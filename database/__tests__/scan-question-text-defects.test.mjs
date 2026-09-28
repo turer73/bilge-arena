@@ -59,8 +59,18 @@ describe('mid_sentence_capital', () => {
   it('yakalamaz: Ingilizce icerik (locale en)', () => {
     expect(findMidSentenceCapitals('I met John near the Thames last Summer.', { locale: 'en' })).toEqual([])
   })
-  it('yakalamaz: iki harfli bilimsel semboller, genotip ve sabitler (Mn, Zn, Cu, Aa, Kc)', () => {
-    expect(words('Kc sabiti Mn ve Zn ile Cu arasında; Aa genotipi ve Kp değeri.')).toEqual([])
+  it('yakalar: iki harfli Turkce sozcuk de cumle ortasinda buyukse (Codex #524: "en Az")', () => {
+    expect(words('Bu niceliğin en Az değeri nedir?')).toEqual(['Az'])
+    expect(words('Bunu okudun Mu, hangisi doğrudur?')).toEqual(['Mu'])
+  })
+  it('yakalamaz: fen icin element sembolu ve sabitler (Mn, Zn, Cu, Kc, Kp); genotip (Aa) her yerde', () => {
+    expect(findMidSentenceCapitals('Kc sabiti Mn ve Zn ile Cu arasında; Aa genotipi ve Kp değeri.', { scientific: true })).toEqual([])
+    // scientific verilmezse semboller sozcuk gibi ele alinir, genotip yine disarida
+    expect(words('Bu tepkimede Mn ve Aa genotipi')).toEqual(['Mn'])
+  })
+  it('scanQuestion: fen satirinda semboller muaf, turkce satirinda iki harfli sozcuk yakalanir', () => {
+    expect(rules({ game: 'fen', category: 'kimya', content: { question: 'Bu tepkimede Mn yükseltgenir, Kc sabiti değişmez.', options: ['a', 'b', 'c'], answer: 0 } })).not.toContain('mid_sentence_capital')
+    expect(rules({ game: 'turkce', content: { question: 'Bu niceliğin en Az değeri nedir?', options: ['a', 'b', 'c'], answer: 0 } })).toContain('mid_sentence_capital')
   })
 })
 
@@ -83,6 +93,17 @@ describe('figure_reference_without_media', () => {
     expect(findMissingFigureReference({ question: 'Yukarıdaki tabloda verilen değerlere göre' })[0]).toEqual({ field: 'question', term: 'Yukarıdaki tabloda' })
     expect(findMissingFigureReference({ question: 'Grafikte verilen hız-zaman ilişkisi' })).toHaveLength(1)
     expect(findMissingFigureReference({ question: 'Şekil 1 incelendiğinde' })).toHaveLength(1)
+  })
+  it('yakalar: cekimli govde ile gosterici gondermeler (grafiğe göre, şekle göre, tabloyu inceleyiniz; Codex #524)', () => {
+    expect(findMissingFigureReference({ question: 'Aşağıdaki grafiğe göre doğru seçenek hangisidir?' })).toEqual([{ field: 'question', term: 'Aşağıdaki grafiğe' }])
+    expect(findMissingFigureReference({ question: 'Şekle göre x kaç derecedir?' })).toEqual([{ field: 'question', term: 'Şekle göre' }])
+    expect(findMissingFigureReference({ question: 'Tabloya göre hangisi doğrudur?' })).toHaveLength(1)
+    expect(findMissingFigureReference({ question: 'Grafiği inceleyiniz ve cevaplayınız.' })).toHaveLength(1)
+    expect(findMissingFigureReference({ question: 'Tablodan yararlanarak ortalamayı bulunuz.' })).toHaveLength(1)
+    expect(findMissingFigureReference({ question: 'Resme bakıldığında hangi dönem anlaşılır?' })).toHaveLength(1)
+  })
+  it('yakalamaz: cekimli govdenin gorsel disi kullanimlari (devreye girmek, şekli beğenmek, resmi kurum)', () => {
+    expect(findMissingFigureReference({ question: 'Yeni yasa bugün devreye girdi; resmi kurumlar bu şekli beğendi.' })).toEqual([])
   })
 })
 
@@ -107,13 +128,21 @@ describe('superscript_loss', () => {
   it('yakalar: aritmetik baglamda harf+rakam (Pilot 2 Q4)', () => {
     expect(findSuperscriptLoss('x2+y2+z2=14 ve x+y+z=6').map((h) => h.token)).toEqual(['x2', 'y2', 'z2'])
   })
-  it('yakalamaz: kimyasal formul ve indis (kimya/wordquest icin kural atlanir; ayrica H2O aritmetik baglamda degil)', () => {
+  it('yakalamaz: kimyasal formul ve indis (H2O aritmetik baglamda degil; skip verilirse hic bakilmaz)', () => {
     expect(findSuperscriptLoss('H2O ve CO2 molekülleri', { skip: true })).toEqual([])
     expect(findSuperscriptLoss('H2O ve CO2 molekülleri')).toEqual([])
   })
-  it('scanQuestion yalniz kimya ve wordquest icin kurali atlar; fizik ve biyoloji taranir (Codex #523)', () => {
+  it('yakalamaz: buyuk harfli formul ve indis aritmetik baglamda da (biyoloji O2 + glikoz, fizik F2 = m a; Codex #524)', () => {
+    expect(rules({ game: 'fen', category: 'biyoloji', content: { question: 'Hücrede O2 + glikoz tepkimesi sonucu ne oluşur?', options: ['a', 'b', 'c'], answer: 0 } })).not.toContain('superscript_loss')
+    expect(rules({ game: 'fen', category: 'fizik', content: { question: 'F2 = m a ise F2 kaç N olur?', options: ['a', 'b', 'c'], answer: 0 } })).not.toContain('superscript_loss')
     expect(rules({ game: 'fen', category: 'kimya', content: { question: '2H2 + O2 = 2H2O tepkimesi', options: ['a', 'b', 'c'], answer: 0 } })).not.toContain('superscript_loss')
+  })
+  it('yakalamaz: "1" indisli esi olan degisken indistir (x1 + x2 = 5, Vieta)', () => {
+    expect(findSuperscriptLoss('x1 + x2 = 5 ve x1 x2 = 6 ise denklem hangisidir?')).toEqual([])
+  })
+  it('yakalar: kucuk harfli degisken + rakam aritmetik baglamda, kategori kapisi olmadan (fizik, kimya, matematik)', () => {
     expect(rules({ game: 'fen', category: 'fizik', content: { question: 'x2+y2=1 çemberi', options: ['a', 'b', 'c'], answer: 0 } })).toContain('superscript_loss')
+    expect(rules({ game: 'fen', category: 'kimya', content: { question: 'r2 = 4 ise yarıçap', options: ['a', 'b', 'c'], answer: 0 } })).toContain('superscript_loss')
     expect(rules({ game: 'matematik', content: { question: 'x2+y2=1 çemberi', options: ['a', 'b', 'c'], answer: 0 } })).toContain('superscript_loss')
   })
   it('siklardaki ust indis kaybi da taranir (Codex #523)', () => {
