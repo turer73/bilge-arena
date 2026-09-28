@@ -179,6 +179,12 @@ describe('buildBatch / renderReviewSheet', () => {
     expect(md).toMatch(/iki bagimsiz insan onayi/)
     expect(md).toContain('soru bulunamadi')
   })
+  it('inceleme sayfasi hucrelerinde ters bolu, boru ve satir sonu kacirilir (CodeQL)', () => {
+    const c = { ...current(), content: { ...current().content, question: 'a\\b | c\nd' } }
+    const items = buildBatch({ proposals: [proposal({ patch: { question: 'x\\y | z' } })], currentById: new Map([[Q, c]]) })
+    const md = renderReviewSheet({ batch: { title: 'T' }, items })
+    expect(md).toContain('| question | a\\\\b \\| c d | x\\\\y \\| z |')
+  })
   it('diffContent secenekleri tek tek karsilastirir', () => {
     expect(diffContent({ options: ['a', 'b', 'c'], answer: 0 }, { options: ['a', 'B', 'c'], answer: 0 })).toEqual([{ field: 'options[1]', before: 'b', after: 'B' }])
   })

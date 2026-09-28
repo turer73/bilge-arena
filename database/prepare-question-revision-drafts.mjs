@@ -290,6 +290,9 @@ export function buildBatch({ proposals, currentById, offline = false }) {
 
 // ── Inceleme sayfasi ─────────────────────────────────────────────────────────
 const fence = (v) => (typeof v === 'string' ? v : JSON.stringify(v))
+// Markdown tablo hucresi: once ters bolu, sonra boru ve satir sonu kacirilir
+// (CodeQL: incomplete string escaping).
+const cell = (v) => fence(v ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')
 export function renderReviewSheet({ batch, items, mode = 'dry-run' }) {
   const counts = items.reduce((a, i) => ({ ...a, [i.status]: (a[i.status] ?? 0) + 1 }), {})
   const lines = []
@@ -309,7 +312,7 @@ export function renderReviewSheet({ batch, items, mode = 'dry-run' }) {
     if (it.notes.length) { lines.push('- Notlar:'); for (const n of it.notes) lines.push(`  - ${n}`) }
     if (it.diff.length) {
       lines.push('', '| Alan | Once | Sonra |', '|---|---|---|')
-      for (const d of it.diff) lines.push(`| ${d.field} | ${fence(d.before ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ')} | ${fence(d.after ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ')} |`)
+      for (const d of it.diff) lines.push(`| ${d.field} | ${cell(d.before)} | ${cell(d.after)} |`)
     } else if (it.changeKind === 'retire') lines.push('', 'Icerik degismez; yayimlanirsa soru pasife alinir.')
     lines.push('')
   }
