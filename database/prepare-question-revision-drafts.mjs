@@ -50,6 +50,10 @@ export const PROPOSALS_SCHEMA = 'question-revision-proposals@1'
 // Payload'da tasinabilen icerik alanlari (106 + 110 `coach`). `coach` (kurate
 // edilmis ipucu/yanilgi nesnesi) yayimli revizyondan AYNEN tasinir; patch ile
 // degistirilemez, aksi halde yayin kurate icerigi sessizce silerdi (Codex #526).
+// coach.misconceptions secenek BASINA aciklamadir: cevap indeksi degisirse null
+// konumu kayar, secenek metni anlamca degisirse aciklama eski secenegi anlatir.
+// Ikisi de coach'lu soruda bloklanir; yalniz yazim duzeltmesi (diakritik, buyuk/
+// kucuk harf, bosluk, noktalama) secenekte gecer (Codex #528).
 export const CONTENT_KEYS = ['question', 'options', 'answer', 'solution', 'explanation', 'hint', 'sentence', 'passage', 'context', 'type', 'coach']
 export const PATCH_KEYS = CONTENT_KEYS.filter((k) => k !== 'coach')
 const COACH_KEYS = ['hint1', 'hint2', 'miniExample', 'misconceptions']
@@ -74,6 +78,11 @@ export function canonicalize(value) {
 }
 const canon = (v) => JSON.stringify(canonicalize(v))
 export const sameContent = (a, b) => canon(a) === canon(b)
+// Yazim esdegerligi: Turkce kucuk harf, diakritik kaldirma (Türkiye ~ Turkiye,
+// ışık ~ isik), harf/rakam disi karakterleri atma. Sira ve sayi korunur;
+// anlam degisikligi (kitap -> defter, 10 -> 100) esdeger DEGILDIR.
+const foldSpelling = (x) => String(x ?? '').toLocaleLowerCase('tr').normalize('NFD').replace(/\p{M}+/gu, '').replace(/ı/g, 'i').replace(/[^\p{L}\p{N}]+/gu, '')
+export const sameSpelling = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => foldSpelling(x) === foldSpelling(b[i]))
 
 /** Ayni soru + ayni payload her zaman ayni istek kimligini uretir: RPC'nin
  * content_governance_requests dedup'u ile yeniden calistirma taslagi cogaltmaz.
@@ -219,6 +228,10 @@ export function buildRevisionPayload({ current, proposal }) {
   if (proposal.changeKind === 'correct_answer' && !answerChanged) errors.push('correct_answer icin patch.answer mevcut cevaptan farkli olmali')
   if (proposal.changeKind !== 'retire' && sameContent(content, before)) errors.push('patch mevcut icerigi degistirmiyor')
   if (answerChanged && before.coach) errors.push('cevap anahtari degisince coach.misconceptions (dogru secenek null) yeniden kurate edilmeli; patch coach degistiremez, once coach revizyonu insan tarafindan')
+  // Secenek metni degisince secenek basina yanilgi aciklamasi eski secenegi
+  // anlatir; yalniz yazim duzeltmesi gecer (Codex #528).
+  const optionsChanged = Array.isArray(patch.options) && !sameContent(patch.options, before.options)
+  if (optionsChanged && before.coach && !sameSpelling(patch.options, before.options)) errors.push('secenekler degisince coach.misconceptions (secenek basina aciklama) eski secenekleri anlatir; yalniz yazim duzeltmesi (diakritik/bosluk/noktalama) gecer, anlam veya sira degisikliginde once coach revizyonu insan tarafindan')
   if (before.coach) notes.push('coach nesnesi yayimli revizyondan aynen tasindi')
 
   const metadata = pick(current.metadata ?? {}, METADATA_KEYS)

@@ -99,6 +99,20 @@ describe('coach, kazanim ve kimlik kurallari (Codex #526)', () => {
     expect(r.errors).toContain('content.coach.misconceptions[1]: 1-1000 karakter')
     expect(r.errors).toContain('content.coach.misconceptions[2]: dogru secenek icin null olmali')
   })
+  it('coach varken secenek metni anlamca degisemez veya yer degistiremez; yalniz yazim duzeltmesi gecer (Codex #528)', () => {
+    const blocked = (e) => e.startsWith('secenekler degisince coach.misconceptions')
+    // ayni sayi, ayni cevap indeksi, farkli secenek: misconceptions eski secenegi anlatirdi
+    expect(buildRevisionPayload({ current: coached(), proposal: proposal({ patch: { options: ['kitab', 'kitap', 'defter', 'kitapp'] } }) }).errors.some(blocked)).toBe(true)
+    // sira degisikligi de bloklanir (aciklama indeksle eslesir)
+    expect(buildRevisionPayload({ current: coached(), proposal: proposal({ patch: { options: ['kitap', 'kitab', 'kıtap', 'kitapp'], answer: 0 } , changeKind: 'correct_answer' }) }).errors.some(blocked)).toBe(true)
+    // yalniz yazim: diakritik, buyuk/kucuk harf, bosluk, noktalama
+    const spelling = buildRevisionPayload({ current: coached(), proposal: proposal({ patch: { options: ['Kitab', 'kitap ', 'kıtap.', 'kitapp'] } }) })
+    expect(spelling.errors).toEqual([]); expect(spelling.payload.content.coach).toEqual(coach)
+    const diacritic = buildRevisionPayload({ current: { ...coached(), content: { ...coached().content, options: ['Turkiye', 'kitap', 'isik', 'Istanbul'] } }, proposal: proposal({ patch: { options: ['Türkiye', 'kitap', 'ışık', 'İstanbul'] } }) })
+    expect(diacritic.errors).toEqual([])
+    // coach yoksa secenek degisikligi serbest
+    expect(buildRevisionPayload({ current: current(), proposal: proposal({ patch: { options: ['kitab', 'kitap', 'defter', 'kitapp'] } }) }).errors).toEqual([])
+  })
   it('coach sekli 110 sozlesmesine gore dogrulanir', () => {
     const p = buildRevisionPayload({ current: coached(), proposal: proposal() }).payload
     expect(validatePayloadShape({ ...p, content: { ...p.content, coach: { hint1: 'a' } } })).toContain('content.coach: anahtarlar hint1,hint2,miniExample,misconceptions olmali')
