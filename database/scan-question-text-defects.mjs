@@ -284,12 +284,24 @@ const SUPERSCRIPT_LOSS_RE = /(?<![\p{L}\p{N}])([A-Za-z])([2-9])(?=\s*[+\-=*/)]|\
 const SINGLE_LETTER_ELEMENTS = new Set(['H', 'B', 'C', 'N', 'O', 'F', 'P', 'S', 'K', 'V', 'Y', 'I', 'W', 'U'])
 // Komsu harf+rakam gruplama parantezi icinde de olabilir: A2 + (D2), (A2) + (D2)
 // (Codex #529). Cagri parantezi gruplama degildir: f(A2) = D2 icinde A2 bir
-// fonksiyon argumanidir, aritmetik komsu sayilmaz (Codex #531). Gruplama "("
-// oncesinde harf/rakam olmayan parantezdir.
-const LETTER_DIGIT_BEFORE = /(?:(?<![\p{L}\p{N}])[A-Za-z][2-9]|(?<![\p{L}\p{N}])\(\s*[A-Za-z][2-9]\s*\))\s*[+\-=*/]\s*\(?\s*$/u
+// fonksiyon argumanidir, aritmetik komsu sayilmaz (Codex #531). Cagri "(":
+// hemen onunde harf/rakam olan parantez (f(, sin(), ya da bosluktan once
+// bilinen bir fonksiyon adi (f (A2), sin (A2); Codex #531 ikinci tur). Duz metin
+// sozcugu ("göre (A2)") ve sayi ("2 (A2)") gruplama sayilir.
+const CALL_PREFIX = /(?:[\p{L}\p{N}]|(?<![\p{L}\p{N}])(?:f|g|h|sin|cos|tan|cot|sec|csc|log|ln|exp|sqrt|arcsin|arccos|arctan|max|min)\s+)$/u
+const isGroupingParen = (s, idx) => s[idx] === '(' && !CALL_PREFIX.test(s.slice(0, idx))
+const LETTER_DIGIT_BEFORE = /(?<![\p{L}\p{N}])[A-Za-z][2-9]\s*[+\-=*/]\s*\(?\s*$/u
+const GROUPED_NEIGHBOUR_BEFORE = /\(\s*[A-Za-z][2-9]\s*\)\s*[+\-=*/]\s*\(?\s*$/u
 const LETTER_DIGIT_AFTER = /^\s*[+\-=*/]\s*\(?\s*[A-Za-z][2-9](?![\p{L}\p{N}])/u
 const LETTER_DIGIT_AFTER_GROUP = /^\s*\)\s*[+\-=*/]\s*\(?\s*[A-Za-z][2-9](?![\p{L}\p{N}])/u
-const OPENS_GROUP = /(?<![\p{L}\p{N}])\(\s*$/u
+
+function hasLetterDigitNeighbour(before, after) {
+  if (LETTER_DIGIT_BEFORE.test(before) || LETTER_DIGIT_AFTER.test(after)) return true
+  const g = GROUPED_NEIGHBOUR_BEFORE.exec(before)
+  if (g && isGroupingParen(before, g.index)) return true
+  const open = before.search(/\(\s*$/)
+  return open >= 0 && isGroupingParen(before, open) && LETTER_DIGIT_AFTER_GROUP.test(after)
+}
 
 export function findSuperscriptLoss(text, { skip = false } = {}) {
   if (skip || !text) return []
@@ -302,8 +314,7 @@ export function findSuperscriptLoss(text, { skip = false } = {}) {
     if (/[A-Z]/.test(m[1])) {
       const before = s.slice(0, m.index)
       const after = s.slice(m.index + m[0].length)
-      const grouped = OPENS_GROUP.test(before) && LETTER_DIGIT_AFTER_GROUP.test(after)
-      if (!LETTER_DIGIT_BEFORE.test(before) && !LETTER_DIGIT_AFTER.test(after) && !grouped) continue
+      if (!hasLetterDigitNeighbour(before, after)) continue
     }
     out.push({ token: m[0], index: m.index })
   }

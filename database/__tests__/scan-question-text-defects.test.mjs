@@ -265,6 +265,14 @@ describe('Codex #531 follow-ups', () => {
     expect(sup('A2 + (D2) = 9')).toEqual(['A2', 'D2'])
     expect(sup('f(A2 + D2) = 1')).toEqual(['A2', 'D2'])
   })
+  it('superscript: bosluklu cagri da cagridir (f (A2) = D2, sin (A2) = D2); duz metin sozcugu ve sayi sonrasi parantez gruplamadir', () => {
+    expect(sup('f (A2) = D2')).toEqual([])
+    expect(sup('sin (A2) = D2')).toEqual([])
+    expect(sup('log (A2) + ln (D2) = 1')).toEqual([])
+    expect(sup('Buna göre (A2) + (D2) = 9')).toEqual(['A2', 'D2'])
+    expect(sup('2 (A2) + D2 = 9')).toEqual(['A2', 'D2'])
+    expect(sup('(A2) + (D2) = 9')).toEqual(['A2', 'D2'])
+  })
 })
 
 describe('Codex #529 follow-ups', () => {
