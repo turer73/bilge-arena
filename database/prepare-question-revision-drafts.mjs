@@ -79,13 +79,15 @@ export function canonicalize(value) {
 }
 const canon = (v) => JSON.stringify(canonicalize(v))
 export const sameContent = (a, b) => canon(a) === canon(b)
-// Yazim esdegerligi: Turkce kucuk harf, diakritik kaldirma (Türkiye ~ Turkiye,
-// ışık ~ isik), tirnak/kesme isareti bicimlerini tekle indirme (’ ~ '),
-// bosluk dizilerini tek bosluga indirme. BASKA hicbir karakter atilmaz:
-// isaret, ondalik ayraci, kesir, yuzde ve operatorler anlam tasir (-10 vs 10,
-// 1,5 vs 15, 1/2 vs 12; Codex #530). Sira ve sayi korunur; anlam degisikligi
-// (kitap -> defter, 10 -> 100) esdeger DEGILDIR.
-const foldSpelling = (x) => String(x ?? '').toLocaleLowerCase('tr').normalize('NFD').replace(/\p{M}+/gu, '').replace(/ı/g, 'i')
+// Yazim esdegerligi: NFC, Turkce kucuk harf, yalniz Turkce harf diakritigini
+// kaldirma (Türkiye ~ Turkiye, ışık ~ isik, hâlâ ~ hala), tirnak/kesme isareti
+// bicimlerini tekle indirme (’ ~ '), bosluk dizilerini tek bosluga indirme.
+// BASKA hicbir karakter atilmaz: isaret, ondalik ayraci, kesir, yuzde ve
+// operatorler anlam tasir (-10 vs 10, 1,5 vs 15, 1/2 vs 12; Codex #530).
+// Birlesik isaretler de korunur: ≠ vs =, ∉ vs ∈, x̄ vs x, 0,3̅ vs 0,3 (Codex
+// #542). Sira ve sayi korunur; anlam degisikligi (kitap -> defter) esdeger DEGILDIR.
+const TR_LETTER_FOLD = { 'ç': 'c', 'ş': 's', 'ğ': 'g', 'ö': 'o', 'ü': 'u', 'â': 'a', 'î': 'i', 'û': 'u', 'ı': 'i' }
+const foldSpelling = (x) => String(x ?? '').normalize('NFC').toLocaleLowerCase('tr').replace(/[çşğöüâîûı]/g, (c) => TR_LETTER_FOLD[c])
   .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'").replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"').replace(/\s+/gu, ' ').trim()
 export const sameSpelling = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => foldSpelling(x) === foldSpelling(b[i]))
 
@@ -236,7 +238,7 @@ export function buildRevisionPayload({ current, proposal }) {
   // Secenek metni degisince secenek basina yanilgi aciklamasi eski secenegi
   // anlatir; yalniz yazim duzeltmesi gecer (Codex #528).
   const optionsChanged = Array.isArray(patch.options) && !sameContent(patch.options, before.options)
-  if (optionsChanged && before.coach && !sameSpelling(patch.options, before.options)) errors.push('secenekler degisince coach.misconceptions (secenek basina aciklama) eski secenekleri anlatir; yalniz yazim duzeltmesi (diakritik, buyuk/kucuk harf, bosluk, tirnak bicimi) gecer; isaret/ondalik/noktalama dahil anlam veya sira degisikliginde once coach revizyonu insan tarafindan')
+  if (optionsChanged && before.coach && !sameSpelling(patch.options, before.options)) errors.push('secenekler degisince coach.misconceptions (secenek basina aciklama) eski secenekleri anlatir; yalniz yazim duzeltmesi (Turkce harf diakritigi, buyuk/kucuk harf, bosluk, tirnak bicimi) gecer; isaret/ondalik/noktalama/birlesik isaret dahil anlam veya sira degisikliginde once coach revizyonu insan tarafindan')
   if (before.coach) notes.push('coach nesnesi yayimli revizyondan aynen tasindi')
 
   const metadata = pick(current.metadata ?? {}, METADATA_KEYS)

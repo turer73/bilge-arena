@@ -117,6 +117,15 @@ describe('coach, kazanim ve kimlik kurallari (Codex #526)', () => {
     expect(buildRevisionPayload({ current: coached(), proposal: proposal({ patch: { options: ['kitab', 'kitap', 'kıtap.', 'kitapp'] } }) }).errors.some(blocked)).toBe(true)
     const diacritic = buildRevisionPayload({ current: { ...coached(), content: { ...coached().content, options: ['Turkiye', 'kitap', 'isik', 'Istanbul'] } }, proposal: proposal({ patch: { options: ['Türkiye', 'kitap', 'ışık', 'İstanbul'] } }) })
     expect(diacritic.errors).toEqual([])
+    // ayni metnin ayrisik (NFD) yazimi ve sapkali harf de yazimdir
+    const decomposed = buildRevisionPayload({ current: { ...coached(), content: { ...coached().content, options: ['Türkiye', 'hala', 'şişe', 'çiçek'] } }, proposal: proposal({ patch: { options: ['Türkiye', 'hâlâ', 'şişe', 'çiçek'] } }) })
+    expect(decomposed.errors).toEqual([])
+    // birlesik isaretli operator ve gosterimler anlam tasir: yazim sayilmaz (Codex #542)
+    const marks = () => ({ ...coached(), content: { ...coached().content, options: ['≠', '∉', 'x̄', '0,3̅'] } })
+    for (const options of [['=', '∉', 'x̄', '0,3̅'], ['≠', '∈', 'x̄', '0,3̅'], ['≠', '∉', 'x', '0,3̅'], ['≠', '∉', 'x̄', '0,3']])
+      expect(buildRevisionPayload({ current: marks(), proposal: proposal({ patch: { options } }) }).errors.some(blocked)).toBe(true)
+    // ayni operatorun ayrisik yazimi (= + U+0338) ise ayni kalir
+    expect(buildRevisionPayload({ current: marks(), proposal: proposal({ patch: { options: ['≠', '∉', 'x̄', '0,3̅'] } }) }).errors).toEqual([])
     // coach yoksa secenek degisikligi serbest
     expect(buildRevisionPayload({ current: current(), proposal: proposal({ patch: { options: ['kitab', 'kitap', 'defter', 'kitapp'] } }) }).errors).toEqual([])
   })
