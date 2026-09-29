@@ -224,12 +224,12 @@ describe('Codex #527 follow-ups', () => {
     expect(fig('Yukarıdaki resmi yapan sanatçı kimdir?')).toEqual(['Yukarıdaki resmi'])
     expect(fig('Yukarıdaki resmi gördüğünüzde ne düşünürsünüz?')).toEqual(['Yukarıdaki resmi'])
   })
-  it('capital: fen icinde muafiyet yalniz ASCII sembol bicimi icindir; Turkce harfli (İp, İz, Ön, Üç) ve listeli ASCII (Ev, Az) sozcukler yakalanir; Er element sembolu olarak muaf kalir, Kf/Fs/Vo muaf', () => {
+  it('capital: fen icinde muafiyet yalniz ASCII sembol bicimi icindir; Turkce harfli (İp, İz, Ön, Üç) ve listeli ASCII (Ev, An) sozcukler yakalanir; Er element sembolu olarak muaf kalir, Kf/Fs/Vo muaf', () => {
     expect(words('Cisim bir İp ile gösterilir.', { scientific: true })).toEqual(['İp'])
     expect(words('Cisim bir İz bırakır.', { scientific: true })).toEqual(['İz'])
     expect(words('Bu cisim Ön tarafa gider.', { scientific: true })).toEqual(['Ön'])
     expect(words('Bu deneyde Üç kap kullanılır.', { scientific: true })).toEqual(['Üç'])
-    expect(words('Cisim bir Ev büyüklüğünde ve bir Az daha gider.', { scientific: true })).toEqual(['Ev', 'Az'])
+    expect(words('Cisim bir Ev büyüklüğünde ve bir An için durur.', { scientific: true })).toEqual(['Ev', 'An'])
     expect(words('Tepkimenin Kf değeri, kuvvet Fs ve hız Vo verilmiştir.', { scientific: true })).toEqual([])
     expect(words('Cisim bir İp ile gösterilir.', { scientific: false })).toEqual(['İp'])
   })
@@ -243,6 +243,27 @@ describe('Codex #527 follow-ups', () => {
     expect(sup('A2 = B2 + C2 ise')).toContain('A2')
     expect(sup('x2 = 9 ise x kaçtır?')).toEqual(['x2'])
     expect(sup('E1 = 5 J ve E2 = 10 J ise')).toEqual([])
+  })
+})
+
+describe('Codex #531 follow-ups', () => {
+  const words = (s, o) => findMidSentenceCapitals(s, o).map((c) => c.word)
+  const sup = (t) => findSuperscriptLoss(t).map((h) => h.token)
+  it('capital: fen icinde yalniz indis bicimiyle cakisan sozcukler (Us, Un, Ur, Ut) muaftir; An, Ol, Oy gibi Turkce sozcukler yakalanir', () => {
+    expect(words('Deneyden bir An sonra sıcaklık artar.', { scientific: true })).toEqual(['An'])
+    expect(words('Cisim bir Ol dedi.', { scientific: true })).toEqual(['Ol'])
+    expect(words('Bu soruda Oy verildi.', { scientific: true })).toEqual(['Oy'])
+    expect(words('Devrede ölçülen Us gerilimi nedir?', { scientific: true })).toEqual([])
+    expect(words('Kaynağın Un ve Ur değerleri verilmiştir.', { scientific: true })).toEqual([])
+  })
+  it('superscript: cagri parantezi gruplama degildir (f(A2) = D2 bayraklanmaz); gruplama parantezi komsu sayilir', () => {
+    expect(sup('f(A2) = D2')).toEqual([])
+    expect(sup('f(A2) = 3')).toEqual([])
+    expect(sup('g(X2) + h(D2) = 1')).toEqual([])
+    expect(sup('A2 = f(D2)')).toEqual([])
+    expect(sup('(A2) + (D2) = 9')).toEqual(['A2', 'D2'])
+    expect(sup('A2 + (D2) = 9')).toEqual(['A2', 'D2'])
+    expect(sup('f(A2 + D2) = 1')).toEqual(['A2', 'D2'])
   })
 })
 

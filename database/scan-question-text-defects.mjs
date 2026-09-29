@@ -127,13 +127,19 @@ const SCIENCE_CONSTANTS = new Set(['Kc', 'Kp', 'Ka', 'Kb', 'Kw', 'Ks', 'Ksp', 'K
 // olabilir; liste tutulamaz (Codex #525: Kf). scientific=true iken muafiyet
 // yalniz SEMBOL BICIMLI tokenlar icindir: ASCII buyuk + ASCII kucuk harf. Turkce
 // harf iceren token (İp, İz, Ön, Üç, Şu) hicbir sembol olamaz, kuralda kalir
-// (Codex #527). Liste BILEREK kisadir: yalniz soru metninde sik gecen ASCII
-// iki harfli Turkce sozcukler (Az, Bu, Ev, Ne, Ve). Duzlesmis indis bicimiyle
-// cakisan sozcukler (Us, Un, Ur, Ut = U_s besleme gerilimi gibi) listeye
-// ALINMAZ; fen icinde sembol sayilip muaf kalir (Codex #529). Element
-// sembolleri (Ne, Al, At) once kontrol edildigi icin fen icinde onlar muaftir.
+// (Codex #527). ASCII iki harfli Turkce sozcukler (Az, Bu, Ev, An, Ol, Oy)
+// listeyle kuralda tutulur. YALNIZ duzlesmis indis bicimiyle cakisan sozcukler
+// (Us, Un, Ur, Ut = U_s besleme gerilimi gibi) listeye BILEREK alinmaz; fen
+// icinde sembol sayilip muaf kalir (Codex #529, #531). Element sembolleri
+// (Ne, Al, At, Er) ve sabitler (Em) once kontrol edildigi icin fen icinde
+// muaftir. "I" ile baslayan ASCII tokenlar tr kucuk harfte "ı" olur; "İp" gibi
+// Turkce yazim zaten sembol bicimli degildir.
 const SYMBOL_SHAPE = /^[A-Z][a-z]$/
-const TURKISH_TWO_LETTER = new Set(['az', 'bu', 'şu', 'ne', 've', 'da', 'de', 'ki', 'mi', 'mı', 'mu', 'mü', 'ya', 'iş', 'ev', 'el', 'su', 'üç', 'on', 'al', 'ad', 'at', 'ok', 'öz', 'uç', 'aç', 'et', 'ay', 'ün', 'il', 'iç', 'ot', 'öl', 'en', 'ha', 'ah', 'ey', 'öp', 'ak', 'ağ', 'ek'])
+const TURKISH_TWO_LETTER = new Set([
+  'az', 'bu', 'şu', 'ne', 've', 'da', 'de', 'ki', 'mi', 'mı', 'mu', 'mü', 'ya', 'iş', 'ev', 'el', 'su', 'üç', 'on', 'al', 'ad', 'at', 'ok', 'öz',
+  'uç', 'aç', 'et', 'ay', 'ün', 'il', 'iç', 'ot', 'öl', 'en', 'ha', 'ah', 'ey', 'öp', 'ak', 'ağ', 'ek',
+  'an', 'ez', 'hu', 'of', 'oh', 'ol', 'oy', 'tu', 'uz', 'ye', 'yo',
+])
 const GENOTYPE_RE = /^([A-Z])([a-z])$/
 
 export function findMidSentenceCapitals(text, { locale = 'tr', scientific = false } = {}) {
@@ -276,9 +282,14 @@ export function findAnswerCues(content) {
 // bakmaz. Kategori kapisi yoktur; wordquest icin cagiran skip gecer.
 const SUPERSCRIPT_LOSS_RE = /(?<![\p{L}\p{N}])([A-Za-z])([2-9])(?=\s*[+\-=*/)]|\s*$)/gu
 const SINGLE_LETTER_ELEMENTS = new Set(['H', 'B', 'C', 'N', 'O', 'F', 'P', 'S', 'K', 'V', 'Y', 'I', 'W', 'U'])
-// Komsu harf+rakam parantez icinde de olabilir: A2 + (D2), (A2) + (B2) (Codex #529).
-const LETTER_DIGIT_BEFORE = /(?<![\p{L}\p{N}])[A-Za-z][2-9]\s*\)?\s*[+\-=*/]\s*\(?\s*$/u
-const LETTER_DIGIT_AFTER = /^\s*\)?\s*[+\-=*/]\s*\(?\s*[A-Za-z][2-9](?![\p{L}\p{N}])/u
+// Komsu harf+rakam gruplama parantezi icinde de olabilir: A2 + (D2), (A2) + (D2)
+// (Codex #529). Cagri parantezi gruplama degildir: f(A2) = D2 icinde A2 bir
+// fonksiyon argumanidir, aritmetik komsu sayilmaz (Codex #531). Gruplama "("
+// oncesinde harf/rakam olmayan parantezdir.
+const LETTER_DIGIT_BEFORE = /(?:(?<![\p{L}\p{N}])[A-Za-z][2-9]|(?<![\p{L}\p{N}])\(\s*[A-Za-z][2-9]\s*\))\s*[+\-=*/]\s*\(?\s*$/u
+const LETTER_DIGIT_AFTER = /^\s*[+\-=*/]\s*\(?\s*[A-Za-z][2-9](?![\p{L}\p{N}])/u
+const LETTER_DIGIT_AFTER_GROUP = /^\s*\)\s*[+\-=*/]\s*\(?\s*[A-Za-z][2-9](?![\p{L}\p{N}])/u
+const OPENS_GROUP = /(?<![\p{L}\p{N}])\(\s*$/u
 
 export function findSuperscriptLoss(text, { skip = false } = {}) {
   if (skip || !text) return []
@@ -291,7 +302,8 @@ export function findSuperscriptLoss(text, { skip = false } = {}) {
     if (/[A-Z]/.test(m[1])) {
       const before = s.slice(0, m.index)
       const after = s.slice(m.index + m[0].length)
-      if (!LETTER_DIGIT_BEFORE.test(before) && !LETTER_DIGIT_AFTER.test(after)) continue
+      const grouped = OPENS_GROUP.test(before) && LETTER_DIGIT_AFTER_GROUP.test(after)
+      if (!LETTER_DIGIT_BEFORE.test(before) && !LETTER_DIGIT_AFTER.test(after) && !grouped) continue
     }
     out.push({ token: m[0], index: m.index })
   }
