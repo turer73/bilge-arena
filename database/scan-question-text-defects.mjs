@@ -284,11 +284,13 @@ const SUPERSCRIPT_LOSS_RE = /(?<![\p{L}\p{N}])([A-Za-z])([2-9])(?=\s*[+\-=*/)]|\
 const SINGLE_LETTER_ELEMENTS = new Set(['H', 'B', 'C', 'N', 'O', 'F', 'P', 'S', 'K', 'V', 'Y', 'I', 'W', 'U'])
 // Komsu harf+rakam gruplama parantezi icinde de olabilir: A2 + (D2), (A2) + (D2)
 // (Codex #529). Cagri parantezi gruplama degildir: f(A2) = D2 icinde A2 bir
-// fonksiyon argumanidir, aritmetik komsu sayilmaz (Codex #531). Cagri "(":
-// hemen onunde harf/rakam olan parantez (f(, sin(), ya da bosluktan once
-// bilinen bir fonksiyon adi (f (A2), sin (A2); Codex #531 ikinci tur). Duz metin
-// sozcugu ("göre (A2)") ve sayi ("2 (A2)") gruplama sayilir.
-const CALL_PREFIX = /(?:[\p{L}\p{N}]|(?<![\p{L}\p{N}])(?:f|g|h|sin|cos|tan|cot|sec|csc|log|ln|exp|sqrt|arcsin|arccos|arctan|max|min)\s+)$/u
+// fonksiyon argumanidir, aritmetik komsu sayilmaz (Codex #531). Bir "("
+// yalniz acikca aritmetik baglamda gruplamadir: metin basi, operator, baska
+// "(" ya da bosluklu bir sayi ("2 (A2)") sonrasi. Hemen onunde harf/rakam olan
+// parantez (f(A2)) ve onunde bosluklu HERHANGI bir sozcuk olan parantez
+// (f (A2), F (A2), sin (A2), "göre (A2)") cagri/duz metin sayilir; boylece ozel
+// fonksiyon adlari liste gerektirmez (Codex #531 ikinci ve ucuncu tur).
+const CALL_PREFIX = /(?:[\p{L}\p{N}]|\p{L}\s+)$/u
 const isGroupingParen = (s, idx) => s[idx] === '(' && !CALL_PREFIX.test(s.slice(0, idx))
 const LETTER_DIGIT_BEFORE = /(?<![\p{L}\p{N}])[A-Za-z][2-9]\s*[+\-=*/]\s*\(?\s*$/u
 const GROUPED_NEIGHBOUR_BEFORE = /\(\s*[A-Za-z][2-9]\s*\)\s*[+\-=*/]\s*\(?\s*$/u
