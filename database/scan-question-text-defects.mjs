@@ -282,26 +282,25 @@ export function findAnswerCues(content) {
 // bakmaz. Kategori kapisi yoktur; wordquest icin cagiran skip gecer.
 const SUPERSCRIPT_LOSS_RE = /(?<![\p{L}\p{N}])([A-Za-z])([2-9])(?=\s*[+\-=*/)]|\s*$)/gu
 const SINGLE_LETTER_ELEMENTS = new Set(['H', 'B', 'C', 'N', 'O', 'F', 'P', 'S', 'K', 'V', 'Y', 'I', 'W', 'U'])
-// Komsu harf+rakam gruplama parantezi icinde de olabilir: A2 + (D2), (A2) + (D2)
-// (Codex #529). Cagri parantezi gruplama degildir: f(A2) = D2 icinde A2 bir
-// fonksiyon argumanidir, aritmetik komsu sayilmaz (Codex #531). Bir "("
-// yalniz acikca aritmetik baglamda gruplamadir: metin basi, operator, baska
-// "(" ya da bosluklu bir sayi ("2 (A2)") sonrasi. Hemen onunde harf/rakam olan
-// parantez (f(A2)) ve onunde bosluklu HERHANGI bir sozcuk olan parantez
-// (f (A2), F (A2), sin (A2), "göre (A2)") cagri/duz metin sayilir; boylece ozel
-// fonksiyon adlari liste gerektirmez (Codex #531 ikinci ve ucuncu tur).
-const CALL_PREFIX = /(?:[\p{L}\p{N}]|\p{L}\s+)$/u
-const isGroupingParen = (s, idx) => s[idx] === '(' && !CALL_PREFIX.test(s.slice(0, idx))
-const LETTER_DIGIT_BEFORE = /(?<![\p{L}\p{N}])[A-Za-z][2-9]\s*[+\-=*/]\s*\(?\s*$/u
-const GROUPED_NEIGHBOUR_BEFORE = /\(\s*[A-Za-z][2-9]\s*\)\s*[+\-=*/]\s*\(?\s*$/u
-const LETTER_DIGIT_AFTER = /^\s*[+\-=*/]\s*\(?\s*[A-Za-z][2-9](?![\p{L}\p{N}])/u
-const LETTER_DIGIT_AFTER_GROUP = /^\s*\)\s*[+\-=*/]\s*\(?\s*[A-Za-z][2-9](?![\p{L}\p{N}])/u
+// Komsu harf+rakam gruplama parantezi icinde de olabilir: A2 + (D2), (A2) + (D2),
+// A2 - (-D2) (Codex #529, #531). Gruplama OLUMLU tanimlanir: "(" yalniz metin
+// basi, operator ya da baska "(" sonrasi gruplamadir. Onunde harf, rakam, kesme
+// isareti, us ya da herhangi bir sozcuk olan parantez (f(A2), f (A2), F (A2),
+// f'(A2), f′(A2), f^{-1}(A2), "göre (A2)", "2 (A2)") gruplama sayilmaz. Boylece
+// parantez yolu yalniz acikca aritmetik baglamda calisir; master'in bayrak
+// vermedigi bir cagri baglaminda yeni bayrak uretemez (Codex #531 ucuncu-besinci tur).
+const GROUP_PREFIX = /(?:^|[+\-−=*/(])\s*$/u
+const isGroupingParen = (s, idx) => s[idx] === '(' && GROUP_PREFIX.test(s.slice(0, idx))
+const LETTER_DIGIT_BEFORE = /(?<![\p{L}\p{N}])[A-Za-z][2-9]\s*[+\-=*/]\s*\(?\s*[+\-−]?\s*$/u
+const GROUPED_NEIGHBOUR_BEFORE = /\(\s*[+\-−]?\s*[A-Za-z][2-9]\s*\)\s*[+\-=*/]\s*\(?\s*[+\-−]?\s*$/u
+const LETTER_DIGIT_AFTER = /^\s*[+\-=*/]\s*\(?\s*[+\-−]?\s*[A-Za-z][2-9](?![\p{L}\p{N}])/u
+const LETTER_DIGIT_AFTER_GROUP = /^\s*\)\s*[+\-=*/]\s*\(?\s*[+\-−]?\s*[A-Za-z][2-9](?![\p{L}\p{N}])/u
 
 function hasLetterDigitNeighbour(before, after) {
   if (LETTER_DIGIT_BEFORE.test(before) || LETTER_DIGIT_AFTER.test(after)) return true
   const g = GROUPED_NEIGHBOUR_BEFORE.exec(before)
   if (g && isGroupingParen(before, g.index)) return true
-  const open = before.search(/\(\s*$/)
+  const open = before.search(/\(\s*[+\-−]?\s*$/)
   return open >= 0 && isGroupingParen(before, open) && LETTER_DIGIT_AFTER_GROUP.test(after)
 }
 
