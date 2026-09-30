@@ -66,7 +66,12 @@ migration ile ya da `questions` tablosuna dogrudan yazilarak canliya alinamaz:
 `trg_question_content_direct_mutation_guard` (106/142) icerik ve `is_active`
 degisikligini 42501 ile reddeder ve migration dosyalari icerik tasimaz.
 Hicbir LLM ciktisi (kor cozucu, oneri metni) tek basina yayin, ret veya
-karantina otoritesi degildir.
+karantina otoritesi degildir. `npm run lint:migrations` (pre-commit ve CI) bunu
+depoda da zorlar: soru icerigini veya `is_active`'i degistiren, korumayi kapatan
+(`DISABLE TRIGGER`, `session_replication_role`, `enforce_direct_mutation`) ya da
+taslak/onay/yayin RPC'sini kendisi cagiran migration reddedilir. Prod'da zaten
+calismis owner onayli veri migration'lari `APPROVED_QUESTION_CONTENT_MIGRATIONS`
+listesinde kaynakta sabittir; `--write-baseline` bu kurali susturmaz.
 
 Yol:
 
