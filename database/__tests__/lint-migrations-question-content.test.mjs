@@ -59,6 +59,7 @@ describe('soru icerigi migration ile degismez (yonetisim 106/142)', () => {
     expect(rules(`SELECT public.set_content_governance_enforcement('00000000-0000-0000-0000-000000000000', false, gen_random_uuid());`)).toEqual(['question-guard-bypass'])
     expect(rules(`DO $$ BEGIN PERFORM public.publish_question_content_revision('u', 'r', 'q'); END $$;`)).toEqual(['question-guard-bypass'])
     expect(rules(`DO $$ BEGIN PERFORM public.review_question_content_revision('u', 'r', 'approve', 'q'); END $$;`)).toEqual(['question-guard-bypass'])
+    expect(rules(`SELECT public.publish_question_turkish_restoration('u', 'q', 'r', '{}'::jsonb, 'x');`)).toEqual(['question-guard-bypass'])
     expect(rules(`DROP TRIGGER IF EXISTS trg_question_content_direct_mutation_guard ON public.questions;`)).toEqual(['question-guard-bypass'])
   })
 
