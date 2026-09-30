@@ -28,8 +28,10 @@ const ydtEnglishReleaseMigration = readFileSync(join(dirname(fileURLToPath(impor
 const modelFreePosteriorMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '212_question_quality_model_free_posterior.sql'), 'utf8')
 const modelGateMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '213_question_quality_model_gate.sql'), 'utf8')
 const modelGateRetentionMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '214_question_quality_model_gate_retention.sql'), 'utf8')
+const turkishRestorationMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '215_question_turkish_letter_restoration.sql'), 'utf8')
 
 suite('106 content governance disposable PostgreSQL acceptance', () => {
+  let turkishQuestion; let spellingTopicQuestion; let toolQuestion
   let client; let author; let reviewer1; let reviewer2; let publisher; let learner; let legacyLearner; let question; let outcome; let outcome2; let outcomeCourse; let outcomeUnit; let outcomeTopic; let outcomeNode; let legacyRevision; let candidateQuestion; let candidateOutcome; let candidateLegacyRevision; let ydtQuestion; let ydtLegacyNullQuestion; let ydtOutcome; let ydtWrongOutcome; let ydtLegacyRevision; let ydtLegacyNullRevision; let parityQuestions
   const rpc = async (call, values = []) => { await client.query("SELECT set_config('request.jwt.claim.sub','',false),set_config('request.jwt.claims',$1,false)",[JSON.stringify({ role:'service_role' })]); await client.query('SET ROLE service_role'); try { return (await client.query(`SELECT ${call} AS result`, values)).rows[0].result } finally { await client.query('RESET ROLE') } }
   const userRpc = async (userId, aal, call, values = []) => { await client.query("SELECT set_config('request.jwt.claim.sub',$1,false),set_config('request.jwt.claims',$2,false)",[userId,JSON.stringify({ sub:userId,role:'authenticated',aal })]); await client.query('SET ROLE authenticated'); try { return (await client.query(`SELECT ${call} AS result`, values)).rows[0].result } finally { await client.query('RESET ROLE') } }
@@ -108,6 +110,13 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
       ydtQuestion,{ question:'legacy YDT',options:['A','B'],answer:0 },
       ydtLegacyNullQuestion,{ question:'legacy null YDT',options:['A','B'],answer:0 },
     ])
+    ;[turkishQuestion, spellingTopicQuestion, toolQuestion] = [randomUUID(), randomUUID(), randomUUID()]
+    await client.query(`INSERT INTO public.questions(id,game,category,difficulty,content) VALUES
+      ($1,'matematik','Temel',2,$2),($3,'matematik','Temel',2,$4),($5,'matematik','Temel',2,$6)`, [
+      turkishQuestion,{ question:'Asagidaki ifadelerden hangisi dogrudur?',options:['Ogrenci sinifta ISIK olcumu yapar.','Gunes batar.','Deney yapilir.','Hepsi'],answer:0,solution:'Cozum: ogrenci olcum yapar.' },
+      spellingTopicQuestion,{ question:'Asagidakilerin hangisinde yazim yanlisi vardir?',options:['dogru','degil','bugun','once'],answer:1 },
+      toolQuestion,{ question:'Ucgenin ic acilari toplami kac derecedir?',options:['90','180','270','360'],answer:1 },
+    ])
     parityQuestions = Array.from({ length: 8 }, randomUUID)
     await client.query(`INSERT INTO public.questions(id,game,category,difficulty,content)
       SELECT source.id,'matematik','Temel',source.difficulty,$3::jsonb
@@ -122,7 +131,7 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     ])
     await client.query(`INSERT INTO public.question_outcomes(question_id,outcome_id,weight,is_primary)
       SELECT question_id,$2,1,true FROM unnest($1::uuid[]) AS source(question_id)`, [
-      parityQuestions,outcome,
+      [...parityQuestions,turkishQuestion,spellingTopicQuestion,toolQuestion],outcome,
     ])
     await client.query("INSERT INTO public.error_reports(id,user_id,question_id,report_type,description,status,created_at) VALUES($1,$2,$3,'typo','Eski yazım bildirimi','pending','2026-07-01T10:00:00Z')",[randomUUID(),legacyLearner,question])
     await client.query(migration)
@@ -147,6 +156,7 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(modelFreePosteriorMigration)
     await client.query(modelGateMigration)
     await client.query(modelGateRetentionMigration)
+    await client.query(turkishRestorationMigration)
     legacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id
     candidateLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[candidateQuestion])).rows[0].published_revision_id
     ydtLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[ydtQuestion])).rows[0].published_revision_id
@@ -1027,5 +1037,114 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     expect((await client.query('SELECT status,change_kind FROM public.question_content_revisions WHERE id=$1',[retireDraft.revisionId])).rows[0]).toEqual({ status:'draft', change_kind:'retire' })
     const after = (await client.query('SELECT content,is_active,published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0]
     expect(after).toEqual(before)
+  })
+
+  it('215: yalniz listelenmis govdelerin Turkce harf duzeltmesi iki onaysiz yayinlanir; karar devri kapiyi gecer; digerleri reddedilir', async () => {
+    const words = async (a, b) => (await client.query('SELECT public.question_turkish_restoration_words($1::jsonb,$2::jsonb) AS w', [JSON.stringify(a), JSON.stringify(b)])).rows[0].w
+    // saf harf duzeltmesi, buyuk harf ve ek dahil
+    expect(await words({ q: 'Asagidaki sinifta ISIK' }, { q: 'Aşağıdaki sınıfta IŞIK' })).toEqual(['Asagidaki>Aşağıdaki', 'sinifta>sınıfta', 'ISIK>IŞIK'])
+    // listede olmayan govde ("ol"->"öl" gibi), kisi/kısım onek tuzagi, harf disi degisiklik, yapi ve sayi degisikligi reddedilir
+    expect(await words({ q: 'ol' }, { q: 'öl' })).toBeNull()
+    expect(await words({ q: 'kisim' }, { q: 'kişim' })).toBeNull()
+    expect(await words({ q: 'dogru' }, { q: 'doğru.' })).toBeNull()
+    expect(await words({ q: 'dogru' }, { q: 'Doğru' })).toBeNull()
+    expect(await words({ q: 'dogru', answer: 0 }, { q: 'doğru', answer: 1 })).toBeNull()
+    expect(await words({ o: ['dogru', 'degil'] }, { o: ['değil', 'doğru'] })).toBeNull()
+    expect(await words({ o: ['dogru'] }, { o: ['doğru', 'x'] })).toBeNull()
+    expect(await words({ q: 'dogru' }, { q: 'dogru', extra: 'x' })).toBeNull()
+    expect(await words({ q: 'dogru' }, { q: 'doğru' })).toBeNull()
+
+    const pubPrepare = randomUUID(); await client.query("INSERT INTO public.roles(id,slug,name,is_system) VALUES($1,'pub-prepare','pub-prepare',true)",[pubPrepare]); await client.query("INSERT INTO public.role_permissions(role_id,permission) VALUES($1,'content.prepare')",[pubPrepare]); await client.query('INSERT INTO public.user_roles(user_id,role_id) VALUES($1,$2)',[publisher,pubPrepare])
+    const before = (await client.query('SELECT content,published_revision_id,is_active FROM public.questions WHERE id=$1',[turkishQuestion])).rows[0]
+    const base = before.published_revision_id
+    const restored = { ...before.content, question: 'Aşağıdaki ifadelerden hangisi doğrudur?', options: ['Öğrenci sınıfta IŞIK ölçümü yapar.', 'Gunes batar.', 'Deney yapilir.', 'Hepsi'], solution: 'Çözüm: öğrenci ölçüm yapar.' }
+    const call = 'public.publish_question_turkish_restoration($1,$2,$3,$4::jsonb,$5)'
+    const errMsg = async (fn, code, re) => { let caught; try { await fn() } catch (e) { caught = e } expect(caught?.code).toBe(code); expect(caught?.message).toMatch(re) }
+    // yetki: prepare tek basina yetmez; istemci rolune kapali
+    await err(() => rpc(call,[author,turkishQuestion,base,JSON.stringify(restored),randomUUID()]), '42501')
+    await err(() => userRpc(publisher,'aal2',call,[publisher,turkishQuestion,base,JSON.stringify(restored),randomUUID()]), '42501')
+    // taban revizyonun gecerli politikada APPROVED karari yoksa kapali
+    await errMsg(() => rpc(call,[publisher,turkishQuestion,base,JSON.stringify(restored),randomUUID()]), '22023', /APPROVED validation decision/)
+    const policy = (await client.query('SELECT required_policy_version FROM public.question_validation_runtime WHERE singleton')).rows[0].required_policy_version
+    const baseHash = (await client.query('SELECT content_sha256 FROM public.question_content_revisions WHERE id=$1',[base])).rows[0].content_sha256
+    await client.query("INSERT INTO public.question_validation_decisions(question_id,revision_id,content_sha256,policy_version,verdict,findings,rationale,run_id,decided_at) VALUES($1,$2,$3,$4,'APPROVED','[]','blind solvers agree',$5,clock_timestamp())",[turkishQuestion,base,baseHash,policy,randomUUID()])
+    // listede olmayan govde (gunes) ve harf disi degisiklik iki onayli yola gider
+    await errMsg(() => rpc(call,[publisher,turkishQuestion,base,JSON.stringify({ ...restored, options: ['Öğrenci sınıfta IŞIK ölçümü yapar.','Güneş batar.','Deney yapilir.','Hepsi'] }),randomUUID()]), '22023', /not a pure Turkish letter restoration/)
+    await errMsg(() => rpc(call,[publisher,turkishQuestion,base,JSON.stringify({ ...restored, answer: 1 }),randomUUID()]), '22023', /not a pure Turkish letter restoration/)
+    await errMsg(() => rpc(call,[publisher,turkishQuestion,base,JSON.stringify(before.content),randomUUID()]), '22023', /not a pure Turkish letter restoration/)
+    // yazim konulu soru kapsam disi
+    const spelling = (await client.query('SELECT content,published_revision_id FROM public.questions WHERE id=$1',[spellingTopicQuestion])).rows[0]
+    await errMsg(() => rpc(call,[publisher,spellingTopicQuestion,spelling.published_revision_id,JSON.stringify({ ...spelling.content, options:['doğru','değil','bugün','önce'] }),randomUUID()]), '22023', /spelling-topic question/)
+
+    // kapi acikken: devredilen karar yeni revizyonun ozetiyle eslesir
+    await client.query('UPDATE public.question_validation_runtime SET enforce_publish_gate=true WHERE singleton')
+    try {
+      const requestId = randomUUID()
+      const out = await rpc(call,[publisher,turkishQuestion,base,JSON.stringify(restored),requestId])
+      expect(out).toEqual(expect.objectContaining({ questionId: turkishQuestion, status: 'published', replayed: false }))
+      // anahtar sirasi: answer, options, question, solution
+      expect(out.words).toEqual(['Ogrenci>Öğrenci','sinifta>sınıfta','ISIK>IŞIK','olcumu>ölçümü','Asagidaki>Aşağıdaki','dogrudur>doğrudur','Cozum>Çözüm','ogrenci>öğrenci','olcum>ölçüm'])
+      const live = (await client.query('SELECT content,published_revision_id,is_active FROM public.questions WHERE id=$1',[turkishQuestion])).rows[0]
+      expect(live).toEqual({ content: restored, published_revision_id: out.revisionId, is_active: true })
+      const revisions = (await client.query('SELECT id,status,change_kind,base_revision_id,prepared_by,content_sha256 FROM public.question_content_revisions WHERE question_id=$1 ORDER BY revision_no',[turkishQuestion])).rows
+      expect(revisions.map((r) => [r.id, r.status])).toEqual([[base,'superseded'],[out.revisionId,'published']])
+      expect(revisions[1]).toEqual(expect.objectContaining({ change_kind:'edit', base_revision_id: base, prepared_by: publisher }))
+      expect((await client.query('SELECT count(*)::int AS n FROM public.question_revision_approvals WHERE revision_id=$1',[out.revisionId])).rows[0].n).toBe(0)
+      const decision = (await client.query('SELECT verdict,content_sha256,policy_version,rationale FROM public.question_validation_decisions WHERE revision_id=$1',[out.revisionId])).rows
+      expect(decision).toHaveLength(1)
+      expect(decision[0]).toEqual(expect.objectContaining({ verdict:'APPROVED', content_sha256: revisions[1].content_sha256, policy_version: policy }))
+      expect(decision[0].rationale).toContain(`Carried over from revision ${base}`)
+      expect((await client.query('SELECT count(*)::int AS n FROM public.question_revision_sources WHERE revision_id=$1',[out.revisionId])).rows[0].n).toBe(1)
+      expect((await client.query('SELECT base_revision_id,published_by,rule_version FROM public.question_turkish_restorations WHERE revision_id=$1',[out.revisionId])).rows[0]).toEqual({ base_revision_id: base, published_by: publisher, rule_version:'turkish-letter-restoration@1' })
+      expect((await client.query("SELECT count(*)::int AS n FROM public.question_governance_events WHERE revision_id=$1 AND event_type='published'",[out.revisionId])).rows[0].n).toBe(1)
+      // replay ayni sonucu dondurur, cogaltmaz; eski taban artik bayat
+      expect(await rpc(call,[publisher,turkishQuestion,base,JSON.stringify(restored),requestId])).toEqual(expect.objectContaining({ revisionId: out.revisionId, replayed: true }))
+      await errMsg(() => rpc(call,[publisher,turkishQuestion,base,JSON.stringify(restored),randomUUID()]), '22023', /stale or unknown revision base/)
+      // ic tablolar ve yardimci fonksiyonlar istemciye ve service_role'a kapali
+      expect((await client.query("SELECT has_table_privilege('service_role','public.question_turkish_restorations','SELECT') AS audit_read,has_table_privilege('service_role','public.question_turkish_restoration_stems','SELECT') AS stems_read,has_function_privilege('authenticated','public.publish_question_turkish_restoration(uuid,uuid,uuid,jsonb,uuid)','EXECUTE') AS client_rpc,has_function_privilege('service_role','public.question_turkish_restoration_words(jsonb,jsonb)','EXECUTE') AS helper")).rows[0]).toEqual({ audit_read:false, stems_read:false, client_rpc:false, helper:false })
+    } finally {
+      await client.query('UPDATE public.question_validation_runtime SET enforce_publish_gate=false WHERE singleton')
+    }
+  })
+
+  it('215: govde listesi ve kural JS aynasiyla birebir ayni; aracin kurdugu icerik RPC\'den gecer; migration tekrar uygulanabilir', async () => {
+    const { TURKISH_RESTORATION_STEMS, turkishRestorationWords } = await import('../scan-question-text-defects.mjs')
+    const { buildBatch, currentFromRevisionDetail } = await import('../prepare-question-revision-drafts.mjs')
+    await client.query(turkishRestorationMigration)
+    const rows = (await client.query('SELECT ascii_stem,turkish_stem FROM public.question_turkish_restoration_stems ORDER BY ascii_stem')).rows
+    expect(rows.map((r) => [r.ascii_stem, r.turkish_stem])).toEqual([...TURKISH_RESTORATION_STEMS].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+    const cases = [
+      [{ q: 'Asagidaki sinifta ISIK' }, { q: 'Aşağıdaki sınıfta IŞIK' }],
+      [{ q: 'Iliski ogrencilerin' }, { q: 'İlişki öğrencilerin' }],
+      [{ q: 'aşagidaki' }, { q: 'aşağıdaki' }],
+      [{ q: "Turkiye'nin dogru" }, { q: "Turkiye'nin doğru" }],
+      [{ c: { m: ['dogru', null], k: 2 } }, { c: { m: ['doğru', null], k: 2 } }],
+      [{ q: 'SINIF' }, { q: 'SINIF' }],
+      [{ q: 'SINIF' }, { q: 'SİNİF' }],
+      [{ q: 'ol' }, { q: 'öl' }],
+      [{ q: 'kisim' }, { q: 'kişim' }],
+      [{ q: 'dogru' }, { q: 'doğru.' }],
+      [{ q: 'dogru' }, { q: 'Doğru' }],
+      [{ q: 'dogru', a: 0 }, { q: 'doğru', a: 1 }],
+      [{ o: ['dogru', 'degil'] }, { o: ['değil', 'doğru'] }],
+      [{ q: 'dogru' }, { q: 'dog\u0306ru' }],
+      [{ q: 'dogru' }, { q: 'doğru', x: 1 }],
+      [{ q: 1 }, { q: '1' }],
+    ]
+    for (const [a, b] of cases) {
+      const sql = (await client.query('SELECT public.question_turkish_restoration_words($1::jsonb,$2::jsonb) AS w', [JSON.stringify(a), JSON.stringify(b)])).rows[0].w
+      expect(sql, JSON.stringify([a, b])).toEqual(turkishRestorationWords(a, b))
+    }
+    // aracin kurdugu 215 ogesi RPC'den gecer
+    const q = (await client.query('SELECT id,game,category,subcategory,topic,difficulty,level_tag,exam_ref,is_boss,is_active,content,published_revision_id FROM public.questions WHERE id=$1',[toolQuestion])).rows[0]
+    const detail = await rpc('public.get_question_content_revision($1,$2)',[publisher,q.published_revision_id])
+    const current = currentFromRevisionDetail({ question: q, detail, fallbackOutcomes: [] })
+    const [item] = buildBatch({ proposals: [{ ref:'T-215', questionId: toolQuestion, finding:{ code:'ASCII_DIACRITIC_LOSS', severity:'P2', summary:'karakter kaybi' }, evidence:['scan'], changeKind:'edit', patch:{ question:'Üçgenin ic acilari toplamı kac derecedir?' }, rationale:'yalniz Turkce harf' }], currentById: new Map([[toolQuestion, current]]) })
+    expect(item).toEqual(expect.objectContaining({ status:'ready', lane:'turkish_restoration', words:['Ucgenin>Üçgenin','toplami>toplamı'] }))
+    const policy = (await client.query('SELECT required_policy_version FROM public.question_validation_runtime WHERE singleton')).rows[0].required_policy_version
+    await client.query("INSERT INTO public.question_validation_decisions(question_id,revision_id,content_sha256,policy_version,verdict,findings,rationale,run_id,decided_at) SELECT $1,id,content_sha256,$2,'APPROVED','[]','ok',$3,clock_timestamp() FROM public.question_content_revisions WHERE id=$4",[toolQuestion,policy,randomUUID(),item.baseRevisionId])
+    const out = await rpc('public.publish_question_turkish_restoration($1,$2,$3,$4::jsonb,$5)',[publisher,toolQuestion,item.baseRevisionId,JSON.stringify(item.payload.content),item.requestId])
+    expect(out).toEqual(expect.objectContaining({ status:'published', words:item.words }))
+    expect((await client.query('SELECT content FROM public.questions WHERE id=$1',[toolQuestion])).rows[0].content).toEqual(item.payload.content)
   })
 })

@@ -29,11 +29,17 @@
  * yayin, ret veya karantina otoritesi degildir. Bu betik yalniz taslak acar;
  * iki insan onayi RPC tarafinda zorunludur (hazirlayan kendi taslagini
  * inceleyemez, stage 1 ve stage 2 ayni kisi olamaz).
+ * Tek istisna (migration 215, owner karari): degisikligi YALNIZ listelenmis
+ * govdelerin Turkce harf geri getirmesi olan `edit` ogeleri (hat
+ * turkish_restoration) --apply ile `publish_question_turkish_restoration`
+ * uzerinden iki onaysiz yayimlanir. Kanit DB'dedir (harf harf, govde listesi,
+ * kapsam disi konular, tabanin APPROVED dogrulama karari); buradaki JS aynasi
+ * yalniz hat secimi ve inceleme sayfasi icindir.
  *
  * Kullanim:
  *   npm run revision:drafts -- --proposals secure/revision-proposals.json --user-id <uuid>
  *   npm run revision:drafts -- --proposals ... --rows secure/16-flawed-questions.json   # DB yoksa cevrimdisi onizleme
- *   npm run revision:drafts -- --proposals ... --user-id <uuid> --apply                 # taslaklari ac
+ *   npm run revision:drafts -- --proposals ... --user-id <uuid> --apply                 # taslaklari ac; 215 hattini yayimla
  * Secenekler: --env .env.local  --out-dir secure/revision-drafts/<batch>
  *
  * Oneri dosyasi: database/__fixtures__/question-revision-proposals/ altindaki
@@ -44,7 +50,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { scanQuestion } from './scan-question-text-defects.mjs'
+import { scanQuestion, turkishRestorationExclusion, turkishRestorationWords } from './scan-question-text-defects.mjs'
 
 export const PROPOSALS_SCHEMA = 'question-revision-proposals@1'
 // Payload'da tasinabilen icerik alanlari (106 + 110 `coach`). `coach` (kurate
@@ -340,13 +346,30 @@ export function buildBatch({ proposals, currentById, offline = false }) {
   return proposals.map((proposal) => {
     const qid = uid(proposal.questionId)
     const current = currentById.get(qid) ?? null
-    const item = { ref: proposal.ref, questionId: qid, changeKind: proposal.changeKind, finding: proposal.finding, evidence: proposal.evidence, rationale: proposal.rationale, status: 'ready', reasons: [], notes: [], diff: [], payload: null, baseRevisionId: current?.baseRevisionId ?? null, requestId: null }
+    const item = { ref: proposal.ref, questionId: qid, changeKind: proposal.changeKind, finding: proposal.finding, evidence: proposal.evidence, rationale: proposal.rationale, status: 'ready', lane: 'draft', words: null, reasons: [], notes: [], diff: [], payload: null, baseRevisionId: current?.baseRevisionId ?? null, requestId: null }
     if (proposal.status === 'needs_patch') { item.status = 'needs_patch'; item.questionId = proposal.questionId ?? null; item.reasons.push('oneri henuz doldurulmadi (status: needs_patch)'); return item }
     if (!current) { item.status = 'blocked'; item.reasons.push('soru bulunamadi (DB veya --rows)'); return item }
     if (current.isActive === false && proposal.changeKind !== 'retire') item.notes.push('soru zaten pasif')
     const built = buildRevisionPayload({ current, proposal })
     item.payload = built.payload; item.diff = diffContent(built.before, built.after); item.notes.push(...built.notes)
     let errors = built.errors
+    // Turkce harf duzeltmesi hatti (215): kazanim ve kaynak taban revizyondan
+    // tasindigi icin esleme eksigi bu hatti engellemez.
+    const mappingError = (x) => x.startsWith('kazanim eslemesi yok') || x.startsWith('outcomes:')
+    const words = proposal.changeKind === 'edit' && built.payload && errors.every(mappingError)
+      ? turkishRestorationWords(current.content, built.payload.content)
+      : null
+    if (words?.length) {
+      const exclusion = turkishRestorationExclusion({ game: current.metadata?.game, category: current.metadata?.category, content: current.content })
+        ?? (current.isActive === false ? 'soru pasif' : null)
+      if (exclusion) item.notes.push(`yalniz Turkce harf duzeltmesi, ama iki onayli yol: ${exclusion}`)
+      else {
+        item.lane = 'turkish_restoration'
+        item.words = words
+        errors = errors.filter((x) => !mappingError(x))
+        item.notes.push('hat: iki onaysiz Turkce harf duzeltmesi (215); kazanim ve kaynak taban revizyondan tasinir, tabanin APPROVED dogrulama karari devralinir')
+      }
+    }
     if (offline) {
       // kazanim/kaynak DB'den gelecek; cevrimdisi bunlari not olarak ayir
       const pending = errors.filter((x) => x.startsWith('kazanim eslemesi yok') || x.startsWith('outcomes:'))
@@ -356,7 +379,10 @@ export function buildBatch({ proposals, currentById, offline = false }) {
     } else if (!current.baseRevisionId) errors.push('yayimli revizyon yok (published_revision_id bos)')
     const gate = scanGate({ payload: built.payload, current, changeKind: proposal.changeKind })
     item.notes.push(...gate.notes.map((n) => `tarama: ${n}`))
-    errors.push(...gate.blocking.map((b) => `tarama ERROR: ${b}`))
+    // Harf geri getirmesi yeni kusur ekleyemez; kalan ERROR'lar tabanda da vardir
+    // ve ayri bir oneriyle (iki onayli yol) ele alinir.
+    if (item.lane === 'turkish_restoration') item.notes.push(...gate.blocking.map((b) => `tarama ERROR (tabanda da var, ayri oneriyle ele alin): ${b}`))
+    else errors.push(...gate.blocking.map((b) => `tarama ERROR: ${b}`))
     if (errors.length) { item.status = 'blocked'; item.reasons.push(...errors) }
     else if (offline) item.status = 'preview' // kazanim/kaynak/taban DB'den gelmeden uygulanamaz
     else item.requestId = draftRequestId(qid, built.payload)
@@ -373,14 +399,17 @@ export function renderReviewSheet({ batch, items, mode = 'dry-run' }) {
   const counts = items.reduce((a, i) => ({ ...a, [i.status]: (a[i.status] ?? 0) + 1 }), {})
   const lines = []
   lines.push(`# Taslak revizyon paketi: ${batch?.title ?? ''}`, '')
-  lines.push(`Mod: ${mode}. Ogeler: ${items.length} (ready ${counts.ready ?? 0}, preview ${counts.preview ?? 0}, blocked ${counts.blocked ?? 0}, needs_patch ${counts.needs_patch ?? 0}${counts.applied ? `, applied ${counts.applied}` : ''}).`, '')
+  const lanes = items.filter((i) => i.lane === 'turkish_restoration').length
+  lines.push(`Mod: ${mode}. Ogeler: ${items.length} (ready ${counts.ready ?? 0}, preview ${counts.preview ?? 0}, blocked ${counts.blocked ?? 0}, needs_patch ${counts.needs_patch ?? 0}${counts.applied ? `, applied ${counts.applied}` : ''}${counts.published ? `, published ${counts.published}` : ''}).`, '')
   lines.push('Bu sayfadaki hicbir oneri karar degildir. Her taslak icin iki bagimsiz insan onayi', '(stage 1 ve stage 2, hazirlayandan ve birbirinden farkli kisiler) ve ardindan yayin', 'RPC\'si gerekir. Pasife alma yalniz `retire` taslaginin yayimiyla olur.', '')
+  if (lanes) lines.push(`Istisna: "Turkce harf duzeltmesi (215)" hattindaki ${lanes} oge --apply ile iki onaysiz yayimlanir.`, 'DB degisikligin yalniz listelenmis govdelerin ASCII->Turkce harf geri getirmesi oldugunu harf harf', 'kanitlar; kanitlanamazsa oge reddedilir ve iki onayli yola doner.', '')
   if (batch?.sourceRef) lines.push(`Kaynak: ${batch.sourceRef}`, '')
   for (const it of items) {
     lines.push(`## ${it.ref} · ${it.questionId}`, '')
     lines.push(`- Durum: **${it.status}**${it.revisionId ? ` · revizyon ${it.revisionId} (no ${it.revisionNo ?? '?'})` : ''}`)
     lines.push(`- Bulgu: ${it.finding.severity} ${it.finding.code}: ${it.finding.summary}`)
     lines.push(`- Degisiklik turu: ${it.changeKind}`)
+    if (it.lane === 'turkish_restoration') lines.push(`- Hat: **Turkce harf duzeltmesi (215), iki onaysiz yayin** · ${(it.words ?? []).join(', ')}`)
     if (it.baseRevisionId) lines.push(`- Taban revizyon: ${it.baseRevisionId}`)
     if (it.payload?.outcomes?.length) lines.push(`- Kazanim eslemesi (degismez): ${it.payload.outcomes.map((o) => `${o.outcomeId} (w ${o.weight}${o.primary ? ', primary' : ''})`).join('; ')}`)
     if (it.evidence?.length) lines.push(`- Kanit: ${it.evidence.join('; ')}`)
@@ -479,6 +508,12 @@ if (isMain) {
   if (apply) {
     for (const it of items) {
       if (it.status !== 'ready') continue
+      if (it.lane === 'turkish_restoration') {
+        const { data, error } = await db.rpc('publish_question_turkish_restoration', { p_user_id: userId, p_question_id: it.questionId, p_base_revision_id: it.baseRevisionId, p_content: it.payload.content, p_request_id: it.requestId })
+        if (error) { it.status = 'blocked'; it.reasons.push(`RPC (215): ${error.code ?? ''} ${error.message ?? ''}`.trim()); continue }
+        it.status = 'published'; it.revisionId = data?.revisionId ?? null; it.replayed = data?.replayed === true
+        continue
+      }
       const { data, error } = await db.rpc('create_question_content_revision', { p_user_id: userId, p_question_id: it.questionId, p_base_revision_id: it.baseRevisionId, p_payload: it.payload, p_request_id: it.requestId })
       if (error) { it.status = 'blocked'; it.reasons.push(`RPC: ${error.code ?? ''} ${error.message ?? ''}`.trim()); continue }
       it.status = 'applied'; it.revisionId = data?.revisionId ?? null; it.revisionNo = data?.revisionNo ?? null; it.replayed = data?.replayed === true
@@ -491,8 +526,10 @@ if (isMain) {
   writeFileSync(join(outDir, 'review-sheet.md'), renderReviewSheet({ batch, items, mode }))
   const counts = items.reduce((a, i) => ({ ...a, [i.status]: (a[i.status] ?? 0) + 1 }), {})
   console.log(`Mod: ${mode}  Ogeler: ${items.length}  ${JSON.stringify(counts)}`)
-  for (const it of items) if (it.status !== 'ready' && it.status !== 'applied' && it.status !== 'preview') console.log(`  ${it.status.padEnd(11)} ${it.ref}: ${it.reasons.join(' | ')}`)
+  for (const it of items) if (!['ready', 'applied', 'published', 'preview'].includes(it.status)) console.log(`  ${it.status.padEnd(11)} ${it.ref}: ${it.reasons.join(' | ')}`)
   for (const it of items) if (it.status === 'applied') console.log(`  applied     ${it.ref}: revizyon ${it.revisionId} no ${it.revisionNo}${it.replayed ? ' (replay)' : ''}`)
+  for (const it of items) if (it.status === 'published') console.log(`  published   ${it.ref}: Turkce harf duzeltmesi (215) revizyon ${it.revisionId}${it.replayed ? ' (replay)' : ''}`)
+  for (const it of items) if (it.lane === 'turkish_restoration' && it.status === 'ready') console.log(`  215 hatti   ${it.ref}: --apply ile iki onaysiz yayimlanir (${(it.words ?? []).join(', ')})`)
   console.log(`Yazildi: ${outDir}/{report.json,payloads.json,review-sheet.md}`)
   process.exit(apply && items.some((i) => i.status === 'blocked') ? 1 : 0)
 }

@@ -276,3 +276,53 @@ describe('buildBatch / renderReviewSheet', () => {
     expect(diffContent({ options: ['a', 'b', 'c'], answer: 0 }, { options: ['a', 'B', 'c'], answer: 0 })).toEqual([{ field: 'options[1]', before: 'b', after: 'B' }])
   })
 })
+
+describe('Turkce harf duzeltmesi hatti (migration 215)', () => {
+  const fen = (over = {}) => ({
+    ...current(),
+    content: { question: 'Asagidaki ifadelerden hangisi dogrudur?', options: ['Ogrenci sinifta olcum yapar.', 'Gunes batar.', 'Deney yapilir.', 'Hepsi'], answer: 0, solution: 'Cozum: ogrenci olcum yapar.' },
+    metadata: { ...current().metadata, game: 'fen', category: 'fizik', topic: undefined },
+    ...over,
+  })
+  const restore = { question: 'Aşağıdaki ifadelerden hangisi doğrudur?', options: ['Öğrenci sınıfta ölçüm yapar.', 'Gunes batar.', 'Deney yapilir.', 'Hepsi'] }
+  const run = (cur, patch = restore, over = {}) => buildBatch({ proposals: [proposal({ changeKind: 'edit', patch, ...over })], currentById: new Map([[Q, cur]]) })[0]
+
+  it('yalniz listelenmis govdelerin harf duzeltmesi 215 hattina gider; kazanim eksigi bu hatti engellemez', () => {
+    const it1 = run(fen())
+    expect(it1).toEqual(expect.objectContaining({ status: 'ready', lane: 'turkish_restoration' }))
+    expect(it1.words).toEqual(['Ogrenci>Öğrenci', 'sinifta>sınıfta', 'olcum>ölçüm', 'Asagidaki>Aşağıdaki', 'dogrudur>doğrudur'])
+    expect(it1.requestId).toMatch(/^[0-9a-f-]{36}$/)
+    const unmapped = run(fen({ outcomes: [] }))
+    expect(unmapped).toEqual(expect.objectContaining({ status: 'ready', lane: 'turkish_restoration' }))
+    expect(renderReviewSheet({ batch: { title: 't' }, items: [it1] })).toContain('Turkce harf duzeltmesi (215), iki onaysiz yayin')
+  })
+
+  it('listede olmayan govde, harf disi degisiklik veya cevap degisikligi iki onayli yolda kalir', () => {
+    expect(run(fen(), { ...restore, options: ['Öğrenci sınıfta ölçüm yapar.', 'Güneş batar.', 'Deney yapilir.', 'Hepsi'] }).lane).toBe('draft')
+    expect(run(fen(), { ...restore, question: 'Aşağıdaki ifadelerden hangisi doğrudur ?' }).lane).toBe('draft')
+    expect(run(fen(), { ...restore, answer: 1 }, { changeKind: 'correct_answer' }).lane).toBe('draft')
+    // esleme eksigi iki onayli yolda blok olarak kalir
+    expect(run(fen({ outcomes: [] }), { ...restore, question: 'Aşağıdaki ifadelerden hangisi doğru ?' }).status).toBe('blocked')
+  })
+
+  it('kapsam disi: yazim konulu kok, yazim_kurallari, wordquest ve pasif soru', () => {
+    const spelling = run(fen({ content: { ...fen().content, question: 'Asagidakilerin hangisinde yazim yanlisi vardir?' } }), { question: 'Aşağıdakilerin hangisinde yazim yanlisi vardir?' })
+    expect(spelling.lane).toBe('draft')
+    expect(spelling.notes.join(' ')).toContain('iki onayli yol: kok yazim/noktalama/ses bilgisi konulu')
+    expect(run(fen({ metadata: { ...fen().metadata, game: 'turkce', category: 'yazim_kurallari' } })).lane).toBe('draft')
+    expect(run(fen({ metadata: { ...fen().metadata, game: 'wordquest', category: 'vocabulary' } })).lane).toBe('draft')
+    const inactive = run(fen({ isActive: false }))
+    expect(inactive.lane).toBe('draft')
+    expect(inactive.notes.join(' ')).toContain('soru pasif')
+  })
+
+  it('tabanda kalan tarama ERROR\'u 215 hattini bloklamaz, not olur; iki onayli yolda bloklar', () => {
+    const cur = fen({ content: { ...fen().content, solution: 'Cozum: kisi basina bir olcum.' } })
+    const lane = run(cur)
+    expect(lane).toEqual(expect.objectContaining({ status: 'ready', lane: 'turkish_restoration' }))
+    expect(lane.notes.join(' ')).toContain('tabanda da var, ayri oneriyle ele alin')
+    const draft = run(cur, { ...restore, solution: 'Çözüm: kisi başına bir ölçüm yapılır.' })
+    expect(draft.lane).toBe('draft')
+    expect(draft.status).toBe('blocked')
+  })
+})
