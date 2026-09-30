@@ -2,10 +2,13 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { DiagnosticExplainerDialog } from '../diagnostic-explainer-dialog'
 import { useAdaptiveDiagnostic } from '@/lib/hooks/use-adaptive-diagnostic'
+import { useSocialPilot } from '@/lib/hooks/use-social-pilot'
 
 vi.mock('@/lib/hooks/use-adaptive-diagnostic', () => ({ useAdaptiveDiagnostic: vi.fn() }))
+vi.mock('@/lib/hooks/use-social-pilot', () => ({ useSocialPilot: vi.fn() }))
 
 const mockedUseAdaptiveDiagnostic = vi.mocked(useAdaptiveDiagnostic)
+const mockedUseSocialPilot = vi.mocked(useSocialPilot)
 
 function diagnosticResult(overrides: Record<string, unknown> = {}) {
   return {
@@ -33,6 +36,8 @@ function diagnosticResult(overrides: Record<string, unknown> = {}) {
 describe('DiagnosticExplainerDialog', () => {
   beforeEach(() => {
     mockedUseAdaptiveDiagnostic.mockReset()
+    mockedUseSocialPilot.mockReset()
+    mockedUseSocialPilot.mockReturnValue({ response: null } as never)
     Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
       configurable: true,
       value: function showModal(this: HTMLDialogElement) { this.setAttribute('open', '') },
@@ -84,5 +89,16 @@ describe('DiagnosticExplainerDialog', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Ölçüm bilgisi şu anda alınamadı.')
     expect(refresh).toHaveBeenCalledTimes(1)
+  })
+  test('Sosyal pilotunu resmî TYT tanılamasından ayrı ve sınırlı kapsamla açar', () => {
+    mockedUseAdaptiveDiagnostic.mockReturnValue(diagnosticResult({
+      response: { supported: false, policy: null }, supported: false,
+    }) as never)
+    mockedUseSocialPilot.mockReturnValue({ response: { supported: true, session: null } } as never)
+    render(<DiagnosticExplainerDialog game="sosyal" examRef="TYT" userId="student" onClose={vi.fn()} />)
+    expect(mockedUseSocialPilot).toHaveBeenCalledWith('student')
+    expect(screen.getByRole('link', { name: 'Dört alanlı Sosyal keşfini aç' })).toHaveAttribute('href', '/arena/tani/sosyal-pilot')
+    expect(screen.getByText(/tam TYT değerlendirmesi veya hâkimiyet puanı değildir/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Ölçüm ekranına geç' })).not.toBeInTheDocument()
   })
 })
