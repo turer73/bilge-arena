@@ -237,6 +237,14 @@ describe('currentFromRows / snapshotFromExport', () => {
     })
     expect(c.outcomes).toEqual([{ outcomeId: OUTCOME, weight: 1, primary: true }]); expect(c.source).toBeNull()
   })
+  it('baseApproved: taban revizyonda onaylanmis bir asama varsa true (218 TYT sosyal korumasi icin)', () => {
+    const base = { question: { id: Q, game: 'sosyal', category: 'tarih', difficulty: 2, exam_ref: 'TYT', is_active: true, published_revision_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' } }
+    const rev = (approvals) => ({ revision: { revisionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', content: { question: 'q' }, approvals } })
+    expect(currentFromRevisionDetail({ ...base, detail: rev([{ stage: 1, decision: 'approved' }]) }).baseApproved).toBe(true)
+    expect(currentFromRevisionDetail({ ...base, detail: rev([{ stage: 1, decision: 'rejected' }]) }).baseApproved).toBe(false)
+    expect(currentFromRevisionDetail({ ...base, detail: rev([]) }).baseApproved).toBe(false)
+    expect(currentFromRevisionDetail({ ...base, detail: null }).baseApproved).toBe(false)
+  })
   it('dbLookupIds: iskelet ogeleri ve uuid olmayan degerler DB sorgusuna gitmez (Codex #526)', () => {
     expect(dbLookupIds([proposal(), { ref: 'S', status: 'needs_patch', questionId: 'TODO', finding: { summary: 's' } }, proposal({ questionId: Q.toUpperCase() })])).toEqual([Q])
   })
@@ -314,6 +322,13 @@ describe('Turkce harf duzeltmesi hatti (migration 215)', () => {
     const inactive = run(fen({ isActive: false }))
     expect(inactive.lane).toBe('draft')
     expect(inactive.notes.join(' ')).toContain('soru pasif')
+    // 218: tabani onayli TYT sosyal sorusu onayli yoldan gider; onaysiz olan ya da TYT disi olan hatta kalir
+    const social = (over = {}) => fen({ metadata: { ...fen().metadata, game: 'sosyal', category: 'tarih', examRef: 'TYT' }, ...over })
+    const approvedSocial = run(social({ baseApproved: true }))
+    expect(approvedSocial.lane).toBe('draft')
+    expect(approvedSocial.notes.join(' ')).toContain('onayli TYT sosyal revizyonu (218)')
+    expect(run(social()).lane).toBe('turkish_restoration')
+    expect(run(fen({ metadata: { ...fen().metadata, game: 'sosyal', category: 'tarih', examRef: 'AYT' }, baseApproved: true })).lane).toBe('turkish_restoration')
   })
 
   it('tabanda kalan tarama ERROR\'u 215 hattini bloklamaz, not olur; iki onayli yolda bloklar', () => {
