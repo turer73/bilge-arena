@@ -1,5 +1,9 @@
 # Sosyal pilotu — gerçek taslak ve ham kanıt adımı
 
+**Güncel ek:** [kaynak incelemesi ve kazanım bağları](social-pilot-source-outcome-progress-20261001.md).
+Aşağıdaki 16:03 UTC tablosu tarihsel ilk taslak adımıdır; sonraki turda 17 iç
+beceri bağı eklenmiştir. Bu yeni adım da yayın veya kaynak kabulü değildir.
+
 1 Ekim 2026; son DB doğrulaması **16:03:35 UTC**. Önceki
 [yerel v2 tesliminden](social-pilot-review-handoff-20261001.md) sonra aşağıdaki
 sınırlı canlı işlemler yapıldı. **Yeni içerik yayımlanmadı.**
