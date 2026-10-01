@@ -194,3 +194,19 @@ Yeni DB revizyonu/publish/pin/source acceptance oluşturulmadı; eski oynanmış
 kayıtlar değişmedi. Bu kontrol yerel export'a karşıdır, yeni canlı doğrulama
 değildir. Eski 12/12 kaynak raporları yeni metinlere taşınmadı. Ayrıntı:
 [Ek düzeltmeler ve 24 adayın durumu](social-pilot-correction-followup-20261001.md).
+
+## 1 Ekim — yeni metinlerin iki-model denetimi
+
+17 düzeltme preview'ı Gemini Pro ve DeepSeek V4 Pro ile mevcut orkestratörden
+geçirildi. 170 gerçek/mantıksal çağrıda 0 başarısız sonuç; 102/102 kör örnek
+anahtarla ve 34/34 çözümden çıkarılan indeks anahtarla eşleşti. İki modelde de
+17/17 `APPROVED` AI etiketi üretildi. Model kararları yayın izni değildir.
+
+Yeni içerik, eski DB UUID'sine değil yerel-preview referansına ve sıralı JSON
+fingerprint'ine bağlı tutuldu. 13 değişen çekirdek iddia için kaynak spot kontrolü
+yenilendi; dört coğrafya kaydı önceki aynı gün incelemesine dayanır. Tam kaynak
+kabulü, müfredat/psikometri kapanışı veya yeni DB revizyonu oluşturulmadı.
+Kaynak kullanım koşulları ayrıca kaydedildi. Dört ilgili dosyada 77 test geçti.
+
+Ham koşular ve birleşik rapor yalnız özel `secure/` klasöründedir. Ayrıntı:
+[Yeni metinlerin iki-model kalite kontrolü](social-pilot-correction-audit-20261001.md).

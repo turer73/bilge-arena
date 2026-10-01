@@ -1,5 +1,9 @@
 # Sosyal pilot: ek düzeltmeler ve 24 adayın durumu
 
+Bu paketteki 17 yeni metnin ardından tamamlanan iki-model denetimi:
+[Gemini Pro / DeepSeek V4 Pro kontrolü](social-pilot-correction-audit-20261001.md).
+Bu sonuçlar kaynak kabulü veya canlı yayına dönüştürülmedi.
+
 ## Sonuç
 
 1 Ekim 2026'da ilk 10 öneriye **7 kaynak destekli düzeltme önerisi** eklendi.
