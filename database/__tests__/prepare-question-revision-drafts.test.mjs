@@ -6,7 +6,9 @@
  * inceleme sayfasi burada kilitlenir. Gercek RPC kabulu
  * question-content-governance-postgres.integration.test.mjs icinde.
  */
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -15,6 +17,7 @@ import {
   buildBatch,
   buildRevisionPayload,
   currentFromRevisionDetail,
+  contentFingerprint,
   dbLookupIds,
   diffContent,
   draftRequestId,
@@ -248,6 +251,49 @@ describe('currentFromRows / snapshotFromExport', () => {
 })
 
 describe('buildBatch / renderReviewSheet', () => {
+  it('pinli oneri yalniz incelenen revizyon VE tam icerikte kurulur; eski oneriler uyumludur', () => {
+    const c = current()
+    const p = proposal({ expectedBase: { revisionId: c.baseRevisionId.toUpperCase(), contentFingerprint: contentFingerprint(c.content) } })
+    expect(validateProposal(p)).toEqual([])
+    const make = (value, prop = p) => buildBatch({ proposals: [prop], currentById: new Map([[Q, value]]), offline: true })[0]
+    expect(make(c).status).toBe('preview')
+    expect(make({ ...c, baseRevisionId: Q }).status).toBe('blocked')
+    expect(make({ ...c, content: { ...c.content, solution: 'Başka açıklama.' } }).status).toBe('blocked')
+    expect(make(c, proposal()).status).toBe('preview')
+    expect(make(c, proposal({ expectedBase: null })).status).toBe('blocked')
+  })
+  it('canonical JSON fingerprint anahtar sirasindan bagimsizdir, noktalama ve tum icerigi korur', () => {
+    expect(contentFingerprint({ a: { x: 1, y: 2 }, b: ['-10'] })).toBe(contentFingerprint({ b: ['-10'], a: { y: 2, x: 1 } }))
+    expect(contentFingerprint({ a: '-10' })).not.toBe(contentFingerprint({ a: '10' }))
+    for (const expectedBase of [{}, { revisionId: Q, contentFingerprint: 'x' }, { revisionId: Q, contentFingerprint: 'a'.repeat(64), extra: true }]) {
+      expect(validateProposal(proposal({ expectedBase })).some(e => e.includes('.expectedBase:'))).toBe(true)
+    }
+  })
+  it('dis aktarim metadata zorlugu/sinavi aynen korur, eski satir icin fallback kalir', () => {
+    const s = snapshotFromExport({ rows: [{ id: Q, game: 'sosyal', category: 'tarih', difficulty: 5, exam_ref: 'TYT', topic: 'Konu', content: {} }] }).get(Q)
+    expect(s.metadata).toEqual(expect.objectContaining({ difficulty: 5, examRef: 'TYT', topic: 'Konu' }))
+    expect(snapshotFromExport({ rows: [{ id: Q, content: {} }] }).get(Q).metadata.difficulty).toBe(3)
+  })
+  it('--offline ortamda DB anahtari olsa da yalniz dosyadan preview uretir; apply ve eksik rows reddedilir', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'bilge-revision-offline-'))
+    try {
+      const c = current()
+      const proposalsPath = join(dir, 'proposals.json'); const rowsPath = join(dir, 'rows.json')
+      writeFileSync(proposalsPath, JSON.stringify({ schemaVersion: PROPOSALS_SCHEMA, batch: { title: 'CLI test' }, proposals: [proposal()] }))
+      writeFileSync(rowsPath, JSON.stringify({ rows: [{ id: Q, game: c.metadata.game, category: c.metadata.category, difficulty: 2, content: c.content, published_revision_id: c.baseRevisionId }] }))
+      const script = fileURLToPath(new URL('../prepare-question-revision-drafts.mjs', import.meta.url))
+      const run = (...args) => spawnSync(process.execPath, [script, '--proposals', proposalsPath, '--out-dir', join(dir, 'out'), ...args], {
+        encoding: 'utf8', timeout: 10000, env: { ...process.env, SUPABASE_URL: 'https://example.invalid', SUPABASE_SERVICE_ROLE_KEY: 'test-not-a-secret' },
+      })
+      const result = run('--offline', '--rows', rowsPath)
+      expect(result.status).toBe(0)
+      const report = JSON.parse(readFileSync(join(dir, 'out', 'report.json'), 'utf8'))
+      expect(report.mode).toBe('offline-preview'); expect(report.items[0].status).toBe('preview')
+      expect(report.items[0].payload.metadata.difficulty).toBe(2)
+      expect(run('--offline', '--rows', rowsPath, '--apply').status).toBe(2)
+      expect(run('--offline').status).toBe(2)
+    } finally { rmSync(dir, { recursive: true, force: true }) }
+  })
   it('cevrimdisi onizleme: oge preview (uygulanamaz), kazanim eksigi pending_db notu; canli modda blok', () => {
     const c = { ...current(), outcomes: [], baseRevisionId: null }
     const offline = buildBatch({ proposals: [proposal()], currentById: new Map([[Q, c]]), offline: true })[0]

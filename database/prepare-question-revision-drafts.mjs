@@ -35,6 +35,7 @@
  *   npm run revision:drafts -- --proposals ... --rows secure/16-flawed-questions.json   # DB yoksa cevrimdisi onizleme
  *   npm run revision:drafts -- --proposals ... --user-id <uuid> --apply                 # taslaklari ac
  * Secenekler: --env .env.local  --out-dir secure/revision-drafts/<batch>
+ *   --offline --rows <dosya>: ortamda DB anahtari olsa da ag baglantisi kurmaz.
  *
  * Oneri dosyasi: database/__fixtures__/question-revision-proposals/ altindaki
  * example.json (calisan ornek) ve pilot1-4.skeleton.json (16 soru iskeleti).
@@ -79,6 +80,9 @@ export function canonicalize(value) {
 }
 const canon = (v) => JSON.stringify(canonicalize(v))
 export const sameContent = (a, b) => canon(a) === canon(b)
+// Bu karma PostgreSQL jsonb::text/content_sha256 karmasi DEGILDIR. Onerinin
+// incelenen tam icerige baglanmasi icin sirali, bosluksuz JSON UTF-8 karmasidir.
+export const contentFingerprint = (content) => createHash('sha256').update(canon(content)).digest('hex')
 // Yazim esdegerligi: NFC, Turkce kucuk harf, yalniz Turkce harf diakritigini
 // kaldirma (Türkiye ~ Turkiye, ışık ~ isik, hâlâ ~ hala), tirnak/kesme isareti
 // bicimlerini tekle indirme (’ ~ '), bosluk dizilerini tek bosluga indirme.
@@ -121,6 +125,15 @@ export function validateProposal(p, index = 0) {
     return errors
   }
   if (typeof p.questionId !== 'string' || !UUID_RE.test(p.questionId)) errors.push(`${at}.questionId: uuid degil`)
+  if (p.expectedBase !== undefined) {
+    const b = p.expectedBase
+    if (!b || typeof b !== 'object' || Array.isArray(b)
+      || Object.keys(b).sort().join(',') !== 'contentFingerprint,revisionId'
+      || typeof b.revisionId !== 'string' || !UUID_RE.test(b.revisionId)
+      || typeof b.contentFingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(b.contentFingerprint)) {
+      errors.push(`${at}.expectedBase: revisionId uuid ve contentFingerprint (canonical JSON SHA-256) zorunlu`)
+    }
+  }
   const f = p.finding
   if (!f || typeof f !== 'object') errors.push(`${at}.finding: zorunlu`)
   else {
@@ -204,7 +217,10 @@ export function snapshotFromExport(raw) {
     const row = item?.row && typeof item.row === 'object' ? item.row : item
     const id = row?.id ?? row?.questionId ?? row?.question_id
     if (!id) continue
-    out.set(uid(String(id)), { ref: item?.code ?? null, questionId: uid(String(id)), content: row.content ?? null, game: row.game ?? null, category: row.category ?? null, publishedRevisionId: uid(row.published_revision_id ?? row.revision_id ?? null) })
+    out.set(uid(String(id)), { ref: item?.code ?? null, questionId: uid(String(id)), content: row.content ?? null, game: row.game ?? null, category: row.category ?? null, publishedRevisionId: uid(row.published_revision_id ?? row.revision_id ?? null), metadata: {
+      game: row.game, category: row.category, subcategory: row.subcategory ?? undefined, topic: row.topic ?? undefined,
+      difficulty: row.difficulty ?? 3, levelTag: row.level_tag ?? undefined, examRef: row.exam_ref ?? undefined, isBoss: row.is_boss ?? undefined,
+    } })
   }
   return out
 }
@@ -341,8 +357,17 @@ export function buildBatch({ proposals, currentById, offline = false }) {
     const qid = uid(proposal.questionId)
     const current = currentById.get(qid) ?? null
     const item = { ref: proposal.ref, questionId: qid, changeKind: proposal.changeKind, finding: proposal.finding, evidence: proposal.evidence, rationale: proposal.rationale, status: 'ready', reasons: [], notes: [], diff: [], payload: null, baseRevisionId: current?.baseRevisionId ?? null, requestId: null }
+    if (proposal.expectedBase !== undefined) item.expectedBase = proposal.expectedBase
     if (proposal.status === 'needs_patch') { item.status = 'needs_patch'; item.questionId = proposal.questionId ?? null; item.reasons.push('oneri henuz doldurulmadi (status: needs_patch)'); return item }
     if (!current) { item.status = 'blocked'; item.reasons.push('soru bulunamadi (DB veya --rows)'); return item }
+    if (proposal.expectedBase !== undefined) {
+      const pinErrors = validateProposal(proposal).filter(e => e.includes('.expectedBase:'))
+      if (pinErrors.length || uid(proposal.expectedBase?.revisionId) !== uid(current.baseRevisionId)
+        || !current.content || proposal.expectedBase?.contentFingerprint !== contentFingerprint(current.content)) {
+        item.status = 'blocked'; item.reasons.push('incelenen taban revizyon veya icerik karmasi degismis/gecersiz: once oneriyi yeniden inceleyin'); return item
+      }
+      item.notes.push('expectedBase: incelenen revizyon ve canonical JSON icerik karmasi eslesiyor')
+    }
     if (current.isActive === false && proposal.changeKind !== 'retire') item.notes.push('soru zaten pasif')
     const built = buildRevisionPayload({ current, proposal })
     item.payload = built.payload; item.diff = diffContent(built.before, built.after); item.notes.push(...built.notes)
@@ -441,6 +466,8 @@ if (isMain) {
   const argv = process.argv.slice(2)
   const opt = (name) => { const i = argv.indexOf(name); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : null }
   const proposalsPath = opt('--proposals'); const rowsPath = opt('--rows'); const apply = argv.includes('--apply'); const userId = uid(opt('--user-id'))
+  const forceOffline = argv.includes('--offline')
+  if (forceOffline && (!rowsPath || apply)) { console.error('--offline --rows gerektirir ve --apply ile kullanilamaz'); process.exit(2) }
   if (!proposalsPath) { console.error('--proposals <dosya> zorunlu'); process.exit(2) }
   const { batch, proposals, errors } = parseProposals(JSON.parse(readFileSync(proposalsPath, 'utf8')))
   if (errors.length) { console.error('Oneri dosyasi gecersiz:\n  ' + errors.join('\n  ')); process.exit(2) }
@@ -452,7 +479,7 @@ if (isMain) {
 
   let currentById; let offline = false; let db = null; let snapshot = null
   if (rowsPath) snapshot = snapshotFromExport(JSON.parse(readFileSync(rowsPath, 'utf8')))
-  if (url && key) {
+  if (!forceOffline && url && key) {
     if (!userId || !UUID_RE.test(userId)) { console.error('Cevrimici modda --user-id <hazirlayan uuid> zorunlu (get_question_content_revision bu kimlikle okur)'); process.exit(2) }
     const { createClient } = await import('@supabase/supabase-js')
     db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -463,7 +490,7 @@ if (isMain) {
     for (const p of proposals) {
       if (p.status === 'needs_patch') continue
       const s = snapshot.get(uid(p.questionId))
-      if (s) currentById.set(uid(p.questionId), { questionId: uid(p.questionId), baseRevisionId: s.publishedRevisionId, isActive: true, content: s.content, metadata: { game: s.game, category: s.category, difficulty: 3 }, outcomes: [], source: null })
+      if (s) currentById.set(uid(p.questionId), { questionId: uid(p.questionId), baseRevisionId: s.publishedRevisionId, isActive: true, content: s.content, metadata: s.metadata, outcomes: [], source: null })
     }
     if (apply) { console.error('--apply icin DB baglantisi gerekir (.env.local)'); process.exit(2) }
   } else { console.error('DB (.env.local) ya da --rows <dis aktarim> gerekir'); process.exit(2) }

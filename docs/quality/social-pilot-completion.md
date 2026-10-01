@@ -164,3 +164,15 @@ publication yapılmadı. Test PostgreSQL'i ve görev tarayıcısı durduruldu.
 Sonuç: uygulama değişiklik paketi ve soru bazlı kaynak araştırması tamamlandı;
 aday içerik düzeltmeleri/kapsam kanıtı kapanmadığından **pilot canlıya hazır değil**.
 Bu durum runtime kapısını gevşeterek veya operatör kabulü uydurularak aşılmadı.
+
+## 1 Ekim — içerik düzeltme paketi
+
+10 aday için revizyon/hash'e bağlı yerel düzeltme önerileri ve tam önce/sonra
+inceleme sayfası oluşturuldu. Taslak aracına açık `--offline` modu ve incelenen
+taban revizyon/tam içerik fingerprint kontrolü eklendi; export'un zorluk ve sınav
+metadata'sı artık preview'da korunuyor. 87 ilgili regresyon testi geçti.
+
+Kömür adayındaki ölçüm tanımı belirsizliği ve müfredat/kaynak kapanışları ayrı
+açık kaldı. Canlı revizyon açılmadı veya yayımlanmadı. Eski kaynak raporları
+değişmedi; yeni metinler için kabul/pin üretilemez. Ayrıntı:
+[Düzeltme paketi](social-pilot-corrections-20261001.md).
