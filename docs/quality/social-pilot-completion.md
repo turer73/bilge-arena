@@ -176,3 +176,21 @@ Kömür adayındaki ölçüm tanımı belirsizliği ve müfredat/kaynak kapanı�
 açık kaldı. Canlı revizyon açılmadı veya yayımlanmadı. Eski kaynak raporları
 değişmedi; yeni metinler için kabul/pin üretilemez. Ayrıntı:
 [Düzeltme paketi](social-pilot-corrections-20261001.md).
+
+## 1 Ekim — ek içerik düzeltmeleri
+
+Yedi ek öneriyle toplam 17/24 aday için yerel revizyon bağlı preview hazırlandı:
+tarih 4, coğrafya 4, felsefe 4, sosyoloji 5. Diğer yedi adayın içerik yaması bu
+turda önerilmedi; açık kaynak/kapsam/tasarım bulguları kabul edilmiş sayılmadı.
+24/24 yerel pin, 17/17 tam içerik fingerprint ve metadata/anahtar korunumu
+kontrol edildi. Altı ilgili dosyada 48 regresyon testi yeniden geçti.
+
+Kömür kökü rezerv sıralaması yerine doğrulanabilir yatak–tür eşleşmesine
+daraltıldı. Yağış normalinin ölçütü/dönemi açıklandı; MGM tablosu eksik metin
+çıkarımı nedeniyle tam PDF sayfasından görsel kontrol edildi. Diğer beş
+öneri çözümdeki aşırı kesinlik veya kavram ayrımlarını ele aldı.
+
+Yeni DB revizyonu/publish/pin/source acceptance oluşturulmadı; eski oynanmış
+kayıtlar değişmedi. Bu kontrol yerel export'a karşıdır, yeni canlı doğrulama
+değildir. Eski 12/12 kaynak raporları yeni metinlere taşınmadı. Ayrıntı:
+[Ek düzeltmeler ve 24 adayın durumu](social-pilot-correction-followup-20261001.md).

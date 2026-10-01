@@ -1,5 +1,10 @@
 # Sosyal pilot: kaynak destekli düzeltme taslakları
 
+Bu dosya ilk 10 önerilik aşamanın kaydıdır. Aynı gün hazırlanan 7 ek öneri ve
+24 adayın birleşik güncel tasarrufu için
+[ek düzeltme raporuna](social-pilot-correction-followup-20261001.md) bakın.
+Buradaki “diğer 14 aday” ve kömür notu ilk aşamayı anlatır.
+
 ## Durum ve sınır
 
 1 Ekim 2026'da mevcut 24 adayın 10'u için somut içerik düzeltmesi hazırlandı.
