@@ -66,7 +66,12 @@ migration ile ya da `questions` tablosuna dogrudan yazilarak canliya alinamaz:
 `trg_question_content_direct_mutation_guard` (106/142) icerik ve `is_active`
 degisikligini 42501 ile reddeder ve migration dosyalari icerik tasimaz.
 Hicbir LLM ciktisi (kor cozucu, oneri metni) tek basina yayin, ret veya
-karantina otoritesi degildir.
+karantina otoritesi degildir. `npm run lint:migrations` (pre-commit ve CI) bunu
+depoda da zorlar: soru icerigini veya `is_active`'i degistiren, korumayi kapatan
+(`DISABLE TRIGGER`, `session_replication_role`, `enforce_direct_mutation`) ya da
+taslak/onay/yayin RPC'sini kendisi cagiran migration reddedilir. Prod'da zaten
+calismis owner onayli veri migration'lari `APPROVED_QUESTION_CONTENT_MIGRATIONS`
+listesinde kaynakta sabittir; `--write-baseline` bu kurali susturmaz.
 
 Yol:
 
@@ -96,3 +101,33 @@ Yol:
    kisiler (`review_question_content_revision`); ardindan
    `publish_question_content_revision`. Pasife alma yalniz `retire`
    taslaginin yayimidir.
+
+### Istisna: Turkce harf duzeltmesi (migration 215)
+
+Owner karari: basit Turkce karakter kaybi (`asagidaki` -> `aşağıdaki`, `sinif`
+-> `sınıf`) iki insan onayi beklemez. Otorite LLM degil veritabanidir:
+`publish_question_turkish_restoration` degisikligi harf harf kanitlamadan
+yayimlamaz.
+
+- Yapi aynen korunur: ayni anahtarlar, ayni sik sayisi ve sirasi; cevap ve
+  string disi her deger esit. Her string ayni uzunlukta ve farkli her karakter
+  c->ç g->ğ i->ı o->ö s->ş u->ü (buyukleri, I->İ) ciftlerinden biri.
+- Degisen her sozcugun eski hali `question_turkish_restoration_stems`
+  listesindeki bir ASCII govdeyle, yeni hali o govdenin Turkce yazimiyla
+  baslar. Liste `scan-question-text-defects.mjs` `TURKISH_RESTORATION_STEMS`
+  ile birebir aynidir; `ol`->`öl` gibi anlam degistiren ceviriler ve onek
+  tuzagi olan `kisi` (`kisim` = kısım) listede yoktur.
+- Kapsam disi: pasif soru, `wordquest`, `turkce/yazim_kurallari` ve kokunde
+  yazim/noktalama/buyuk harf/kesme isareti/ses olayi gecen sorular (oradaki
+  hatali yazimlar bilincli celdiricidir).
+- Yayin kapisi atlanmaz: taban revizyonun gecerli politikada APPROVED karari
+  yoksa (ya da baska bir verdict'i varsa) yol kapanir; varsa yeni revizyona
+  devredilir ve gerekcesi devri yazar.
+- Kaynak kaydi ve kazanim eslemesi taban revizyondan aynen tasinir;
+  `question_outcomes`'a dokunulmaz. Her yayin `question_governance_events` ve
+  `question_turkish_restorations`'a yazilir. RPC `content.prepare` ve
+  `content.publish` yetkisinin ikisini birden ister.
+
+`npm run revision:drafts` kuru calismada bu ogeleri "Turkce harf duzeltmesi
+(215)" hatti olarak ayirir; `--apply` onlari bu RPC ile yayimlar, digerlerini
+taslak acar. Kanitlanamayan her degisiklik yukaridaki iki onayli yoldan gider.

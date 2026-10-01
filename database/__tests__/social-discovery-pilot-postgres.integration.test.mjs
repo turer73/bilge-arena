@@ -17,7 +17,7 @@ const { describe, it } = testing
 const require = createRequire(import.meta.url)
 const typescript = require('typescript')
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
-const sql = readFileSync(join(root, 'database/migrations/215_social_discovery_pilot.sql'), 'utf8')
+const sql = readFileSync(join(root, 'database/migrations/216_social_discovery_pilot.sql'), 'utf8')
 const categories = ['tarih', 'cografya', 'felsefe', 'sosyoloji']
 
 // Load the actual TS selector/replay/parser without emitting or editing files.

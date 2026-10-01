@@ -72,6 +72,88 @@ const ASCII_DIACRITIC_STEMS = [
   ['kac', null], ['kacdir', 'kaçtır'], ['esittir', 'eşittir'], ['esit', 'eşit'],
 ].filter(([, fixed]) => fixed !== null) // null = tek basina belirsiz, listeden dus
 
+// Harf harf Turkce karakter geri getirme: ayni uzunluk, farkli her harf
+// c->ç g->ğ i->ı o->ö s->ş u->ü (buyukleri ve I->İ dahil). 215 ile ayni kural.
+export const TURKISH_LETTER_RESTORATIONS = { c: 'ç', g: 'ğ', i: 'ı', o: 'ö', s: 'ş', u: 'ü', C: 'Ç', G: 'Ğ', I: 'İ', O: 'Ö', S: 'Ş', U: 'Ü' }
+export function isTurkishLetterRestoration(before, after) {
+  const a = [...String(before)]
+  const b = [...String(after)]
+  return a.length === b.length && a.every((ch, i) => ch === b[i] || TURKISH_LETTER_RESTORATIONS[ch] === b[i])
+}
+
+// Insan onaysiz Turkce harf duzeltme yolu (migration 215) icin tek sozcuk
+// govdeleri; 215'teki question_turkish_restoration_stems ile birebir ayni
+// (test esitligi denetler). Disarida: "kisi" ("kisim" kısım ve "kisitli"
+// kısıtlı ayni ASCII onekle baslar) ve harf harf olmayanlar ("kacdir" -> "kaçtır").
+export const TURKISH_RESTORATION_STEMS = ASCII_DIACRITIC_STEMS.filter(([ascii, turkish]) =>
+  !ascii.includes(' ') && ascii !== 'kisi' && isTurkishLetterRestoration(ascii, turkish))
+
+// 215 question_turkish_restoration_* fonksiyonlarinin JS karsiligi (kuru
+// calismada hat secimi icin; yetkili kontrol DB'dedir, test ikisini karsilastirir).
+const RESTORATION_LETTER = /[A-Za-zÀ-ÖØ-öø-ɏ]/u
+const TR_UPPER_TO_LOWER = { İ: 'i', I: 'ı', Ç: 'ç', Ğ: 'ğ', Ö: 'ö', Ş: 'ş', Ü: 'ü', Â: 'â', Î: 'î', Û: 'û' }
+const TR_TO_ASCII = { ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u', â: 'a', î: 'i', û: 'u' }
+const lowerTr = (s) => s.replace(/[İIÇĞÖŞÜÂÎÛ]/g, (c) => TR_UPPER_TO_LOWER[c]).toLowerCase()
+export const foldTurkishToAscii = (s) => lowerTr(String(s)).replace(/[çğıöşüâîû]/g, (c) => TR_TO_ASCII[c])
+
+/** Tek string: null = saf Turkce harf geri getirmesi degil; aksi halde
+ * degisen sozcukler ('eski>yeni'). */
+export function turkishRestorationStringWords(before, after) {
+  if (typeof before !== 'string' || typeof after !== 'string' || after.normalize('NFC') !== after) return null
+  const a = [...before.normalize('NFC')]
+  const b = [...after]
+  if (a.join('') === after) return []
+  if (a.length !== b.length) return null
+  const seen = new Set()
+  const words = []
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] === b[i]) continue
+    if (TURKISH_LETTER_RESTORATIONS[a[i]] !== b[i]) return null
+    let start = i
+    while (start > 0 && RESTORATION_LETTER.test(a[start - 1])) start--
+    if (seen.has(start)) continue
+    seen.add(start)
+    let end = i
+    while (end < a.length - 1 && RESTORATION_LETTER.test(a[end + 1])) end++
+    const oldWord = a.slice(start, end + 1).join('')
+    const newWord = b.slice(start, end + 1).join('')
+    const folded = foldTurkishToAscii(oldWord)
+    const lowered = lowerTr(newWord)
+    if (!TURKISH_RESTORATION_STEMS.some(([ascii, turkish]) => folded.startsWith(ascii) && lowered.startsWith(turkish))) return null
+    words.push(`${oldWord}>${newWord}`)
+  }
+  return words
+}
+
+const jsonType = (v) => (v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v)
+/** JSON icerik: yapi aynen korunur, string disi degerler esit; nesne anahtarlari sirali gezilir. */
+export function turkishRestorationWords(before, after) {
+  if (before === undefined || after === undefined) return null
+  const type = jsonType(before)
+  if (type !== jsonType(after)) return null
+  if (type === 'string') return turkishRestorationStringWords(before, after)
+  if (type === 'array' || type === 'object') {
+    const keys = type === 'array' ? before.map((_, i) => i) : Object.keys(before).sort()
+    if (type === 'array' ? before.length !== after.length : keys.join('\0') !== Object.keys(after).sort().join('\0')) return null
+    const words = []
+    for (const k of keys) {
+      const part = turkishRestorationWords(before[k], after[k])
+      if (part === null) return null
+      words.push(...part)
+    }
+    return words
+  }
+  return before === after ? [] : null
+}
+
+/** 215 kapsam disi: yazim/noktalama sorularindaki hatali yazimlar bilincli celdiricidir. */
+export function turkishRestorationExclusion({ game, category, content }) {
+  if (game === 'wordquest') return 'wordquest (Ingilizce icerik)'
+  if (game === 'turkce' && category === 'yazim_kurallari') return 'turkce/yazim_kurallari'
+  if (/(yazim|yazil|imla|noktalama|buyuk harf|kucuk harf|kesme isaret|ses olay|unlu dus|unlu uyum|unsuz)/.test(foldTurkishToAscii(content?.question ?? ''))) return 'kok yazim/noktalama/ses bilgisi konulu'
+  return null
+}
+
 const STEM_RE = new RegExp(
   '(?<![\\p{L}])(' + ASCII_DIACRITIC_STEMS.map(([s]) => s.replace(/ /g, '\\s+')).join('|') + ')(?=[\\p{L}]*)(?![\\p{L}]*[çğıöşüÇĞİÖŞÜ])',
   'giu',

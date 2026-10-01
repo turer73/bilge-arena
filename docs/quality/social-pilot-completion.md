@@ -2,7 +2,7 @@
 
 Durum: DB/API/öğrenci akışı ve yerel kabul testleri uygulandı. Kaynak incelemesi
 gerçek adaylar üzerinden yürütüldü; yayın kabulü ve canlı dağıtım yapılmadı.
-Taban: master a41026e0 (#542 dahil). Önceki çalışma klasörü değiştirilmedi.
+Taban: master ebb39b82 (#544 dahil). Önceki çalışma klasörü değiştirilmedi.
 
 ## Bu dalda bulunanlar
 
@@ -66,7 +66,7 @@ Bu ilk notlar sonradan tamamlanan iki soru-bazlı raporun yerine geçmez.
 
 ## 30 Eylül — uygulanan öğrenci akışı
 
-- Migration 215: draft/released/retired paket, 24 değişmez revizyon snapshot'ı,
+- Migration 216 (dağıtım öncesi 215 çakışması giderildi): draft/released/retired paket, 24 değişmez revizyon snapshot'ı,
   kullanıcıya bağlı 30 dakikalık oturum ve append-only cevaplar.
 - `GET/POST /api/study/diagnostic/social-pilot`: gerçek oturum kimliği, fail-closed
   hız sınırlaması, yalnız sunucuda puanlama ve adaptif sonraki soru seçimi.
@@ -114,7 +114,7 @@ kapsamında değildir. Yerel Redis olmadığından diğer production API'lerinin
    Plan cevap anahtarı veya çözüm içermez; DB'ye bağlanmaz.
 3. Anlam düzeltmeleri yeni içerik revizyonu olarak hazırlanır. Yeni revision/hash
    için kaynak incelemesi yenilenir; eski oynanmış revizyon değiştirilmez.
-4. Ayrıca yetkilendirilmiş schema dağıtımında migration 215 uygulanır; kabul
+4. Ayrıca yetkilendirilmiş schema dağıtımında migration 216 uygulanır; kabul
    edilmiş kaynak paketi hash'i, gerçek operatör ve kabul referansı kaydedilir.
 5. Kabul sonrası paket `released` yapılır. Trigger o anda bütün aktif yayın
    pinlerini, 24 aday/bant kotasını ve kanonik içerik hash'lerini tekrar kontrol eder.
@@ -210,3 +210,17 @@ Kaynak kullanım koşulları ayrıca kaydedildi. Dört ilgili dosyada 77 test ge
 
 Ham koşular ve birleşik rapor yalnız özel `secure/` klasöründedir. Ayrıntı:
 [Yeni metinlerin iki-model kalite kontrolü](social-pilot-correction-audit-20261001.md).
+
+## 1 Ekim — güncel master, canlı şema ve eşleme bekleyen taslaklar
+
+#543/#544 ana dala alınmış değişikliklerle birleştirildi. Canlı 215 Türkçe
+harf düzeltmesi migration'ı korunarak uygulanmamış Sosyal migration'ı 216'ya
+taşındı. 24 canlı pin eşleşiyor; fakat 24 soru/revizyonda kazanım bağı yok ve
+kaynaklar hâlâ lisans incelemesi isteyen legacy kayıtlardır. Pilot tabloları
+canlıda yok; TYT Sosyal tanılama kapısı kapalıdır.
+
+164'ün mevcut kazanımsız taslak sözleşmesine açık, pin zorunlu ve hızlı yayın
+kapalı bir araç modu eklendi. 17 düzeltme gerçek kaynak/provenance korunarak
+yalnız yerel taslak planına bağlandı; 24 kazanım katalog adayı kabul edilmeden
+ayrı tutuldu. Canlı revizyon, eşleme, kaynak kabulü veya yayın yazması yapılmadı.
+Ayrıntı: [Canlı şema ve taslak hazırlığı](social-pilot-live-readiness-20261001.md).

@@ -1,4 +1,5 @@
--- Migration 215: isolated four-domain discovery, not a released TYT diagnostic.
+-- Migration 216: isolated four-domain discovery, not a released TYT diagnostic.
+-- Renumbered before deployment: 215 is the published Turkish restoration migration.
 -- Requires profiles, questions, question_content_revisions and extensions.digest.
 -- Does not alter 178/193, approve sources, seed a release, or write mastery.
 -- Operator-only release: record a separately accepted source package and actor
