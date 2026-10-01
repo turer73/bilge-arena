@@ -45,6 +45,9 @@
  *   --mapping-pending-drafts: migration 164'e uygun esleme bekleyen revizyon
  *     TASLAGI acabilir. expectedBase zorunlu; 215 hizli yayin hatti kapali.
  *     Yeni soru yaratmaz, stage 2/yayin kapilarini veya kaynak kabulunu asmaz.
+ *   --require-all-ready: tek bir oge hazir degilse hicbir mutation RPC'si
+ *     cagrilmaz. Bu on kontrol RPC'leri tek transaction yapmaz; sonraki yarista
+ *     her RPC kendi taban/CAS ve requestId/idempotency kapisini korur.
  *
  * Oneri dosyasi: database/__fixtures__/question-revision-proposals/ altindaki
  * example.json (calisan ornek) ve pilot1-4.skeleton.json (16 soru iskeleti).
@@ -503,6 +506,42 @@ export async function loadCurrentFromDb(db, questionIds, userId) {
   return byId
 }
 
+/** Read-only gate for a reviewed batch. Does not confer actor/source approval. */
+export function revisionApplyPreflight(items, { requireAllReady = false, draftOnly = false } = {}) {
+  const blockingRefs = items.filter(it =>
+    (requireAllReady && it.status !== 'ready')
+    || (draftOnly && it.status === 'ready' && it.lane !== 'draft')
+  ).map(it => it.ref)
+  const ids = items.map(it => it.questionId)
+  const duplicateQuestions = requireAllReady && new Set(ids).size !== ids.length
+  const empty = requireAllReady && items.length === 0
+  const passed = blockingRefs.length === 0 && !duplicateQuestions && !empty
+  return { requiredAllReady: requireAllReady, draftOnly, passed, blockingRefs,
+    reason: passed ? null : empty ? 'bos paket uygulanamaz'
+      : duplicateQuestions ? 'ayni soru icin birden fazla oneri var'
+      : 'paketin tamami hazir degil veya taslak disi hat var; hicbir mutation RPC cagrilmadi' }
+}
+
+/** Existing governance RPCs only. A successful preflight is NOT an atomic batch. */
+export async function applyRevisionItems({ db, userId, items, requireAllReady = false, draftOnly = false }) {
+  const preflight = revisionApplyPreflight(items, { requireAllReady, draftOnly })
+  if (!preflight.passed) return preflight
+  for (const it of items) {
+    if (it.status !== 'ready') continue
+    if (it.lane === 'turkish_restoration') {
+      const { data, error } = await db.rpc('publish_question_turkish_restoration', { p_user_id: userId, p_question_id: it.questionId, p_base_revision_id: it.baseRevisionId, p_content: it.payload.content, p_request_id: it.requestId })
+      if (error) { it.status = 'blocked'; it.reasons.push(`RPC (215): ${error.code ?? ''} ${error.message ?? ''}`.trim()); continue }
+      it.status = 'published'; it.revisionId = data?.revisionId ?? null; it.replayed = data?.replayed === true
+      continue
+    }
+    const { data, error } = await db.rpc('create_question_content_revision', { p_user_id: userId, p_question_id: it.questionId, p_base_revision_id: it.baseRevisionId, p_payload: it.payload, p_request_id: it.requestId })
+    if (error) { it.status = 'blocked'; it.reasons.push(`RPC: ${error.code ?? ''} ${error.message ?? ''}`.trim()); continue }
+    it.status = 'applied'; it.revisionId = data?.revisionId ?? null; it.revisionNo = data?.revisionNo ?? null; it.replayed = data?.replayed === true
+    it.mappingRequired = data?.mappingRequired === true
+  }
+  return preflight
+}
+
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])
 if (isMain) {
   const argv = process.argv.slice(2)
@@ -510,6 +549,7 @@ if (isMain) {
   const proposalsPath = opt('--proposals'); const rowsPath = opt('--rows'); const apply = argv.includes('--apply'); const userId = uid(opt('--user-id'))
   const forceOffline = argv.includes('--offline')
   const mappingPendingDrafts = argv.includes('--mapping-pending-drafts')
+  const requireAllReady = argv.includes('--require-all-ready')
   if (forceOffline && (!rowsPath || apply)) { console.error('--offline --rows gerektirir ve --apply ile kullanilamaz'); process.exit(2) }
   if (!proposalsPath) { console.error('--proposals <dosya> zorunlu'); process.exit(2) }
   const { batch, proposals, errors } = parseProposals(JSON.parse(readFileSync(proposalsPath, 'utf8')))
@@ -546,32 +586,20 @@ if (isMain) {
       if (it.status === 'ready' && s?.content && c?.content && !sameContent(s.content, c.content)) { it.status = 'blocked'; it.reasons.push('canli icerik --rows dis aktarimindan farkli: once dis aktarimi yenileyin') }
     }
   }
-  if (apply) {
-    for (const it of items) {
-      if (it.status !== 'ready') continue
-      if (it.lane === 'turkish_restoration') {
-        const { data, error } = await db.rpc('publish_question_turkish_restoration', { p_user_id: userId, p_question_id: it.questionId, p_base_revision_id: it.baseRevisionId, p_content: it.payload.content, p_request_id: it.requestId })
-        if (error) { it.status = 'blocked'; it.reasons.push(`RPC (215): ${error.code ?? ''} ${error.message ?? ''}`.trim()); continue }
-        it.status = 'published'; it.revisionId = data?.revisionId ?? null; it.replayed = data?.replayed === true
-        continue
-      }
-      const { data, error } = await db.rpc('create_question_content_revision', { p_user_id: userId, p_question_id: it.questionId, p_base_revision_id: it.baseRevisionId, p_payload: it.payload, p_request_id: it.requestId })
-      if (error) { it.status = 'blocked'; it.reasons.push(`RPC: ${error.code ?? ''} ${error.message ?? ''}`.trim()); continue }
-      it.status = 'applied'; it.revisionId = data?.revisionId ?? null; it.revisionNo = data?.revisionNo ?? null; it.replayed = data?.replayed === true
-      it.mappingRequired = data?.mappingRequired === true
-    }
-  }
+  const applyPreflight = revisionApplyPreflight(items, { requireAllReady, draftOnly: mappingPendingDrafts })
+  if (apply) await applyRevisionItems({ db, userId, items, requireAllReady, draftOnly: mappingPendingDrafts })
   const mode = apply ? 'apply' : offline ? 'offline-preview' : 'dry-run'
-  const report = { schemaVersion: 'question-revision-drafts-report@1', mode, mappingPendingDrafts, batch, generatedAt: new Date().toISOString(), items }
+  const report = { schemaVersion: 'question-revision-drafts-report@1', mode, mappingPendingDrafts, applyPreflight, batch, generatedAt: new Date().toISOString(), items }
   writeFileSync(join(outDir, 'report.json'), JSON.stringify(report, null, 2) + '\n')
   writeFileSync(join(outDir, 'payloads.json'), JSON.stringify(items.filter((i) => i.payload).map((i) => ({ ref: i.ref, questionId: i.questionId, baseRevisionId: i.baseRevisionId, requestId: i.requestId, status: i.status, payload: i.payload })), null, 2) + '\n')
   writeFileSync(join(outDir, 'review-sheet.md'), renderReviewSheet({ batch, items, mode }))
   const counts = items.reduce((a, i) => ({ ...a, [i.status]: (a[i.status] ?? 0) + 1 }), {})
   console.log(`Mod: ${mode}  Ogeler: ${items.length}  ${JSON.stringify(counts)}`)
+  if (!applyPreflight.passed) console.log(`Uygulama on kontrolu: ${applyPreflight.reason}`)
   for (const it of items) if (!['ready', 'applied', 'published', 'preview'].includes(it.status)) console.log(`  ${it.status.padEnd(11)} ${it.ref}: ${it.reasons.join(' | ')}`)
   for (const it of items) if (it.status === 'applied') console.log(`  applied     ${it.ref}: revizyon ${it.revisionId} no ${it.revisionNo}${it.replayed ? ' (replay)' : ''}`)
   for (const it of items) if (it.status === 'published') console.log(`  published   ${it.ref}: Turkce harf duzeltmesi (215) revizyon ${it.revisionId}${it.replayed ? ' (replay)' : ''}`)
   for (const it of items) if (it.lane === 'turkish_restoration' && it.status === 'ready') console.log(`  215 hatti   ${it.ref}: --apply ile iki onaysiz yayimlanir (${(it.words ?? []).join(', ')})`)
   console.log(`Yazildi: ${outDir}/{report.json,payloads.json,review-sheet.md}`)
-  process.exit(apply && items.some((i) => i.status === 'blocked') ? 1 : 0)
+  process.exit((apply || requireAllReady) && (!applyPreflight.passed || items.some((i) => i.status === 'blocked')) ? 1 : 0)
 }

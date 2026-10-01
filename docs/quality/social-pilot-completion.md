@@ -236,3 +236,15 @@ anahtarla eşleşiyor. Bu turdaki 149 regresyon testi ve 42 dosya hash kontrolü
 14:27–14:28 UTC canlı kontrolünde 24 eski pin korunuyor; pilot tabloları yok,
 kazanım bağları 0, tanılama kapalı. Kaynak ve insan kabulü, canlı taslak/yayın ve
 deploy yapılmadı. Ayrıntı: [Yerel inceleme teslimi ve kalan canlı kapılar](social-pilot-review-handoff-20261001.md).
+
+## 1 Ekim — gerçek taslaklar ve canlı ham kontrol kanıtları
+
+17 v2 düzeltmesi gerçek DB taslağı olarak açıldı; eski yayımlanmış revizyonlar
+korundu. Yeni gerçek UUID/PostgreSQL hash'leriyle iki model yeniden denetlendi:
+102/102 kör örnek ve 34/34 çözüm denetimi eşleşiyor. Mevcut mapper ile 170 ham
+ajan kaydı canlıya eklendi; yetkili karar, kaynak/kazanım kabulü, insan onayı
+ve yayın yazılmadı. 17 yeni kaynak görevi hazır, response'ları henüz eksik.
+
+Taslak aracına tam-paket ön kontrolü eklendi; bu turdaki 166 regresyon testi
+geçti. 16:03:35 UTC DB kontrolü: 17 draft, 17 eski yayın korunmuş, 170 OK ham
+kayıt, 0 UUID/hash uyumsuzluğu. Ayrıntı: [Gerçek taslak ve ham kanıt adımı](social-pilot-draft-progress-20261001.md).

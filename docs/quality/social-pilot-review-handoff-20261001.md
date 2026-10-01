@@ -1,5 +1,9 @@
 # Sosyal pilotu — yerel inceleme teslimi
 
+**Sonraki adım gerçekleştirildi:** [17 gerçek taslak, 170 ham kanıt ve yeni kaynak görevleri](social-pilot-draft-progress-20261001.md).
+Bu belgedeki canlı yazım yapılmadığı bilgisi önceki yerel teslim anını anlatır;
+güncel durum bağlantıdaki son DB kontrolündedir. Yeni içerik yayını yoktur.
+
 1 Ekim 2026. Bu belge soru incelemesinin yerel teslimini kapatır; canlı pilotun
 açıldığı veya kaynak/insan kabulünün tamamlandığı anlamına gelmez.
 

@@ -13,7 +13,7 @@ const write = (path, value) => writeFileSync(path, JSON.stringify(value, null, 2
 async function modules() {
   const server = await createServer({ root, configFile: false,
     cacheDir: join(root, 'secure/.vite-source-review'), optimizeDeps: { noDiscovery: true, include: [] },
-    server: { middlewareMode: true, watch: null }, appType: 'custom' })
+    server: { middlewareMode: true, watch: null, hmr: false }, appType: 'custom' })
   try {
     return {
       source: await server.ssrLoadModule(join(root, 'src/lib/question-audit/question-source.ts')),

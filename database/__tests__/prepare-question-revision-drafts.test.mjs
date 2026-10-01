@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   PROPOSALS_SCHEMA,
+  applyRevisionItems,
   buildBatch,
   buildRevisionPayload,
   currentFromRevisionDetail,
@@ -23,6 +24,7 @@ import {
   draftRequestId,
   parseProposals,
   renderReviewSheet,
+  revisionApplyPreflight,
   scanGate,
   snapshotFromExport,
   validatePayloadShape,
@@ -43,6 +45,77 @@ const current = () => ({
 const proposal = (over = {}) => ({
   ref: 'T-1', questionId: Q, finding: { code: 'ASCII_DIACRITIC_LOSS', severity: 'P1', summary: 'Kokte karakter kaybi.' }, evidence: ['scan'],
   changeKind: 'edit', patch: { question: 'Aşağıdakilerden hangisi doğru yazılmıştır?' }, rationale: 'Yalniz yazim.', ...over,
+})
+
+describe('tam-paket uygulama on kontrolu', () => {
+  const ready = (n = 1, over = {}) => ({ ref: `R-${n}`, questionId: `${String(n).padStart(8, '0')}-1111-4111-8111-111111111111`,
+    baseRevisionId: current().baseRevisionId, requestId: `request-${n}`, status: 'ready', lane: 'draft',
+    payload: { content: current().content }, reasons: [], ...over })
+  const fakeDb = (response = { data: { revisionId: 'new-revision', revisionNo: 2, mappingRequired: true }, error: null }) => {
+    const calls = []
+    return { calls, rpc: async (...args) => { calls.push(args); return response } }
+  }
+  it('tek engelli oge tum pakette sifir mutation RPC ile durur; hazir ogeler yazilmis sayilmaz', async () => {
+    const items = [ready(), ready(2, { status: 'blocked' })]
+    const db = fakeDb()
+    const preflight = await applyRevisionItems({ db, userId: Q, items, requireAllReady: true, draftOnly: true })
+    expect(preflight.passed).toBe(false)
+    expect(preflight.blockingRefs).toEqual(['R-2'])
+    expect(db.calls).toHaveLength(0)
+    expect(items.map(i => i.status)).toEqual(['ready', 'blocked'])
+  })
+  it('needs_patch ve preview hazir veya uygulanmis sayilmaz', () => {
+    for (const status of ['needs_patch', 'preview']) {
+      expect(revisionApplyPreflight([ready(1, { status })], { requireAllReady: true }).passed).toBe(false)
+    }
+  })
+  it('bos veya ayni soruya iki oneri iceren paket hic yazmadan durur', async () => {
+    for (const items of [[], [ready(), ready(2, { questionId: ready().questionId })]]) {
+      const db = fakeDb()
+      expect((await applyRevisionItems({ db, userId: Q, items, requireAllReady: true })).passed).toBe(false)
+      expect(db.calls).toHaveLength(0)
+    }
+  })
+  it('esleme bekleyen taslak hattinda 215 yayin RPCsine dusmez', async () => {
+    const db = fakeDb()
+    const items = [ready(), ready(2, { lane: 'turkish_restoration' })]
+    expect((await applyRevisionItems({ db, userId: Q, items, draftOnly: true })).passed).toBe(false)
+    expect(db.calls).toHaveLength(0)
+  })
+  it('tam hazir pakette yalniz mevcut create revision RPCsini ayni pin ve requestId ile cagirir', async () => {
+    const items = [ready(), ready(2)]
+    const before = structuredClone(items)
+    const db = fakeDb()
+    expect((await applyRevisionItems({ db, userId: Q, items, requireAllReady: true, draftOnly: true })).passed).toBe(true)
+    expect(db.calls).toEqual(before.map(it => ['create_question_content_revision', {
+      p_user_id: Q, p_question_id: it.questionId, p_base_revision_id: it.baseRevisionId,
+      p_payload: it.payload, p_request_id: it.requestId,
+    }]))
+    expect(items.every(it => it.status === 'applied' && it.mappingRequired === true)).toBe(true)
+    expect(items.every(it => it.status !== 'published')).toBe(true)
+  })
+  it('varsayilan parcali hazir-oge davranisi degismez; tam paket secenegi acik olmalidir', async () => {
+    const items = [ready(), ready(2, { status: 'blocked' })]
+    const db = fakeDb()
+    expect((await applyRevisionItems({ db, userId: Q, items })).passed).toBe(true)
+    expect(db.calls).toHaveLength(1)
+    expect(items.map(it => it.status)).toEqual(['applied', 'blocked'])
+  })
+  it('izin/CAS RPC reddi uygulanmis sayilmaz; batch on kontrolu DB transaction garantisi degildir', async () => {
+    const db = fakeDb({ data: null, error: { code: '42501', message: 'prepare permission required' } })
+    const items = [ready()]
+    const preflight = await applyRevisionItems({ db, userId: Q, items, requireAllReady: true })
+    expect(preflight.passed).toBe(true)
+    expect(items[0].status).toBe('blocked')
+    expect(items[0].reasons.join(' ')).toContain('42501')
+  })
+  it('215 hattinin mevcut yayin ve replay sonucu varsayilan modda korunur', async () => {
+    const db = fakeDb({ data: { revisionId: 'restored', replayed: true }, error: null })
+    const items = [ready(1, { lane: 'turkish_restoration' })]
+    await applyRevisionItems({ db, userId: Q, items, requireAllReady: true })
+    expect(db.calls[0][0]).toBe('publish_question_turkish_restoration')
+    expect(items[0]).toMatchObject({ status: 'published', revisionId: 'restored', replayed: true })
+  })
 })
 
 describe('buildRevisionPayload', () => {
@@ -295,6 +368,10 @@ describe('buildBatch / renderReviewSheet', () => {
       const mappingReport = JSON.parse(readFileSync(join(dir, 'out', 'report.json'), 'utf8'))
       expect(mappingReport.mappingPendingDrafts).toBe(true)
       expect(mappingReport.items[0]).toEqual(expect.objectContaining({ status: 'preview', lane: 'draft', mappingRequired: true, requestId: null }))
+      expect(run('--offline', '--rows', rowsPath, '--mapping-pending-drafts', '--require-all-ready').status).toBe(1)
+      const previewPreflight = JSON.parse(readFileSync(join(dir, 'out', 'report.json'), 'utf8'))
+      expect(previewPreflight.applyPreflight).toMatchObject({ requiredAllReady: true, draftOnly: true, passed: false, blockingRefs: ['T-1'] })
+      expect(previewPreflight.items[0].status).toBe('preview')
       expect(run('--offline', '--rows', rowsPath, '--apply').status).toBe(2)
       expect(run('--offline').status).toBe(2)
     } finally { rmSync(dir, { recursive: true, force: true }) }
