@@ -1,5 +1,10 @@
 # Sosyal pilotu — canlı şema ve taslak hazırlığı
 
+**Güncel teslim:** [Soru/şık bazlı v2 inceleme ve son canlı kontrol](social-pilot-review-handoff-20261001.md).
+Tabakalaşma sorusu yeniden yazılıp iki modelde yeniden denetlendi. Aşağıdaki
+07:51 UTC ve v1 dosya referansları tarihsel kayıttır; yeni işlemlerde v2 paketini
+kullanın. Son canlı pin kontrolü 14:27–14:28 UTC'de tekrarlandı.
+
 1 Ekim 2026, 07:51 UTC salt okunur Supabase kontrolü. Ana dal tabanı
 `ebb39b82` (#544). Bu çalışma canlı veritabanına yazmadı.
 

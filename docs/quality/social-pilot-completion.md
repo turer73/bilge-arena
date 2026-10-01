@@ -224,3 +224,15 @@ kapalı bir araç modu eklendi. 17 düzeltme gerçek kaynak/provenance korunarak
 yalnız yerel taslak planına bağlandı; 24 kazanım katalog adayı kabul edilmeden
 ayrı tutuldu. Canlı revizyon, eşleme, kaynak kabulü veya yayın yazması yapılmadı.
 Ayrıntı: [Canlı şema ve taslak hazırlığı](social-pilot-live-readiness-20261001.md).
+
+## 1 Ekim — v2 soru/şık teslimi
+
+24 sorunun 120 seçeneği için ayrı editoryal gerekçe ve 24 soru bazlı ölçülen
+beceri önerisi tek özel teslimde toplandı. Tabakalaşma kökü ve bütün seçenekleri
+anlam bakımından netleştirildi; eski paket değiştirilmedi, yeni metin iki modelde
+yeniden denetlendi. Son 17 düzeltmede 102/102 kör örnek ve 34/34 çözüm denetimi
+anahtarla eşleşiyor. Bu turdaki 149 regresyon testi ve 42 dosya hash kontrolü geçti.
+
+14:27–14:28 UTC canlı kontrolünde 24 eski pin korunuyor; pilot tabloları yok,
+kazanım bağları 0, tanılama kapalı. Kaynak ve insan kabulü, canlı taslak/yayın ve
+deploy yapılmadı. Ayrıntı: [Yerel inceleme teslimi ve kalan canlı kapılar](social-pilot-review-handoff-20261001.md).
