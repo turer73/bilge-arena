@@ -29,9 +29,10 @@ const modelFreePosteriorMigration = readFileSync(join(dirname(fileURLToPath(impo
 const modelGateMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '213_question_quality_model_gate.sql'), 'utf8')
 const modelGateRetentionMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '214_question_quality_model_gate_retention.sql'), 'utf8')
 const turkishRestorationMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '215_question_turkish_letter_restoration.sql'), 'utf8')
+const turkishRestorationSocialGuardMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '218_question_turkish_restoration_tyt_social_guard.sql'), 'utf8')
 
 suite('106 content governance disposable PostgreSQL acceptance', () => {
-  let turkishQuestion; let spellingTopicQuestion; let toolQuestion
+  let turkishQuestion; let spellingTopicQuestion; let toolQuestion; let socialQuestion; let socialOpenQuestion
   let client; let author; let reviewer1; let reviewer2; let publisher; let learner; let legacyLearner; let question; let outcome; let outcome2; let outcomeCourse; let outcomeUnit; let outcomeTopic; let outcomeNode; let legacyRevision; let candidateQuestion; let candidateOutcome; let candidateLegacyRevision; let ydtQuestion; let ydtLegacyNullQuestion; let ydtOutcome; let ydtWrongOutcome; let ydtLegacyRevision; let ydtLegacyNullRevision; let parityQuestions
   const rpc = async (call, values = []) => { await client.query("SELECT set_config('request.jwt.claim.sub','',false),set_config('request.jwt.claims',$1,false)",[JSON.stringify({ role:'service_role' })]); await client.query('SET ROLE service_role'); try { return (await client.query(`SELECT ${call} AS result`, values)).rows[0].result } finally { await client.query('RESET ROLE') } }
   const userRpc = async (userId, aal, call, values = []) => { await client.query("SELECT set_config('request.jwt.claim.sub',$1,false),set_config('request.jwt.claims',$2,false)",[userId,JSON.stringify({ sub:userId,role:'authenticated',aal })]); await client.query('SET ROLE authenticated'); try { return (await client.query(`SELECT ${call} AS result`, values)).rows[0].result } finally { await client.query('RESET ROLE') } }
@@ -110,7 +111,12 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
       ydtQuestion,{ question:'legacy YDT',options:['A','B'],answer:0 },
       ydtLegacyNullQuestion,{ question:'legacy null YDT',options:['A','B'],answer:0 },
     ])
-    ;[turkishQuestion, spellingTopicQuestion, toolQuestion] = [randomUUID(), randomUUID(), randomUUID()]
+    ;[turkishQuestion, spellingTopicQuestion, toolQuestion, socialQuestion, socialOpenQuestion] = [randomUUID(), randomUUID(), randomUUID(), randomUUID(), randomUUID()]
+    // pasif baslar (kazanim adaylari sayimini etkilemesin); 218 testi aktiflestirir
+    await client.query(`INSERT INTO public.questions(id,game,category,difficulty,exam_ref,is_active,content) VALUES
+      ($1,'sosyal','tarih',2,'TYT',false,$2),($3,'sosyal','tarih',2,'TYT',false,$2)`, [
+      socialQuestion,{ question:'Asagidaki olaylardan hangisi once olmustur?',options:['A','B','C','D','E'],answer:0 },socialOpenQuestion,
+    ])
     await client.query(`INSERT INTO public.questions(id,game,category,difficulty,content) VALUES
       ($1,'matematik','Temel',2,$2),($3,'matematik','Temel',2,$4),($5,'matematik','Temel',2,$6)`, [
       turkishQuestion,{ question:'Asagidaki ifadelerden hangisi dogrudur?',options:['Ogrenci sinifta ISIK olcumu yapar.','Gunes batar.','Deney yapilir.','Hepsi'],answer:0,solution:'Cozum: ogrenci olcum yapar.' },
@@ -157,6 +163,7 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(modelGateMigration)
     await client.query(modelGateRetentionMigration)
     await client.query(turkishRestorationMigration)
+    await client.query(turkishRestorationSocialGuardMigration)
     legacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id
     candidateLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[candidateQuestion])).rows[0].published_revision_id
     ydtLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[ydtQuestion])).rows[0].published_revision_id
@@ -1146,5 +1153,35 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     const out = await rpc('public.publish_question_turkish_restoration($1,$2,$3,$4::jsonb,$5)',[publisher,toolQuestion,item.baseRevisionId,JSON.stringify(item.payload.content),item.requestId])
     expect(out).toEqual(expect.objectContaining({ status:'published', words:item.words }))
     expect((await client.query('SELECT content FROM public.questions WHERE id=$1',[toolQuestion])).rows[0].content).toEqual(item.payload.content)
+  })
+
+  it('218: tabani onayli TYT sosyal sorusu onaysiz harf duzeltmesiyle yayimlanmaz; onaysiz TYT sosyal sorusu yayimlanir; migration tekrar uygulanabilir', async () => {
+    await client.query(turkishRestorationSocialGuardMigration)
+    // yonetisimin ic yazma baglamiyla aktiflestir (142 korumasi bunu kabul eder)
+    await client.query('BEGIN')
+    for (const id of [socialQuestion, socialOpenQuestion]) {
+      await client.query("SELECT public.content_governance_authorize_question_write($1,'publish')",[id])
+      await client.query('UPDATE public.questions SET is_active=true WHERE id=$1',[id])
+      await client.query('SELECT public.content_governance_clear_question_write($1)',[id])
+    }
+    await client.query('COMMIT')
+    const call = 'public.publish_question_turkish_restoration($1,$2,$3,$4::jsonb,$5)'
+    const policy = (await client.query('SELECT required_policy_version FROM public.question_validation_runtime WHERE singleton')).rows[0].required_policy_version
+    const prepare = async (id) => {
+      const q = (await client.query('SELECT content,published_revision_id FROM public.questions WHERE id=$1',[id])).rows[0]
+      await client.query("INSERT INTO public.question_validation_decisions(question_id,revision_id,content_sha256,policy_version,verdict,findings,rationale,run_id,decided_at) SELECT $1,id,content_sha256,$2,'APPROVED','[]','ok',$3,clock_timestamp() FROM public.question_content_revisions WHERE id=$4",[id,policy,randomUUID(),q.published_revision_id])
+      return { base: q.published_revision_id, restored: { ...q.content, question: 'Aşağıdaki olaylardan hangisi önce olmustur?' } }
+    }
+    const approved = await prepare(socialQuestion)
+    // taban revizyon stage 1'de onaylanmis (iki asama ya da 217 tek onay yolu)
+    await client.query("INSERT INTO public.question_revision_approvals(revision_id,stage,reviewer_id,decision,rationale) VALUES($1,1,$2,'approved','kaynak karsilastirmali onay')",[approved.base,reviewer1])
+    let caught
+    try { await rpc(call,[publisher,socialQuestion,approved.base,JSON.stringify(approved.restored),randomUUID()]) } catch (e) { caught = e }
+    expect(caught?.code).toBe('22023'); expect(caught?.message).toMatch(/approved TYT social revision/)
+    expect((await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[socialQuestion])).rows[0].published_revision_id).toBe(approved.base)
+    // onaysiz TYT sosyal tabani 215 hattinda kalir
+    const open = await prepare(socialOpenQuestion)
+    const out = await rpc(call,[publisher,socialOpenQuestion,open.base,JSON.stringify(open.restored),randomUUID()])
+    expect(out).toEqual(expect.objectContaining({ status:'published', words:['Asagidaki>Aşağıdaki','once>önce'] }))
   })
 })

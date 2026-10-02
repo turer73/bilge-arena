@@ -198,6 +198,7 @@ export function currentFromRevisionDetail({ question, detail, fallbackOutcomes =
     },
     outcomes: sortOutcomes(raw.map((o) => ({ outcomeId: uid(o.outcomeId), weight: Number(o.weight), primary: o.primary === true }))),
     source: r?.source && typeof r.source === 'object' && Object.keys(r.source).length ? pick(r.source, SOURCE_KEYS) : null,
+    baseApproved: Array.isArray(r?.approvals) && r.approvals.some((a) => a?.decision === 'approved'),
   }
 }
 
@@ -360,7 +361,7 @@ export function buildBatch({ proposals, currentById, offline = false }) {
       ? turkishRestorationWords(current.content, built.payload.content)
       : null
     if (words?.length) {
-      const exclusion = turkishRestorationExclusion({ game: current.metadata?.game, category: current.metadata?.category, content: current.content })
+      const exclusion = turkishRestorationExclusion({ game: current.metadata?.game, category: current.metadata?.category, content: current.content, examRef: current.metadata?.examRef, baseApproved: current.baseApproved === true })
         ?? (current.isActive === false ? 'soru pasif' : null)
       if (exclusion) item.notes.push(`yalniz Turkce harf duzeltmesi, ama iki onayli yol: ${exclusion}`)
       else {
