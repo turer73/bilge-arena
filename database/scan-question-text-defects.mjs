@@ -146,9 +146,12 @@ export function turkishRestorationWords(before, after) {
   return before === after ? [] : null
 }
 
-/** 215 kapsam disi: yazim/noktalama sorularindaki hatali yazimlar bilincli celdiricidir. */
-export function turkishRestorationExclusion({ game, category, content }) {
+/** 215 kapsam disi: yazim/noktalama sorularindaki hatali yazimlar bilincli celdiricidir.
+ * 218: tabani onayli TYT sosyal sorusu da disarida (191/210 kapilari onayli
+ * revizyonu hazir sayar; onaysiz duzeltme soruyu havuzdan dusururdu). */
+export function turkishRestorationExclusion({ game, category, content, examRef, baseApproved = false }) {
   if (game === 'wordquest') return 'wordquest (Ingilizce icerik)'
+  if (game === 'sosyal' && String(examRef ?? '').trim().toUpperCase() === 'TYT' && baseApproved) return 'onayli TYT sosyal revizyonu (218)'
   if (game === 'turkce' && category === 'yazim_kurallari') return 'turkce/yazim_kurallari'
   if (/(yazim|yazil|imla|noktalama|buyuk harf|kucuk harf|kesme isaret|ses olay|unlu dus|unlu uyum|unsuz)/.test(foldTurkishToAscii(content?.question ?? ''))) return 'kok yazim/noktalama/ses bilgisi konulu'
   return null

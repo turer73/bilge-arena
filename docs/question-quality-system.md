@@ -120,6 +120,10 @@ yayimlamaz.
 - Kapsam disi: pasif soru, `wordquest`, `turkce/yazim_kurallari` ve kokunde
   yazim/noktalama/buyuk harf/kesme isareti/ses olayi gecen sorular (oradaki
   hatali yazimlar bilincli celdiricidir).
+- Tabani onayli TYT sosyal sorusu da kapsam disidir (218): 191/210 kapilari ve
+  kaynak politikasi soruyu yalniz onayli yayimli revizyonla hazir sayar;
+  onaysiz bir harf duzeltmesi soruyu havuzdan dusururdu. Bu sorularda duzeltme
+  onayli yoldan gider.
 - Yayin kapisi atlanmaz: taban revizyonun gecerli politikada APPROVED karari
   yoksa (ya da baska bir verdict'i varsa) yol kapanir; varsa yeni revizyona
   devredilir ve gerekcesi devri yazar.
