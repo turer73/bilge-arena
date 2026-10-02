@@ -192,6 +192,8 @@ jobs:
     env:
       CONTENT_GOVERNANCE_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/bilge_r43_test_ci
       CONTENT_GOVERNANCE_TEST_DATABASE_DISPOSABLE: '1'
+      SOCIAL_PILOT_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/bilge_social_pilot_test_ci
+      SOCIAL_PILOT_TEST_DATABASE_DISPOSABLE: '1'
       VERIFIED_ATTEMPTS_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/bilge_r02_test_ci
       VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE: '1'
     steps:
@@ -210,6 +212,7 @@ jobs:
           (async () => { const client = new Client({ connectionString:
           'postgres://postgres:postgres@localhost:5432/postgres' });
           await client.connect(); await client.query('CREATE DATABASE bilge_r02_test_ci');
+          await client.query('CREATE DATABASE bilge_social_pilot_test_ci');
           await client.end(); })().catch((error) => { console.error(error); process.exit(1); });"
 
       - name: Run revision-bound diagnostic and governance acceptance tests
@@ -220,6 +223,9 @@ jobs:
 
       - name: Run distinct-day mastery evidence acceptance test
         run: npm run test:mastery-evidence:pg
+
+      - name: Run isolated four-domain Social discovery acceptance tests
+        run: npm run test:social-pilot:pg
 
   build:
     name: 🏗️ Build

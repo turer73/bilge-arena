@@ -6,20 +6,25 @@
  * inceleme sayfasi burada kilitlenir. Gercek RPC kabulu
  * question-content-governance-postgres.integration.test.mjs icinde.
  */
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   PROPOSALS_SCHEMA,
+  applyRevisionItems,
   buildBatch,
   buildRevisionPayload,
   currentFromRevisionDetail,
+  contentFingerprint,
   dbLookupIds,
   diffContent,
   draftRequestId,
   parseProposals,
   renderReviewSheet,
+  revisionApplyPreflight,
   scanGate,
   snapshotFromExport,
   validatePayloadShape,
@@ -40,6 +45,77 @@ const current = () => ({
 const proposal = (over = {}) => ({
   ref: 'T-1', questionId: Q, finding: { code: 'ASCII_DIACRITIC_LOSS', severity: 'P1', summary: 'Kokte karakter kaybi.' }, evidence: ['scan'],
   changeKind: 'edit', patch: { question: 'Aşağıdakilerden hangisi doğru yazılmıştır?' }, rationale: 'Yalniz yazim.', ...over,
+})
+
+describe('tam-paket uygulama on kontrolu', () => {
+  const ready = (n = 1, over = {}) => ({ ref: `R-${n}`, questionId: `${String(n).padStart(8, '0')}-1111-4111-8111-111111111111`,
+    baseRevisionId: current().baseRevisionId, requestId: `request-${n}`, status: 'ready', lane: 'draft',
+    payload: { content: current().content }, reasons: [], ...over })
+  const fakeDb = (response = { data: { revisionId: 'new-revision', revisionNo: 2, mappingRequired: true }, error: null }) => {
+    const calls = []
+    return { calls, rpc: async (...args) => { calls.push(args); return response } }
+  }
+  it('tek engelli oge tum pakette sifir mutation RPC ile durur; hazir ogeler yazilmis sayilmaz', async () => {
+    const items = [ready(), ready(2, { status: 'blocked' })]
+    const db = fakeDb()
+    const preflight = await applyRevisionItems({ db, userId: Q, items, requireAllReady: true, draftOnly: true })
+    expect(preflight.passed).toBe(false)
+    expect(preflight.blockingRefs).toEqual(['R-2'])
+    expect(db.calls).toHaveLength(0)
+    expect(items.map(i => i.status)).toEqual(['ready', 'blocked'])
+  })
+  it('needs_patch ve preview hazir veya uygulanmis sayilmaz', () => {
+    for (const status of ['needs_patch', 'preview']) {
+      expect(revisionApplyPreflight([ready(1, { status })], { requireAllReady: true }).passed).toBe(false)
+    }
+  })
+  it('bos veya ayni soruya iki oneri iceren paket hic yazmadan durur', async () => {
+    for (const items of [[], [ready(), ready(2, { questionId: ready().questionId })]]) {
+      const db = fakeDb()
+      expect((await applyRevisionItems({ db, userId: Q, items, requireAllReady: true })).passed).toBe(false)
+      expect(db.calls).toHaveLength(0)
+    }
+  })
+  it('esleme bekleyen taslak hattinda 215 yayin RPCsine dusmez', async () => {
+    const db = fakeDb()
+    const items = [ready(), ready(2, { lane: 'turkish_restoration' })]
+    expect((await applyRevisionItems({ db, userId: Q, items, draftOnly: true })).passed).toBe(false)
+    expect(db.calls).toHaveLength(0)
+  })
+  it('tam hazir pakette yalniz mevcut create revision RPCsini ayni pin ve requestId ile cagirir', async () => {
+    const items = [ready(), ready(2)]
+    const before = structuredClone(items)
+    const db = fakeDb()
+    expect((await applyRevisionItems({ db, userId: Q, items, requireAllReady: true, draftOnly: true })).passed).toBe(true)
+    expect(db.calls).toEqual(before.map(it => ['create_question_content_revision', {
+      p_user_id: Q, p_question_id: it.questionId, p_base_revision_id: it.baseRevisionId,
+      p_payload: it.payload, p_request_id: it.requestId,
+    }]))
+    expect(items.every(it => it.status === 'applied' && it.mappingRequired === true)).toBe(true)
+    expect(items.every(it => it.status !== 'published')).toBe(true)
+  })
+  it('varsayilan parcali hazir-oge davranisi degismez; tam paket secenegi acik olmalidir', async () => {
+    const items = [ready(), ready(2, { status: 'blocked' })]
+    const db = fakeDb()
+    expect((await applyRevisionItems({ db, userId: Q, items })).passed).toBe(true)
+    expect(db.calls).toHaveLength(1)
+    expect(items.map(it => it.status)).toEqual(['applied', 'blocked'])
+  })
+  it('izin/CAS RPC reddi uygulanmis sayilmaz; batch on kontrolu DB transaction garantisi degildir', async () => {
+    const db = fakeDb({ data: null, error: { code: '42501', message: 'prepare permission required' } })
+    const items = [ready()]
+    const preflight = await applyRevisionItems({ db, userId: Q, items, requireAllReady: true })
+    expect(preflight.passed).toBe(true)
+    expect(items[0].status).toBe('blocked')
+    expect(items[0].reasons.join(' ')).toContain('42501')
+  })
+  it('215 hattinin mevcut yayin ve replay sonucu varsayilan modda korunur', async () => {
+    const db = fakeDb({ data: { revisionId: 'restored', replayed: true }, error: null })
+    const items = [ready(1, { lane: 'turkish_restoration' })]
+    await applyRevisionItems({ db, userId: Q, items, requireAllReady: true })
+    expect(db.calls[0][0]).toBe('publish_question_turkish_restoration')
+    expect(items[0]).toMatchObject({ status: 'published', revisionId: 'restored', replayed: true })
+  })
 })
 
 describe('buildRevisionPayload', () => {
@@ -256,6 +332,58 @@ describe('currentFromRows / snapshotFromExport', () => {
 })
 
 describe('buildBatch / renderReviewSheet', () => {
+  it('pinli oneri yalniz incelenen revizyon VE tam icerikte kurulur; eski oneriler uyumludur', () => {
+    const c = current()
+    const p = proposal({ expectedBase: { revisionId: c.baseRevisionId.toUpperCase(), contentFingerprint: contentFingerprint(c.content) } })
+    expect(validateProposal(p)).toEqual([])
+    const make = (value, prop = p) => buildBatch({ proposals: [prop], currentById: new Map([[Q, value]]), offline: true })[0]
+    expect(make(c).status).toBe('preview')
+    expect(make({ ...c, baseRevisionId: Q }).status).toBe('blocked')
+    expect(make({ ...c, content: { ...c.content, solution: 'Başka açıklama.' } }).status).toBe('blocked')
+    expect(make(c, proposal()).status).toBe('preview')
+    expect(make(c, proposal({ expectedBase: null })).status).toBe('blocked')
+  })
+  it('canonical JSON fingerprint anahtar sirasindan bagimsizdir, noktalama ve tum icerigi korur', () => {
+    expect(contentFingerprint({ a: { x: 1, y: 2 }, b: ['-10'] })).toBe(contentFingerprint({ b: ['-10'], a: { y: 2, x: 1 } }))
+    expect(contentFingerprint({ a: '-10' })).not.toBe(contentFingerprint({ a: '10' }))
+    for (const expectedBase of [{}, { revisionId: Q, contentFingerprint: 'x' }, { revisionId: Q, contentFingerprint: 'a'.repeat(64), extra: true }]) {
+      expect(validateProposal(proposal({ expectedBase })).some(e => e.includes('.expectedBase:'))).toBe(true)
+    }
+  })
+  it('dis aktarim metadata zorlugu/sinavi aynen korur, eski satir icin fallback kalir', () => {
+    const s = snapshotFromExport({ rows: [{ id: Q, game: 'sosyal', category: 'tarih', difficulty: 5, exam_ref: 'TYT', topic: 'Konu', content: {} }] }).get(Q)
+    expect(s.metadata).toEqual(expect.objectContaining({ difficulty: 5, examRef: 'TYT', topic: 'Konu' }))
+    expect(snapshotFromExport({ rows: [{ id: Q, content: {} }] }).get(Q).metadata.difficulty).toBe(3)
+  })
+  it('--offline ortamda DB anahtari olsa da yalniz dosyadan preview uretir; apply ve eksik rows reddedilir', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'bilge-revision-offline-'))
+    try {
+      const c = current()
+      const proposalsPath = join(dir, 'proposals.json'); const rowsPath = join(dir, 'rows.json')
+      writeFileSync(proposalsPath, JSON.stringify({ schemaVersion: PROPOSALS_SCHEMA, batch: { title: 'CLI test' }, proposals: [proposal()] }))
+      writeFileSync(rowsPath, JSON.stringify({ rows: [{ id: Q, game: c.metadata.game, category: c.metadata.category, difficulty: 2, content: c.content, published_revision_id: c.baseRevisionId }] }))
+      const script = fileURLToPath(new URL('../prepare-question-revision-drafts.mjs', import.meta.url))
+      const run = (...args) => spawnSync(process.execPath, [script, '--proposals', proposalsPath, '--out-dir', join(dir, 'out'), ...args], {
+        encoding: 'utf8', timeout: 10000, env: { ...process.env, SUPABASE_URL: 'https://example.invalid', SUPABASE_SERVICE_ROLE_KEY: 'test-not-a-secret' },
+      })
+      const result = run('--offline', '--rows', rowsPath)
+      expect(result.status).toBe(0)
+      const report = JSON.parse(readFileSync(join(dir, 'out', 'report.json'), 'utf8'))
+      expect(report.mode).toBe('offline-preview'); expect(report.items[0].status).toBe('preview')
+      expect(report.items[0].payload.metadata.difficulty).toBe(2)
+      writeFileSync(proposalsPath, JSON.stringify({ schemaVersion: PROPOSALS_SCHEMA, batch: { title: 'CLI test' }, proposals: [proposal({ expectedBase: { revisionId: c.baseRevisionId, contentFingerprint: contentFingerprint(c.content) } })] }))
+      expect(run('--offline', '--rows', rowsPath, '--mapping-pending-drafts').status).toBe(0)
+      const mappingReport = JSON.parse(readFileSync(join(dir, 'out', 'report.json'), 'utf8'))
+      expect(mappingReport.mappingPendingDrafts).toBe(true)
+      expect(mappingReport.items[0]).toEqual(expect.objectContaining({ status: 'preview', lane: 'draft', mappingRequired: true, requestId: null }))
+      expect(run('--offline', '--rows', rowsPath, '--mapping-pending-drafts', '--require-all-ready').status).toBe(1)
+      const previewPreflight = JSON.parse(readFileSync(join(dir, 'out', 'report.json'), 'utf8'))
+      expect(previewPreflight.applyPreflight).toMatchObject({ requiredAllReady: true, draftOnly: true, passed: false, blockingRefs: ['T-1'] })
+      expect(previewPreflight.items[0].status).toBe('preview')
+      expect(run('--offline', '--rows', rowsPath, '--apply').status).toBe(2)
+      expect(run('--offline').status).toBe(2)
+    } finally { rmSync(dir, { recursive: true, force: true }) }
+  })
   it('cevrimdisi onizleme: oge preview (uygulanamaz), kazanim eksigi pending_db notu; canli modda blok', () => {
     const c = { ...current(), outcomes: [], baseRevisionId: null }
     const offline = buildBatch({ proposals: [proposal()], currentById: new Map([[Q, c]]), offline: true })[0]
@@ -282,6 +410,56 @@ describe('buildBatch / renderReviewSheet', () => {
   })
   it('diffContent secenekleri tek tek karsilastirir', () => {
     expect(diffContent({ options: ['a', 'b', 'c'], answer: 0 }, { options: ['a', 'B', 'c'], answer: 0 })).toEqual([{ field: 'options[1]', before: 'b', after: 'B' }])
+  })
+})
+
+describe('esleme bekleyen TASLAK modu (migration 164)', () => {
+  const unmapped = () => ({ ...current(), outcomes: [], source: { kind: 'original', title: 'Legacy import', licenseCode: 'legacy-import' } })
+  const pinned = (c, over = {}) => proposal({ expectedBase: { revisionId: c.baseRevisionId, contentFingerprint: contentFingerprint(c.content) }, ...over })
+  const run = (c, p = pinned(c), over = {}) => buildBatch({ proposals: [p], currentById: new Map([[Q, c]]), mappingPendingDrafts: true, ...over })[0]
+
+  it('bos outcomes yalniz revision validator modu ile gecer; create ve default hala blok', () => {
+    const built = buildRevisionPayload({ current: unmapped(), proposal: proposal(), allowUnmapped: true })
+    expect(built.errors).toEqual([])
+    expect(validatePayloadShape(built.payload, { allowUnmapped: true })).toEqual([])
+    expect(validatePayloadShape(built.payload)).toContain('outcomes: 1-5 kazanim')
+    expect(validatePayloadShape({ ...built.payload, changeKind: 'create' }, { allowUnmapped: true })).toContain('outcomes: 1-5 kazanim')
+    expect(built.payload.source).toEqual(unmapped().source)
+  })
+
+  it('pinli duzeltme create RPC icin ready kalir, esleme/yayin uygunlugu iddia etmez', () => {
+    const c = unmapped(); const it1 = run(c)
+    expect(it1).toEqual(expect.objectContaining({ status: 'ready', lane: 'draft', mappingRequired: true }))
+    expect(it1.payload.outcomes).toEqual([])
+    expect(it1.requestId).toMatch(/^[0-9a-f-]{36}$/)
+    expect(renderReviewSheet({ batch: { title: 'test' }, items: [it1] })).toContain('stage 2/yayin uygunlugu degildir')
+    expect(run(c, pinned(c), { mappingPendingDrafts: false }).status).toBe('blocked')
+  })
+
+  it('expectedBase zorunlu; farkli taban/icerik, eksik kaynak/revizyon reddedilir', () => {
+    const c = unmapped(); const p = pinned(c)
+    expect(run(c, proposal()).reasons.join(' ')).toContain('expectedBase zorunlu')
+    expect(run({ ...c, baseRevisionId: Q }, p).status).toBe('blocked')
+    expect(run({ ...c, content: { ...c.content, answer: 0 } }, p).status).toBe('blocked')
+    expect(run({ ...c, source: null }, p).reasons.join(' ')).toContain('INTERNAL kaynak uydurulamaz')
+    const noRevision = { ...c, baseRevisionId: null }
+    expect(run(noRevision, p).status).toBe('blocked')
+  })
+
+  it('yanlis dolu kazanimi, tarama ERROR veya yeni soru yaratmayi filtrelemez', () => {
+    const c = unmapped()
+    expect(run(c, pinned(c, { outcomes: [{ outcomeId: OUTCOME, weight: 1, primary: false }] })).reasons).toContain('outcomes: tam olarak bir primary')
+    expect(run(c, pinned(c, { patch: { question: 'Asagidaki ifadeyi okuyunuz.' } })).status).toBe('blocked')
+    expect(run(c, pinned(c, { changeKind: 'create' })).status).toBe('blocked')
+    expect(run(c, pinned(c), { offline: true })).toEqual(expect.objectContaining({ status: 'preview', requestId: null }))
+  })
+
+  it('215 harf duzeltmesi dahil butun ogeleri draft hattinda tutar', () => {
+    const c = { ...unmapped(), metadata: { ...current().metadata, game: 'fen', category: 'fizik' },
+      content: { question: 'Asagidaki ifadelerden hangisi dogrudur?', options: ['Ölçüm', 'Deney', 'Madde', 'Işık'], answer: 0, solution: 'Ölçüm.' } }
+    const p = pinned(c, { patch: { question: 'Aşağıdaki ifadelerden hangisi doğrudur?' } })
+    expect(run(c, p)).toEqual(expect.objectContaining({ status: 'ready', lane: 'draft', words: null, mappingRequired: true }))
+    expect(run(c, p, { mappingPendingDrafts: false }).lane).toBe('turkish_restoration')
   })
 })
 

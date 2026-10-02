@@ -5,6 +5,8 @@ import { BrainCircuit, CalendarCheck2, Gauge, Route } from 'lucide-react'
 import { AcademyDialog } from '@/components/academy/academy-dialog'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { useAdaptiveDiagnostic } from '@/lib/hooks/use-adaptive-diagnostic'
+import { useSocialPilot } from '@/lib/hooks/use-social-pilot'
+import { SOCIAL_DISCOVERY_DESCRIPTION } from '@/lib/diagnostic/social-pilot-public'
 
 interface DiagnosticExplainerDialogProps {
   game: GameSlug
@@ -38,6 +40,8 @@ export function DiagnosticExplainerDialog({
   onClose,
 }: DiagnosticExplainerDialogProps) {
   const diagnostic = useAdaptiveDiagnostic(game, userId, examRef)
+  const socialPilot = useSocialPilot(game === 'sosyal' && examRef === 'TYT'
+    && diagnostic.response?.supported === false ? userId : null)
   const policy = diagnostic.response?.policy ?? null
   const subjectName = `${examRef} ${GAMES[game].name}`
   const diagnosticParams = new URLSearchParams({ game, exam_ref: examRef })
@@ -91,7 +95,10 @@ export function DiagnosticExplainerDialog({
           ) : diagnostic.loading || !diagnostic.response ? (
             <p role="status" className="text-sm font-bold text-[var(--app-text-sub)]">Bu dersin ölçüm kapsamı kontrol ediliyor…</p>
           ) : !diagnostic.supported || !policy ? (
-            <p className="text-sm font-bold text-[var(--app-text-sub)]">Bu ders ve sınav kapsamında başlangıç taraması henüz yayınlanmadı.</p>
+            <div className="space-y-2">
+              <p className="text-sm font-bold text-[var(--app-text-sub)]">Bu ders ve sınav kapsamında başlangıç taraması henüz yayınlanmadı.</p>
+              {socialPilot.response?.supported && <p className="text-xs leading-5 text-[var(--app-text-sub)]">{SOCIAL_DISCOVERY_DESCRIPTION}</p>}
+            </div>
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -110,6 +117,10 @@ export function DiagnosticExplainerDialog({
         ) : diagnostic.supported && policy ? (
           <Link href={diagnosticHref} className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-[var(--app-accent)] px-5 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none">
             {activeSession ? 'Kaldığın yerden devam et' : 'Ölçüm ekranına geç'}
+          </Link>
+        ) : socialPilot.response?.supported ? (
+          <Link href="/arena/tani/sosyal-pilot" className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-[var(--app-accent)] px-5 text-sm font-black text-white">
+            {socialPilot.response.session?.status === 'active' ? 'Sosyal keşfine devam et' : 'Dört alanlı Sosyal keşfini aç'}
           </Link>
         ) : null}
       </div>
