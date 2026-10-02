@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { useMasteryMap, type MasteryOutcome } from '@/lib/hooks/use-mastery-map'
+import { useSocialPilot } from '@/lib/hooks/use-social-pilot'
+import { SOCIAL_DISCOVERY_DESCRIPTION, SOCIAL_DISCOVERY_LABEL } from '@/lib/diagnostic/social-pilot-public'
 import { useGameStore } from '@/stores/game-store'
 import { DiagnosticExplainerDialog } from './diagnostic-explainer-dialog'
 
@@ -37,6 +39,11 @@ export function MasteryActionCard({
     error,
     fetchMastery,
   } = useMasteryMap(game, userId, examRef)
+  // The four-domain pilot is independent of the unreleased full TYT scope.
+  // Only the authenticated pilot API can report it as supported.
+  const pilotEligible = game === 'sosyal' && examRef?.trim().toUpperCase() === 'TYT'
+    && !!response && !coverage.supported && !loading && !error
+  const socialPilot = useSocialPilot(pilotEligible ? userId : null)
 
   const freePracticeParams = new URLSearchParams()
   if (game !== 'wordquest' && examRef) freePracticeParams.set('exam_ref', examRef)
@@ -64,6 +71,26 @@ export function MasteryActionCard({
   }
 
   if (response && !coverage.supported) {
+    if (pilotEligible && !socialPilot.loading && !socialPilot.error && socialPilot.response?.supported) {
+      const session = socialPilot.response.session
+      const action = session?.status === 'active' ? 'Keşfe devam et'
+        : session?.status === 'completed' ? 'Keşif gözlemlerini gör'
+          : session ? 'Keşif oturumunu aç' : 'Dört alan keşfini başlat'
+      return (
+        <article className="rounded-[22px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-border)]">
+          <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-accent-text)]">DÖRT ALAN KEŞİF PİLOTU</p>
+          <h2 className="mt-1 text-sm font-black text-[var(--app-text)]">{SOCIAL_DISCOVERY_LABEL}</h2>
+          <p className="mt-1 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">{SOCIAL_DISCOVERY_DESCRIPTION}</p>
+          {session && <p className="mt-2 text-xs font-semibold text-[var(--app-text-sub)]">{session.answeredCount}/12 soru yanıtlandı</p>}
+          <Link href="/arena/tani/sosyal-pilot" className="mt-3 flex min-h-12 items-center justify-center rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white">
+            {action}
+          </Link>
+          <Link href={freePracticeHref} className="mt-2 inline-flex min-h-11 items-center text-xs font-black text-[var(--app-accent-text)] hover:underline">
+            Serbest pratikle devam et
+          </Link>
+        </article>
+      )
+    }
     return (
       <article className="rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-border)]">
         <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-accent-text)]">KEŞİF SEVİYESİ HAZIRLANIYOR</p>

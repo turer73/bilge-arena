@@ -2,6 +2,8 @@ import { describe, test, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MasteryActionCard } from '../mastery-action-card'
 import { useMasteryMap, type MasteryOutcome } from '@/lib/hooks/use-mastery-map'
+import { useSocialPilot } from '@/lib/hooks/use-social-pilot'
+import { SOCIAL_DISCOVERY_DESCRIPTION, SOCIAL_DISCOVERY_LABEL } from '@/lib/diagnostic/social-pilot-public'
 import { useGameStore } from '@/stores/game-store'
 
 const pushMock = vi.fn()
@@ -11,11 +13,13 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/hooks/use-mastery-map', () => ({
   useMasteryMap: vi.fn(),
 }))
+vi.mock('@/lib/hooks/use-social-pilot', () => ({ useSocialPilot: vi.fn() }))
 vi.mock('../diagnostic-explainer-dialog', () => ({
   DiagnosticExplainerDialog: ({ examRef }: { examRef: string }) => <div role="dialog">{examRef} ölçüm açıklaması</div>,
 }))
 
 const mockedUseMasteryMap = vi.mocked(useMasteryMap)
+const mockedUseSocialPilot = vi.mocked(useSocialPilot)
 const fetchMasteryMock = vi.fn()
 
 const supportedCoverage = {
@@ -80,6 +84,8 @@ describe('MasteryActionCard', () => {
     pushMock.mockClear()
     fetchMasteryMock.mockClear()
     mockedUseMasteryMap.mockReset()
+    mockedUseSocialPilot.mockReset()
+    mockedUseSocialPilot.mockReturnValue({ response: null, loading: false, error: false } as never)
     useGameStore.setState({
       selectedGame: null,
       selectedMode: 'classic',
@@ -113,6 +119,78 @@ describe('MasteryActionCard', () => {
     render(<MasteryActionCard game="fen" userId="u1" examRef="TYT" />)
     fireEvent.click(screen.getByRole('button', { name: 'Tekrar Dene' }))
     expect(fetchMasteryMock).toHaveBeenCalledTimes(1)
+  })
+
+  function unreleasedSocial() {
+    const coverage = { supported: false, diagnosticAvailable: false, taxonomyVersion: null,
+      totalQuestions: 0, mappedQuestions: 0, percentage: 0 }
+    mockedUseMasteryMap.mockReturnValue(hookResult({ response: { coverage }, coverage }) as never)
+  }
+
+  function enabledPilot(session: unknown = null) {
+    mockedUseSocialPilot.mockReturnValue({ loading: false, error: false, response: {
+      supported: true, label: SOCIAL_DISCOVERY_LABEL, description: SOCIAL_DISCOVERY_DESCRIPTION,
+      questionCount: 12, session,
+    } } as never)
+  }
+
+  test('tam TYT kapaliyken sadece API tarafindan acilan dort alan pilotuna yonlendirir', () => {
+    unreleasedSocial(); enabledPilot()
+    render(<MasteryActionCard game="sosyal" userId="u1" examRef="TYT" />)
+    expect(mockedUseSocialPilot).toHaveBeenCalledWith('u1')
+    expect(screen.getByText(SOCIAL_DISCOVERY_DESCRIPTION)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Dört alan keşfini başlat' })).toHaveAttribute('href', '/arena/tani/sosyal-pilot')
+    expect(screen.queryByText('KEŞİF SEVİYESİ 1/3')).not.toBeInTheDocument()
+    expect(screen.queryByText('KEŞİF SEVİYESİ HAZIRLANIYOR')).not.toBeInTheDocument()
+  })
+
+  test.each([
+    ['active', 4, 'Keşfe devam et'],
+    ['completed', 12, 'Keşif gözlemlerini gör'],
+    ['expired', 4, 'Keşif oturumunu aç'],
+    ['abandoned', 4, 'Keşif oturumunu aç'],
+  ])('pilot oturumu %s ise dogru aksiyonu gosterir', (status, answeredCount, action) => {
+    unreleasedSocial(); enabledPilot({ status, answeredCount })
+    render(<MasteryActionCard game="sosyal" userId="u1" examRef="TYT" />)
+    expect(screen.getByText(`${answeredCount}/12 soru yanıtlandı`)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: action })).toHaveAttribute('href', '/arena/tani/sosyal-pilot')
+  })
+
+  test.each([
+    { response: null, loading: true, error: false },
+    { response: null, loading: false, error: true },
+    { response: { supported: false }, loading: false, error: false },
+    { response: { supported: true }, loading: false, error: true },
+  ])('eksik, kapali veya hatali pilot yanitindan baslatma izni uretmez: %j', (pilot) => {
+    unreleasedSocial(); mockedUseSocialPilot.mockReturnValue(pilot as never)
+    render(<MasteryActionCard game="sosyal" userId="u1" examRef="TYT" />)
+    expect(screen.getByText('KEŞİF SEVİYESİ HAZIRLANIYOR')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Dört alan keşfini başlat' })).not.toBeInTheDocument()
+  })
+
+  test.each([
+    ['sosyal', 'AYT'], ['fen', 'TYT'], ['turkce', 'TYT'], ['sosyal', undefined],
+  ] as const)('pilot baska kapsama tasmaz: %s/%s', (game, examRef) => {
+    unreleasedSocial(); enabledPilot()
+    render(<MasteryActionCard game={game} userId="u1" examRef={examRef} />)
+    expect(mockedUseSocialPilot).toHaveBeenCalledWith(null)
+    expect(screen.getByText('KEŞİF SEVİYESİ HAZIRLANIYOR')).toBeInTheDocument()
+  })
+
+  test('kullanici yokken pilot istegi ve aksiyonu yoktur', () => {
+    unreleasedSocial(); enabledPilot()
+    const { container } = render(<MasteryActionCard game="sosyal" examRef="TYT" />)
+    expect(mockedUseSocialPilot).toHaveBeenCalledWith(undefined)
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  test('tam Sosyal kapsami acilinca pilot onun yerine gecmez', () => {
+    enabledPilot()
+    mockedUseMasteryMap.mockReturnValue(hookResult({ outcomes: [mkOutcome({ game: 'sosyal' })] }) as never)
+    render(<MasteryActionCard game="sosyal" userId="u1" examRef="TYT" />)
+    expect(mockedUseSocialPilot).toHaveBeenCalledWith(null)
+    expect(screen.queryByText('DÖRT ALAN KEŞİF PİLOTU')).not.toBeInTheDocument()
+    expect(screen.getByText('GELİŞİYOR')).toBeInTheDocument()
   })
 
   test('tüm kazanımlar mastered ise güçlü durumunu gösterir', () => {
