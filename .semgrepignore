@@ -1,0 +1,14 @@
+# Semgrep CE 1.163.0 cannot fully parse these checked-in files.
+# This is a scanner coverage exception, not a security approval.
+# Generated type declarations contain no executable application logic.
+src/types/database.generated.ts
+# These two application files trigger PartialParsing; revisit on scanner upgrade.
+src/app/admin/roller/page.tsx
+src/components/study/today-plan-focus.tsx
+# Existing test fixtures with PartialParsing; runtime source remains in scope.
+src/app/api/institution/tracking/programs/draft/__tests__/route.test.ts
+src/app/api/institution/tracking/reports/__tests__/route.test.ts
+src/app/api/questions/random/__tests__/route.fsrs.test.ts
+src/app/api/questions/random/__tests__/route.test.ts
+src/app/api/study/personalized-mock/__tests__/route.test.ts
+src/app/api/study/today/__tests__/route.test.ts

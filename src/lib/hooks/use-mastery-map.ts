@@ -24,6 +24,7 @@ export function useMasteryMap(
   game: GameSlug,
   userId?: string | null,
   examRef?: string | null,
+  policyEpoch?: string | null,
 ) {
   // Wordquest questions intentionally use a NULL storage exam_ref, while the
   // released mastery registry exposes the same scope under display ref YDT.
@@ -34,7 +35,9 @@ export function useMasteryMap(
   const [mastery, setMastery] = useState<MasteryMapResponsePublic | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
+  const [settledContextKey, setSettledContextKey] = useState<string | null>(null)
   const requestRef = useRef<AbortController | null>(null)
+  const contextKey = `${userId ?? ''}\u0000${game}\u0000${normalizedExamRef ?? ''}\u0000${policyEpoch ?? ''}`
 
   const fetchMastery = useCallback(async () => {
     requestRef.current?.abort()
@@ -42,12 +45,14 @@ export function useMasteryMap(
       setMastery(null)
       setLoading(false)
       setError(false)
+      setSettledContextKey(contextKey)
       return
     }
 
     const controller = new AbortController()
     requestRef.current = controller
     setMastery(null)
+    setSettledContextKey(null)
     setError(false)
     setLoading(true)
     try {
@@ -80,23 +85,28 @@ export function useMasteryMap(
         setError(true)
       }
     } finally {
-      if (requestRef.current === controller) setLoading(false)
+      if (requestRef.current === controller) {
+        setSettledContextKey(contextKey)
+        setLoading(false)
+      }
     }
-  }, [game, normalizedExamRef, userId])
+  }, [contextKey, game, normalizedExamRef, userId])
 
   useEffect(() => {
     void fetchMastery()
     return () => requestRef.current?.abort()
   }, [fetchMastery])
 
+  const contextSettled = settledContextKey === contextKey
+  const visibleMastery = contextSettled ? mastery : null
   return {
-    response: mastery,
-    discovery: mastery?.discovery ?? null,
-    outcomes: mastery?.outcomes ?? [],
-    graph: mastery?.graph ?? null,
-    coverage: mastery?.coverage ?? EMPTY_COVERAGE,
-    loading,
-    error,
+    response: visibleMastery,
+    discovery: visibleMastery?.discovery ?? null,
+    outcomes: visibleMastery?.outcomes ?? [],
+    graph: visibleMastery?.graph ?? null,
+    coverage: visibleMastery?.coverage ?? EMPTY_COVERAGE,
+    loading: contextSettled ? loading : true,
+    error: contextSettled ? error : false,
     fetchMastery,
   }
 }

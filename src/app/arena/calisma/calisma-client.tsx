@@ -241,7 +241,12 @@ function LegacyCalismaClient() {
               selectedCategory={null}
               tytSocialPolicy={tytSocialPolicy}
             />
-            <MasteryActionCard game={game} userId={user.id} examRef={examRef} />
+            <MasteryActionCard
+              game={game}
+              userId={tytSocialStartBlocked ? undefined : user.id}
+              examRef={examRef}
+              policyEpoch={tytSocialPolicy.selectionEpoch}
+            />
             <InstitutionWeeklyProgramCard />
           </section>
 

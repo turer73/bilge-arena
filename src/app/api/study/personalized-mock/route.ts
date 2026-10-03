@@ -15,10 +15,12 @@ import {
 import { selectPersonalizedMock } from '@/lib/study/personalized-mock'
 import type { Question } from '@/types/database'
 import {
-  filterTytSocialQuestionIds,
+  isTytSocialSelectionEpochChanged,
   issueVerifiedAttempt,
   issueVerifiedExamAttempt,
+  readTytSocialLearningSnapshot,
   toPublicVerifiedQuestions,
+  type TytSocialLearningEpoch,
 } from '@/lib/verified-attempts'
 import { isValidUuid } from '@/lib/utils/uuid'
 import { DENEME_CONFIGS } from '@/lib/constants/modes'
@@ -158,21 +160,35 @@ export async function GET(request: NextRequest) {
   }
 
   let eligibleHistory = historyResult.data ?? []
+  let tytSocialEpoch: TytSocialLearningEpoch | undefined
   if (tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT') {
     try {
-      const allowedIds = new Set(await filterTytSocialQuestionIds(
+      const selection = await readTytSocialLearningSnapshot(
         admin,
         user.id,
         [...questionsById.keys()],
-      ))
+      )
+      if (selection.status !== 'active') {
+        return NextResponse.json(
+          { error: selection.status === 'setup_required'
+            ? 'TYT Sosyal cevaplama düzeni seçilmelidir'
+            : 'TYT Sosyal çalışma kapsamı kullanılamıyor' },
+          { status: selection.status === 'setup_required' ? 409 : 503, headers: { 'Cache-Control': 'no-store' } },
+        )
+      }
+      const allowedIds = new Set(selection.allowedQuestionIds)
       for (const questionId of questionsById.keys()) {
         if (!allowedIds.has(questionId)) questionsById.delete(questionId)
       }
       eligibleHistory = eligibleHistory.filter(row => allowedIds.has(row.question_id))
+      tytSocialEpoch = {
+        policyVersion: selection.context.policyVersion,
+        selectionEventId: selection.context.selectionEventId,
+      }
     } catch {
       return NextResponse.json(
-        { error: 'TYT Sosyal cevaplama düzeni seçilmelidir' },
-        { status: 409, headers: { 'Cache-Control': 'no-store' } },
+        { error: 'TYT Sosyal çalışma kapsamı okunamadı' },
+        { status: 500, headers: { 'Cache-Control': 'no-store' } },
       )
     }
   }
@@ -226,6 +242,7 @@ export async function GET(request: NextRequest) {
           blueprintVersion: STRATEGY_BLUEPRINT_VERSION,
           items: composition.items,
           plannedDurationSec: DENEME_CONFIGS[game].totalTime,
+          tytSocialEpoch,
           requestId: requestIdHeader && isValidUuid(requestIdHeader)
             ? requestIdHeader
             : crypto.randomUUID(),
@@ -251,7 +268,13 @@ export async function GET(request: NextRequest) {
       || verifiedQuestions.some((question, index) => question.id !== questions[index]?.id)
     ) throw new Error('verified_attempt_snapshot_mismatch')
     questions = verifiedQuestions
-  } catch {
+  } catch (error) {
+    if (isTytSocialSelectionEpochChanged(error)) {
+      return NextResponse.json(
+        { error: 'TYT Sosyal cevaplama düzeni değişti. Yeniden deneyin.' },
+        { status: 409, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
     console.error('[/api/study/personalized-mock] verified attempt issuance failed')
     return NextResponse.json(
       { error: 'Deneme baslatilamadi' },
