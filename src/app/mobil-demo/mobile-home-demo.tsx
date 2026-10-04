@@ -35,6 +35,7 @@ import {
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { DesktopDailyPlan } from '@/components/academy/desktop-daily-plan'
 import { useWideStudy } from '@/lib/hooks/use-wide-study'
+import { useSubjectSwipe } from '@/lib/hooks/use-subject-swipe'
 import { useTopicProgress } from '@/lib/hooks/use-topic-progress'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { studyHref } from '@/lib/utils/study-href'
@@ -253,6 +254,7 @@ export function MobileHomeDemo({
   const wideStudy = useWideStudy()
   const visibleSubjects = SUBJECTS.filter((item) => !availableSubjects || availableSubjects.includes(item.id))
   const [subjectId, setSubjectId] = useState<SubjectId>(visibleSubjects[0]?.id ?? 'matematik')
+  const subjectTabsRef = useRef<HTMLDivElement>(null)
   // Demo rotasi bir vitrin: pencere acik baslar. Canli ana giriste planin
   // birincil eylemini kapatmamak icin koç yalniz kullanici istegiyle acilir.
   const [coachOpen, setCoachOpen] = useState(mode === 'demo')
@@ -264,6 +266,30 @@ export function MobileHomeDemo({
   const activeSubjectId = selectedSubject ?? subjectId
   const handleSubjectChange = onSubjectChange ?? setSubjectId
   const subject = visibleSubjects.find((item) => item.id === activeSubjectId) ?? visibleSubjects[0] ?? SUBJECTS[0]
+  const subjectSwipe = useSubjectSwipe({
+    subjects: visibleSubjects.map((item) => item.id),
+    selectedSubject: subject.id,
+    onSubjectChange: handleSubjectChange,
+    disabled: wideStudy || coachOpen || examPickerOpen,
+  })
+  useEffect(() => {
+    const tabs = subjectTabsRef.current
+    if (!tabs) return
+    const revealSelectedTab = () => {
+      const active = tabs.querySelector<HTMLElement>('[aria-pressed="true"]')
+      if (!active) return
+      const bounds = tabs.getBoundingClientRect()
+      const selected = active.getBoundingClientRect()
+      // Reveal the new tab without scrolling the lesson page back to the top.
+      if (selected.left < bounds.left) tabs.scrollLeft += selected.left - bounds.left
+      else if (selected.right > bounds.right) tabs.scrollLeft += selected.right - bounds.right
+    }
+    revealSelectedTab()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(revealSelectedTab)
+    observer.observe(tabs)
+    return () => observer.disconnect()
+  }, [subject.id, wideStudy])
   const gameSlug = subject.id === 'ingilizce' ? 'wordquest' : subject.id
   const progressExamRef = gameSlug === 'wordquest'
     ? null
@@ -505,10 +531,13 @@ export function MobileHomeDemo({
         </div>
       </header>
 
-      <main inert={coachOpen}>
+      <main inert={coachOpen} data-subject-swipe {...subjectSwipe}>
+        <p className="sr-only" aria-live="polite" aria-atomic="true">Seçili ders: {subject.label}</p>
         <section aria-label="Ders seçimi" className="border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)] px-3 py-2.5">
           <div
+            ref={subjectTabsRef}
             data-subject-tabs
+            data-subject-swipe-ignore
             className="scrollbar-none mx-auto flex max-w-[1180px] snap-x gap-2 overflow-x-auto pb-1 md:flex-wrap md:justify-center md:gap-3 md:overflow-visible md:px-2 md:py-1"
           >
             {visibleSubjects.map((item) => {
@@ -534,6 +563,9 @@ export function MobileHomeDemo({
               )
             })}
           </div>
+          {visibleSubjects.length > 1 && <p className="mt-1 flex items-center justify-center gap-1 text-xs font-medium text-[var(--app-text-muted)]">
+            <ChevronLeft size={14} aria-hidden="true" /> Dersler arasında kaydır <ChevronRight size={14} aria-hidden="true" />
+          </p>}
         </section>
 
         {mode === 'live' && userId && (
