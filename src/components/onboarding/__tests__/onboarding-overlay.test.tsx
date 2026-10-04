@@ -64,8 +64,29 @@ describe('OnboardingOverlay', () => {
     expect(navigateDocument).not.toHaveBeenCalled()
   })
 
+  test('kurum panelinde hic render etmez ve scroll kilidi koymaz', () => {
+    // Kurum paneli ogrenci yuzeyi degil: sinif+oyun secimi sorup /arena'ya
+    // atmak kullaniciyi panelden dusuruyordu. onboarding_completed=false
+    // olsa da bu yuzeyde overlay kurulmaz.
+    for (const path of ['/arena/kurum', '/arena/kurum/sinif/abc', '/arena/kurum/roller']) {
+      pathnameMock.mockReturnValue(path)
+      const { container, unmount } = render(<OnboardingOverlay />)
+      expect(container).toBeEmptyDOMElement()
+      expect(document.body.style.overflow).toBe('')
+      unmount()
+    }
+  })
+
+  test('kurum disindaki arena yollarinda acilmaya devam eder', () => {
+    // Prefix esleme segment sinirina saygi duymali: /arena/kurumsal gibi bir
+    // yol kurum paneli degildir.
+    pathnameMock.mockReturnValue('/arena/kurumsal')
+    render(<OnboardingOverlay />)
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
   test('hassas dokumanda ag hatasi sonrasi da tam dokuman navigasyonu yapar', async () => {
-    pathnameMock.mockReturnValue('/arena/kurum')
+    pathnameMock.mockReturnValue('/arena/sinif/ogretmen')
     fetchMock.mockRejectedValueOnce(new Error('network'))
     const navigateDocument = vi.fn()
     render(<OnboardingOverlay navigateDocument={navigateDocument} />)

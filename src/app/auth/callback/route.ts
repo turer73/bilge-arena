@@ -7,7 +7,13 @@ import {
   ACTIVATION_REWARD_COOKIE,
   claimActivationReward,
 } from '@/lib/activation/server-reward'
-import { safeAuthNext } from '@/lib/auth/safe-next'
+import {
+  INSTITUTION_NO_ACCESS_PATH,
+  isInstitutionSurfacePath,
+  safeAuthNext,
+} from '@/lib/auth/safe-next'
+import { INSTITUTION_PILOT_ENTRY_PERMISSION } from '@/lib/admin/platform-permissions'
+import { userHasAnyPlatformPermission } from '@/lib/supabase/platform-access'
 import {
   hasCurrentLegalConsent,
   legalConsentIntentMatchesCookie,
@@ -140,7 +146,28 @@ export async function GET(request: Request) {
       }
 
       const candidateUrl = new URL(next, origin)
-      const redirectUrl = candidateUrl.origin === origin ? candidateUrl : new URL('/arena', origin)
+      let redirectUrl = candidateUrl.origin === origin ? candidateUrl : new URL('/arena', origin)
+
+      // Kurum girisi: hedef /arena/kurum ise ve hesapta kurum yetkisi yoksa
+      // kullaniciyi once TOTP kurulumuna (proxy AAL2 kapisi) zorlamak yerine
+      // aciklama sayfasina gonder. Bu yetki bakisi yalniz OAuth degisimini AZ
+      // ONCE tamamlamis kisi icin yapilir; proxy'deki "AAL2'den once yetki
+      // sorgusu yok" kurali calinan cookie senaryosunu korur ve degismez.
+      // Sorgu basarisiz olursa fail-closed: aciklama sayfasi. Oradaki "Kurum
+      // paneline git" baglantisi gercek yetkili icin normal TOTP'li yolu acar.
+      if (isInstitutionSurfacePath(redirectUrl.pathname)) {
+        let hasInstitutionAccess = false
+        try {
+          hasInstitutionAccess = await userHasAnyPlatformPermission(
+            admin,
+            data.session.user.id,
+            [INSTITUTION_PILOT_ENTRY_PERMISSION],
+          )
+        } catch (permissionError) {
+          console.error('[AuthCallback] kurum yetkisi sorgulanamadı:', (permissionError as Error).message)
+        }
+        if (!hasInstitutionAccess) redirectUrl = new URL(INSTITUTION_NO_ACCESS_PATH, origin)
+      }
       const rewardToken = cookieStore.get(ACTIVATION_REWARD_COOKIE)?.value
       let rewardResolved = false
       if (rewardToken) {
