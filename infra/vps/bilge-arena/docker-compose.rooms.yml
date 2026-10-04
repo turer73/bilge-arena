@@ -1,0 +1,44 @@
+name: bilge-arena-rooms
+networks:
+  rooms: {external: true, name: bilge-arena-rooms}
+  edge: {external: true, name: edge}
+services:
+  postgrest:
+    image: postgrest/postgrest:v16.4
+    container_name: bilge-arena-postgrest
+    restart: unless-stopped
+    networks: [rooms, edge]
+    env_file: [secrets/postgrest.env]
+    healthcheck: {disable: true}
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.ba-api.rule=Host(`api-dev.bilgearena.com`)
+      - traefik.http.routers.ba-api.entrypoints=websecure
+      - traefik.http.routers.ba-api.tls.certresolver=letsencrypt
+      - traefik.http.services.ba-api.loadbalancer.server.port=3000
+      - traefik.http.routers.ba-api-http.rule=Host(`api-dev.bilgearena.com`)
+      - traefik.http.routers.ba-api-http.entrypoints=web
+      - traefik.http.routers.ba-api-http.middlewares=redirect-to-https@file
+  realtime:
+    image: supabase/realtime:v2.140.7
+    container_name: bilge-arena-realtime
+    restart: unless-stopped
+    networks: [rooms, edge]
+    env_file: [secrets/realtime.env]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4000/ -o /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.ba-ws.rule=Host(`ws-dev.bilgearena.com`)
+      - traefik.http.routers.ba-ws.entrypoints=websecure
+      - traefik.http.routers.ba-ws.tls.certresolver=letsencrypt
+      - traefik.http.services.ba-ws.loadbalancer.server.port=4000
+      - traefik.http.routers.ba-ws-http.rule=Host(`ws-dev.bilgearena.com`)
+      - traefik.http.routers.ba-ws-http.entrypoints=web
+      - traefik.http.routers.ba-ws-http.middlewares=redirect-to-https@file
