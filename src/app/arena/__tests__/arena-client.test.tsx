@@ -30,6 +30,8 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockAuth.value = { user: null, profile: null }
   mockQuestState.value = []
+  Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: function(this: HTMLDialogElement) { this.setAttribute('open', '') } })
+  Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: function(this: HTMLDialogElement) { this.removeAttribute('open') } })
   useGameStore.setState({ selectedGame: null, selectedCategory: null, selectedExamRef: null })
   localStorage.clear()
   global.fetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -216,17 +218,27 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
       }) } as Response
     }) as typeof fetch
     render(<ArenaClient />)
-    expect(await screen.findByRole('button', { name: 'Planı Başlat · 15 Soru' })).toBeInTheDocument()
+    expect(await screen.findByRole('progressbar', { name: 'Günlük plan ilerlemesi' })).toHaveAttribute('aria-valuemax', '15')
+    expect(screen.queryByRole('button', { name: 'Planı Başlat · 15 Soru' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Planı incele' }))
+    expect(screen.getByRole('button', { name: 'Planı Başlat · 15 Soru' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Pencereyi kapat' }))
     const primaryEntry = document.querySelector('[data-today-plan-primary]')!
     const secondaryGrid = document.querySelector('[data-responsive-arena-grid]')!
     expect(primaryEntry.compareDocumentPosition(secondaryGrid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Türkçe' }))
+    expect(screen.queryByText('0 / 15')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Planı Başlat · 15 Soru' })).not.toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: 'Planı Başlat · 12 Soru' })).toBeInTheDocument()
+    expect(await screen.findByRole('progressbar', { name: 'Günlük plan ilerlemesi' })).toHaveAttribute('aria-valuemax', '12')
+    fireEvent.click(screen.getByRole('button', { name: 'Planı incele' }))
+    expect(screen.getByRole('button', { name: 'Planı Başlat · 12 Soru' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Pencereyi kapat' }))
     fireEvent.click(screen.getByRole('button', { name: 'Sınav kapsamını değiştir' }))
     fireEvent.click(screen.getByRole('button', { name: 'AYT Eşit Ağırlık' }))
     expect(screen.queryByRole('button', { name: 'Planı Başlat · 12 Soru' })).not.toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: 'Planı Başlat · 8 Soru' })).toBeInTheDocument()
+    expect(await screen.findByRole('progressbar', { name: 'Günlük plan ilerlemesi' })).toHaveAttribute('aria-valuemax', '8')
+    fireEvent.click(screen.getByRole('button', { name: 'Planı incele' }))
+    expect(screen.getByRole('button', { name: 'Planı Başlat · 8 Soru' })).toBeInTheDocument()
     expect(requests).toEqual([
       '/api/study/today?game=matematik&exam_ref=TYT',
       '/api/study/today?game=turkce&exam_ref=TYT',
