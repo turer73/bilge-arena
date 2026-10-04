@@ -51,6 +51,7 @@ import { InstitutionStudentInviteDialog } from './institution-student-invite-dia
 import { EvidenceDistributionChart, PercentBar } from './analytics-charts'
 import { InstitutionOverviewPanel } from './institution-overview-panel'
 import { DocumentBoundaryLink } from '@/components/privacy/document-boundary-link'
+import { InstitutionAccessHelp } from './institution-access-help'
 import type { InstitutionInitialScope } from '@/app/arena/kurum/scope-query'
 
 const statusCopy = {
@@ -347,20 +348,7 @@ export function InstitutionTrackingDashboard({
           {errorStatus === 404 && 'Bu hesabın aktif bir kurum üyeliği yok. Üyeliğiniz kaldırılmış ya da kurum pilotunun süresi dolmuş olabilir.'}
           {!noAccess && 'Bağlantıyı ve pilot ayarlarını kontrol edip yeniden deneyin.'}
         </p>
-        {noAccess && (
-          <div className="mx-auto mt-5 max-w-xl rounded-xl border border-white/10 bg-[var(--surface)] p-4 text-left text-sm leading-6 text-[var(--text-sub)]">
-            <p className="font-bold text-[var(--text)]">Erişim nasıl açılır?</p>
-            <ul className="mt-2 list-disc space-y-1 pl-5">
-              <li>Kurum yöneticisiyseniz: Bilge Arena ekibi kurumunuzu tanımlarken bu hesabı yönetici olarak seçer. Giriş yaptığınız Google adresini ekibe iletin.</li>
-              <li>Öğretmenseniz: kurum yöneticiniz, giriş yaptığınız e-posta adresini kurum panelinden öğretmen olarak ekler.</li>
-              <li>Kuruma başka bir Google hesabıyla tanımlandıysanız çıkış yapıp o hesapla tekrar giriş yapın.</li>
-            </ul>
-            <p className="mt-3">
-              Erişim tanımlandıktan sonra bu sayfayı yenilemeniz yeterlidir; ayrıca bir bildirim gönderilmez.
-              Sorularınız için: <a href="mailto:iletisim@bilgearena.com" className="font-bold text-[var(--primary)] underline-offset-2 hover:underline">iletisim@bilgearena.com</a>
-            </p>
-          </div>
-        )}
+        {noAccess && <InstitutionAccessHelp />}
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
           <DocumentBoundaryLink
             href="/arena"
