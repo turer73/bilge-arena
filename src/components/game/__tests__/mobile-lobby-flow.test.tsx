@@ -49,6 +49,34 @@ function FlowHarness({
 }
 
 describe('MobileLobbyFlow', () => {
+  it('başlatmadan önce seçili modun soru, süre ve can kurallarını gösterir', () => {
+    render(<FlowHarness />)
+    expect(screen.getByLabelText('Tur kuralları')).toHaveTextContent('10 soru · 30 sn / soru · 3 can')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pratik: Zamansız' }))
+    expect(screen.getByLabelText('Tur kuralları')).toHaveTextContent('10 soru · Zamansız · Sınırsız can')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Deneme: 40 soru' }))
+    expect(screen.getByLabelText('Tur kuralları')).toHaveTextContent('40 soru · 45 dk toplam · Sınırsız can')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Diğer modlar' }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Diğer oyun modları' })).getByRole('button', { name: /Blitz/ }))
+    expect(screen.getByLabelText('Tur kuralları')).toHaveTextContent('5 soru · 15 sn / soru · 2 can')
+  })
+
+  it('misafir önizlemesinde tam deneme uzunluğu veya süresi vaat etmez', () => {
+    render(<MobileLobbyFlow
+      game="matematik" selectedMode="deneme" onSelectMode={vi.fn()}
+      selectedCategory={null} onSelectCategory={vi.fn()}
+      selectedDifficulty={null} onSelectDifficulty={vi.fn()}
+      selectedExamRef="TYT" onSelectExamRef={vi.fn()} onStart={vi.fn()}
+      quizLimit={{ canPlay: true, remaining: 1, isPremium: false, isGuest: true }}
+    />)
+    expect(screen.getByLabelText('Tur kuralları')).toHaveTextContent('1 soru · Zamansız · Sınırsız can')
+    expect(screen.getByLabelText('Tur kuralları')).not.toHaveTextContent('45 dk')
+    expect(screen.getByRole('button', { name: 'Önizlemeyi başlat · 1 soru' })).toBeInTheDocument()
+  })
+
   it('adım sihirbazı yerine tek ekran ve tek ana CTA gösterir', () => {
     render(<FlowHarness />)
     const flow = within(screen.getByTestId('mobile-lobby-flow'))

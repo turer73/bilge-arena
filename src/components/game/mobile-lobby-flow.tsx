@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Check, ChevronRight, Play, X } from 'lucide-react'
 import { GAMES, getCategoriesForExam, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
-import { getModesForContext, type QuizMode } from '@/lib/constants/modes'
+import { DENEME_CONFIGS, getModesForContext, type QuizMode } from '@/lib/constants/modes'
 import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 
 interface MobileLobbyFlowProps {
@@ -152,6 +152,12 @@ export function MobileLobbyFlow({
   const scopeLabel = effectiveExamRef ? (EXAM_SCOPE_LABELS[effectiveExamRef] ?? effectiveExamRef) : 'Sınav seç'
   const categoryLabel = safeCategory ? getCategoryLabel(safeCategory) : 'Tüm konular'
   const isExtraMode = EXTRA_MODE_IDS.includes(mode.id as typeof EXTRA_MODE_IDS[number])
+  const preview = Boolean(quizLimit?.isGuest && !startHref)
+  const questionCount = preview ? 1 : mode.questionCount
+  const timeLabel = mode.isDeneme && !preview
+    ? `${Math.ceil(DENEME_CONFIGS[game].totalTime / 60)} dk toplam`
+    : mode.timePerQuestion > 0 ? `${mode.timePerQuestion} sn / soru` : 'Zamansız'
+  const livesLabel = mode.lives === undefined ? 'Sınırsız can' : `${mode.lives} can`
 
   useEffect(() => {
     if (!selectedCategoryIsValid) onSelectCategory(null)
@@ -293,6 +299,9 @@ export function MobileLobbyFlow({
       </div>
 
       <div className="mt-4 border-t-2 border-[var(--app-border-soft)] pt-4">
+        <p aria-label="Tur kuralları" aria-live="polite" className="mb-3 text-center text-xs font-semibold leading-5 text-[var(--app-text-sub)]">
+          {questionCount} soru · {timeLabel} · {livesLabel}
+        </p>
         {startHref && !startBlocked ? (
           <Link
             href={startHref}
@@ -314,9 +323,11 @@ export function MobileLobbyFlow({
               : startLabel
                 ?? (quizLimit && !quizLimit.canPlay
                   ? 'Limit doldu · Premium’a geç'
-                  : mode.isDeneme
-                    ? `Denemeyi Başlat · ${mode.questionCount} soru`
-                    : `Başla · ${mode.questionCount} soru`)}
+                  : preview
+                    ? 'Önizlemeyi başlat · 1 soru'
+                    : mode.isDeneme
+                      ? `Denemeyi Başlat · ${questionCount} soru`
+                      : `Başla · ${questionCount} soru`)}
           </button>
         )}
       </div>

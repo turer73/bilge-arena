@@ -4,6 +4,7 @@ import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boun
 import { usePathname } from 'next/navigation'
 import { BookOpen, Dumbbell, Swords, Trophy, User, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { GAME_SLUGS } from '@/lib/constants/games'
 
 /**
  * Mobil alt navigasyon (tab bar). Masaustunde Navbar var; mobilde
@@ -31,6 +32,8 @@ const ITEMS: NavItem[] = [
   { id: 'profile', href: '/arena/profil', label: 'Profil', Icon: User },
 ]
 
+const PRACTICE_PATHS = GAME_SLUGS.map((game) => `/arena/${game}`)
+
 interface BottomNavProps {
   /** Demo/storybook icin rota yerine sabit aktif sekme. */
   activeOverride?: string
@@ -47,6 +50,7 @@ export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavP
 
   const isActive = (item: NavItem) => {
     if (activeOverride) return activeOverride === item.id
+    if (item.id === 'practice' && PRACTICE_PATHS.some((path) => pathname === path || pathname.startsWith(path + '/'))) return true
     // '/arena' yalnizca tam eslesmede aktif; alt rotalar kendi sekmelerine ait.
     if (item.href === '/arena') return pathname === '/arena'
     return pathname === item.href || pathname.startsWith(item.href + '/')

@@ -1,8 +1,5 @@
 /**
- * ArenaClient tek duyarlı öğrenme yolu kabuğu sözleşmesi.
- *
- * Aynı içerik mobil, tablet ve masaüstünde render edilir; ekran genişliği
- * yalnız yerleşimi değiştirir, veri ve eylem modelini değiştirmez.
+ * Mobil öğrenme kabuğu ile Pratik ekranı arasındaki ortak ders seçimi.
  */
 
 import { beforeEach, describe, expect, test, vi } from 'vitest'
@@ -24,6 +21,7 @@ vi.mock('next/link', () => ({
 }))
 
 import ArenaClient from '../arena-client'
+import CalismaClient from '../calisma/calisma-client'
 import { useGameStore } from '@/stores/game-store'
 
 const UUID = '11111111-1111-4111-8111-111111111111'
@@ -32,7 +30,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockAuth.value = { user: null, profile: null }
   mockQuestState.value = []
-  useGameStore.setState({ selectedExamRef: null })
+  useGameStore.setState({ selectedGame: null, selectedCategory: null, selectedExamRef: null })
   localStorage.clear()
   global.fetch = vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input)
@@ -43,6 +41,37 @@ beforeEach(() => {
 })
 
 describe('ArenaClient duyarlı öğrenme ekranı', () => {
+  test('mobilde Fen seçimi Pratik ekranına ve Öğren ekranına dönüşe taşınır', async () => {
+    mockAuth.value = { user: { id: UUID }, profile: { exam_type: 'yks' } }
+    useGameStore.setState({ selectedCategory: 'sayilar', selectedExamRef: 'TYT' })
+    const learn = render(<ArenaClient />)
+
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Fen' })) })
+    expect(screen.getByRole('heading', { name: 'Fen Bilimleri Yolu' })).toBeInTheDocument()
+    expect(useGameStore.getState().selectedCategory).toBeNull()
+    learn.unmount()
+
+    const practice = render(<CalismaClient />)
+    expect(screen.getByRole('button', { name: 'Fen Bilimleri' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('link', { name: 'Devam et' })).toHaveAttribute('href', '/arena/fen?exam_ref=TYT')
+    practice.unmount()
+
+    await act(async () => { render(<ArenaClient />) })
+    expect(screen.getByRole('button', { name: 'Fen' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('heading', { name: 'Fen Bilimleri Yolu' })).toBeInTheDocument()
+  })
+
+  test('Pratik ekranında seçilen İngilizce mobil Öğren ekranında korunur', async () => {
+    mockAuth.value = { user: { id: UUID }, profile: { exam_type: 'yks' } }
+    const practice = render(<CalismaClient />)
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'İngilizce' })) })
+    practice.unmount()
+
+    await act(async () => { render(<ArenaClient />) })
+    expect(screen.getByRole('button', { name: 'İng.' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('heading', { name: 'İngilizce Yolu' })).toBeInTheDocument()
+  })
+
   test('ekran genişliğinden bağımsız olarak öğrenme yolu ve konu derin bağlantılarını render eder', () => {
     const { container } = render(<ArenaClient />)
 

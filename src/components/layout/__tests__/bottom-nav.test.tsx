@@ -82,6 +82,19 @@ describe('BottomNav', () => {
     expect(linkFor('Arena')).toHaveAttribute('aria-current', 'page')
   })
 
+  test.each(['matematik', 'turkce', 'fen', 'sosyal', 'wordquest'])('%s hazırlığında yalnız Pratik sekmesi aktiftir', (game) => {
+    mockUsePathname.mockReturnValue(`/arena/${game}`)
+    render(<BottomNav />)
+    expect(linkFor('Pratik')).toHaveAttribute('aria-current', 'page')
+    expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(1)
+  })
+
+  test('ders adına benzeyen ilgisiz rotayı Pratik olarak işaretlemez', () => {
+    mockUsePathname.mockReturnValue('/arena/matematik-extra')
+    render(<BottomNav />)
+    expect(linkFor('Pratik')).not.toHaveAttribute('aria-current')
+  })
+
   test('hassas dokumanda tum public sekmeleri native anchor olarak render eder', () => {
     mockUsePathname.mockReturnValue('/arena/sinif')
     render(<BottomNav />)

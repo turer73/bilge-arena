@@ -226,7 +226,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
       <MobileHomeDemo
         mode="live"
         userId="user-1"
-        desktopSubject="ingilizce"
+        selectedSubject="ingilizce"
         availableSubjects={['ingilizce']}
         examRef="LGS"
         renderStudyTools={renderStudyTools}
