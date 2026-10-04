@@ -1,8 +1,9 @@
 'use client'
 
 import { useId, useRef, useState, type ReactNode } from 'react'
+import Image from 'next/image'
 import type { GameDefinition, GameSlug } from '@/lib/constants/games'
-import { BookOpenText, Calculator, FlaskConical, Globe2, Languages, type LucideIcon } from 'lucide-react'
+import { AcademyIcon } from '@/components/ui/academy-icon'
 
 interface StudyContextSelectorProps {
   games: GameDefinition[]
@@ -18,12 +19,12 @@ interface StudyContextSelectorProps {
   footer?: ReactNode
 }
 
-const GAME_ICONS: Record<GameSlug, LucideIcon> = {
-  matematik: Calculator,
-  turkce: BookOpenText,
-  fen: FlaskConical,
-  sosyal: Globe2,
-  wordquest: Languages,
+const SUBJECT_ART: Record<GameSlug, string> = {
+  matematik: '/academy/subjects/matematik-magic-v1.png',
+  turkce: '/academy/subjects/turkce-magic-v1.png',
+  fen: '/academy/subjects/fen-magic-v1.png',
+  sosyal: '/academy/subjects/sosyal-magic-v1.png',
+  wordquest: '/academy/modes/wordquest-v1.png',
 }
 
 /** Ders Çalış ekranındaki görünür ve profil-kapsamlı çalışma bağlamı. */
@@ -60,13 +61,18 @@ export function StudyContextSelector({
       }}
     >
       <div className="flex min-w-0 items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-bold tracking-[0.08em] text-[var(--app-accent-text)]">
-            {eyebrow}
-          </p>
-          <h2 id={headingId} className="mt-1 text-base font-black leading-snug text-[var(--app-text)]">
-            {collapsible ? summary : title}
-          </h2>
+        <div className="flex min-w-0 items-center gap-2.5">
+          {collapsible && <span data-mobile-subject-art aria-hidden="true" className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-white/15 bg-[#0a1830]">
+            <Image src={SUBJECT_ART[selectedGame]} alt="" fill sizes="128px" className="origin-top scale-[1.35] object-cover object-center" />
+          </span>}
+          <div className="min-w-0">
+            <p className="text-xs font-bold tracking-[0.08em] text-[var(--app-accent-text)]">
+              {eyebrow}
+            </p>
+            <h2 id={headingId} className="mt-1 text-base font-black leading-snug text-[var(--app-text)]">
+              {collapsible ? summary : title}
+            </h2>
+          </div>
         </div>
         {collapsible ? <button
           ref={toggleRef}
@@ -91,7 +97,6 @@ export function StudyContextSelector({
           >
             {games.map((game) => {
               const selected = game.slug === selectedGame
-              const Icon = GAME_ICONS[game.slug]
               return (
                 <button
                   key={game.slug}
@@ -108,7 +113,7 @@ export function StudyContextSelector({
                     boxShadow: selected ? `0 3px 0 color-mix(in srgb, var(--${game.color}) 34%, transparent)` : undefined,
                   }}
                 >
-                  <Icon size={19} strokeWidth={2.7} aria-hidden="true" />
+                  <AcademyIcon name={game.slug} size={28} muted={!selected} />
                   <span className="min-w-0 break-words leading-tight">{game.name}</span>
                 </button>
               )

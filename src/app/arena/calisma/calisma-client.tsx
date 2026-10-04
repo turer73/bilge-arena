@@ -14,7 +14,8 @@ import { StudyAssistantLauncher } from '@/components/study/study-assistant-launc
 import { InstitutionWeeklyProgramCard } from '@/components/study/institution-weekly-program-card'
 import { TytSocialExamPolicyCardView } from '@/components/study/tyt-social-exam-policy-card'
 import { useTytSocialExamPolicy } from '@/lib/hooks/use-tyt-social-exam-policy'
-import { ArrowRight, BookOpenCheck, ChevronLeft, ChevronRight, Clock3, Sparkles } from 'lucide-react'
+import { ArrowRight, ChevronLeft, ChevronRight, Clock3, Sparkles } from 'lucide-react'
+import { AcademyIcon } from '@/components/ui/academy-icon'
 import { useWideStudy } from '@/lib/hooks/use-wide-study'
 import { useSubjectSwipe } from '@/lib/hooks/use-subject-swipe'
 import { StudyHomeClient } from '../arena-client'
@@ -148,7 +149,7 @@ function LegacyCalismaClient() {
         <div className="mx-auto flex h-14 max-w-[1180px] items-center justify-between px-4 lg:h-auto lg:px-6 lg:pb-5 lg:pt-8 xl:px-6">
           <div className="flex items-center gap-2.5">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--app-accent-tint)] text-[var(--app-accent-text)] md:h-12 md:w-12">
-              <BookOpenCheck size={22} strokeWidth={2.8} />
+              <AcademyIcon name="practice" size={30} />
             </span>
             <div>
               <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]">Çalışma merkezi</p>
