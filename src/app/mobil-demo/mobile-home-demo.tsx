@@ -33,7 +33,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { BottomNav } from '@/components/layout/bottom-nav'
-import { TodayPlanFocus } from '@/components/study/today-plan-focus'
+import { DesktopDailyPlan } from '@/components/academy/desktop-daily-plan'
 import { useWideStudy } from '@/lib/hooks/use-wide-study'
 import { useTopicProgress } from '@/lib/hooks/use-topic-progress'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
@@ -535,12 +535,11 @@ export function MobileHomeDemo({
         {mode === 'live' && userId && (
           <div className="mx-auto w-full max-w-[1180px] px-4 pt-4 md:px-5 md:pt-5 xl:px-6">
             <section data-today-plan-primary aria-label="Günlük çalışma planı">
-              <TodayPlanFocus
+              <DesktopDailyPlan
+                mode="live"
                 game={gameSlug}
                 userId={userId}
                 examRef={progressExamRef}
-                selectedCategory={null}
-                showStickyMobileAction={false}
               />
             </section>
           </div>
