@@ -28,6 +28,12 @@ Her örneğin SVG geçiş kimliği React `useId` ile benzersizdir. Dış istek, 
 - İki kullanım da Next Image üzerinden uygun `sizes` ile sunulur. Kaynak PNG dosyaları çoğaltılmaz veya yeniden üretilmez.
 - Günlük plan kupası ve mevcut Bilge karakteri korunur. Yeni tam ekran arka plan veya hareketli efekt eklenmez.
 
+## Arena mod kartları
+
+`ArenaModeCards`, Kule Modu ve Bil ve Fethet için masaüstündeki `modes/tower-v1.png` ve `modes/conquest-janissary-v2.png` görsellerini kullanır. 72 × 80 px küçük görsel alanı mevcut yatay kart düzenini korur; kule ortalanır, fetih karakteri sağa yakın kırpılır. Kart adları, açıklamaları, bağlantıları ve dar masaüstü yan sütunu değişmez.
+
+Görseller dekoratiftir (`alt=""`, `aria-hidden`); bağlantının erişilebilir adı mevcut metinlerden gelir. Next Image `sizes="256px"` geniş panoramanın 80 px yüksekliğe göre kırpılmasına yeterli kaynak çözünürlüğü sağlar. Yeni dosya, arka plan efekti veya oyun akışı eklenmez.
+
 ## Doğrulama sınırı
 
 Dar ekranlarda metin taşması, dokunma hedefleri, seçili durum ve açık/koyu yüzeyler tarayıcı önizlemesiyle kontrol edilir. Önizleme gerçek bileşenleri ve örnek veriyi kullanır; canlı hesap veya fiziksel telefon kabulü yerine geçmez. Sürümün somut test ve yayın kanıtları ilgili PR ve yerel handoff kaydında tutulur.
