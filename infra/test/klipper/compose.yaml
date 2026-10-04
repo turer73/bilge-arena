@@ -77,7 +77,7 @@ services:
       PGRST_JWT_AUD: authenticated
   rooms-rest:
     <<: *service
-    image: postgrest/postgrest:v12.2.3
+    image: postgrest/postgrest:v16.4
     mem_limit: 256m
     depends_on:
       rooms-db: {condition: service_healthy}

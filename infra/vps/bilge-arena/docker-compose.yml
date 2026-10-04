@@ -50,7 +50,7 @@ networks:
 
 services:
   postgrest:
-    image: postgrest/postgrest:v12.2.3
+    image: postgrest/postgrest:v16.4
     container_name: bilge-arena-postgrest
     restart: unless-stopped
     env_file:
