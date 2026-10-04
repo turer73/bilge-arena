@@ -99,7 +99,9 @@ describe('batch preflight and write boundary', () => {
   it('all four entrypoints can be imported without credentials or network effects', () => {
     const files = ['generate-lgs-fen.mjs', 'generate-lgs-matematik.mjs', 'generate-lgs-matematik-retry.mjs', 'import-lgs-batch.mjs']
     const urls = files.map(name => new URL(`../${name}`, import.meta.url).href)
-    const child = spawnSync(process.execPath, ['--input-type=module', '-e', `globalThis.fetch=()=>{throw new Error('Unexpected network')}; for (const url of ${JSON.stringify(urls)}) await import(url); console.log('IMPORT_SAFE')`], {
+    // Keep executable code constant: paths travel as data, never as JS source.
+    const probe = "globalThis.fetch=()=>{throw new Error('Unexpected network')}; for (const url of JSON.parse(process.argv[1])) await import(url); console.log('IMPORT_SAFE')"
+    const child = spawnSync(process.execPath, ['--input-type=module', '-e', probe, JSON.stringify(urls)], {
       cwd: fileURLToPath(new URL('../../', import.meta.url)), encoding: 'utf8', timeout: 15000,
       env: { ...process.env, GOOGLE_GENERATIVE_AI_API_KEY: '', SUPABASE_URL: '', NEXT_PUBLIC_SUPABASE_URL: '', SUPABASE_SERVICE_ROLE_KEY: '' },
     })
