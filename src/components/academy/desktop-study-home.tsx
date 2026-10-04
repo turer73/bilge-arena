@@ -16,6 +16,8 @@ import { AcademyTabletNav } from './academy-tablet-nav'
 import { DesktopDailyPlan } from './desktop-daily-plan'
 import { useTytSocialExamPolicy } from '@/lib/hooks/use-tyt-social-exam-policy'
 import { TytSocialExamPolicyCardView } from '@/components/study/tyt-social-exam-policy-card'
+import { studyHref } from '@/lib/utils/study-href'
+import { getPreparationLabel } from '@/lib/utils/lobby-presentation'
 import styles from './academy.module.css'
 
 type ProgressStatus = 'ready' | 'loading' | 'unavailable' | 'preparing' | 'guest'
@@ -56,6 +58,7 @@ const STATUS_COPY: Record<Exclude<ProgressStatus, 'ready'>, string> = {
 
 export function DesktopStudyHome(props: DesktopStudyHomeProps) {
   const { subject, subjects, steps, progressStatus, mode } = props
+  const gameHref = studyHref(props.game, props.examRef)
   const { character } = useBilgeCharacter()
   const [dialog, setDialog] = useState<'support' | null>(null)
   const guest = mode === 'live' && !props.userId
@@ -111,7 +114,7 @@ export function DesktopStudyHome(props: DesktopStudyHomeProps) {
           </section>
           {guest && <DesktopDailyPlan mode={mode} game={props.game} examRef={props.examRef} userId={null} />}
           <section className={styles.panel} aria-label={subject.label + ' öğrenme yolu'}>
-            <header className={styles.sectionHeader}><div><p className={styles.eyebrow}>ADIM ADIM İLERLE</p><h2>Öğrenme yolun</h2></div><Link href={'/arena/' + props.game} className={styles.textLink}>Tüm konular <ChevronRight size={16} aria-hidden="true" /></Link></header>
+            <header className={styles.sectionHeader}><div><p className={styles.eyebrow}>ADIM ADIM İLERLE</p><h2>Öğrenme yolun</h2></div><Link href={gameHref} className={styles.textLink}>Tüm konular <ChevronRight size={16} aria-hidden="true" /></Link></header>
             {!ready && <p role="status" className={styles.status}>{STATUS_COPY[progressStatus]}</p>}
             <div className={styles.lessonGrid}>
               {steps.map(step => <Link key={step.key} href={step.href} className={styles.lesson} data-current={ready && step.current} aria-disabled={step.locked || undefined} tabIndex={step.locked ? -1 : undefined} onClick={event => { if (step.locked) event.preventDefault() }}>
@@ -120,7 +123,7 @@ export function DesktopStudyHome(props: DesktopStudyHomeProps) {
                 <ChevronRight size={17} aria-hidden="true" />
               </Link>)}
             </div>
-            {steps.length === 0 && <Link href={'/arena/' + props.game} className={styles.textLink}>Bağımsız çalışmaya geç <ChevronRight size={16} /></Link>}
+            {steps.length === 0 && <Link href={gameHref} className={styles.textLink}>Bağımsız çalışmaya geç <ChevronRight size={16} /></Link>}
             <p className={styles.footnote}>Bir konuyu yeniden çalışmak da ilerlemenin bir parçası.</p>
           </section>
         </div>
@@ -135,7 +138,7 @@ export function DesktopStudyHome(props: DesktopStudyHomeProps) {
           {props.dailyGoal && <section className={styles.panel}><h2 className={styles.goalTitle}><Flame size={22} />Günlük hedef</h2><div className={styles.goalCount}><span>Bugünkü ilerlemen</span><strong>{props.dailyGoal.current} / {props.dailyGoal.target}</strong></div><progress aria-label="Günlük doğru cevap hedefi" max={Math.max(1, props.dailyGoal.target)} value={Math.max(0, props.dailyGoal.current)} style={{ width: '100%' }}>{dailyPercentage}%</progress><p className={styles.footnote}>Doğru cevap hedefin. Küçük adımlar da ilerlemedir.</p></section>}
           <nav className={styles.tools} aria-label="Diğer alanlar">
             <h2>Diğer alanlar</h2>
-            <Link href={'/arena/' + props.game}><BookOpenText size={20} aria-hidden="true" /><span className={styles.toolCopy}><strong>Pratik yap</strong><small>Bilgini sorularla pekiştir</small></span><ChevronRight size={16} aria-hidden="true" /></Link>
+            <Link href={gameHref}><BookOpenText size={20} aria-hidden="true" /><span className={styles.toolCopy}><strong>Pratik yap</strong><small>{getPreparationLabel(props.game)}</small></span><ChevronRight size={16} aria-hidden="true" /></Link>
             <Link href="/arena/yanlislarim"><GraduationCap size={20} aria-hidden="true" /><span className={styles.toolCopy}><strong>Yanlışlarıma dön</strong><small>Takıldığın yeri birlikte bulalım</small></span><ChevronRight size={16} aria-hidden="true" /></Link>
             <Link href="/arena/magaza"><ShoppingBag size={20} />Mağaza<ChevronRight size={16} /></Link>
             {props.classroomEnabled && <DocumentBoundaryLink href="/arena/sinif"><GraduationCap size={20} />Sınıflarım<ChevronRight size={16} /></DocumentBoundaryLink>}

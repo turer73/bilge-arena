@@ -54,7 +54,7 @@ export default async function Page({
     <>
       <header className="mb-5 md:hidden">
         <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--focus-text)]">
-          ODA MODU
+          Oyunlar ve odalar
         </p>
         <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
           Birlikte çöz, yarış ve devam et

@@ -72,9 +72,9 @@ describe('Desktop academy integration', () => {
     const sidebar = screen.getByRole('complementary', {name:'Bilge ve çalışma araçları'})
     const tools = within(sidebar).getByRole('navigation', {name:'Diğer alanlar'})
     const links = within(tools).getAllByRole('link')
-    expect(links.map(link => link.getAttribute('href'))).toEqual(['/arena/matematik', '/arena/yanlislarim', '/arena/magaza'])
+    expect(links.map(link => link.getAttribute('href'))).toEqual(['/arena/matematik?exam_ref=TYT', '/arena/yanlislarim', '/arena/magaza'])
     expect(links[0]).toHaveTextContent('Pratik yap')
-    expect(links[0]).toHaveTextContent('Bilgini sorularla pekiştir')
+    expect(links[0]).toHaveTextContent('Matematik turunu hazırla')
     expect(links[1]).toHaveTextContent('Yanlışlarıma dön')
     expect(links[1]).toHaveTextContent('Takıldığın yeri birlikte bulalım')
     expect(screen.getAllByRole('link', {name:/Pratik yap/})).toHaveLength(1)
@@ -82,7 +82,7 @@ describe('Desktop academy integration', () => {
     const mainColumn = screen.getByRole('region', {name:'Matematik öğrenme yolu'}).parentElement!
     expect(within(mainColumn).queryByRole('link', {name:/Pratik yap|Yanlışlarıma dön/})).not.toBeInTheDocument()
     rerender(<DesktopStudyHome {...props} mode={mode} game="turkce" />)
-    expect(screen.getByRole('link', {name:/Pratik yap/})).toHaveAttribute('href', '/arena/turkce')
+    expect(screen.getByRole('link', {name:/Pratik yap/})).toHaveAttribute('href', '/arena/turkce?exam_ref=TYT')
   })
 
   it('keeps the actual topic href, exam and subject controls; plan starts closed', () => {

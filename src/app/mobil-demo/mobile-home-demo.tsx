@@ -37,6 +37,7 @@ import { TodayPlanFocus } from '@/components/study/today-plan-focus'
 import { useWideStudy } from '@/lib/hooks/use-wide-study'
 import { useTopicProgress } from '@/lib/hooks/use-topic-progress'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
+import { studyHref } from '@/lib/utils/study-href'
 import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 
 export type MobileSubjectId = 'matematik' | 'turkce' | 'fen' | 'sosyal' | 'ingilizce'
@@ -264,7 +265,6 @@ export function MobileHomeDemo({
   const handleSubjectChange = onSubjectChange ?? setSubjectId
   const subject = visibleSubjects.find((item) => item.id === activeSubjectId) ?? visibleSubjects[0] ?? SUBJECTS[0]
   const gameSlug = subject.id === 'ingilizce' ? 'wordquest' : subject.id
-  const gameHref = `/arena/${gameSlug}`
   const progressExamRef = gameSlug === 'wordquest'
     ? null
     : examRef && GAMES[gameSlug].examTags.includes(examRef)
@@ -274,6 +274,7 @@ export function MobileHomeDemo({
         : GAMES[gameSlug].examTags.includes('TYT')
           ? 'TYT'
           : GAMES[gameSlug].examTags[0] ?? null
+  const gameHref = studyHref(gameSlug, progressExamRef)
   // Canli modda yol, oyunun kanonik kategori listesi + kullanicinin gercek
   // konu basarisi uzerine kurulur. Demo modunda (rota /mobil-demo) backend
   // yok; sabit ornek icerik gosterilir.
@@ -294,7 +295,7 @@ export function MobileHomeDemo({
         key: `${gameSlug}-${topic.category}`,
         label: topic.label,
         // Adim gercekten o konuya goturur: lobi ?category ile acilir.
-        href: `${gameHref}?category=${encodeURIComponent(topic.category)}`,
+        href: studyHref(gameSlug, progressExamRef, topic.category),
         index,
         done: topic.completed,
         current: index === progress.currentIndex,

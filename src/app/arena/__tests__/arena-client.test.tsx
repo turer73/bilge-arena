@@ -53,7 +53,7 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
 
     const practice = render(<CalismaClient />)
     expect(screen.getByRole('button', { name: 'Fen Bilimleri' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('link', { name: 'Devam et' })).toHaveAttribute('href', '/arena/fen?exam_ref=TYT')
+    expect(screen.getByRole('link', { name: 'Fen Bilimleri turunu hazırla' })).toHaveAttribute('href', '/arena/fen?exam_ref=TYT')
     practice.unmount()
 
     await act(async () => { render(<ArenaClient />) })
@@ -78,7 +78,7 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
     expect(screen.getByRole('heading', { name: 'Matematik Yolu' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Öğrenme yolu' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Sayılar dersini aç' }))
-      .toHaveAttribute('href', '/arena/matematik?category=sayilar')
+      .toHaveAttribute('href', '/arena/matematik?exam_ref=TYT&category=sayilar')
     expect(screen.getByRole('link', { name: /Mağaza/ })).toHaveAttribute('href', '/arena/magaza')
 
     const responsiveGrid = container.querySelector('[data-responsive-arena-grid]')

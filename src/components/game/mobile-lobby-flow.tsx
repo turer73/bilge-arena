@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Check, ChevronRight, Play, X } from 'lucide-react'
 import { GAMES, getCategoriesForExam, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
-import { DENEME_CONFIGS, getModesForContext, type QuizMode } from '@/lib/constants/modes'
+import { getModesForContext, type QuizMode } from '@/lib/constants/modes'
 import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
+import { getLobbyModeLabel, getLobbyPresentation } from '@/lib/utils/lobby-presentation'
+import { useLobbySelection } from '@/lib/hooks/use-lobby-selection'
 
 interface MobileLobbyFlowProps {
   game: GameSlug
@@ -54,12 +56,6 @@ const DIFFICULTIES = [
 
 const PRIMARY_MODE_IDS = ['classic', 'deneme', 'practice'] as const
 const EXTRA_MODE_IDS = ['blitz', 'marathon', 'boss'] as const
-
-const PRIMARY_MODE_COPY: Record<string, { label: string; description: string }> = {
-  classic: { label: 'Hızlı', description: '10 soru' },
-  deneme: { label: 'Deneme', description: '40 soru' },
-  practice: { label: 'Pratik', description: 'Zamansız' },
-}
 
 const SHEET_TITLES: Record<Exclude<OptionSheet, null>, string> = {
   scope: 'Sınav kapsamını seç',
@@ -143,6 +139,7 @@ export function MobileLobbyFlow({
   const [sheet, setSheet] = useState<OptionSheet>(null)
   const sheetDialogRef = useRef<HTMLDivElement>(null)
   const sheetTriggerRef = useRef<HTMLElement | null>(null)
+  const selection = useLobbySelection({ game, selectedCategory, onSelectCategory, onSelectExamRef, onSelectMode })
 
   const startAction = startBlocked
     ? undefined
@@ -153,11 +150,9 @@ export function MobileLobbyFlow({
   const categoryLabel = safeCategory ? getCategoryLabel(safeCategory) : 'Tüm konular'
   const isExtraMode = EXTRA_MODE_IDS.includes(mode.id as typeof EXTRA_MODE_IDS[number])
   const preview = Boolean(quizLimit?.isGuest && !startHref)
-  const questionCount = preview ? 1 : mode.questionCount
-  const timeLabel = mode.isDeneme && !preview
-    ? `${Math.ceil(DENEME_CONFIGS[game].totalTime / 60)} dk toplam`
-    : mode.timePerQuestion > 0 ? `${mode.timePerQuestion} sn / soru` : 'Zamansız'
-  const livesLabel = mode.lives === undefined ? 'Sınırsız can' : `${mode.lives} can`
+  const { questionCount, timeLabel, lives, actionLabel } = getLobbyPresentation(game, mode, {
+    preview, limitReached: Boolean(quizLimit && !quizLimit.canPlay), startBlocked, startBlockedLabel, startLabel,
+  })
 
   useEffect(() => {
     if (!selectedCategoryIsValid) onSelectCategory(null)
@@ -222,7 +217,7 @@ export function MobileLobbyFlow({
   }
 
   const selectMode = (nextMode: QuizMode) => {
-    onSelectMode(nextMode)
+    selection.selectMode(nextMode)
     setSheet(null)
   }
 
@@ -249,14 +244,14 @@ export function MobileLobbyFlow({
           const item = modes.find((candidate) => candidate.id === modeId)
           if (!item) return null
           const active = item.id === selectedMode
-          const copy = PRIMARY_MODE_COPY[item.id]
-          const description = item.isDeneme ? `${item.questionCount} soru` : copy.description
+          const label = getLobbyModeLabel(item)
+          const description = item.id === 'practice' ? 'Zamansız' : `${item.questionCount} soru`
           return (
             <button
               type="button"
               key={item.id}
-              onClick={() => onSelectMode(item)}
-              aria-label={`${copy.label}: ${description}`}
+              onClick={() => selectMode(item)}
+              aria-label={`${label}: ${description}`}
               aria-pressed={active}
               className={`relative min-h-[68px] rounded-2xl border-2 px-2 py-2.5 text-center transition-transform active:scale-[.98] ${
                 active
@@ -265,7 +260,7 @@ export function MobileLobbyFlow({
               }`}
             >
               {active && <Check size={15} strokeWidth={3.5} className="absolute right-1.5 top-1.5 text-[var(--app-accent-text)]" aria-hidden="true" />}
-              <span className="block text-sm font-black text-[var(--app-text)]">{copy.label}</span>
+              <span className="block text-sm font-black text-[var(--app-text)]">{label}</span>
               <span className="mt-0.5 block text-[10px] font-bold text-[var(--app-text-muted)]">{description}</span>
             </button>
           )
@@ -299,8 +294,8 @@ export function MobileLobbyFlow({
       </div>
 
       <div className="mt-4 border-t-2 border-[var(--app-border-soft)] pt-4">
-        <p aria-label="Tur kuralları" aria-live="polite" className="mb-3 text-center text-xs font-semibold leading-5 text-[var(--app-text-sub)]">
-          {questionCount} soru · {timeLabel} · {livesLabel}
+        <p role="status" aria-label="Tur kuralları" className="mb-3 text-center text-sm font-semibold leading-6 text-[var(--app-text-sub)]">
+          {questionCount} soru · {timeLabel} · {lives} can
         </p>
         {startHref && !startBlocked ? (
           <Link
@@ -318,16 +313,7 @@ export function MobileLobbyFlow({
             className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Play size={18} fill="currentColor" aria-hidden="true" />
-            {startBlocked
-              ? startBlockedLabel
-              : startLabel
-                ?? (quizLimit && !quizLimit.canPlay
-                  ? 'Limit doldu · Premium’a geç'
-                  : preview
-                    ? 'Önizlemeyi başlat · 1 soru'
-                    : mode.isDeneme
-                      ? `Denemeyi Başlat · ${questionCount} soru`
-                      : `Başla · ${questionCount} soru`)}
+            {actionLabel}
           </button>
         )}
       </div>
@@ -369,7 +355,7 @@ export function MobileLobbyFlow({
                   {gameDef.examTags.map((examRef) => {
                     const active = selectedExamRef === examRef
                     return (
-                      <button type="button" key={examRef} onClick={() => { onSelectExamRef(examRef); setSheet(null) }} aria-pressed={active} className={optionClass(active)}>
+                      <button type="button" key={examRef} onClick={() => { selection.selectScope(examRef); setSheet(null) }} aria-pressed={active} className={optionClass(active)}>
                         <span className="flex items-center justify-between gap-2">
                           <span className="text-sm font-black text-[var(--app-text)]">{EXAM_SCOPE_LABELS[examRef] ?? examRef}</span>
                           {active && <Check size={17} strokeWidth={3.5} className="text-[var(--app-accent-text)]" aria-hidden="true" />}
@@ -383,14 +369,14 @@ export function MobileLobbyFlow({
 
               {sheet === 'topic' && (
                 <div className="grid grid-cols-2 gap-2.5" role="group" aria-label="Konu">
-                  <button type="button" onClick={() => { onSelectCategory(null); setSheet(null) }} aria-pressed={safeCategory === null} className={optionClass(safeCategory === null)}>
+                  <button type="button" onClick={() => { selection.selectTopic(null); setSheet(null) }} aria-pressed={safeCategory === null} className={optionClass(safeCategory === null)}>
                     <span className="block text-sm font-black text-[var(--app-text)]">Tüm konular</span>
                     <span className="mt-1 block text-[10px] font-semibold text-[var(--app-text-sub)]">Karışık ve dengeli</span>
                   </button>
                   {categories.map((category) => {
                     const active = safeCategory === category
                     return (
-                      <button type="button" key={category} onClick={() => { onSelectCategory(category); setSheet(null) }} aria-pressed={active} className={optionClass(active)}>
+                      <button type="button" key={category} onClick={() => { selection.selectTopic(category); setSheet(null) }} aria-pressed={active} className={optionClass(active)}>
                         <span className="block text-sm font-black leading-5 text-[var(--app-text)]">{getCategoryLabel(category)}</span>
                         <span className="mt-1 block text-[10px] font-semibold text-[var(--app-text-sub)]">Bu konuya odaklan</span>
                       </button>

@@ -122,7 +122,7 @@ describe('MobileLobbyFlow', () => {
     expect(flow.getByRole('heading', { name: 'Hemen başla' })).toBeInTheDocument()
     expect(flow.queryByRole('button', { name: /Konu seç:/ })).not.toBeInTheDocument()
     expect(flow.queryByRole('button', { name: /Seviye seç:/ })).not.toBeInTheDocument()
-    expect(flow.getByRole('button', { name: 'Denemeyi Başlat · 40 soru' })).toBeInTheDocument()
+    expect(flow.getByRole('button', { name: 'Denemeyi başlat · 40 soru' })).toBeInTheDocument()
     expect(flow.queryByText('Tur')).not.toBeInTheDocument()
   })
 
