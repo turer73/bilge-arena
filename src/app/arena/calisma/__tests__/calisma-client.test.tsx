@@ -80,7 +80,13 @@ describe('CalismaClient', () => {
     expect(document.querySelector('[data-practice-overview]')).toHaveClass('lg:grid-cols-[minmax(0,1fr)_420px]')
     expect(document.querySelector('[data-practice-focus]')).toHaveClass('hidden', 'lg:block', 'min-h-[154px]', 'self-start')
     expect(document.querySelector('[data-practice-start]')).toHaveClass('lg:sticky')
-    expect(screen.getByRole('heading', { name: 'Ne çalışmak istersin?' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Matematik · TYT' })).toBeInTheDocument()
+    const changeSelection = screen.getByRole('button', { name: 'Değiştir' })
+    expect(changeSelection).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('group', { name: 'Ders seçimi' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Matematik turunu hazırla' })).toHaveAttribute('href', '/arena/matematik?exam_ref=TYT')
+    fireEvent.click(changeSelection)
+    expect(screen.getByRole('button', { name: 'Tamam' })).toHaveAttribute('aria-expanded', 'true')
     const gameGrid = document.querySelector('[data-study-game-grid]')
     expect(gameGrid).toHaveClass('grid', 'grid-cols-2', 'min-w-0', 'lg:grid-cols-2')
     expect(gameGrid).not.toHaveClass('overflow-x-auto')
@@ -105,6 +111,8 @@ describe('CalismaClient', () => {
     } as never)
     render(<CalismaClient />)
 
+    expect(screen.getByRole('heading', { name: 'İngilizce · Serbest' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Değiştir' }))
     expect(screen.getByRole('button', { name: /İngilizce/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByRole('button', { name: 'LGS' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'YDT' })).not.toBeInTheDocument()
@@ -145,11 +153,20 @@ describe('CalismaClient', () => {
     } as never)
     render(<CalismaClient />)
 
+    fireEvent.click(screen.getByRole('button', { name: 'Değiştir' }))
     fireEvent.click(screen.getByRole('button', { name: /Türkçe/ }))
     expect(useGameStore.getState().selectedGame).toBe('turkce')
     expect(useGameStore.getState().selectedExamRef).toBe('TYT')
     expect(useGameStore.getState().selectedCategory).toBeNull()
     expect(screen.getByRole('link', { name: 'Türkçe turunu hazırla' })).toHaveAttribute('href', '/arena/turkce?exam_ref=TYT')
+    fireEvent.click(screen.getByRole('button', { name: 'Tamam' }))
+    expect(screen.getByRole('heading', { name: 'Türkçe · TYT' })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Ders seçimi' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Değiştir' }))
+    expect(screen.getByRole('button', { name: 'Türkçe' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Türkçe' }), { key: 'Escape' })
+    expect(screen.getByRole('button', { name: 'Değiştir' })).toHaveFocus()
+    expect(screen.queryByRole('group', { name: 'Ders seçimi' })).not.toBeInTheDocument()
   })
 
   test('Wordquest gecisi onceki dersin sinav tercihini silmez', () => {
@@ -165,6 +182,7 @@ describe('CalismaClient', () => {
     } as never)
     render(<CalismaClient />)
 
+    fireEvent.click(screen.getByRole('button', { name: 'Değiştir' }))
     fireEvent.click(screen.getByRole('button', { name: /İngilizce/ }))
     expect(useGameStore.getState()).toMatchObject({
       selectedGame: 'wordquest',

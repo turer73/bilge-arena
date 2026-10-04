@@ -184,12 +184,13 @@ function LegacyCalismaClient() {
               onGameChange={handleGameChange}
               onExamRefChange={handleExamRefChange}
               compact
+              collapsible
               eyebrow="HEMEN BAŞLA"
               title="Ne çalışmak istersin?"
               footer={(
                 <div>
-                  <p className="mb-3 text-[11px] font-semibold leading-4 text-[var(--app-text-sub)]">
-                    Sonraki adımda oyun biçimi, konu ve zorluk seçilir.
+                  <p className="mb-3 text-xs font-medium leading-5 text-[var(--app-text-sub)]">
+                    Sonraki adım: oyun biçimi, konu ve zorluk.
                   </p>
                   {tytSocialStartBlocked ? (
                     <div aria-live="polite">

@@ -133,8 +133,8 @@ const COACH_MESSAGES = [
   },
   {
     eyebrow: 'Günlük hedef',
-    title: 'Yalnızca 4 soru kaldı!',
-    body: 'Bu dersi tamamladığında günlük hedefini geçip serini korumaya yaklaşacaksın.',
+    title: 'Yalnızca 4 doğru cevap kaldı!',
+    body: 'Her doğru cevap, günlük hedefine bir adım daha yaklaştırır.',
     icon: Target,
     color: 'var(--app-success)',
     tint: 'var(--app-success-tint)',
@@ -352,7 +352,7 @@ export function MobileHomeDemo({
         ? goalRemaining === null
           ? 'Bugünkü rotayı tamamla!'
           : goalRemaining > 0
-            ? `Yalnızca ${goalRemaining} soru kaldı!`
+            ? `Yalnızca ${goalRemaining} doğru cevap kaldı!`
             : 'Günlük hedef tamam!'
         : message.title
   const coachBody = isSocialTytProgressPreparing
@@ -363,7 +363,11 @@ export function MobileHomeDemo({
         : `${currentStep?.label ?? subject.label} için çalışma rotan hazır.`
       : coachMessage === 1
         ? 'Önce soru kökündeki ipucunu yakala. Bildiklerini küçük adımlara bölmek sana zaman kazandırır.'
-        : 'Bu dersi tamamladığında günlük rotanda ilerleyip serini korumaya yaklaşacaksın.'
+        : goalRemaining === null
+          ? 'Bu dersi tamamladığında günlük rotanda ilerleyip serini korumaya yaklaşacaksın.'
+          : goalRemaining > 0
+            ? 'Her doğru cevap, günlük hedefine bir adım daha yaklaştırır.'
+            : 'Günlük doğru cevap hedefini tamamladın. İstersen konunu tekrar edebilirsin.'
 
   useEffect(() => {
     if (!coachOpen || wideStudy) return
@@ -665,11 +669,11 @@ export function MobileHomeDemo({
           </div>
         </section>
 
-        {dailyGoal && <section className="mx-4 mb-7 rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-border)] md:col-start-2 md:row-start-2 md:mx-0 md:mb-0">
+        {dailyGoal && <section aria-label="Günlük doğru cevap hedefi" className="mx-4 mb-7 rounded-[22px] border border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-sm md:col-start-2 md:row-start-2 md:mx-0 md:mb-0">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><Flame size={24} fill="currentColor" strokeWidth={2.6} /></div>
             <div className="min-w-0 flex-1">
-              <div className="flex justify-between text-xs font-black"><span>Günlük hedef</span><span className="text-[var(--app-warn)]">{dailyGoal.current} / {dailyGoal.target} soru</span></div>
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs font-bold"><span>Günlük doğru cevap hedefi</span><span className="text-sm font-black text-[var(--app-warn)]">{dailyGoal.current} / {dailyGoal.target}</span></div>
               <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-[var(--app-border-soft)] p-[2px]"><div className="h-full rounded-full bg-[var(--app-warn)]" style={{ width: `${Math.min(100, (dailyGoal.current / Math.max(1, dailyGoal.target)) * 100)}%` }} /></div>
             </div>
           </div>

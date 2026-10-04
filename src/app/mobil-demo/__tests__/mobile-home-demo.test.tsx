@@ -58,8 +58,12 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
     expect(screen.getByRole('heading', { name: 'Önce kuralı yakala' })).toBeVisible()
 
     fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
-    expect(screen.getByRole('heading', { name: 'Yalnızca 4 soru kaldı!' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Yalnızca 4 doğru cevap kaldı!' })).toBeVisible()
+    expect(screen.getByText('Her doğru cevap, günlük hedefine bir adım daha yaklaştırır.')).toBeVisible()
     expect(screen.getByRole('link', { name: /Başla/ })).toHaveAttribute('href', '/arena/matematik?exam_ref=TYT')
+    fireEvent.click(screen.getByRole('button', { name: 'Koç penceresini kapat' }))
+    expect(screen.getByRole('region', { name: 'Günlük doğru cevap hedefi' })).toHaveTextContent('6 / 10')
+    expect(screen.queryByText('6 / 10 soru')).not.toBeInTheDocument()
   })
 
   test('ders seçimi içeriği ve hedef bağlantısını günceller', async () => {

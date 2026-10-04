@@ -75,7 +75,6 @@ export function DesktopDailyPlan({ mode, game, examRef, userId, tytSocialPolicy 
         <button type="button" className={styles.dailyPlanAction} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>Planı incele <ChevronRight size={18} aria-hidden="true" /></button>
       </section>
       {open && <AcademyDialog title="Sana özel günlük plan" mobileSheet onClose={() => setOpen(false)}>
-        <p className={styles.dialogIntro}>Bu plan, tekrarını ve gelişimini tek bir kısa çalışmada birleştirir. Soru dağılımını ve ilerlemeni incele; hazır olduğunda aşağıdan başla.</p>
         {content}
       </AcademyDialog>}
     </>
@@ -100,6 +99,7 @@ export function DesktopDailyPlan({ mode, game, examRef, userId, tytSocialPolicy 
   }
 
   return <TodayPlanFocus game={game} examRef={examRef} userId={userId} selectedCategory={null} showStickyMobileAction={false}
+    cardPresentation="details"
     tytSocialPolicy={tytSocialPolicy}
     render={({ plan, loading, content }) => {
       const total = plan?.questions.length ?? 0

@@ -65,15 +65,15 @@
   .dailyPlan{grid-template-columns:44px minmax(0,1fr) 76px;grid-template-areas:'icon eyebrow count' 'icon title count' 'description description description' 'action action action';column-gap:10px;row-gap:6px;padding:14px}
   .dailyPlan[data-ready=false]{grid-template-columns:44px minmax(0,1fr);grid-template-areas:'icon eyebrow' 'icon title' 'description description' 'action action'}
   .dailyPlanCopy{display:contents}
-  .dailyPlanCopy .eyebrow{grid-area:eyebrow;align-self:end;font-size:.625rem;line-height:1.45;letter-spacing:.06em;margin:0}
+  .dailyPlanCopy .eyebrow{grid-area:eyebrow;align-self:end;font-size:.75rem;line-height:1.45;letter-spacing:.04em;margin:0}
   .dailyPlanCopy h2{grid-area:title;align-self:start;font-size:1rem;line-height:1.25}
-  .dailyPlanCopy>p:last-child:not(.eyebrow){grid-area:description;font-size:.8125rem;margin:4px 0 2px}
+  .dailyPlanCopy>p:last-child:not(.eyebrow){grid-area:description;font-size:.875rem;margin:4px 0 2px}
   .dailyPlanIcon,.dailyPlan[data-complete=true] .dailyPlanIcon{width:44px;height:52px}
   .dailyPlanCount{align-self:center;gap:4px}
   .dailyPlanCountRing{width:4.5rem;height:4.5rem}
   .dailyPlanCountRing::before{inset:5px}
   .dailyPlanCount strong{font-size:1.25rem}
-  .dailyPlanCount small{font-size:.625rem}
+  .dailyPlanCount small{font-size:.75rem}
   .dailyPlanAction{margin-top:6px;cursor:pointer}
   .dailyPlan[data-complete=true]{grid-template-areas:'icon eyebrow count' 'icon title count' 'action action action';padding-block:14px}
   .dailyPlan[data-complete=true] h2{font-size:1rem}
