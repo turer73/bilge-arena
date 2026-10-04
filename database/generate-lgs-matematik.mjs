@@ -10,14 +10,12 @@ import { writeFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
+import { isMainModule, validateLgsContent } from './lib/lgs-question-contract.mjs'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 const GEMINI_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY
 const SB_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-if (!GEMINI_KEY || !SB_URL || !SB_KEY) { console.error('ENV eksik'); process.exit(1) }
-
-const supabase = createClient(SB_URL, SB_KEY)
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
 // ── Üretim planı (LGS Matematik 8. sınıf) ────────────────────────────────────
@@ -37,7 +35,7 @@ const PLAN = [
 ]
 
 // ── Sistem promptu ────────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = `Sen LGS (Liselere Geçiş Sınavı) 8. sınıf Matematik sorusu üreticisisin.
+export const SYSTEM_PROMPT = `Sen LGS (Liselere Geçiş Sınavı) 8. sınıf Matematik sorusu üreticisisin.
 
 SEVİYE: LGS — ortaokul 8. sınıf, 13-14 yaş, orta zorluk.
 TYT'den DAHA KOLAY: trigonometri, logaritm, türev, integral YOK.
@@ -55,11 +53,12 @@ LGS MATEMATİK soruları ŞÖYLE olur:
 - Yüzde uygulaması: "İndirim öncesi fiyat 240 TL, %25 indirimle..."
 - Geometri uygulaması: "Bahçenin çevresi 56 m, bir kenarı diğerinin 3 katı ise..."
 
-ÇOK SEÇENEKLİ (A-E), 1 doğru cevap.
+ÇOK SEÇENEKLİ (A-D), tam 4 seçenek, 1 doğru cevap. answer yalnız 0, 1, 2 veya 3 olabilir.
+Çözümde seçenek harfi veya indeks kullanma; doğru cevabın metnine atıf yap.
 JSON çıktısı (başka hiçbir şey yazma):
 [{
   "question": "Senaryo ve soru (tek paragraf, net ve anlaşılır)",
-  "options": ["A seçenek", "B seçenek", "C seçenek", "D seçenek", "E seçenek"],
+  "options": ["A seçenek", "B seçenek", "C seçenek", "D seçenek"],
   "answer": 0,
   "solution": "Adım adım Türkçe çözüm (kısa, 2-3 satır)",
   "topic": "konu adı",
@@ -109,17 +108,17 @@ const TRIVIAL_PATTERNS = [
   /^\d+\s*[\+\-\*\/]\s*\d+\s*=\s*\?/,
 ]
 
-function validate(q) {
-  if (!q.question || q.question.length < 25) return 'soru çok kısa'
-  if (!Array.isArray(q.options) || q.options.length !== 5) return 'options 5 değil'
-  if (typeof q.answer !== 'number' || q.answer < 0 || q.answer > 4) return 'answer geçersiz'
-  if (!q.solution || q.solution.length < 15) return 'solution eksik'
+export function validate(q) {
+  const error = validateLgsContent(q, { questionMinLength: 25, solutionMinLength: 15 })
+  if (error) return error
   if (TRIVIAL_PATTERNS.some(p => p.test(q.question))) return 'trivial soru'
   return null
 }
 
 // ── Ana akış ──────────────────────────────────────────────────────────────────
 async function main() {
+  if (!GEMINI_KEY || !SB_URL || !SB_KEY) throw new Error('ENV eksik')
+  const supabase = createClient(SB_URL, SB_KEY)
   let totalGenerated = 0, totalValid = 0, totalInserted = 0
   const byCategory = {}
   const log = []
@@ -140,7 +139,7 @@ async function main() {
     for (const q of questions) {
       const err = validate(q)
       if (err) {
-        console.log(`  ✗ ${err}: "${String(q.question || '').slice(0, 60)}"`)
+        console.log(`  ✗ ${err}: "${String(q?.question || '').slice(0, 60)}"`)
       } else {
         valid.push(q)
       }
@@ -189,7 +188,7 @@ async function main() {
 
   writeFileSync(resolve(__dir, '_lgs-matematik-log.json'),
     JSON.stringify({ date: new Date().toISOString(), totalInserted, byCategory, log }, null, 2))
-  console.log('\nSonraki adım: kalite spot-check → toplu aktive')
+  console.log('\nSonraki adım: revizyon bazlı kalite ve kaynak/kazanım incelemesi → yetkili yayın')
 }
 
-main().catch(err => { console.error('Fatal:', err); process.exit(1) })
+if (isMainModule(import.meta.url)) main().catch(err => { console.error('Fatal:', err.message); process.exitCode = 1 })
