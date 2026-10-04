@@ -102,6 +102,42 @@ describe('CalismaClient', () => {
     expect(screen.getByRole('link', { name: 'Profil sayfasını aç' })).toHaveAttribute('href', '/arena/profil')
   })
 
+  test('yatay kaydırma mevcut ders geçişini kullanır ve dikey kaydırma dersi değiştirmez', () => {
+    useGameStore.setState({ selectedGame: 'matematik', selectedCategory: 'problemler', selectedExamRef: 'TYT' })
+    mockedUseAuthStore.mockReturnValue({ user: { id: 'u1' }, profile: { exam_type: 'yks' }, loading: false } as never)
+    render(<CalismaClient />)
+    const heading = screen.getByRole('heading', { name: 'Matematik · TYT' })
+    fireEvent.touchStart(heading, { touches: [{ identifier: 1, clientX: 280, clientY: 130 }] })
+    fireEvent.touchEnd(heading, { touches: [], changedTouches: [{ identifier: 1, clientX: 100, clientY: 134 }] })
+    expect(useGameStore.getState().selectedGame).toBe('turkce')
+    expect(useGameStore.getState().selectedCategory).toBeNull()
+    expect(screen.getByRole('link', { name: 'Türkçe turunu hazırla' })).toHaveAttribute('href', '/arena/turkce?exam_ref=TYT')
+    expect(screen.getByRole('button', { name: 'Değiştir' })).toHaveAttribute('aria-expanded', 'false')
+    const nextHeading = screen.getByRole('heading', { name: 'Türkçe · TYT' })
+    fireEvent.touchStart(nextHeading, { touches: [{ identifier: 1, clientX: 200, clientY: 130 }] })
+    fireEvent.touchMove(nextHeading, { touches: [{ identifier: 1, clientX: 205, clientY: 220 }] })
+    fireEvent.touchEnd(nextHeading, { touches: [], changedTouches: [{ identifier: 1, clientX: 205, clientY: 260 }] })
+    expect(useGameStore.getState().selectedGame).toBe('turkce')
+  })
+
+  test('LGS kaydırma İngilizceye geçerken sınav tercihini saklar ve sınırda durur', () => {
+    useGameStore.setState({ selectedGame: 'sosyal', selectedExamRef: 'LGS' })
+    mockedUseAuthStore.mockReturnValue({ user: { id: 'u1' }, profile: { exam_type: 'lgs' }, loading: false } as never)
+    render(<CalismaClient />)
+    const swipeHeading = (from: number, to: number) => {
+      const heading = screen.getByRole('heading', { level: 2, name: / · / })
+      fireEvent.touchStart(heading, { touches: [{ identifier: 1, clientX: from, clientY: 130 }] })
+      fireEvent.touchEnd(heading, { touches: [], changedTouches: [{ identifier: 1, clientX: to, clientY: 133 }] })
+    }
+    swipeHeading(280, 100)
+    expect(screen.getByRole('link', { name: 'İngilizce turunu hazırla' })).toHaveAttribute('href', '/arena/wordquest')
+    expect(useGameStore.getState().selectedExamRef).toBe('LGS')
+    swipeHeading(280, 100)
+    expect(useGameStore.getState().selectedGame).toBe('wordquest')
+    swipeHeading(100, 280)
+    expect(screen.getByRole('link', { name: 'Sosyal Bilimler turunu hazırla' })).toHaveAttribute('href', '/arena/sosyal?exam_ref=LGS')
+  })
+
   test('LGS profilinde WordQuest görünür kalır ve sınavdan bağımsız açılır', () => {
     useGameStore.setState({ selectedGame: 'wordquest', selectedExamRef: 'TYT' })
     mockedUseAuthStore.mockReturnValue({

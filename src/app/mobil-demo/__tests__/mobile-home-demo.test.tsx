@@ -142,6 +142,34 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
 })
 
 describe('MobileHomeDemo canlı öğrenme yolu', () => {
+  test('kaydırma yalnız görünür derslere gider, içerik ve bağlantı aynı dersi gösterir', () => {
+    render(<MobileHomeDemo mode="live" availableSubjects={['matematik', 'ingilizce']} />)
+    const math = screen.getByRole('heading', { name: 'Matematik Yolu' })
+    fireEvent.touchStart(math, { touches: [{ identifier: 1, clientX: 280, clientY: 400 }] })
+    fireEvent.touchEnd(math, { touches: [], changedTouches: [{ identifier: 1, clientX: 100, clientY: 405 }] })
+    const english = screen.getByRole('heading', { name: 'İngilizce Yolu' })
+    expect(english).toBeVisible()
+    expect(screen.getByRole('button', { name: 'İng.' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('link', { name: 'KONUYA GİT' })).toHaveAttribute('href', '/arena/wordquest?category=vocabulary')
+    fireEvent.touchStart(english, { touches: [{ identifier: 1, clientX: 100, clientY: 400 }] })
+    fireEvent.touchEnd(english, { touches: [], changedTouches: [{ identifier: 1, clientX: 280, clientY: 405 }] })
+    expect(screen.getByRole('heading', { name: 'Matematik Yolu' })).toBeVisible()
+  })
+
+  test('ders şeridini kaydırmak veya koç açıkken dokunmak dersi değiştirmez', () => {
+    render(<MobileHomeDemo mode="live" />)
+    const tabs = document.querySelector('[data-subject-tabs]')!
+    fireEvent.touchStart(tabs, { touches: [{ identifier: 1, clientX: 280, clientY: 90 }] })
+    fireEvent.touchEnd(tabs, { touches: [], changedTouches: [{ identifier: 1, clientX: 100, clientY: 90 }] })
+    expect(screen.getByRole('button', { name: 'Mat' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'Bilge Chan mesajlarını aç' }))
+    const message = screen.getByRole('heading', { name: 'Hazırsın, Bilgin!' })
+    fireEvent.touchStart(message, { touches: [{ identifier: 1, clientX: 280, clientY: 200 }] })
+    fireEvent.touchEnd(message, { touches: [], changedTouches: [{ identifier: 1, clientX: 100, clientY: 200 }] })
+    fireEvent.click(screen.getByRole('button', { name: 'Koç penceresini kapat' }))
+    expect(screen.getByRole('heading', { name: 'Matematik Yolu' })).toBeVisible()
+  })
+
   test('kalite görevlerini yalnız ayrı yayın kapısı açıkken gösterir', () => {
     const { rerender } = render(<MobileHomeDemo mode="live" />)
     expect(screen.queryByRole('link', { name: /Kalite görevleri/i })).not.toBeInTheDocument()
