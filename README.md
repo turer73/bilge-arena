@@ -121,3 +121,17 @@ Full dataset git'te takip edilmez (`.gitignore` ile `wordquest/data/` ve `/priva
 
 **Başlangıç tarihi:** Mart 2026  
 **Hedef lansman:** Mayıs 2026
+
+## Lisans
+
+Bu depodaki kod **GNU Affero General Public License v3.0** (`AGPL-3.0-only`) ile
+lisanslanmıştır. Tam metin: [LICENSE](LICENSE).
+
+Kısaca: kodu kullanabilir, değiştirebilir ve dağıtabilirsiniz. Ancak değiştirilmiş
+bir sürümü dağıtırsanız **veya bir ağ üzerinden hizmet olarak sunarsanız**, kaynak
+kodunu aynı lisansla açmanız gerekir.
+
+Üçüncü taraf bağımlılıklar ve `vendor/` benzeri dizinlerdeki bileşenler kendi
+lisanslarıyla gelir; bu lisans onları kapsamaz.
+
+Telif hakkı (c) 2026 turer73.
