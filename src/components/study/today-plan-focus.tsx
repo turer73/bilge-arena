@@ -28,9 +28,10 @@ interface TodayPlanFocusProps {
   examRef?: string | null
   selectedCategory?: string | null
   showStickyMobileAction?: boolean
+  cardPresentation?: 'card' | 'details'
   /** Reuse the study page's policy read and form instead of fetching twice. */
   tytSocialPolicy?: TytSocialExamPolicyState
-  /** Optional desktop presentation; shares this instance's plan and start safeguards. */
+  /** Optional summary presentation; shares this instance's plan and start safeguards. */
   render?: (view: TodayPlanFocusView) => ReactNode
 }
 
@@ -88,6 +89,7 @@ function TodayPlanContent({
   examRef,
   selectedCategory,
   showStickyMobileAction = false,
+  cardPresentation = 'card',
   render,
 }: TodayPlanFocusProps) {
   const router = useRouter()
@@ -178,6 +180,7 @@ function TodayPlanContent({
       loading={loading}
       onStart={startPlan}
       showStickyMobileAction={showStickyMobileAction}
+      presentation={cardPresentation}
       paperHref={isPaperModeUiEnabled() && plan
         ? paperPackCreateHref(game, questionExamRefForGame(game, plan.examRef ?? questionExamRef, isTytSocialV2ClientEnabled()))
         : null}

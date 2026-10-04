@@ -54,6 +54,8 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
     learn.unmount()
 
     const practice = render(<CalismaClient />)
+    expect(screen.getByRole('heading', { name: 'Fen Bilimleri · TYT' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Değiştir' }))
     expect(screen.getByRole('button', { name: 'Fen Bilimleri' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('link', { name: 'Fen Bilimleri turunu hazırla' })).toHaveAttribute('href', '/arena/fen?exam_ref=TYT')
     practice.unmount()
@@ -66,6 +68,7 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
   test('Pratik ekranında seçilen İngilizce mobil Öğren ekranında korunur', async () => {
     mockAuth.value = { user: { id: UUID }, profile: { exam_type: 'yks' } }
     const practice = render(<CalismaClient />)
+    fireEvent.click(screen.getByRole('button', { name: 'Değiştir' }))
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'İngilizce' })) })
     practice.unmount()
 
@@ -87,7 +90,7 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
     expect(responsiveGrid).toHaveClass('md:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)]')
   })
 
-  test('profil kaynaklarını ve günlük soru hedefini aynı kabuğa aktarır', async () => {
+  test('profil kaynaklarını ve günlük doğru cevap hedefini aynı kabuğa aktarır', async () => {
     mockAuth.value = {
       user: { id: UUID },
       profile: {
@@ -107,7 +110,8 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
 
     expect(screen.getByLabelText('Günlük seri: 12')).toBeInTheDocument()
     expect(screen.getByLabelText('Altın: 480')).toBeInTheDocument()
-    expect(screen.getByText('3 / 5 soru')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Günlük doğru cevap hedefi' })).toHaveTextContent('3 / 5')
+    expect(screen.queryByText('3 / 5 soru')).not.toBeInTheDocument()
   })
 
   test('LGS profilinde uygun derslerle birlikte sınavdan bağımsız WordQuest girişini gösterir', async () => {

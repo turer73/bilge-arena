@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import type { GameDefinition, GameSlug } from '@/lib/constants/games'
 import { BookOpenText, Calculator, FlaskConical, Globe2, Languages, type LucideIcon } from 'lucide-react'
 
@@ -12,6 +12,7 @@ interface StudyContextSelectorProps {
   onGameChange: (game: GameSlug) => void
   onExamRefChange: (examRef: string) => void
   compact?: boolean
+  collapsible?: boolean
   eyebrow?: string
   title?: string
   footer?: ReactNode
@@ -34,91 +35,117 @@ export function StudyContextSelector({
   onGameChange,
   onExamRefChange,
   compact = false,
+  collapsible = false,
   eyebrow = 'ÇALIŞMA ODAĞIN',
   title = 'Dersini ve sınavını seç',
   footer,
 }: StudyContextSelectorProps) {
+  const headingId = useId()
+  const choicesId = useId()
+  const toggleRef = useRef<HTMLButtonElement>(null)
+  const [expanded, setExpanded] = useState(false)
+  const selectedGameName = games.find((game) => game.slug === selectedGame)?.name ?? selectedGame
+  const summary = `${selectedGameName} · ${selectedExamRef ?? 'Serbest'}`
+
   return (
     <section
-      aria-labelledby="study-context-title"
-      className={`min-w-0 overflow-hidden rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-3 shadow-[0_5px_0_var(--app-border)] md:p-4 ${compact ? 'lg:h-full' : ''}`}
+      aria-labelledby={headingId}
+      className={`min-w-0 overflow-hidden rounded-[22px] border-[var(--app-border)] bg-[var(--app-card)] p-3 md:p-4 ${collapsible ? 'border shadow-sm' : 'border-2 shadow-[0_5px_0_var(--app-border)]'} ${compact ? 'lg:h-full' : ''}`}
+      onKeyDown={(event) => {
+        if (collapsible && expanded && event.key === 'Escape') {
+          event.preventDefault()
+          setExpanded(false)
+          toggleRef.current?.focus()
+        }
+      }}
     >
-      <div className="mb-3 flex min-w-0 items-start justify-between gap-3">
+      <div className="flex min-w-0 items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-accent-text)]">
+          <p className="text-xs font-bold tracking-[0.08em] text-[var(--app-accent-text)]">
             {eyebrow}
           </p>
-          <h2 id="study-context-title" className="mt-0.5 text-sm font-black text-[var(--app-text)]">
-            {title}
+          <h2 id={headingId} className="mt-1 text-base font-black leading-snug text-[var(--app-text)]">
+            {collapsible ? summary : title}
           </h2>
         </div>
-        <span className="hidden max-w-28 shrink-0 text-right text-[10px] font-semibold leading-snug text-[var(--app-text-muted)] min-[400px]:block">
+        {collapsible ? <button
+          ref={toggleRef}
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={choicesId}
+          onClick={() => setExpanded((current) => !current)}
+          className="min-h-11 shrink-0 rounded-xl border border-[var(--app-border)] bg-[var(--app-card-sunken)] px-3 text-sm font-bold text-[var(--app-accent-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)]"
+        >
+          {expanded ? 'Tamam' : 'Değiştir'}
+        </button> : <span className="hidden max-w-28 shrink-0 text-right text-xs font-semibold leading-snug text-[var(--app-text-muted)] min-[400px]:block">
           İstediğin zaman değiştirebilirsin
-        </span>
+        </span>}
       </div>
 
-      <fieldset>
-        <legend className="sr-only">Ders seçimi</legend>
-        <div
-          data-study-game-grid
-          className={`grid min-w-0 grid-cols-2 gap-2 min-[420px]:grid-cols-3 ${compact ? 'lg:grid-cols-2' : 'lg:grid-cols-5'}`}
-        >
-          {games.map((game) => {
-            const selected = game.slug === selectedGame
-            const Icon = GAME_ICONS[game.slug]
-            return (
-              <button
-                key={game.slug}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => onGameChange(game.slug)}
-                className="flex min-h-[52px] w-full min-w-0 items-center gap-2 rounded-2xl border-2 px-2.5 py-2 text-left text-[11px] font-black transition-[border-color,background-color,transform] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)] sm:px-3 sm:text-xs"
-                style={{
-                  borderColor: selected ? `var(--${game.color})` : 'var(--app-border)',
-                  background: selected
-                    ? `color-mix(in srgb, var(--${game.color}) 12%, var(--app-card))`
-                    : 'var(--app-card-sunken)',
-                  color: selected ? 'var(--app-text)' : 'var(--app-text-sub)',
-                  boxShadow: selected ? `0 3px 0 color-mix(in srgb, var(--${game.color}) 34%, transparent)` : undefined,
-                }}
-              >
-                <Icon size={19} strokeWidth={2.7} aria-hidden="true" />
-                <span className="min-w-0 break-words leading-tight">{game.name}</span>
-              </button>
-            )
-          })}
-        </div>
-      </fieldset>
-
-      {examRefs.length > 0 && (
-        <fieldset className="mt-3 border-t-2 border-[var(--app-border-soft)] pt-3">
-          <legend className="sr-only">Sınav seçimi</legend>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-[10px] font-black text-[var(--app-text-sub)]">Sınav</span>
-            {examRefs.map((examRef) => {
-              const selected = examRef === selectedExamRef
+      <div id={choicesId} hidden={collapsible && !expanded}>
+        <fieldset className="mt-3">
+          <legend className="sr-only">Ders seçimi</legend>
+          <div
+            data-study-game-grid
+            className={`grid min-w-0 grid-cols-2 gap-2 min-[420px]:grid-cols-3 ${compact ? 'lg:grid-cols-2' : 'lg:grid-cols-5'}`}
+          >
+            {games.map((game) => {
+              const selected = game.slug === selectedGame
+              const Icon = GAME_ICONS[game.slug]
               return (
                 <button
-                  key={examRef}
+                  key={game.slug}
                   type="button"
                   aria-pressed={selected}
-                  onClick={() => onExamRefChange(examRef)}
-                  className={`min-h-11 rounded-2xl border-2 px-4 text-xs font-black transition-[transform,background-color] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)] ${
-                    selected
-                      ? 'border-[var(--app-accent)] bg-[var(--app-accent)] text-white shadow-[0_3px_0_var(--app-accent-strong)]'
-                      : 'border-[var(--app-border)] bg-[var(--app-card-sunken)] text-[var(--app-text-sub)]'
-                  }`}
+                  onClick={() => onGameChange(game.slug)}
+                  className="flex min-h-[52px] w-full min-w-0 items-center gap-2 rounded-2xl border px-2.5 py-2 text-left text-xs font-bold transition-[border-color,background-color,transform] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)] sm:px-3"
+                  style={{
+                    borderColor: selected ? `var(--${game.color})` : 'var(--app-border)',
+                    background: selected
+                      ? `color-mix(in srgb, var(--${game.color}) 12%, var(--app-card))`
+                      : 'var(--app-card-sunken)',
+                    color: selected ? 'var(--app-text)' : 'var(--app-text-sub)',
+                    boxShadow: selected ? `0 3px 0 color-mix(in srgb, var(--${game.color}) 34%, transparent)` : undefined,
+                  }}
                 >
-                  {examRef}
+                  <Icon size={19} strokeWidth={2.7} aria-hidden="true" />
+                  <span className="min-w-0 break-words leading-tight">{game.name}</span>
                 </button>
               )
             })}
           </div>
         </fieldset>
-      )}
+
+        {examRefs.length > 0 && (
+          <fieldset className="mt-3 border-t border-[var(--app-border-soft)] pt-3">
+            <legend className="sr-only">Sınav seçimi</legend>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="mr-1 text-xs font-bold text-[var(--app-text-sub)]">Sınav</span>
+              {examRefs.map((examRef) => {
+                const selected = examRef === selectedExamRef
+                return (
+                  <button
+                    key={examRef}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => onExamRefChange(examRef)}
+                    className={`min-h-11 rounded-2xl border-2 px-4 text-xs font-black transition-[transform,background-color] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)] ${
+                      selected
+                        ? 'border-[var(--app-accent)] bg-[var(--app-accent)] text-white shadow-[0_3px_0_var(--app-accent-strong)]'
+                        : 'border-[var(--app-border)] bg-[var(--app-card-sunken)] text-[var(--app-text-sub)]'
+                    }`}
+                  >
+                    {examRef}
+                  </button>
+                )
+              })}
+            </div>
+          </fieldset>
+        )}
+      </div>
 
       {footer && (
-        <div data-study-context-footer className="mt-4 border-t-2 border-[var(--app-border-soft)] pt-4">
+        <div data-study-context-footer className="mt-3 border-t border-[var(--app-border-soft)] pt-3">
           {footer}
         </div>
       )}
