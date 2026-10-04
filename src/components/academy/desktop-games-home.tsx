@@ -11,6 +11,8 @@ import { useBilgeCharacter } from '@/lib/bilge/use-bilge-character'
 import { bilgeImage } from '@/lib/bilge/characters'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { AcademyTabletNav } from './academy-tablet-nav'
+import { getPreparationLabel } from '@/lib/utils/lobby-presentation'
+import { studyHref } from '@/lib/utils/study-href'
 import styles from './academy.module.css'
 
 const SUBJECT_ART = {
@@ -71,8 +73,8 @@ export function DesktopGamesHome() {
           data-subject={game.slug}
           data-pressed={pressedSubject === game.slug ? 'true' : undefined}
           style={{ '--subject-color': game.colorHex } as CSSProperties}
-          href={`/arena/${game.slug}?exam_ref=${encodeURIComponent(examRef)}`}
-          aria-label={`${game.name} ${EXAM_LABELS[examRef]} · Turunu kur`}
+          href={studyHref(game.slug, examRef)}
+          aria-label={`${getPreparationLabel(game.slug)} · ${EXAM_LABELS[examRef]}`}
           onPointerDown={event => {
             if (event.pointerType === 'touch' || event.pointerType === 'pen') setPressedSubject(game.slug)
           }}
@@ -86,7 +88,7 @@ export function DesktopGamesHome() {
           </span>
           <span className={styles.subjectGameScope}>{EXAM_LABELS[examRef]}</span>
           <span className={styles.subjectGameCopy}><strong>{game.name}</strong></span>
-          <span className={styles.subjectGameAction}>Turunu kur <span><ChevronRight size={18} aria-hidden="true" /></span></span>
+          <span className={styles.subjectGameAction}>Turunu hazırla <span><ChevronRight size={18} aria-hidden="true" /></span></span>
         </Link>
       })}</div>
     </section>

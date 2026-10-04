@@ -89,7 +89,7 @@ describe('CalismaClient', () => {
     expect(screen.getByRole('button', { name: 'TYT' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByRole('button', { name: 'LGS' })).not.toBeInTheDocument()
     expect(screen.getByTestId('institution-weekly-program')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Devam et' })).toHaveAttribute('href', '/arena/matematik?exam_ref=TYT')
+    expect(screen.getByRole('link', { name: 'Matematik turunu hazırla' })).toHaveAttribute('href', '/arena/matematik?exam_ref=TYT')
     expect(screen.getByTestId('today-plan-focus')).toBeInTheDocument()
     expect(screen.getByTestId('mastery-action-card')).toBeInTheDocument()
     expect(document.querySelector('[data-practice-progress]')).toHaveClass('lg:col-start-1', 'lg:row-start-2')
@@ -108,7 +108,7 @@ describe('CalismaClient', () => {
     expect(screen.getByRole('button', { name: /İngilizce/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByRole('button', { name: 'LGS' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'YDT' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Devam et' })).toHaveAttribute('href', '/arena/wordquest')
+    expect(screen.getByRole('link', { name: 'İngilizce turunu hazırla' })).toHaveAttribute('href', '/arena/wordquest')
     expect(todayPlanFocusProps).toHaveBeenLastCalledWith(expect.objectContaining({ game: 'wordquest', examRef: null }))
     expect(masteryActionCardProps).toHaveBeenLastCalledWith(expect.objectContaining({ game: 'wordquest', examRef: null }))
   })
@@ -132,7 +132,7 @@ describe('CalismaClient', () => {
 
     render(<CalismaClient />)
     await waitFor(() => expect(screen.getByText('TYT Sosyal cevaplama düzeni')).toBeInTheDocument())
-    expect(screen.queryByRole('link', { name: 'Devam et' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /turunu hazırla/ })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'TYT Sosyal seçimi gerekli' })).toBeDisabled()
   })
 
@@ -149,7 +149,7 @@ describe('CalismaClient', () => {
     expect(useGameStore.getState().selectedGame).toBe('turkce')
     expect(useGameStore.getState().selectedExamRef).toBe('TYT')
     expect(useGameStore.getState().selectedCategory).toBeNull()
-    expect(screen.getByRole('link', { name: 'Devam et' })).toHaveAttribute('href', '/arena/turkce?exam_ref=TYT')
+    expect(screen.getByRole('link', { name: 'Türkçe turunu hazırla' })).toHaveAttribute('href', '/arena/turkce?exam_ref=TYT')
   })
 
   test('Wordquest gecisi onceki dersin sinav tercihini silmez', () => {

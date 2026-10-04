@@ -37,6 +37,7 @@ import { TodayPlanFocus } from '@/components/study/today-plan-focus'
 import { useWideStudy } from '@/lib/hooks/use-wide-study'
 import { useTopicProgress } from '@/lib/hooks/use-topic-progress'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
+import { studyHref } from '@/lib/utils/study-href'
 import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 
 export type MobileSubjectId = 'matematik' | 'turkce' | 'fen' | 'sosyal' | 'ingilizce'
@@ -44,8 +45,8 @@ const DesktopStudyHome = dynamic(() => import('@/components/academy/desktop-stud
 type SubjectId = MobileSubjectId
 
 interface MobileHomeDemoProps {
-  desktopSubject?: MobileSubjectId
-  onDesktopSubjectChange?: (subject: MobileSubjectId) => void
+  selectedSubject?: MobileSubjectId
+  onSubjectChange?: (subject: MobileSubjectId) => void
   renderStudyTools?: (game: GameSlug, examRef: string | null) => ReactNode
   mode?: 'demo' | 'live'
   examLabel?: 'YKS' | 'LGS'
@@ -229,8 +230,8 @@ function compactNumber(value: number) {
 }
 
 export function MobileHomeDemo({
-  desktopSubject,
-  onDesktopSubjectChange,
+  selectedSubject,
+  onSubjectChange,
   renderStudyTools,
   mode = 'demo',
   examLabel = 'YKS',
@@ -260,10 +261,10 @@ export function MobileHomeDemo({
   const [coachMessage, setCoachMessage] = useState(0)
   const [examPickerOpen, setExamPickerOpen] = useState(false)
   const [demoExamRef, setDemoExamRef] = useState(examRef)
-  const activeSubjectId = wideStudy && desktopSubject ? desktopSubject : subjectId
+  const activeSubjectId = selectedSubject ?? subjectId
+  const handleSubjectChange = onSubjectChange ?? setSubjectId
   const subject = visibleSubjects.find((item) => item.id === activeSubjectId) ?? visibleSubjects[0] ?? SUBJECTS[0]
   const gameSlug = subject.id === 'ingilizce' ? 'wordquest' : subject.id
-  const gameHref = `/arena/${gameSlug}`
   const progressExamRef = gameSlug === 'wordquest'
     ? null
     : examRef && GAMES[gameSlug].examTags.includes(examRef)
@@ -273,6 +274,7 @@ export function MobileHomeDemo({
         : GAMES[gameSlug].examTags.includes('TYT')
           ? 'TYT'
           : GAMES[gameSlug].examTags[0] ?? null
+  const gameHref = studyHref(gameSlug, progressExamRef)
   // Canli modda yol, oyunun kanonik kategori listesi + kullanicinin gercek
   // konu basarisi uzerine kurulur. Demo modunda (rota /mobil-demo) backend
   // yok; sabit ornek icerik gosterilir.
@@ -293,7 +295,7 @@ export function MobileHomeDemo({
         key: `${gameSlug}-${topic.category}`,
         label: topic.label,
         // Adim gercekten o konuya goturur: lobi ?category ile acilir.
-        href: `${gameHref}?category=${encodeURIComponent(topic.category)}`,
+        href: studyHref(gameSlug, progressExamRef, topic.category),
         index,
         done: topic.completed,
         current: index === progress.currentIndex,
@@ -422,7 +424,7 @@ export function MobileHomeDemo({
           : isSocialTytProgressPreparing || progress.available === false ? 'preparing'
             : progress.available === null ? 'unavailable' : 'ready'
     return <DesktopStudyHome
-      mode={mode} subjects={visibleSubjects} subject={subject} onSubjectChange={onDesktopSubjectChange ?? setSubjectId}
+      mode={mode} subjects={visibleSubjects} subject={subject} onSubjectChange={handleSubjectChange}
       examOptions={examScopeOptions} examRef={progressExamRef} selectedExamRef={selectedHeaderExamRef}
       onExamChange={onExamRefChange ?? setDemoExamRef} game={gameSlug}
       steps={mode === 'demo' || isLivePath ? steps : []}
@@ -511,7 +513,7 @@ export function MobileHomeDemo({
               return (
                 <button
                   key={item.id}
-                  onClick={() => setSubjectId(item.id)}
+                  onClick={() => handleSubjectChange(item.id)}
                   aria-label={item.shortLabel}
                   title={item.label}
                   aria-pressed={active}
@@ -735,7 +737,7 @@ export function MobileHomeDemo({
                         key={item.id}
                         type="button"
                         onClick={() => {
-                          setSubjectId(item.id)
+                          handleSubjectChange(item.id)
                           setCoachMessage(0)
                         }}
                         aria-label={`${item.label} rotasını seç`}

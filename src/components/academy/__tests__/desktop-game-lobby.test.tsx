@@ -23,7 +23,7 @@ describe('Wide game preparation', () => {
     const { container, rerender } = render(<DesktopGameLobby {...makeProps()} dailyPlanAction={<button>Günlük planın</button>} />)
     const summary = screen.getByRole('complementary', { name: 'Tur özeti' })
     const shortcut = within(summary).getByRole('button', { name: 'Günlük planın' })
-    const start = within(summary).getByRole('button', { name: 'Başlat · 10 soru' })
+    const start = within(summary).getByRole('button', { name: 'Başla · 10 soru' })
     expect(start.compareDocumentPosition(shortcut) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(container.querySelector('header')!).queryByRole('button', { name: 'Günlük planın' })).not.toBeInTheDocument()
     rerender(<DesktopGameLobby {...makeProps()} />)
@@ -32,9 +32,9 @@ describe('Wide game preparation', () => {
   it('has one start action, a summary and no mobile or XP level panel', () => {
     const props = makeProps()
     const {container}=render(<DesktopGameLobby {...props} />)
-    expect(screen.getByRole('heading',{level:1,name:'Matematik turunu kur'})).toBeInTheDocument()
-    expect(screen.getAllByRole('button',{name:'Başlat · 10 soru'})).toHaveLength(1)
-    fireEvent.click(screen.getByRole('button',{name:'Başlat · 10 soru'}))
+    expect(screen.getByRole('heading',{level:1,name:'Matematik turunu hazırla'})).toBeInTheDocument()
+    expect(screen.getAllByRole('button',{name:'Başla · 10 soru'})).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button',{name:'Başla · 10 soru'}))
     expect(props.onStart).toHaveBeenCalledOnce()
     expect(screen.queryByText('Turun hazır!')).not.toBeInTheDocument()
     expect(container.querySelector('[data-mobile-lobby-flow]')).toBeNull()
@@ -80,8 +80,8 @@ describe('Wide game preparation', () => {
     expect(artCards.map(card=>card.dataset.modeArt)).toEqual(['classic','deneme','practice'])
     expect(artCards.every(card=>card.querySelector('img')?.getAttribute('alt')==='')).toBe(true)
     expect(artCards.every(card=>card.querySelector('img')?.getAttribute('sizes')?.includes('calc((100vw - 382px) / 3)'))).toBe(true)
-    expect(screen.getByRole('button',{name:/Klasik, 10 soru/})).toBeInTheDocument()
-    expect(screen.getByRole('button',{name:/Deneme Sınavı, 40 soru/})).toBeInTheDocument()
+    expect(screen.getByRole('button',{name:/Hızlı, 10 soru/})).toBeInTheDocument()
+    expect(screen.getByRole('button',{name:/Deneme, 40 soru/})).toBeInTheDocument()
     expect(screen.getByRole('button',{name:/Pratik, 10 soru/})).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button',{name:'Blitz, Maraton ve Boss'}))
     const expandedArtCards=[...container.querySelectorAll<HTMLElement>('[data-mode-art]')]
@@ -108,7 +108,7 @@ describe('Wide game preparation', () => {
     render(<DesktopGameLobby {...props} />)
     expect(within(screen.getByLabelText('Konu')).queryByRole('option',{name:'Edebiyat'})).not.toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Önceki konu bu sınavda yok')
-    expect(screen.getByRole('button',{name:'Başlat · 10 soru'})).toBeDisabled()
+    expect(screen.getByRole('button',{name:'Başla · 10 soru'})).toBeDisabled()
   })
   it('does not introduce an exam filter into WordQuest', () => {
     const props=makeProps()
@@ -150,13 +150,13 @@ describe('Wide game preparation', () => {
     expect(screen.getByLabelText('Konu')).toBeDisabled()
     expect(screen.getByLabelText('Zorluk')).toBeDisabled()
     expect(screen.getByText('20 soruluk TYT Sosyal bölümü')).toBeInTheDocument()
-    expect(screen.getByRole('button',{name:'Başlat · 20 soru'})).toBeInTheDocument()
+    expect(screen.getByRole('button',{name:'Denemeyi başlat · 20 soru'})).toBeInTheDocument()
   })
   it('lets an explicit UI mode choice leave a practice entry preference without losing its source context', () => {
     window.history.replaceState(null,'','/arena/matematik?exam_ref=TYT&mode=practice&source=program')
     const props={...makeProps(),selectedMode:'practice'}
     const {rerender}=render(<DesktopGameLobby {...props} />)
-    fireEvent.click(within(screen.getByRole('group',{name:'Oyun biçimi'})).getByRole('button',{name:/Klasik/}))
+    fireEvent.click(within(screen.getByRole('group',{name:'Oyun biçimi'})).getByRole('button',{name:/Hızlı/}))
     const url=new URL(window.location.href)
     expect(url.searchParams.has('mode')).toBe(false)
     expect(url.searchParams.get('source')).toBe('program')
@@ -167,7 +167,7 @@ describe('Wide game preparation', () => {
   it('keeps legacy Social mode count when its rollout is disabled', () => {
     vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED','false')
     render(<DesktopGameLobby {...makeProps()} game="sosyal" selectedMode="deneme" />)
-    expect(screen.getByRole('button',{name:'Başlat · 40 soru'})).toBeInTheDocument()
+    expect(screen.getByRole('button',{name:'Denemeyi başlat · 40 soru'})).toBeInTheDocument()
     expect(screen.getByLabelText('Konu')).toBeEnabled()
   })
   it('explains the real single-question guest preview instead of promising a full round', () => {

@@ -18,6 +18,8 @@ import { ArrowRight, BookOpenCheck, Clock3, Sparkles } from 'lucide-react'
 import { useWideStudy } from '@/lib/hooks/use-wide-study'
 import { StudyHomeClient } from '../arena-client'
 import { DesktopStudyTools } from '@/components/academy/desktop-study-tools'
+import { getPreparationLabel } from '@/lib/utils/lobby-presentation'
+import { studyHref } from '@/lib/utils/study-href'
 
 const MOBILE_APP_SHELL_STYLE = '@media (max-width: 1023px) { [data-app-navbar] { display: none !important; } [data-arena-main] { padding-top: 0 !important; } }'
 
@@ -129,9 +131,7 @@ function LegacyCalismaClient() {
     gameStore.setCategory(null)
   }
 
-  const practiceParams = new URLSearchParams()
-  if (game !== 'wordquest' && examRef) practiceParams.set('exam_ref', examRef)
-  const practiceHref = `/arena/${game}${practiceParams.size > 0 ? `?${practiceParams}` : ''}`
+  const practiceHref = studyHref(game, examRef)
 
   return (
     <div data-practice-screen className="min-h-[100dvh] w-full min-w-0 touch-pan-y overflow-x-clip bg-[var(--app-bg)] pb-24 text-[var(--app-text)] lg:bg-transparent lg:pb-10">
@@ -217,7 +217,7 @@ function LegacyCalismaClient() {
                       href={practiceHref}
                       className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
                     >
-                      Devam et
+                      {getPreparationLabel(game)}
                       <ArrowRight size={18} strokeWidth={3} aria-hidden="true" />
                     </Link>
                   )}

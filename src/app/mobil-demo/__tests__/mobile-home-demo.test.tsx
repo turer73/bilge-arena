@@ -59,7 +59,7 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
     expect(screen.getByRole('heading', { name: 'Yalnızca 4 soru kaldı!' })).toBeVisible()
-    expect(screen.getByRole('link', { name: /Başla/ })).toHaveAttribute('href', '/arena/matematik')
+    expect(screen.getByRole('link', { name: /Başla/ })).toHaveAttribute('href', '/arena/matematik?exam_ref=TYT')
   })
 
   test('ders seçimi içeriği ve hedef bağlantısını günceller', async () => {
@@ -70,7 +70,7 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
 
     expect(screen.getByRole('heading', { name: 'Türkçe Yolu' })).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Paragrafın Yapısı' })).toBeVisible()
-    expect(screen.getByRole('link', { name: /KONUYA GİT/ })).toHaveAttribute('href', '/arena/turkce')
+    expect(screen.getByRole('link', { name: /KONUYA GİT/ })).toHaveAttribute('href', '/arena/turkce?exam_ref=TYT')
   })
 
   test('tablet ve masaüstü koç penceresinde tüm oyunlar seçilebilir', async () => {
@@ -85,7 +85,7 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
     fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
-    expect(screen.getByRole('link', { name: /Başla/ })).toHaveAttribute('href', '/arena/fen')
+    expect(screen.getByRole('link', { name: /Başla/ })).toHaveAttribute('href', '/arena/fen?exam_ref=TYT')
   })
 
   test('üst ders sekmeleri masaüstünde ortalanır, mobil kısa adları korunur', () => {
@@ -181,12 +181,21 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
     render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['matematik']} />)
 
     const step = await screen.findByRole('link', { name: 'Olasılık dersini aç' })
-    expect(step).toHaveAttribute('href', '/arena/matematik?category=olasilik')
+    expect(step).toHaveAttribute('href', '/arena/matematik?exam_ref=TYT&category=olasilik')
     expect(step).not.toHaveAttribute('aria-disabled')
 
     // Sıradaki konu = tamamlanmamis ilk konu (problemler)
     expect(screen.getByRole('link', { name: /KONUYA GİT/ }))
-      .toHaveAttribute('href', '/arena/matematik?category=problemler')
+      .toHaveAttribute('href', '/arena/matematik?exam_ref=TYT&category=problemler')
+  })
+
+  test('AYT öğrenme yolundan hazırlığa geçerken sınav ve konu bağlantıda korunur', async () => {
+    render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['matematik']} examRef="AYT-SAY" />)
+    const step = await screen.findByRole('link', { name: 'Olasılık dersini aç' })
+    const url = new URL(step.getAttribute('href')!, 'https://bilgearena.com')
+    expect(url.pathname).toBe('/arena/matematik')
+    expect(url.searchParams.get('exam_ref')).toBe('AYT-SAY')
+    expect(url.searchParams.get('category')).toBe('olasilik')
   })
 
   test('kimlik doğrulanmış canlı girişte Bugünün 15’i ilk DOM ve görsel akıştır', async () => {
@@ -226,7 +235,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
       <MobileHomeDemo
         mode="live"
         userId="user-1"
-        desktopSubject="ingilizce"
+        selectedSubject="ingilizce"
         availableSubjects={['ingilizce']}
         examRef="LGS"
         renderStudyTools={renderStudyTools}
