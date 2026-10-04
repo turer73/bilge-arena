@@ -49,17 +49,35 @@
 .panel progress{display:block;height:9px;border:0;border-radius:8px;overflow:hidden;background:var(--app-border);accent-color:var(--app-accent)}
 .panel progress::-webkit-progress-bar{background:var(--app-border)}.panel progress::-webkit-progress-value{background:var(--app-accent)}.panel progress::-moz-progress-bar{background:var(--app-accent)}
 .tools{display:grid;gap:10px}.tools h2{font-size:1.125rem;margin:0 0 4px}.tools>a{display:flex;align-items:center;gap:12px;min-height:58px;padding:14px;border:1px solid var(--academy-line);border-radius:12px;background:var(--academy-panel);font-size:.875rem}.tools>a>svg{flex-shrink:0}.tools>a>svg:last-child{margin-left:auto}.toolCopy{min-width:0;flex:1}.toolCopy strong,.toolCopy small{display:block}.toolCopy small{font-size:.8125rem;color:var(--app-text-sub)}
-.dailyPlan{display:grid;grid-template-columns:88px minmax(0,1fr) 6.5rem;grid-template-areas:'icon copy count' 'action action action';gap:18px;align-items:center;padding:24px;border:1px solid var(--app-warn-border);border-radius:18px;background:linear-gradient(115deg,var(--app-warn-tint),transparent 55%),var(--academy-panel);box-shadow:0 6px 22px #0000000d}
+.dailyPlan{--academy-panel:color-mix(in srgb,var(--app-card) 70%,var(--app-bg));display:grid;min-width:0;grid-template-columns:88px minmax(0,1fr) 6.5rem;grid-template-areas:'icon copy count' 'action action action';gap:18px;align-items:center;padding:24px;border:1px solid var(--app-warn-border);border-radius:18px;background:linear-gradient(115deg,var(--app-warn-tint),transparent 55%),var(--academy-panel);box-shadow:0 6px 22px #0000000d;color:var(--app-text);line-height:1.6}
 .dailyPlan[data-ready=false]{grid-template-columns:88px minmax(0,1fr);grid-template-areas:'icon copy' 'action action'}
 .dailyPlanIcon{grid-area:icon;position:relative;display:grid;place-items:center;justify-self:center;width:88px;height:96px;background:radial-gradient(ellipse closest-side,var(--app-warn-tint),transparent);color:var(--app-warn-ink)}
 .dailyPlanTrophy{display:block;width:100%;height:auto;object-fit:contain;filter:drop-shadow(0 4px 6px #00000026)}
 .dailyPlanCompleteBadge{position:absolute;right:-2px;bottom:0;display:grid;place-items:center;width:24px;height:24px;border:1px solid var(--app-warn-border);border-radius:50%;background:var(--academy-panel);color:var(--app-warn-ink)}
-.dailyPlanCopy{grid-area:copy;min-width:0}.dailyPlanCopy .eyebrow{color:var(--app-warn-ink);letter-spacing:.08em;margin-bottom:7px}.dailyPlanCopy h2{font-size:clamp(1.25rem,1.7vw,1.65rem);margin:0}.dailyPlanCopy>p:last-child:not(.eyebrow){font-size:1rem;line-height:1.55;color:var(--app-text-sub);margin:9px 0 0}
+.dailyPlanCopy{grid-area:copy;min-width:0}.dailyPlanCopy .eyebrow{color:var(--app-warn-ink);letter-spacing:.08em;margin-bottom:7px}.dailyPlanCopy h2{font-size:clamp(1.25rem,1.7vw,1.65rem);font-weight:800;line-height:1.2;letter-spacing:-.025em;margin:0}.dailyPlanCopy>p:last-child:not(.eyebrow){font-size:1rem;line-height:1.55;color:var(--app-text-sub);margin:9px 0 0}
 .dailyPlanCount{grid-area:count;align-self:start;justify-self:end;display:grid;justify-items:center;gap:6px;text-align:center}.dailyPlanCountRing{position:relative;display:grid;place-items:center;width:6.25rem;height:6.25rem;border-radius:50%;box-shadow:0 0 0 1px var(--app-border)}.dailyPlanCountRing::before{content:'';position:absolute;inset:6px;border:1px solid var(--app-border);border-radius:inherit;background:var(--academy-panel)}.dailyPlanCount strong{position:relative;color:var(--app-warn-ink);font-size:1.75rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap}.dailyPlanCount small{color:var(--app-text-sub);font-size:.75rem;line-height:1.35}
 .dailyPlanAction{grid-area:action;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:11px 16px;border:1px solid var(--app-accent-border);border-radius:11px;background:var(--app-accent);box-shadow:0 3px 0 var(--app-accent-strong);color:#fff;font-size:.9375rem;font-weight:750;white-space:nowrap}
+.dailyPlanAction:focus-visible{outline:3px solid var(--app-accent);outline-offset:4px}
 .dailyPlan[data-complete=true]{padding-block:17px;row-gap:8px}.dailyPlan[data-complete=true] .dailyPlanIcon{width:56px;height:60px}.dailyPlan[data-complete=true] h2{font-size:1.125rem}.dailyPlan[data-complete=true] .dailyPlanCountRing{width:4.5rem;height:4.5rem}.dailyPlan[data-complete=true] .dailyPlanCount strong{font-size:1.125rem}.dailyPlan[data-complete=true] .dailyPlanAction{background:var(--app-card);color:var(--app-accent-text);box-shadow:none}
 .planComposition{display:grid;gap:10px;margin:18px 0}.planComposition>div{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;border-bottom:1px solid var(--app-border);padding:12px 0}.planComposition dt{font-weight:700;color:var(--app-text)}.planComposition dd{margin:0;color:var(--app-text-sub);font-size:1rem}
 @media(min-width:768px) and (max-width:1200px){.dailyPlan{grid-template-columns:72px minmax(0,1fr) 6rem;padding:20px;gap:14px}.dailyPlan[data-ready=false]{grid-template-columns:72px minmax(0,1fr)}.dailyPlanIcon{width:72px;height:80px}.dailyPlanCountRing{width:6rem;height:6rem}.dailyPlanCount strong{font-size:1.625rem}}
+@media(max-width:767px){
+  .dailyPlan{grid-template-columns:44px minmax(0,1fr) 76px;grid-template-areas:'icon eyebrow count' 'icon title count' 'description description description' 'action action action';column-gap:10px;row-gap:6px;padding:14px}
+  .dailyPlan[data-ready=false]{grid-template-columns:44px minmax(0,1fr);grid-template-areas:'icon eyebrow' 'icon title' 'description description' 'action action'}
+  .dailyPlanCopy{display:contents}
+  .dailyPlanCopy .eyebrow{grid-area:eyebrow;align-self:end;font-size:.625rem;line-height:1.45;letter-spacing:.06em;margin:0}
+  .dailyPlanCopy h2{grid-area:title;align-self:start;font-size:1rem;line-height:1.25}
+  .dailyPlanCopy>p:last-child:not(.eyebrow){grid-area:description;font-size:.8125rem;margin:4px 0 2px}
+  .dailyPlanIcon,.dailyPlan[data-complete=true] .dailyPlanIcon{width:44px;height:52px}
+  .dailyPlanCount{align-self:center;gap:4px}
+  .dailyPlanCountRing{width:4.5rem;height:4.5rem}
+  .dailyPlanCountRing::before{inset:5px}
+  .dailyPlanCount strong{font-size:1.25rem}
+  .dailyPlanCount small{font-size:.625rem}
+  .dailyPlanAction{margin-top:6px;cursor:pointer}
+  .dailyPlan[data-complete=true]{grid-template-areas:'icon eyebrow count' 'icon title count' 'action action action';padding-block:14px}
+  .dailyPlan[data-complete=true] h2{font-size:1rem}
+}
 .status{border:1px solid var(--academy-line,var(--app-border));border-radius:12px;padding:16px;background:var(--app-card-sunken);font-size:.9375rem;color:var(--app-text-sub);margin-bottom:16px}
 .dialog{padding:0;border:1px solid var(--app-border);border-radius:20px;background:var(--app-card);color:var(--app-text);width:min(920px,calc(100vw - 40px));max-height:calc(100dvh - 48px);margin:auto;box-shadow:0 24px 80px #0008;overflow:auto}
 .dialog[data-size=compact]{width:min(580px,calc(100vw - 40px))}
