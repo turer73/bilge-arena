@@ -22,8 +22,10 @@
 #     (ir-20261003 epmd/dist loopback kararinin devami).
 #   - DB_USER=bilge_arena_realtime: REPLICATION yetkili ayri rol; _realtime ve
 #     realtime semalarinin sahibi (tenant migration'lari ALTER ister).
-#   - postgres_changes HALA KAPALI: bilge-arena-db (postgres:16-alpine) wal2json
-#     eklentisi icermiyor; broadcast + presence calisir. Ayri karar.
+#   - postgres_changes ACIK (4 Ekim ikinci adim): bilge-arena-db artik Dockerfile.db ile
+#     postgres:16-alpine + wal2json; output_plugin_libraries=wal2json. Tenant migration'lari
+#     icin rol: CREATEROLE, createrole_self_grant='set, inherit', supabase_admin/postgres/
+#     dashboard_user (NOLOGIN) uyeligi WITH SET, GRANT SET ON PARAMETER log_min_messages.
 # =============================================================================
 
 set -euo pipefail
@@ -112,7 +114,7 @@ cat > "$TARGET" <<EOF
 #   JWKS desteklemiyor). Channel-auth: Next.js /api/realtime/token RPC;
 #   Vercel BILGE_ARENA_REALTIME_JWT_SECRET bu degerle AYNI olmali.
 # Plan-deviation #14: ECTO_IPV6=false override (image defaults to IPv6).
-# 2026-10-04: postgres_changes kapali (DB imajinda wal2json yok); broadcast+presence.
+# 2026-10-04: postgres_changes acik (wal2json imaji), broadcast+presence+postgres_changes.
 
 DB_HOST=bilge-arena-db
 DB_PORT=5432
