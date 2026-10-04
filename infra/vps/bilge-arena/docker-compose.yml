@@ -91,7 +91,7 @@ services:
         max-file: '3'
 
   realtime:
-    image: supabase/realtime:v2.30.34
+    image: supabase/realtime:v2.140.7
     container_name: bilge-arena-realtime
     restart: unless-stopped
     env_file:
