@@ -332,6 +332,56 @@ afterEach(() => {
 })
 
 describe('GET /api/study/today', () => {
+  function installCanonicalFixture(blocked = false) {
+    const key = 'meb-turkce@2019:grade8:LGS:T.8.3.25'
+    const scope = { game: 'turkce', displayExamRef: 'LGS', questionExamRef: 'LGS',
+      taxonomyVersion: 'ba-lgs-turkce-v1', mappingMode: 'canonical_reviewed', diagnosticEnabled: false }
+    const questions = [uid(971), uid(972), uid(973)].map(id => makeQuestionRow(id, { game: 'turkce', category: 'paragraf', exam_ref: 'LGS' }))
+    tableMocks.profiles.push({ data: { exam_type: 'lgs' } })
+    tableMocks.questions.push({ data: questions }); tableMocks.questions.push({ data: questions })
+    tableMocks.question_outcomes.push({ data: questions.flatMap(q => [
+      { question_id: q.id, outcome_id: uid(981) }, { question_id: q.id, outcome_id: uid(982) },
+    ]) })
+    installCreateRpcSuccess()
+    const previous = mockRpc.getMockImplementation()!
+    mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
+      if (name === 'resolve_released_curriculum_scope') return { data: scope, error: null }
+      if (name === 'read_canonical_mastery_context') return { data: blocked ? null : {
+        format: 'canonical-mastery@1', game: 'turkce', examRef: 'LGS', taxonomyVersion: scope.taxonomyVersion,
+        integrity: cleanScopeIntegrity().data, items: [{ canonicalId: key, programKey: 'meb-turkce', programEdition: '2019', grade: 8,
+          officialCode: 'T.8.3.25', title: 'Kazanım', path: [{ nodeType: 'course', title: 'Türkçe' },
+            { nodeType: 'outcome', title: 'Kazanım', officialCode: 'T.8.3.25' }],
+          aliases: [{ id: uid(981), code: 'ALIAS-1', category: 'dil_bilgisi' }, { id: uid(982), code: 'ALIAS-2', category: 'paragraf' }] }],
+        states: [makeMasteryState(key, { correct_attempts: 2, weighted_earned: 2, difficulty_weighted_earned: 6, delayed_correct: 0 })],
+      }, error: null }
+      return previous(name, args)
+    })
+    return key
+  }
+
+  it('canonical plans rank one outcome and use verified union state, not legacy alias sums', async () => {
+    const key = installCanonicalFixture()
+    const response = await GET(makeGetRequest({ game: 'turkce', exam_ref: 'LGS', choice_category: 'paragraf' }) as never)
+    expect(response.status).toBe(200)
+    expect(tableMocks.curriculum_outcomes.from).not.toHaveBeenCalled()
+    expect(tableMocks.user_outcome_state.from).not.toHaveBeenCalled()
+    expect(mockRpc).toHaveBeenCalledWith('read_canonical_mastery_context', {
+      p_user_id: U1, p_game: 'turkce', p_exam_ref: 'LGS', p_taxonomy_version: 'ba-lgs-turkce-v1',
+    })
+    const items = mockRpc.mock.calls.find(([name]) => name === 'create_daily_plan_v2')?.[1].p_items as Array<{ source_ref: string; question_id: string }>
+    expect(items.some(item => item.source_ref === key)).toBe(true)
+    expect(items.every(item => !['ALIAS-1', 'ALIAS-2'].includes(item.source_ref))).toBe(true)
+    expect(new Set(items.map(item => item.question_id)).size).toBe(items.length)
+  })
+
+  it('does not issue a canonical plan if context is blocked', async () => {
+    installCanonicalFixture(true)
+    const response = await GET(makeGetRequest({ game: 'turkce', exam_ref: 'LGS' }) as never)
+    expect(response.status).toBe(503)
+    assertNoPlanIssuance()
+    expect(tableMocks.user_outcome_state.from).not.toHaveBeenCalled()
+  })
+
   function installSavedPlan(legacy = false) {
     const questionIds = [uid(1), uid(2)]
     tableMocks.daily_plan.push({ data: {

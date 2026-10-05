@@ -5,7 +5,7 @@ export interface ReleasedMasteryScope {
   displayExamRef: string
   questionExamRef: string | null
   taxonomyVersion: string
-  mappingMode: 'category_proxy'
+  mappingMode: 'category_proxy' | 'canonical_reviewed'
   diagnosticEnabled: boolean
 }
 
@@ -55,7 +55,10 @@ export function parseReleasedMasteryScope(value: unknown): ReleasedMasteryScope 
     ))
     || typeof value.taxonomyVersion !== 'string'
     || !/^ba-[a-z0-9-]+-v[0-9]+$/.test(value.taxonomyVersion)
-    || value.mappingMode !== 'category_proxy'
+    || !['category_proxy', 'canonical_reviewed'].includes(String(value.mappingMode))
+    || (value.mappingMode === 'canonical_reviewed' && (
+      value.displayExamRef !== 'LGS' || value.questionExamRef !== 'LGS' || value.diagnosticEnabled !== false
+    ))
     || typeof value.diagnosticEnabled !== 'boolean'
   ) return null
   return value as unknown as ReleasedMasteryScope

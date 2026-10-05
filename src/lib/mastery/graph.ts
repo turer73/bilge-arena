@@ -18,7 +18,7 @@ export interface CurriculumOutcomeNodeInput {
 export interface PublicCurriculumNode {
   code: string
   title: string
-  nodeType: CurriculumNodeType
+  nodeType: CurriculumNodeType | 'collection' | 'learning_area' | 'language_skill'
   outcomeCode?: string
   children: PublicCurriculumNode[]
 }

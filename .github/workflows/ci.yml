@@ -221,6 +221,15 @@ jobs:
       - name: Run distinct-day mastery evidence acceptance test
         run: npm run test:mastery-evidence:pg
 
+      - name: Install local PostgreSQL binaries for canonical reader acceptance
+        run: sudo apt-get update && sudo apt-get install -y postgresql-16
+
+      - name: Run canonical identity and deduplicated evidence acceptance
+        env:
+          CANONICAL_PG_BIN: /usr/lib/postgresql/16/bin
+        # The test starts its own loopback cluster; no production/test-service URL.
+        run: node --test database/__tests__/canonical-curriculum.test.mjs database/__tests__/canonical-curriculum-postgres.integration.test.mjs
+
   build:
     name: 🏗️ Build
     runs-on: ubuntu-latest

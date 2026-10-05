@@ -80,6 +80,25 @@ function OutcomeLeaf({
     </article>
   )
 }
+function CanonicalBranch({ node, outcomes, onPractice }: {
+  node: PublicCurriculumNode
+  outcomes: Map<string, MasteryOutcomePublic>
+  onPractice?: (outcome: MasteryOutcomePublic) => void
+}) {
+  if (node.nodeType === 'outcome') {
+    const outcome = node.outcomeCode ? outcomes.get(node.outcomeCode) : null
+    return outcome ? <OutcomeLeaf node={node} outcome={outcome} onPractice={onPractice} /> : null
+  }
+  return (
+    <section aria-label={node.title} className="min-w-0 space-y-2 rounded-xl bg-[var(--bg-secondary)] p-2">
+      <p className="break-words px-1 text-xs font-bold text-[var(--text)]">{node.title}</p>
+      <div className="grid min-w-0 gap-2">
+        {node.children.map(child => <CanonicalBranch key={child.code} node={child} outcomes={outcomes} onPractice={onPractice} />)}
+      </div>
+    </section>
+  )
+}
+
 export function MasteryGraph({ graph, coverage, discovery, outcomes, onPractice }: MasteryGraphProps) {
   if (!coverage.supported) {
     return (
@@ -146,12 +165,16 @@ export function MasteryGraph({ graph, coverage, discovery, outcomes, onPractice 
           </span>
         </div>
         <p className="mt-2 text-[10px] leading-relaxed text-[var(--text-sub)]">
-          Bilge Arena iç öğrenme grafiği; resmî müfredat kodu değildir. Skor doğruluk, zorluk,
+          {graph.nodeType === 'collection'
+            ? 'Kaynak programların kazanım yolları; başlıklar ortak haritada gruplanmıştır. '
+            : 'Bilge Arena iç öğrenme grafiği; resmî müfredat kodu değildir. '}Skor doğruluk, zorluk,
           gecikmeli tekrar, ipucu bağımsızlığı ve hata riski kanıtlarını birlikte açıklar.
         </p>
       </div>
 
-      {graph.children.map((unit) => (
+      {graph.nodeType === 'collection' ? graph.children.map(node => (
+        <CanonicalBranch key={node.code} node={node} outcomes={outcomeByCode} onPractice={onPractice} />
+      )) : graph.children.map((unit) => (
         <section key={unit.code} className="space-y-2">
           <h3 className="px-1 text-sm font-bold text-[var(--text)]">{unit.title}</h3>
           {unit.children.map((topic) => (

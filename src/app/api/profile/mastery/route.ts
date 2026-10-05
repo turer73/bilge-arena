@@ -6,6 +6,7 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { buildMasteryMapResponse } from '@/lib/mastery/build-response'
+import { buildCanonicalMasteryResponse, parseCanonicalMasteryContext } from '@/lib/mastery/canonical'
 import { isCompleteMasteryStateRow, MASTERY_STATE_COLUMNS, toMasteryStateInput, type MasteryStateRow as StateRow } from '@/lib/mastery/state-row'
 import {
   parseActiveTytSocialMasteryContext,
@@ -208,6 +209,17 @@ export async function GET(request: NextRequest) {
     const scope = scopeResolution.scope
     if (!scope) {
       return noStoreJson({ game, examRef, coverage: unsupportedCoverage(), discovery: null, graph: null, outcomes: [] })
+    }
+
+    if (scope.mappingMode === 'canonical_reviewed') {
+      const result = await callServiceRpc(supabase, 'read_canonical_mastery_context', {
+        p_user_id: user.id, p_game: game, p_exam_ref: examRef, p_taxonomy_version: scope.taxonomyVersion,
+      })
+      const context = result.error ? null : parseCanonicalMasteryContext(result.data, scope)
+      const response = context ? buildCanonicalMasteryResponse(context) : null
+      // Never fall back to alias totals or expose a structurally complete draft.
+      if (!response) return noStoreJson({ error: 'Kazanim kaniti su an dogrulanamadi' }, { status: 503 })
+      return noStoreJson(response)
     }
 
     const isTytSocialScope = isTytSocialV2LearnerEnabled()
