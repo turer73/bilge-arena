@@ -76,8 +76,16 @@ vi.mock('@/lib/supabase/service-role', () => ({
       if (name === 'resolve_released_curriculum_scope') return Promise.resolve(mockScopeResult())
       if (name === 'resolve_released_diagnostic_scope') return Promise.resolve(mockDiagnosticScopeResult())
       if (name === 'curriculum_scope_integrity') return Promise.resolve(mockIntegrityResult())
-      if (name === 'resolve_tyt_social_mastery_read_context') return Promise.resolve(mockSocialContextResult())
-      if (name === 'read_tyt_social_mastery_outcome_state') return Promise.resolve(mockSocialStateResult())
+      if (name === 'read_tyt_social_learning_snapshot') {
+        const context = mockSocialContextResult()
+        const states = mockSocialStateResult()
+        if (context.error) return Promise.resolve(context)
+        if (states.error) return Promise.resolve(states)
+        return Promise.resolve({
+          data: { context: context.data, states: states.data, allowedQuestionIds: [] },
+          error: null,
+        })
+      }
       throw new Error(`unexpected rpc: ${name}`)
     }),
   })),
@@ -85,7 +93,7 @@ vi.mock('@/lib/supabase/service-role', () => ({
 
 import { GET } from '../route'
 
-const USER_ID = '11111111-2222-3333-4444-555555555555'
+const USER_ID = '11111111-2222-4333-8444-555555555555'
 const OUTCOME_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
 const COURSE_ID = '10000000-0000-4000-8000-000000000001'
 const UNIT_ID = '10000000-0000-4000-8000-000000000002'
@@ -558,11 +566,8 @@ describe('GET /api/profile/mastery', () => {
     expect(JSON.stringify(body)).not.toContain('SOS-DIN-01')
     expect(JSON.stringify(body)).not.toContain('questions_21_25')
     expect(JSON.stringify(body)).not.toContain(SOCIAL_EVENT_ID)
-    expect(mockRpc).toHaveBeenCalledWith('resolve_tyt_social_mastery_read_context', {
-      p_user_id: USER_ID,
-    })
-    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_mastery_outcome_state', {
-      p_user_id: USER_ID,
+    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_learning_snapshot', {
+      p_user_id: USER_ID, p_question_ids: [],
     })
     expect(mockFrom).not.toHaveBeenCalledWith('user_outcome_state')
     expect(mockFrom).not.toHaveBeenCalledWith('user_diagnostic_outcome_state')
@@ -597,7 +602,9 @@ describe('GET /api/profile/mastery', () => {
     expect(response.status).toBe(500)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
     expect(await response.json()).toEqual({ error: 'Sorgu basarisiz' })
-    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_mastery_outcome_state', { p_user_id: USER_ID })
+    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_learning_snapshot', {
+      p_user_id: USER_ID, p_question_ids: [],
+    })
     expect(mockFrom).not.toHaveBeenCalledWith('user_outcome_state')
     expect(mockFrom).not.toHaveBeenCalledWith('user_diagnostic_outcome_state')
     expect(mockStateResult).not.toHaveBeenCalled()
@@ -647,15 +654,17 @@ describe('GET /api/profile/mastery', () => {
     for (let index = 0; index < 2; index += 1) {
       const response = await GET(request('game=sosyal&exam_ref=TYT') as never)
       const body = await response.json()
-      expect(response.status).toBe(200)
-      expect(body).toEqual({
-        game: 'sosyal', examRef: 'TYT',
-        coverage: {
-          supported: false, diagnosticAvailable: false, taxonomyVersion: null,
-          totalQuestions: 0, mappedQuestions: 0, percentage: 0,
-        },
-        discovery: null, graph: null, outcomes: [],
-      })
+      expect(response.status).toBe(index === 0 ? 200 : 500)
+      expect(body).toEqual(index === 0
+        ? {
+            game: 'sosyal', examRef: 'TYT',
+            coverage: {
+              supported: false, diagnosticAvailable: false, taxonomyVersion: null,
+              totalQuestions: 0, mappedQuestions: 0, percentage: 0,
+            },
+            discovery: null, graph: null, outcomes: [],
+          }
+        : { error: 'Sorgu basarisiz' })
       const serialized = JSON.stringify(body)
       expect(serialized).not.toContain('selection-required')
       expect(serialized).not.toContain('questions_')
@@ -663,8 +672,8 @@ describe('GET /api/profile/mastery', () => {
     }
     expect(mockFrom).not.toHaveBeenCalled()
     expect(mockRpc.mock.calls.filter(([name]) => (
-      name === 'read_tyt_social_mastery_outcome_state'
-    ))).toHaveLength(0)
+      name === 'read_tyt_social_learning_snapshot'
+    ))).toHaveLength(2)
   })
 
   it('V3 resolver exact Fen blueprintini yayinladiginda on soruluk baslangic taramasini acar', async () => {

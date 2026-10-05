@@ -451,6 +451,10 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
       | 'complete_game_session'
       | 'open_institution_student_followup'
       | 'review_institution_study_program'
+      // Replace intentional overrides instead of intersecting generated never
+      // arguments or generated non-null SQL return columns with client types.
+      | 'get_my_tyt_social_exam_policy'
+      | 'read_tyt_social_mastery_outcome_state'
     > & {
       complete_game_session: Omit<CompleteGameSession, 'Args'> & {
         Args: CompleteGameSessionArgs
@@ -497,52 +501,54 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         }
         Returns: Json
       }
-      // Migrations 205-206. TYT Social issuance is policy-aware and remains
-      // service-role only; the user's branch choice is never returned to the
-      // public question APIs.
-      filter_tyt_social_question_candidates: {
-        Args: { p_user_id: string; p_question_ids: string[] }
-        Returns: Json
-      }
-      // Migration 208: service-only, selection-bound read contracts. These
-      // must not be replaced with the legacy user_outcome_state aggregate.
-      resolve_tyt_social_mastery_read_context: {
-        Args: { p_user_id: string }
-        Returns: Json
-      }
+      // Migrations 205-211 now come from the production-generated schema.
+      // Preserve this nullable application projection as an explicit override;
+      // the generator cannot infer nullability of SQL function return columns.
       read_tyt_social_mastery_outcome_state: {
         Args: { p_user_id: string }
         Returns: Array<UserOutcomeStateV2Columns & Pick<UserOutcomeState['Row'],
           'outcome_id' | 'attempts' | 'correct_attempts' | 'weighted_earned'
           | 'weighted_possible' | 'delayed_correct' | 'last_answered_at'>>
       }
-      issue_verified_tyt_social_attempt: {
+      // Migration 212: one statement-level learning snapshot and epoch-bound
+      // writers. These remain service-role only and are intentionally explicit
+      // until the production schema-generated type is refreshed.
+      read_tyt_social_learning_snapshot: {
+        Args: { p_user_id: string; p_question_ids?: string[] }
+        Returns: Json
+      }
+      create_tyt_social_daily_plan_for_epoch: {
+        Args: {
+          p_user_id: string
+          p_plan_date: string
+          p_items: Json
+          p_expected_policy_version: string
+          p_expected_selection_event_id: string
+        }
+        Returns: Json
+      }
+      issue_verified_tyt_social_attempt_for_epoch: {
         Args: {
           p_user_id: string
           p_mode: string
           p_question_ids: string[]
           p_duration_sec: number
           p_request_id: string
+          p_expected_policy_version: string
+          p_expected_selection_event_id: string
         }
         Returns: Json
       }
-      issue_verified_tyt_social_plan_attempt: {
+      issue_verified_tyt_social_exam_attempt_for_epoch: {
         Args: {
           p_user_id: string
-          p_plan_id: string
-          p_mode: string
+          p_blueprint_version: string
+          p_items: Json
           p_duration_sec: number
+          p_planned_duration_sec: number
           p_request_id: string
-        }
-        Returns: Json
-      }
-      // Migration 209. The caller supplies no question ids; the database
-      // composes the governed 5/5/5/5 official section atomically.
-      compose_and_issue_verified_tyt_social_section_attempt: {
-        Args: {
-          p_user_id: string
-          p_duration_sec: number
-          p_request_id: string
+          p_expected_policy_version: string
+          p_expected_selection_event_id: string
         }
         Returns: Json
       }
@@ -595,14 +601,6 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
           p_game: string
           p_plan_date: string
           p_exam_ref: string | null
-          p_items: Json
-        }
-        Returns: Json
-      }
-      create_tyt_social_daily_plan_v2: {
-        Args: {
-          p_user_id: string
-          p_plan_date: string
           p_items: Json
         }
         Returns: Json
@@ -951,11 +949,8 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
       // Migration 205. Owner-bound policy RPCs use auth.uid() and must be
       // invoked through the cookie client, never a service-role client.
       get_my_tyt_social_exam_policy: {
+        // Preserve the client's explicit empty-object call convention.
         Args: Record<string, never>
-        Returns: Json
-      }
-      set_my_tyt_social_exam_policy: {
-        Args: { p_variant: string; p_notice_version: string; p_request_id: string }
         Returns: Json
       }
       create_institution_student_report: {
@@ -993,17 +988,6 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
           p_user_id: string
           p_game: string
           p_exam_ref: string | null
-          p_blueprint_version: string
-          p_items: Json
-          p_duration_sec: number
-          p_planned_duration_sec: number
-          p_request_id: string
-        }
-        Returns: Json
-      }
-      issue_verified_tyt_social_exam_attempt: {
-        Args: {
-          p_user_id: string
           p_blueprint_version: string
           p_items: Json
           p_duration_sec: number
