@@ -102,7 +102,7 @@
     "@vitest/coverage-v8": "^4.1.11",
     "autoprefixer": "^10.6.1",
     "eslint": "^9.27.0",
-    "eslint-config-next": "^16.3.6",
+    "eslint-config-next": "^16.3.8",
     "husky": "^9.1.7",
     "jsdom": "^30.0.1",
     "pg": "^8.23.1",
