@@ -84,12 +84,15 @@ const path = [{ nodeType: 'course', title: 'Türkçe', officialCode: null },
         socket.close(error => error ? reject(error) : resolvePort(selected))
       })
     })
-    // Only our fresh directory and loopback. No shell or existing DB instance.
+    // Only our fresh directory and loopback. Disable Unix sockets too: distro
+    // builds may default to a shared /var/run/postgresql directory that the CI
+    // runner cannot write. The test connects only to the selected TCP port.
     started = true // also clean up if startup returns an error after launching the server
     run('pg_ctl', ['-D', data, '-l', join(cluster, 'postgres.log'), '-w', '-t', '30',
-      '-o', `-F -h 127.0.0.1 -p ${port}`, 'start'])
+      '-o', `-F -h 127.0.0.1 -p ${port} -c unix_socket_directories=`, 'start'])
     db = new pg.Client({ host: '127.0.0.1', port, database: 'postgres', user: 'postgres', connectionTimeoutMillis: 5000 })
     await db.connect()
+    assert.equal((await query('SHOW unix_socket_directories')).rows[0].unix_socket_directories, '')
     await query("SET TIME ZONE 'UTC'")
     const serverData = (await query('SHOW data_directory')).rows[0].data_directory
     assert.equal(realpathSync(serverData).toLowerCase(), realpathSync(data).toLowerCase(), 'refuse any existing cluster')
