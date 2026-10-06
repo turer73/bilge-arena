@@ -124,9 +124,13 @@ export function useAuth() {
     try {
       const signupKey = `signup_tracked_${authUser.id}`
       if (!localStorage.getItem(signupKey)) {
-        // Klipper review B1 fix: setItem outer block'ta — API hatasi olsa bile
-        // flag set edilmeli, yoksa her sayfa yuklenmesinde tekrar /api/profile
-        // cagrisi yapilir (rate limit dolar).
+        // Flag ilk await'ten ONCE yazilir: kontrol+yazma senkron kalir. Bu
+        // fonksiyon ayni yuklemede birden cok kez es zamanli kosar (getUser +
+        // INITIAL_SESSION, ustelik useAuth'u kullanan her bilesen icin ayri);
+        // flag API cevabindan sonra yazildiginda hepsi bos flag gorup Signup'i
+        // tekrar gonderiyordu (Plausible toplam/tekil ~2,1). API hatasinda da
+        // flag kalir (Klipper review B1: her yuklemede /api/profile cagrilmasin).
+        localStorage.setItem(signupKey, '1')
         const initialData = await fetchProfileFromApi()
         if (initialData?.profile?.created_at) {
           const createdMs = new Date(initialData.profile.created_at).getTime()
@@ -140,8 +144,6 @@ export function useAuth() {
             resetGuestQuizCount()
           }
         }
-        // Eski user da olsa veya API hata verse de flag set et
-        localStorage.setItem(signupKey, '1')
       }
 
       // Day2Return event — son goruldugu gun != bugun ise

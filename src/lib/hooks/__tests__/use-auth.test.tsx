@@ -1,8 +1,8 @@
 /**
  * Bilge Arena: useAuth çekirdek akış smoke testleri (Codex follow-up #901).
  * Kapsam: oturum-var/yok başlangıcı, profil sync→GET fallback, auth-state
- * değişiminde logout temizliği, signOut. Analytics yan-yolları (signup/Day2)
- * bilinçli kapsam dışı — ayrı PR'lık iş.
+ * değişiminde logout temizliği, signOut. Analytics yan-yollarından yalnız
+ * Signup tekilliği kapsanır (en alttaki describe); Day2Return kapsam dışı.
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
@@ -53,6 +53,8 @@ vi.mock('@/lib/supabase/client', () => ({
 vi.mock('@/lib/utils/plausible', () => ({ trackEvent: vi.fn() }))
 vi.mock('@/lib/hooks/use-guest-session', () => ({ resetGuestQuizCount: vi.fn() }))
 
+import { trackEvent } from '@/lib/utils/plausible'
+import { resetGuestQuizCount } from '@/lib/hooks/use-guest-session'
 import { useAuth } from '../use-auth'
 
 const AUTH_USER = { id: 'u1', email: 'test@test.com', app_metadata: { provider: 'google' } }
@@ -235,5 +237,46 @@ describe('useAuth', () => {
     await waitFor(() => expect(supa.authStateCb).not.toBeNull())
     unmount()
     expect(supa.unsubscribe).toHaveBeenCalledOnce()
+  })
+})
+
+describe('useAuth signup analytics', () => {
+  const signupCalls = () => vi.mocked(trackEvent).mock.calls.filter(([name]) => name === 'Signup')
+
+  beforeEach(() => {
+    localStorage.removeItem('signup_tracked_u1')
+  })
+
+  test('es zamanli profil yuklemeleri Signup eventini tek kez gonderir', async () => {
+    const freshProfile = { ...PROFILE, created_at: new Date().toISOString() }
+    fetchMock.mockImplementation((url: string) => {
+      if (String(url).includes('/api/profile/sync')) {
+        return jsonOk({ profile: freshProfile, isAdmin: false, updated: false })
+      }
+      return jsonOk({ profile: freshProfile, isAdmin: false })
+    })
+    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+
+    // Navbar + sayfa bileseni: iki useAuth ornegi, her biri getUser ile
+    // yukler; Supabase'in INITIAL_SESSION bildirimi de ayni anda gelir.
+    renderHook(() => useAuth())
+    renderHook(() => useAuth())
+    act(() => supa.authStateCb!('INITIAL_SESSION', { user: AUTH_USER }))
+
+    await waitFor(() => expect(store.setProfile).toHaveBeenCalledTimes(3))
+    expect(signupCalls()).toEqual([['Signup', { props: { provider: 'google' } }]])
+    expect(resetGuestQuizCount).toHaveBeenCalledOnce()
+    expect(localStorage.getItem('signup_tracked_u1')).toBe('1')
+  })
+
+  test('profil API hata verse de flag yazilir, Signup gonderilmez', async () => {
+    fetchMock.mockResolvedValue({ ok: false, json: () => Promise.resolve({}) })
+    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+
+    renderHook(() => useAuth())
+
+    await waitFor(() => expect(localStorage.getItem('signup_tracked_u1')).toBe('1'))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    expect(signupCalls()).toHaveLength(0)
   })
 })
