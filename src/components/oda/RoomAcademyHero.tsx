@@ -24,7 +24,7 @@ export function RoomAcademyHero() {
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[var(--app-card)] via-[var(--app-card)] to-[var(--app-card)]/25" />
       <div className="relative z-10 max-w-[62%] lg:max-w-[58%]">
         <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]">
-          <UsersRound size={17} aria-hidden="true" /> Oda Modu
+          <UsersRound size={17} aria-hidden="true" /> Oyunlar ve odalar
         </p>
         <h1 id="room-academy-title" className="mt-3 text-3xl font-black leading-tight tracking-tight lg:text-4xl">
           Birlikte çöz, birlikte yüksel.

@@ -27,6 +27,22 @@ const outcome: MasteryOutcomePublic = {
 }
 
 describe('MasteryGraph', () => {
+  it('renders variable-depth canonical paths without exposing storage aliases', () => {
+    render(<MasteryGraph
+      graph={{ code: 'lgs', title: 'LGS kazanım haritası', nodeType: 'collection', children: [
+        { code: 'program', title: 'Türkçe', nodeType: 'course', children: [
+          { code: 'skill', title: 'Okuma', nodeType: 'language_skill', children: [
+            { code: 'L1', title: outcome.title, nodeType: 'outcome', outcomeCode: outcome.code, children: [] },
+          ] },
+        ] },
+      ] }}
+      coverage={{ supported: true, diagnosticAvailable: false, taxonomyVersion: 'ba-lgs-turkce-v1', totalQuestions: 2, mappedQuestions: 2, percentage: 100 }}
+      discovery={null} outcomes={[outcome]} />)
+    expect(screen.getByText('Okuma')).toBeInTheDocument()
+    expect(screen.getAllByText(outcome.title)).toHaveLength(1)
+    expect(screen.getByText(/Kaynak programların kazanım yolları/)).toBeInTheDocument()
+    expect(screen.queryByText(/resmî müfredat kodu değildir/)).not.toBeInTheDocument()
+  })
   it('hiyerarşiyi ve açıklanabilir kanıtları gösterir', () => {
     render(<MasteryGraph
       graph={graph}

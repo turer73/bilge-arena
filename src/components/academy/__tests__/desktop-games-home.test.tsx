@@ -12,7 +12,7 @@ beforeEach(()=>{auth.user=null;auth.profile=null;auth.loading=false;useGameStore
 describe('Desktop games discovery',()=>{
   it('resets the visual touch press on release, cancelled scroll, and blur without changing navigation',()=>{
     render(<DesktopGamesHome />)
-    const link=screen.getByRole('link',{name:'Matematik TYT · Turunu kur'})
+    const link=screen.getByRole('link',{name:'Matematik turunu hazırla · TYT'})
     const press=()=>{
       const event=new Event('pointerdown',{bubbles:true})
       Object.defineProperty(event,'pointerType',{value:'touch'})
@@ -35,7 +35,7 @@ describe('Desktop games discovery',()=>{
     ]
     expect(within(subjects).getAllByRole('link')).toHaveLength(4)
     for(const game of expected){
-      const link=within(subjects).getByRole('link',{name:`${game.name} TYT · Turunu kur`})
+      const link=within(subjects).getByRole('link',{name:`${game.name} turunu hazırla · TYT`})
       expect(link).toHaveAttribute('href',`/arena/${game.slug}?exam_ref=TYT`)
       expect(link).toHaveAttribute('data-subject',game.slug)
       expect(link.style.getPropertyValue('--subject-color')).toBe(game.color)
@@ -52,7 +52,7 @@ describe('Desktop games discovery',()=>{
     render(<DesktopGamesHome />)
     const subjects=screen.getByRole('region',{name:'Ders oyunları'})
     expect(within(subjects).getAllByRole('link')).toHaveLength(1)
-    expect(within(subjects).getByRole('link',{name:'İngilizce YDT · Turunu kur'})).toHaveAttribute('href','/arena/wordquest?exam_ref=YDT')
+    expect(within(subjects).getByRole('link',{name:'İngilizce turunu hazırla · YDT'})).toHaveAttribute('href','/arena/wordquest')
     expect(subjects.querySelector('[data-count]')).toHaveAttribute('data-count','1')
     expect(subjects.querySelector('a img')).toHaveAttribute('src','/academy/modes/wordquest-v1.png')
   })

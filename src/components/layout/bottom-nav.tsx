@@ -2,8 +2,9 @@
 
 import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, Dumbbell, Swords, Trophy, User, type LucideIcon } from 'lucide-react'
+import { AcademyIcon, type AcademyIconName } from '@/components/ui/academy-icon'
 import { cn } from '@/lib/utils/cn'
+import { GAME_SLUGS } from '@/lib/constants/games'
 
 /**
  * Mobil alt navigasyon (tab bar). Masaustunde Navbar var; mobilde
@@ -20,16 +21,18 @@ interface NavItem {
   id: string
   href: string
   label: string
-  Icon: LucideIcon
+  icon: AcademyIconName
 }
 
 const ITEMS: NavItem[] = [
-  { id: 'learn', href: '/arena', label: 'Öğren', Icon: BookOpen },
-  { id: 'practice', href: '/arena/calisma', label: 'Pratik', Icon: Dumbbell },
-  { id: 'oda', href: '/oda', label: 'Arena', Icon: Swords },
-  { id: 'leaderboard', href: '/arena/siralama', label: 'Lig', Icon: Trophy },
-  { id: 'profile', href: '/arena/profil', label: 'Profil', Icon: User },
+  { id: 'learn', href: '/arena', label: 'Öğren', icon: 'learn' },
+  { id: 'practice', href: '/arena/calisma', label: 'Pratik', icon: 'practice' },
+  { id: 'oda', href: '/oda', label: 'Arena', icon: 'arena' },
+  { id: 'leaderboard', href: '/arena/siralama', label: 'Lig', icon: 'league' },
+  { id: 'profile', href: '/arena/profil', label: 'Profil', icon: 'profile' },
 ]
+
+const PRACTICE_PATHS = GAME_SLUGS.map((game) => `/arena/${game}`)
 
 interface BottomNavProps {
   /** Demo/storybook icin rota yerine sabit aktif sekme. */
@@ -47,6 +50,7 @@ export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavP
 
   const isActive = (item: NavItem) => {
     if (activeOverride) return activeOverride === item.id
+    if (item.id === 'practice' && PRACTICE_PATHS.some((path) => pathname === path || pathname.startsWith(path + '/'))) return true
     // '/arena' yalnizca tam eslesmede aktif; alt rotalar kendi sekmelerine ait.
     if (item.href === '/arena') return pathname === '/arena'
     return pathname === item.href || pathname.startsWith(item.href + '/')
@@ -77,7 +81,6 @@ export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavP
       <div data-bottom-nav-inner className="mx-auto flex w-full min-w-0 max-w-[440px] items-stretch">
         {ITEMS.map((item) => {
           const active = isActive(item)
-          const { Icon } = item
           return (
             <Link
               key={item.id}
@@ -108,7 +111,7 @@ export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavP
               />
 
               {/* ikon + arkada duotone glow */}
-              <span className="relative flex h-7 w-7 items-center justify-center">
+              <span className="relative flex h-8 w-8 items-center justify-center">
                 {active && (
                   <span
                     aria-hidden
@@ -122,18 +125,7 @@ export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavP
                     }}
                   />
                 )}
-                <Icon
-                  size={23}
-                  strokeWidth={active ? 2.4 : 2}
-                  className="relative transition-all duration-200"
-                  style={{
-                    fill: active
-                      ? (learningAppearance
-                        ? 'color-mix(in srgb, var(--app-accent) 16%, transparent)'
-                        : 'color-mix(in srgb, var(--focus) 20%, transparent)')
-                      : 'transparent',
-                  }}
-                />
+                <AcademyIcon name={item.icon} size={30} muted={!active} className="relative" />
               </span>
 
               <span

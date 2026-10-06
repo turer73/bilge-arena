@@ -10,14 +10,12 @@ import { writeFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
+import { isMainModule, validateLgsContent } from './lib/lgs-question-contract.mjs'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 const GEMINI_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY
 const SB_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-if (!GEMINI_KEY || !SB_URL || !SB_KEY) { console.error('ENV eksik'); process.exit(1) }
-
-const supabase = createClient(SB_URL, SB_KEY)
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
 // ── Üretim planı (LGS Fen Bilimleri 8. sınıf) ────────────────────────────────
@@ -40,7 +38,7 @@ const PLAN = [
 ]
 
 // ── Sistem promptu ────────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = `Sen LGS (Liselere Geçiş Sınavı) 8. sınıf Fen Bilimleri sorusu üreticisisin.
+export const SYSTEM_PROMPT = `Sen LGS (Liselere Geçiş Sınavı) 8. sınıf Fen Bilimleri sorusu üreticisisin.
 
 SEVİYE: LGS — ortaokul 8. sınıf, 13-14 yaş.
 Fen Bilimleri = Fizik + Kimya + Biyoloji konuları entegre tek sınav.
@@ -59,13 +57,14 @@ LGS FEN soruları ŞÖYLE olur:
 - Neden-sonuç: "Sürtünme kuvveti artarsa hız nasıl değişir?"
 - Günlük hayat bağlantısı: evde yapılan deneyler, vücut sistemleri, doğa olayları
 
-ÇOK SEÇENEKLİ (A-E), 1 doğru cevap.
-Roman numeral soruları için options: ["Yalnız I", "Yalnız II", "I ve II", "II ve III", "I, II ve III"] formatı.
+ÇOK SEÇENEKLİ (A-D), tam 4 seçenek, 1 doğru cevap. answer yalnız 0, 1, 2 veya 3 olabilir.
+Çözümde seçenek harfi veya indeks kullanma; doğru cevabın metnine atıf yap.
+Roman numeral soruları için örnek options: ["Yalnız I", "I ve II", "II ve III", "I, II ve III"]. Doğru kombinasyon mutlaka dört seçenek içinde bulunmalı.
 
 JSON çıktısı (başka hiçbir şey yazma):
 [{
   "question": "Soru metni (roman numeral varsa I. II. III. ifadeleri buraya)",
-  "options": ["A seçenek", "B seçenek", "C seçenek", "D seçenek", "E seçenek"],
+  "options": ["A seçenek", "B seçenek", "C seçenek", "D seçenek"],
   "answer": 0,
   "solution": "Kısa Türkçe açıklama (1-3 cümle)",
   "topic": "konu adı",
@@ -116,11 +115,9 @@ const TRIVIAL = [
   /sembolü nedir/i,
 ]
 
-function validate(q) {
-  if (!q.question || q.question.length < 20) return 'soru çok kısa'
-  if (!Array.isArray(q.options) || q.options.length !== 5) return 'options 5 değil'
-  if (typeof q.answer !== 'number' || q.answer < 0 || q.answer > 4) return 'answer geçersiz'
-  if (!q.solution || q.solution.length < 10) return 'solution eksik'
+export function validate(q) {
+  const error = validateLgsContent(q, { questionMinLength: 20, solutionMinLength: 10 })
+  if (error) return error
   if (TRIVIAL.some(p => p.test(q.question.trim()))) return 'trivial soru'
 
   // Roman numeral kontrolü
@@ -133,6 +130,8 @@ function validate(q) {
 
 // ── Ana akış ──────────────────────────────────────────────────────────────────
 async function main() {
+  if (!GEMINI_KEY || !SB_URL || !SB_KEY) throw new Error('ENV eksik')
+  const supabase = createClient(SB_URL, SB_KEY)
   let totalGenerated = 0, totalValid = 0, totalInserted = 0
   const byCategory = { fizik: 0, kimya: 0, biyoloji: 0 }
   const log = []
@@ -153,7 +152,7 @@ async function main() {
     for (const q of questions) {
       const err = validate(q)
       if (err) {
-        console.log(`  ✗ ${err}: "${String(q.question || '').slice(0, 60)}"`)
+        console.log(`  ✗ ${err}: "${String(q?.question || '').slice(0, 60)}"`)
       } else {
         valid.push(q)
       }
@@ -207,7 +206,7 @@ async function main() {
 
   writeFileSync(resolve(__dir, '_lgs-fen-log.json'),
     JSON.stringify({ date: new Date().toISOString(), totalInserted, byCategory, log }, null, 2))
-  console.log('\nSonraki adım: kalite spot-check → toplu aktive')
+  console.log('\nSonraki adım: revizyon bazlı kalite ve kaynak/kazanım incelemesi → yetkili yayın')
 }
 
-main().catch(err => { console.error('Fatal:', err); process.exit(1) })
+if (isMainModule(import.meta.url)) main().catch(err => { console.error('Fatal:', err.message); process.exitCode = 1 })

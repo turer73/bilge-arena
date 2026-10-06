@@ -32,7 +32,7 @@ const DEMO_COMPOSITION = [
   ['1 senin seçimin', 'Çalışmak istediğin konuya yer açmak için.'],
 ]
 
-/** Desktop-only summary. The modal reuses the same live plan, not a second fetch. */
+/** Shared study summary. The dialog reuses this instance's live plan and start safeguards. */
 export function DesktopDailyPlan({ mode, game, examRef, userId, tytSocialPolicy }: DesktopDailyPlanProps) {
   const [open, setOpen] = useState(false)
   const headingId = useId()
@@ -54,7 +54,7 @@ export function DesktopDailyPlan({ mode, game, examRef, userId, tytSocialPolicy 
       <section id="gunluk-plan" className={styles.dailyPlan} aria-label="Sana özel günlük plan" aria-labelledby={headingId} data-complete={done} data-ready={ready}>
         <div className={styles.dailyPlanIcon} aria-hidden="true">
           <Image src="/academy/daily-plan-trophy-v1.png" alt="" width={96} height={96}
-            sizes={done ? '56px' : '(max-width: 1200px) 72px, 88px'} className={styles.dailyPlanTrophy} />
+            sizes={done ? '56px' : '(max-width: 767px) 44px, (max-width: 1200px) 72px, 88px'} className={styles.dailyPlanTrophy} />
           {done && <span className={styles.dailyPlanCompleteBadge}><Check size={16} /></span>}
         </div>
         <div className={styles.dailyPlanCopy}>
@@ -72,10 +72,9 @@ export function DesktopDailyPlan({ mode, game, examRef, userId, tytSocialPolicy 
           </span>
           <small>soru tamamlandı</small>
         </div>}
-        <button type="button" className={styles.dailyPlanAction} onClick={() => setOpen(true)}>Planı incele <ChevronRight size={18} aria-hidden="true" /></button>
+        <button type="button" className={styles.dailyPlanAction} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>Planı incele <ChevronRight size={18} aria-hidden="true" /></button>
       </section>
-      {open && <AcademyDialog title="Sana özel günlük plan" onClose={() => setOpen(false)}>
-        <p className={styles.dialogIntro}>Bu plan, tekrarını ve gelişimini tek bir kısa çalışmada birleştirir. Soru dağılımını ve ilerlemeni incele; hazır olduğunda aşağıdan başla.</p>
+      {open && <AcademyDialog title="Sana özel günlük plan" mobileSheet onClose={() => setOpen(false)}>
         {content}
       </AcademyDialog>}
     </>
@@ -100,6 +99,7 @@ export function DesktopDailyPlan({ mode, game, examRef, userId, tytSocialPolicy 
   }
 
   return <TodayPlanFocus game={game} examRef={examRef} userId={userId} selectedCategory={null} showStickyMobileAction={false}
+    cardPresentation="details"
     tytSocialPolicy={tytSocialPolicy}
     render={({ plan, loading, content }) => {
       const total = plan?.questions.length ?? 0

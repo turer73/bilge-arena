@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DesktopDailyPlan } from '../desktop-daily-plan'
 
@@ -65,6 +65,10 @@ describe('Desktop daily plan summary', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     fireEvent.click(screen.getByRole('button',{name:'Planı incele'}))
     await screen.findByRole('button',{name:'Planı Başlat · 15 Soru'})
+    const details = within(screen.getByRole('dialog'))
+    expect(details.getByText('15 soru · yaklaşık 12 dk')).toBeInTheDocument()
+    expect(details.getByText('15 tekrar zamanı')).toBeInTheDocument()
+    expect(details.queryByRole('heading', {name:'Dengeli planın hazır'})).not.toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(1)
     fireEvent.click(screen.getByRole('button',{name:'Pencereyi kapat'}))
     fireEvent.click(screen.getByRole('button',{name:'Planı incele'}))

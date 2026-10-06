@@ -1,5 +1,6 @@
+import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, Castle, Swords } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 const MODES = [
   {
@@ -7,8 +8,8 @@ const MODES = [
     title: 'Kule Modu',
     description: 'Yanlış yapmadan yüksel; her katta tempo artar.',
     badge: 'Tek oyuncu',
-    Icon: Castle,
-    tint: 'var(--focus-bg)',
+    image: '/academy/modes/tower-v1.png',
+    objectPosition: '50% center',
     color: 'var(--focus-text)',
   },
   {
@@ -16,8 +17,8 @@ const MODES = [
     title: 'Bil ve Fethet',
     description: 'Soruları çöz, bölgeleri ele geçir ve haritayı tamamla.',
     badge: 'Strateji',
-    Icon: Swords,
-    tint: 'var(--reward-bg)',
+    image: '/academy/modes/conquest-janissary-v2.png',
+    objectPosition: '72% center',
     color: 'var(--reward-text)',
   },
 ] as const
@@ -31,14 +32,22 @@ export function ArenaModeCards({ compact = false }: { compact?: boolean }) {
         <h2 id="solo-arena-title" className="mt-1 text-lg font-extrabold">Arena modları</h2>
       </div>
       <div data-room-mode-grid className={`grid gap-3 ${compact ? '' : 'sm:grid-cols-2'}`}>
-        {MODES.map(({ href, title, description, badge, Icon, tint, color }) => (
+        {MODES.map(({ href, title, description, badge, image, objectPosition, color }) => (
           <Link
             key={href}
             href={href}
             className="group flex min-h-[116px] items-center gap-3 rounded-2xl border-2 border-[var(--border)] bg-[var(--card)] p-4 shadow-[0_4px_0_var(--border)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
           >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl" style={{ background: tint, color }}>
-              <Icon aria-hidden="true" size={24} strokeWidth={2.5} />
+            <span aria-hidden="true" className="relative h-20 w-[72px] shrink-0 overflow-hidden rounded-xl border border-white/10 bg-[#091627]">
+              <Image
+                src={image}
+                alt=""
+                fill
+                sizes="256px"
+                className="pointer-events-none object-cover"
+                style={{ objectPosition }}
+                draggable={false}
+              />
             </span>
             <span className="min-w-0 flex-1">
               <span className="text-[9px] font-black uppercase tracking-[0.12em]" style={{ color }}>{badge}</span>

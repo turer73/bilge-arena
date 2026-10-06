@@ -13,6 +13,7 @@ const {
   mockIntegrityResult,
   mockSocialContextResult,
   mockSocialStateResult,
+  mockCanonicalResult,
   mockFrom,
   mockRpc,
   mockEq,
@@ -30,6 +31,7 @@ const {
   mockIntegrityResult: vi.fn(),
   mockSocialContextResult: vi.fn(),
   mockSocialStateResult: vi.fn(),
+  mockCanonicalResult: vi.fn(),
   mockFrom: vi.fn(),
   mockRpc: vi.fn(),
   mockEq: vi.fn(),
@@ -78,6 +80,7 @@ vi.mock('@/lib/supabase/service-role', () => ({
       if (name === 'curriculum_scope_integrity') return Promise.resolve(mockIntegrityResult())
       if (name === 'resolve_tyt_social_mastery_read_context') return Promise.resolve(mockSocialContextResult())
       if (name === 'read_tyt_social_mastery_outcome_state') return Promise.resolve(mockSocialStateResult())
+      if (name === 'read_canonical_mastery_context') return Promise.resolve(mockCanonicalResult())
       throw new Error(`unexpected rpc: ${name}`)
     }),
   })),
@@ -259,6 +262,53 @@ describe('GET /api/profile/mastery', () => {
   it('auth yoksa 401 doner', async () => {
     const response = await GET(request() as never)
     expect(response.status).toBe(401)
+  })
+
+  function canonicalFixture() {
+    const key = 'meb-turkce@2019:grade8:LGS:T.8.3.25'
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockScopeResult.mockReturnValue({ data: {
+      game: 'turkce', displayExamRef: 'LGS', questionExamRef: 'LGS', taxonomyVersion: 'ba-lgs-turkce-v1',
+      mappingMode: 'canonical_reviewed', diagnosticEnabled: false,
+    }, error: null })
+    return { format: 'canonical-mastery@1', game: 'turkce', examRef: 'LGS', taxonomyVersion: 'ba-lgs-turkce-v1',
+      integrity: { total: 2, mapped: 2, unmapped: 0, scopeMismatch: 0, nodeOrphan: 0, outcomeOrphan: 0, primaryMismatch: 0, emptyOutcome: 0 },
+      items: [{ canonicalId: key, programKey: 'meb-turkce', programEdition: '2019', grade: 8,
+        officialCode: 'T.8.3.25', title: 'Kazanım', path: [
+          { nodeType: 'course', title: 'Türkçe' }, { nodeType: 'outcome', title: 'Kazanım', officialCode: 'T.8.3.25' },
+        ], aliases: [{ id: OUTCOME_ID, code: 'ALIAS-1', category: 'paragraf' },
+          { id: SOCIAL_PHILOSOPHY_OUTCOME_ID, code: 'ALIAS-2', category: 'dil_bilgisi' }] }], states: [] }
+  }
+
+  it('canonical map uses the authenticated user, one leaf, and no raw alias state query', async () => {
+    mockCanonicalResult.mockReturnValue({ data: canonicalFixture(), error: null })
+    const response = await GET(request('game=turkce&exam_ref=LGS&user_id=attacker') as never)
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    const body = await response.json()
+    expect(body.graphFormat).toBe('canonical@1')
+    expect(body.outcomes).toHaveLength(1)
+    expect(body.discovery).toMatchObject({ totalOutcomes: 1, diagnosticCompleted: false })
+    expect(mockRpc).toHaveBeenCalledWith('read_canonical_mastery_context', {
+      p_user_id: USER_ID, p_game: 'turkce', p_exam_ref: 'LGS', p_taxonomy_version: 'ba-lgs-turkce-v1',
+    })
+    expect(mockFrom).not.toHaveBeenCalled()
+    expect(JSON.stringify(body)).not.toContain(OUTCOME_ID)
+  })
+
+  it.each([null, { format: 'catalog-only' }])('refuses incomplete canonical context without legacy fallback: %j', async data => {
+    canonicalFixture()
+    mockCanonicalResult.mockReturnValue({ data, error: null })
+    const response = await GET(request('game=turkce&exam_ref=LGS') as never)
+    expect(response.status).toBe(503)
+    expect(mockFrom).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when canonical RPC is missing during app-first deployment', async () => {
+    canonicalFixture()
+    mockCanonicalResult.mockReturnValue({ data: null, error: { code: 'PGRST202' } })
+    expect((await GET(request('game=turkce&exam_ref=LGS') as never)).status).toBe(503)
+    expect(mockFrom).not.toHaveBeenCalled()
   })
 
   it('gecersiz oyun ve exam_ref parametrelerini reddeder', async () => {

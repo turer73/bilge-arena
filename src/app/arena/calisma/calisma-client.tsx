@@ -7,17 +7,21 @@ import { useGameStore } from '@/stores/game-store'
 import { defaultExamRefForType, gamesForExamType } from '@/lib/constants/exam-types'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { BilgeChan } from '@/components/ui/bilge-chan'
-import { TodayPlanFocus } from '@/components/study/today-plan-focus'
+import { DesktopDailyPlan } from '@/components/academy/desktop-daily-plan'
 import { MasteryActionCard } from '@/components/study/mastery-action-card'
 import { StudyContextSelector } from '@/components/study/study-context-selector'
 import { StudyAssistantLauncher } from '@/components/study/study-assistant-launcher'
 import { InstitutionWeeklyProgramCard } from '@/components/study/institution-weekly-program-card'
 import { TytSocialExamPolicyCardView } from '@/components/study/tyt-social-exam-policy-card'
 import { useTytSocialExamPolicy } from '@/lib/hooks/use-tyt-social-exam-policy'
-import { ArrowRight, BookOpenCheck, Clock3, Sparkles } from 'lucide-react'
+import { ArrowRight, ChevronLeft, ChevronRight, Clock3, Sparkles } from 'lucide-react'
+import { AcademyIcon } from '@/components/ui/academy-icon'
 import { useWideStudy } from '@/lib/hooks/use-wide-study'
+import { useSubjectSwipe } from '@/lib/hooks/use-subject-swipe'
 import { StudyHomeClient } from '../arena-client'
 import { DesktopStudyTools } from '@/components/academy/desktop-study-tools'
+import { getPreparationLabel } from '@/lib/utils/lobby-presentation'
+import { studyHref } from '@/lib/utils/study-href'
 
 const MOBILE_APP_SHELL_STYLE = '@media (max-width: 1023px) { [data-app-navbar] { display: none !important; } [data-arena-main] { padding-top: 0 !important; } }'
 
@@ -79,6 +83,27 @@ function LegacyCalismaClient() {
     && tytSocialPolicy.status !== 'active',
   )
 
+  const handleGameChange = (nextGame: GameSlug) => {
+    const nextExamRefs = examRefsForGame(nextGame, profile?.exam_type)
+    const nextDefault = defaultExamRefForType(profile?.exam_type)
+    const storedExamRef = gameStore.selectedExamRef
+    const nextExamRef = storedExamRef && nextExamRefs.includes(storedExamRef)
+      ? storedExamRef
+      : nextDefault && nextExamRefs.includes(nextDefault)
+        ? nextDefault
+        : nextExamRefs[0] ?? null
+
+    gameStore.setGame(nextGame)
+    gameStore.setCategory(null)
+    if (nextGame !== 'wordquest') gameStore.setExamRef(nextExamRef)
+  }
+  const subjectSwipe = useSubjectSwipe({
+    subjects: availableGames.map((item) => item.slug),
+    selectedSubject: game,
+    onSubjectChange: handleGameChange,
+    disabled: loading || !user,
+  })
+
   if (loading) {
     return (
       <div data-practice-screen className="min-h-[100dvh] bg-[var(--app-bg)] px-4 py-24 text-center text-sm font-bold text-[var(--app-text-sub)]" role="status">
@@ -109,29 +134,12 @@ function LegacyCalismaClient() {
     )
   }
 
-  const handleGameChange = (nextGame: GameSlug) => {
-    const nextExamRefs = examRefsForGame(nextGame, profile?.exam_type)
-    const nextDefault = defaultExamRefForType(profile?.exam_type)
-    const storedExamRef = gameStore.selectedExamRef
-    const nextExamRef = storedExamRef && nextExamRefs.includes(storedExamRef)
-      ? storedExamRef
-      : nextDefault && nextExamRefs.includes(nextDefault)
-        ? nextDefault
-        : nextExamRefs[0] ?? null
-
-    gameStore.setGame(nextGame)
-    gameStore.setCategory(null)
-    if (nextGame !== 'wordquest') gameStore.setExamRef(nextExamRef)
-  }
-
   const handleExamRefChange = (nextExamRef: string) => {
     if (game !== 'wordquest') gameStore.setExamRef(nextExamRef)
     gameStore.setCategory(null)
   }
 
-  const practiceParams = new URLSearchParams()
-  if (game !== 'wordquest' && examRef) practiceParams.set('exam_ref', examRef)
-  const practiceHref = `/arena/${game}${practiceParams.size > 0 ? `?${practiceParams}` : ''}`
+  const practiceHref = studyHref(game, examRef)
 
   return (
     <div data-practice-screen className="min-h-[100dvh] w-full min-w-0 touch-pan-y overflow-x-clip bg-[var(--app-bg)] pb-24 text-[var(--app-text)] lg:bg-transparent lg:pb-10">
@@ -141,7 +149,7 @@ function LegacyCalismaClient() {
         <div className="mx-auto flex h-14 max-w-[1180px] items-center justify-between px-4 lg:h-auto lg:px-6 lg:pb-5 lg:pt-8 xl:px-6">
           <div className="flex items-center gap-2.5">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--app-accent-tint)] text-[var(--app-accent-text)] md:h-12 md:w-12">
-              <BookOpenCheck size={22} strokeWidth={2.8} />
+              <AcademyIcon name="practice" size={30} />
             </span>
             <div>
               <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]">Çalışma merkezi</p>
@@ -157,7 +165,8 @@ function LegacyCalismaClient() {
       </header>
 
       <div className="mx-auto w-full min-w-0 max-w-[1180px] px-3 pt-3 md:px-5 lg:px-6 lg:pt-0">
-        <main data-practice-overview className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start lg:gap-6">
+        <main data-practice-overview data-subject-swipe {...subjectSwipe} className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start lg:gap-6">
+          <p className="sr-only" aria-live="polite" aria-atomic="true">Seçili ders: {GAMES[game].name}</p>
           <section data-practice-focus aria-labelledby="practice-hero-title" className="relative hidden min-h-[154px] min-w-0 self-start overflow-hidden rounded-[26px] bg-gradient-to-br from-[var(--app-accent)] to-[var(--app-accent-strong)] p-6 text-white shadow-[0_6px_0_var(--app-shadow-accent)] lg:block lg:py-5">
             <div className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full border-[26px] border-white/10" />
             <div className="relative z-10 min-w-0 max-w-[72%]">
@@ -184,12 +193,13 @@ function LegacyCalismaClient() {
               onGameChange={handleGameChange}
               onExamRefChange={handleExamRefChange}
               compact
+              collapsible
               eyebrow="HEMEN BAŞLA"
               title="Ne çalışmak istersin?"
               footer={(
                 <div>
-                  <p className="mb-3 text-[11px] font-semibold leading-4 text-[var(--app-text-sub)]">
-                    Sonraki adımda oyun biçimi, konu ve zorluk seçilir.
+                  <p className="mb-3 text-xs font-medium leading-5 text-[var(--app-text-sub)]">
+                    Sonraki adım: oyun biçimi, konu ve zorluk.
                   </p>
                   {tytSocialStartBlocked ? (
                     <div aria-live="polite">
@@ -217,13 +227,16 @@ function LegacyCalismaClient() {
                       href={practiceHref}
                       className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
                     >
-                      Devam et
+                      {getPreparationLabel(game)}
                       <ArrowRight size={18} strokeWidth={3} aria-hidden="true" />
                     </Link>
                   )}
                 </div>
               )}
             />
+            {availableGames.length > 1 && <p className="mt-2 flex items-center justify-center gap-1 text-xs font-medium text-[var(--app-text-muted)]">
+              <ChevronLeft size={14} aria-hidden="true" /> Dersler arasında kaydır <ChevronRight size={14} aria-hidden="true" />
+            </p>}
             <div className="mt-4">
               <TytSocialExamPolicyCardView policy={tytSocialPolicy} />
             </div>
@@ -234,11 +247,11 @@ function LegacyCalismaClient() {
             aria-label="Günlük plan ve öğrenme ilerlemesi"
             className="min-w-0 space-y-4 lg:col-start-1 lg:row-start-2"
           >
-            <TodayPlanFocus
+            <DesktopDailyPlan
+              mode="live"
               game={game}
               userId={user.id}
               examRef={examRef}
-              selectedCategory={null}
               tytSocialPolicy={tytSocialPolicy}
             />
             <MasteryActionCard game={game} userId={user.id} examRef={examRef} />

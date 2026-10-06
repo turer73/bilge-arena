@@ -7,36 +7,30 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { DocumentBoundaryLink } from '@/components/privacy/document-boundary-link'
 import {
   BookOpenText,
-  Building2,
   Calculator,
   Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Flame,
   FlaskConical,
-  Gem,
   Globe2,
-  GraduationCap,
   Languages,
   Lightbulb,
-  Lock,
   MessageCircle,
   Play,
-  ShoppingBag,
-  ShieldCheck,
   Sparkles,
-  Star,
   Target,
-  Trophy,
   X,
   type LucideIcon,
 } from 'lucide-react'
 import { BottomNav } from '@/components/layout/bottom-nav'
-import { TodayPlanFocus } from '@/components/study/today-plan-focus'
+import { AcademyIcon, type AcademyIconName } from '@/components/ui/academy-icon'
+import { DesktopDailyPlan } from '@/components/academy/desktop-daily-plan'
 import { useWideStudy } from '@/lib/hooks/use-wide-study'
+import { useSubjectSwipe } from '@/lib/hooks/use-subject-swipe'
 import { useTopicProgress } from '@/lib/hooks/use-topic-progress'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
+import { studyHref } from '@/lib/utils/study-href'
 import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 
 export type MobileSubjectId = 'matematik' | 'turkce' | 'fen' | 'sosyal' | 'ingilizce'
@@ -44,8 +38,8 @@ const DesktopStudyHome = dynamic(() => import('@/components/academy/desktop-stud
 type SubjectId = MobileSubjectId
 
 interface MobileHomeDemoProps {
-  desktopSubject?: MobileSubjectId
-  onDesktopSubjectChange?: (subject: MobileSubjectId) => void
+  selectedSubject?: MobileSubjectId
+  onSubjectChange?: (subject: MobileSubjectId) => void
   renderStudyTools?: (game: GameSlug, examRef: string | null) => ReactNode
   mode?: 'demo' | 'live'
   examLabel?: 'YKS' | 'LGS'
@@ -132,23 +126,23 @@ const COACH_MESSAGES = [
   },
   {
     eyebrow: 'Günlük hedef',
-    title: 'Yalnızca 4 soru kaldı!',
-    body: 'Bu dersi tamamladığında günlük hedefini geçip serini korumaya yaklaşacaksın.',
+    title: 'Yalnızca 4 doğru cevap kaldı!',
+    body: 'Her doğru cevap, günlük hedefine bir adım daha yaklaştırır.',
     icon: Target,
     color: 'var(--app-success)',
     tint: 'var(--app-success-tint)',
   },
 ]
 
-function Resource({ icon: Icon, value, color, label }: {
-  icon: LucideIcon
+function Resource({ icon, value, color, label }: {
+  icon: AcademyIconName
   value: string | number
   color: string
   label: string
 }) {
   return (
     <div aria-label={`${label}: ${value}`} className="flex min-h-11 items-center gap-1 text-sm font-black" style={{ color }}>
-      <Icon aria-hidden="true" size={20} fill="currentColor" strokeWidth={2.7} />
+      <AcademyIcon name={icon} size={22} />
       <span className="tabular-nums">{value}</span>
     </div>
   )
@@ -187,7 +181,7 @@ function snakePath(count: number) {
 
 function PathStep({ step, subject }: { step: PathStepModel; subject: Subject }) {
   const { done, current, exam, locked } = step
-  const Icon = done ? Check : current ? Star : exam ? Trophy : locked ? Lock : BookOpenText
+  const icon: AcademyIconName = locked ? 'locked' : current ? 'xp' : exam ? 'league' : 'learn'
 
   return (
     <Link
@@ -211,7 +205,7 @@ function PathStep({ step, subject }: { step: PathStepModel; subject: Subject }) 
         className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-white md:h-11 md:w-11"
         style={{ background: locked ? 'var(--app-disabled)' : subject.color }}
       >
-        <Icon aria-hidden="true" size={21} fill={current || exam ? 'currentColor' : 'none'} strokeWidth={3} />
+        <AcademyIcon name={icon} size={28} muted={locked} />
         {done && <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[var(--app-card)] bg-[var(--app-success-solid)]"><Check size={10} strokeWidth={4} /></span>}
       </span>
       <span className="min-w-0 flex-1">
@@ -229,8 +223,8 @@ function compactNumber(value: number) {
 }
 
 export function MobileHomeDemo({
-  desktopSubject,
-  onDesktopSubjectChange,
+  selectedSubject,
+  onSubjectChange,
   renderStudyTools,
   mode = 'demo',
   examLabel = 'YKS',
@@ -252,6 +246,7 @@ export function MobileHomeDemo({
   const wideStudy = useWideStudy()
   const visibleSubjects = SUBJECTS.filter((item) => !availableSubjects || availableSubjects.includes(item.id))
   const [subjectId, setSubjectId] = useState<SubjectId>(visibleSubjects[0]?.id ?? 'matematik')
+  const subjectTabsRef = useRef<HTMLDivElement>(null)
   // Demo rotasi bir vitrin: pencere acik baslar. Canli ana giriste planin
   // birincil eylemini kapatmamak icin koç yalniz kullanici istegiyle acilir.
   const [coachOpen, setCoachOpen] = useState(mode === 'demo')
@@ -260,10 +255,34 @@ export function MobileHomeDemo({
   const [coachMessage, setCoachMessage] = useState(0)
   const [examPickerOpen, setExamPickerOpen] = useState(false)
   const [demoExamRef, setDemoExamRef] = useState(examRef)
-  const activeSubjectId = wideStudy && desktopSubject ? desktopSubject : subjectId
+  const activeSubjectId = selectedSubject ?? subjectId
+  const handleSubjectChange = onSubjectChange ?? setSubjectId
   const subject = visibleSubjects.find((item) => item.id === activeSubjectId) ?? visibleSubjects[0] ?? SUBJECTS[0]
+  const subjectSwipe = useSubjectSwipe({
+    subjects: visibleSubjects.map((item) => item.id),
+    selectedSubject: subject.id,
+    onSubjectChange: handleSubjectChange,
+    disabled: wideStudy || coachOpen || examPickerOpen,
+  })
+  useEffect(() => {
+    const tabs = subjectTabsRef.current
+    if (!tabs) return
+    const revealSelectedTab = () => {
+      const active = tabs.querySelector<HTMLElement>('[aria-pressed="true"]')
+      if (!active) return
+      const bounds = tabs.getBoundingClientRect()
+      const selected = active.getBoundingClientRect()
+      // Reveal the new tab without scrolling the lesson page back to the top.
+      if (selected.left < bounds.left) tabs.scrollLeft += selected.left - bounds.left
+      else if (selected.right > bounds.right) tabs.scrollLeft += selected.right - bounds.right
+    }
+    revealSelectedTab()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(revealSelectedTab)
+    observer.observe(tabs)
+    return () => observer.disconnect()
+  }, [subject.id, wideStudy])
   const gameSlug = subject.id === 'ingilizce' ? 'wordquest' : subject.id
-  const gameHref = `/arena/${gameSlug}`
   const progressExamRef = gameSlug === 'wordquest'
     ? null
     : examRef && GAMES[gameSlug].examTags.includes(examRef)
@@ -273,6 +292,7 @@ export function MobileHomeDemo({
         : GAMES[gameSlug].examTags.includes('TYT')
           ? 'TYT'
           : GAMES[gameSlug].examTags[0] ?? null
+  const gameHref = studyHref(gameSlug, progressExamRef)
   // Canli modda yol, oyunun kanonik kategori listesi + kullanicinin gercek
   // konu basarisi uzerine kurulur. Demo modunda (rota /mobil-demo) backend
   // yok; sabit ornek icerik gosterilir.
@@ -293,7 +313,7 @@ export function MobileHomeDemo({
         key: `${gameSlug}-${topic.category}`,
         label: topic.label,
         // Adim gercekten o konuya goturur: lobi ?category ile acilir.
-        href: `${gameHref}?category=${encodeURIComponent(topic.category)}`,
+        href: studyHref(gameSlug, progressExamRef, topic.category),
         index,
         done: topic.completed,
         current: index === progress.currentIndex,
@@ -350,7 +370,7 @@ export function MobileHomeDemo({
         ? goalRemaining === null
           ? 'Bugünkü rotayı tamamla!'
           : goalRemaining > 0
-            ? `Yalnızca ${goalRemaining} soru kaldı!`
+            ? `Yalnızca ${goalRemaining} doğru cevap kaldı!`
             : 'Günlük hedef tamam!'
         : message.title
   const coachBody = isSocialTytProgressPreparing
@@ -361,7 +381,11 @@ export function MobileHomeDemo({
         : `${currentStep?.label ?? subject.label} için çalışma rotan hazır.`
       : coachMessage === 1
         ? 'Önce soru kökündeki ipucunu yakala. Bildiklerini küçük adımlara bölmek sana zaman kazandırır.'
-        : 'Bu dersi tamamladığında günlük rotanda ilerleyip serini korumaya yaklaşacaksın.'
+        : goalRemaining === null
+          ? 'Bu dersi tamamladığında günlük rotanda ilerleyip serini korumaya yaklaşacaksın.'
+          : goalRemaining > 0
+            ? 'Her doğru cevap, günlük hedefine bir adım daha yaklaştırır.'
+            : 'Günlük doğru cevap hedefini tamamladın. İstersen konunu tekrar edebilirsin.'
 
   useEffect(() => {
     if (!coachOpen || wideStudy) return
@@ -422,7 +446,7 @@ export function MobileHomeDemo({
           : isSocialTytProgressPreparing || progress.available === false ? 'preparing'
             : progress.available === null ? 'unavailable' : 'ready'
     return <DesktopStudyHome
-      mode={mode} subjects={visibleSubjects} subject={subject} onSubjectChange={onDesktopSubjectChange ?? setSubjectId}
+      mode={mode} subjects={visibleSubjects} subject={subject} onSubjectChange={handleSubjectChange}
       examOptions={examScopeOptions} examRef={progressExamRef} selectedExamRef={selectedHeaderExamRef}
       onExamChange={onExamRefChange ?? setDemoExamRef} game={gameSlug}
       steps={mode === 'demo' || isLivePath ? steps : []}
@@ -449,7 +473,7 @@ export function MobileHomeDemo({
               onClick={() => setExamPickerOpen((current) => !current)}
               className="flex min-h-11 items-center gap-1 rounded-xl px-1 text-[var(--app-text-sub)] active:bg-[var(--app-hover)]"
             >
-              <ShieldCheck size={24} fill="var(--app-accent-border)" className="text-[var(--app-accent-text)]" strokeWidth={2.5} />
+              <AcademyIcon name="quality" size={24} />
               <span className="max-w-[72px] truncate text-xs font-black">{selectedHeaderExamLabel}</span>
               <ChevronDown size={14} strokeWidth={3} className={examPickerOpen ? 'rotate-180' : ''} />
             </button>
@@ -487,9 +511,9 @@ export function MobileHomeDemo({
             )}
           </div>
           <div className="flex items-center gap-4">
-            <Resource icon={Flame} value={currentStreak} color="var(--app-warn)" label="Günlük seri" />
-            <Resource icon={Gem} value={compactNumber(coinBalance)} color="#06b6d4" label="Altın" />
-            <Resource icon={Sparkles} value={compactNumber(totalXP)} color="var(--wisdom-light)" label="Toplam XP" />
+            <Resource icon="streak" value={currentStreak} color="var(--app-warn)" label="Günlük seri" />
+            <Resource icon="gem" value={compactNumber(coinBalance)} color="#06b6d4" label="Altın" />
+            <Resource icon="xp" value={compactNumber(totalXP)} color="var(--wisdom-light)" label="Toplam XP" />
           </div>
           <Link href="/arena/profil" aria-label={`${displayName} profilini aç`} className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-sm font-black text-[var(--app-accent-text)] shadow-[0_2px_0_var(--app-shadow-accent)] active:translate-y-0.5">
             {avatarUrl ? (
@@ -499,19 +523,21 @@ export function MobileHomeDemo({
         </div>
       </header>
 
-      <main inert={coachOpen}>
+      <main inert={coachOpen} data-subject-swipe {...subjectSwipe}>
+        <p className="sr-only" aria-live="polite" aria-atomic="true">Seçili ders: {subject.label}</p>
         <section aria-label="Ders seçimi" className="border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)] px-3 py-2.5">
           <div
+            ref={subjectTabsRef}
             data-subject-tabs
+            data-subject-swipe-ignore
             className="scrollbar-none mx-auto flex max-w-[1180px] snap-x gap-2 overflow-x-auto pb-1 md:flex-wrap md:justify-center md:gap-3 md:overflow-visible md:px-2 md:py-1"
           >
             {visibleSubjects.map((item) => {
-              const Icon = item.icon
               const active = item.id === subject.id
               return (
                 <button
                   key={item.id}
-                  onClick={() => setSubjectId(item.id)}
+                  onClick={() => handleSubjectChange(item.id)}
                   aria-label={item.shortLabel}
                   title={item.label}
                   aria-pressed={active}
@@ -521,32 +547,35 @@ export function MobileHomeDemo({
                     background: active ? `${item.color}10` : 'var(--app-card)', boxShadow: active ? `0 3px 0 ${item.color}35` : '0 3px 0 var(--app-border)',
                   }}
                 >
-                  <Icon size={18} strokeWidth={2.7} />
+                  <AcademyIcon name={item.id === 'ingilizce' ? 'wordquest' : item.id} size={24} muted={!active} />
                   <span className="md:hidden">{item.shortLabel}</span>
                   <span className="hidden md:inline">{item.label}</span>
                 </button>
               )
             })}
           </div>
+          {visibleSubjects.length > 1 && <p className="mt-1 flex items-center justify-center gap-1 text-xs font-medium text-[var(--app-text-muted)]">
+            <ChevronLeft size={14} aria-hidden="true" /> Dersler arasında kaydır <ChevronRight size={14} aria-hidden="true" />
+          </p>}
         </section>
 
         {mode === 'live' && userId && (
           <div className="mx-auto w-full max-w-[1180px] px-4 pt-4 md:px-5 md:pt-5 xl:px-6">
             <section data-today-plan-primary aria-label="Günlük çalışma planı">
-              <TodayPlanFocus
+              <DesktopDailyPlan
+                mode="live"
                 game={gameSlug}
                 userId={userId}
                 examRef={progressExamRef}
-                selectedCategory={null}
-                showStickyMobileAction={false}
               />
             </section>
           </div>
         )}
         <div data-responsive-arena-grid className="mx-auto grid w-full max-w-[1180px] grid-cols-1 md:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)] md:gap-x-5 md:gap-y-5 md:px-5 md:py-5 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-x-7 xl:px-6">
         <section data-learning-path-hero className="px-4 pt-4 md:col-start-1 md:row-start-1 md:px-0 md:pt-0">
-          <div className="relative overflow-hidden rounded-[22px] p-4 text-white md:min-h-[168px] md:rounded-[28px] md:p-6" style={{ background: `linear-gradient(135deg, ${subject.color}, ${subject.shadow})`, boxShadow: `0 6px 0 ${subject.shadow}` }}>
-            <div className="pointer-events-none absolute -right-8 -top-14 h-32 w-32 rounded-full border-[22px] border-white/10" />
+          <div className="relative isolate overflow-hidden rounded-[22px] border bg-[#0a1b32] p-4 text-white md:min-h-[168px] md:rounded-[28px] md:p-6" style={{ borderColor: `${subject.color}55`, boxShadow: '0 3px 0 var(--app-border)' }}>
+            <Image data-mobile-landscape src="/academy/academy-landscape.png" alt="" fill sizes="(max-width: 767px) calc(100vw - 32px), 640px" className="pointer-events-none -z-20 object-cover object-right" />
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(90deg,#0a1b32f2_8%,#0a1b32cc_48%,#0a1b324d_100%)]" />
             <div className="relative flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/75">{unitLabel}</p>
@@ -562,7 +591,7 @@ export function MobileHomeDemo({
                 Güvenilir TYT Sosyal ilerleme verisi hazır olduğunda yolun burada açılacak.
               </p>
             ) : (
-              <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-black/15 p-[2px] md:mt-6 md:h-3"><div className="h-full rounded-full bg-[var(--app-card)]" style={{ width: `${(completedCount / stepCount) * 100}%` }} /></div>
+              <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-black/30 p-[2px] md:mt-6 md:h-3"><div className="h-full rounded-full" style={{ width: `${(completedCount / stepCount) * 100}%`, background: subject.color }} /></div>
             )}
           </div>
         </section>
@@ -638,25 +667,25 @@ export function MobileHomeDemo({
           </div>
           <div className="grid grid-cols-2 gap-2.5 md:grid-cols-1">
             <Link href="/arena/magaza" className="flex min-h-[92px] flex-col justify-between rounded-[20px] border-2 border-[var(--app-warn-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-warn-border)] active:translate-y-0.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><ShoppingBag size={19} strokeWidth={2.7} /></span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><AcademyIcon name="shop" size={28} /></span>
               <span><span className="block text-xs font-black">Mağaza</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Altınlarını kullan</span></span>
             </Link>
             {classroomEnabled && (
               <DocumentBoundaryLink href="/arena/sinif" className="flex min-h-[92px] flex-col justify-between rounded-[20px] border-2 border-[var(--app-success-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-success-border)] active:translate-y-0.5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-[var(--app-success-tint)] text-[var(--app-success)]"><GraduationCap size={20} strokeWidth={2.7} /></span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-[var(--app-success-tint)] text-[var(--app-success)]"><AcademyIcon name="classroom" size={28} /></span>
                 <span><span className="block text-xs font-black">Sınıflarım</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Ödev, davet, öğretmen</span></span>
               </DocumentBoundaryLink>
             )}
             {institutionEnabled && (
               <DocumentBoundaryLink href="/arena/kurum" className="col-span-2 flex min-h-[78px] items-center gap-3 rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-accent-border)] active:translate-y-0.5 md:col-span-1">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]"><Building2 size={22} strokeWidth={2.7} /></span>
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]"><AcademyIcon name="institution" size={30} /></span>
                 <span className="min-w-0 flex-1"><span className="block text-xs font-black">Kurum paneli</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Sınıf, rol ve rapor akışları</span></span>
                 <ChevronRight size={18} className="text-[var(--app-text-muted)]" strokeWidth={3} />
               </DocumentBoundaryLink>
             )}
             {communityQualityEnabled && (
               <Link href="/arena/kalite-gorevleri" className="col-span-2 flex min-h-[78px] items-center gap-3 rounded-[20px] border-2 border-[var(--app-success-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-success-border)] active:translate-y-0.5 md:col-span-1">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-[var(--app-success-tint)] text-[var(--app-success)]"><ShieldCheck size={22} strokeWidth={2.7} /></span>
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-[var(--app-success-tint)] text-[var(--app-success)]"><AcademyIcon name="quality" size={30} /></span>
                 <span className="min-w-0 flex-1"><span className="block text-xs font-black">Kalite görevleri</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Soruları çöz, hataları doğrula</span></span>
                 <ChevronRight size={18} className="text-[var(--app-text-muted)]" strokeWidth={3} />
               </Link>
@@ -664,11 +693,11 @@ export function MobileHomeDemo({
           </div>
         </section>
 
-        {dailyGoal && <section className="mx-4 mb-7 rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-border)] md:col-start-2 md:row-start-2 md:mx-0 md:mb-0">
+        {dailyGoal && <section aria-label="Günlük doğru cevap hedefi" className="mx-4 mb-7 rounded-[22px] border border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-sm md:col-start-2 md:row-start-2 md:mx-0 md:mb-0">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><Flame size={24} fill="currentColor" strokeWidth={2.6} /></div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><AcademyIcon name="streak" size={30} /></div>
             <div className="min-w-0 flex-1">
-              <div className="flex justify-between text-xs font-black"><span>Günlük hedef</span><span className="text-[var(--app-warn)]">{dailyGoal.current} / {dailyGoal.target} soru</span></div>
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs font-bold"><span>Günlük doğru cevap hedefi</span><span className="text-sm font-black text-[var(--app-warn)]">{dailyGoal.current} / {dailyGoal.target}</span></div>
               <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-[var(--app-border-soft)] p-[2px]"><div className="h-full rounded-full bg-[var(--app-warn)]" style={{ width: `${Math.min(100, (dailyGoal.current / Math.max(1, dailyGoal.target)) * 100)}%` }} /></div>
             </div>
           </div>
@@ -735,7 +764,7 @@ export function MobileHomeDemo({
                         key={item.id}
                         type="button"
                         onClick={() => {
-                          setSubjectId(item.id)
+                          handleSubjectChange(item.id)
                           setCoachMessage(0)
                         }}
                         aria-label={`${item.label} rotasını seç`}

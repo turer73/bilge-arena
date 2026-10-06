@@ -49,6 +49,7 @@ export interface MasteryCoveragePublic {
 }
 
 export interface MasteryMapResponsePublic {
+  graphFormat?: 'canonical@1'
   game: string
   examRef: string | null
   coverage: MasteryCoveragePublic
@@ -76,10 +77,14 @@ function validGraphNode(
   nodeCodes: Set<string>,
   leaves: Map<string, { nodeCode: string; path: string[] }>,
   path: string[],
+  canonical = false,
 ): value is PublicCurriculumNode {
-  if (depth > 3 || !isRecord(value)) return false
+  if (depth > (canonical ? 8 : 3) || !isRecord(value) || nodeCodes.size >= 5000) return false
   if (!hasOnlyKeys(value, ['code', 'title', 'nodeType', 'outcomeCode', 'children'])) return false
-  const expectedType = CURRICULUM_NODE_TYPES[depth]
+  const expectedType = canonical ? value.nodeType : CURRICULUM_NODE_TYPES[depth]
+  if (canonical && (depth === 0 ? expectedType !== 'collection'
+    : depth === 1 ? expectedType !== 'course'
+      : !['unit', 'topic', 'learning_area', 'language_skill', 'outcome'].includes(String(expectedType)))) return false
   if (
     typeof value.code !== 'string' || !value.code
     || typeof value.title !== 'string' || !value.title
@@ -96,10 +101,10 @@ function validGraphNode(
     return true
   }
   if (value.outcomeCode !== undefined || value.children.length === 0) return false
-  return value.children.every((child) => validGraphNode(child, depth + 1, nodeCodes, leaves, nextPath))
+  return value.children.every((child) => validGraphNode(child, depth + 1, nodeCodes, leaves, nextPath, canonical))
 }
 
-function validOutcome(value: unknown): value is MasteryOutcomePublic {
+function validOutcome(value: unknown, canonical = false): value is MasteryOutcomePublic {
   if (!isRecord(value)) return false
   if (!hasOnlyKeys(value, [
     'code', 'nodeCode', 'path', 'title', 'description', 'game', 'category', 'examRef',
@@ -111,7 +116,8 @@ function validOutcome(value: unknown): value is MasteryOutcomePublic {
   ])) return false
   const stringFields = ['code', 'nodeCode', 'title', 'game', 'category']
   if (stringFields.some((field) => typeof value[field] !== 'string')) return false
-  if (!Array.isArray(value.path) || value.path.length !== 4 || !value.path.every((part) => typeof part === 'string' && part.length > 0)) return false
+  if (!Array.isArray(value.path) || (canonical ? value.path.length < 3 || value.path.length > 9 : value.path.length !== 4)
+    || !value.path.every((part) => typeof part === 'string' && part.length > 0)) return false
   if (value.description !== null && typeof value.description !== 'string') return false
   if (value.examRef !== null && typeof value.examRef !== 'string') return false
   if (value.lastAnsweredAt !== null && (
@@ -172,7 +178,12 @@ function validOutcome(value: unknown): value is MasteryOutcomePublic {
 
 export function parseMasteryMapResponse(value: unknown): MasteryMapResponsePublic | null {
   if (!isRecord(value)) return null
-  if (!hasOnlyKeys(value, ['game', 'examRef', 'coverage', 'discovery', 'graph', 'outcomes'])) return null
+  if (!hasOnlyKeys(value, ['game', 'examRef', 'coverage', 'discovery', 'graph', 'outcomes', 'graphFormat'])) return null
+  if (value.graphFormat !== undefined && value.graphFormat !== 'canonical@1') return null
+  const canonical = value.graphFormat === 'canonical@1'
+  if (canonical && (value.examRef !== 'LGS' || !isRecord(value.coverage)
+    || value.coverage.supported !== true || value.coverage.diagnosticAvailable !== false
+    || !isRecord(value.discovery) || value.discovery.diagnosticCompleted !== false)) return null
   if (
     typeof value.game !== 'string'
     || (value.examRef !== null && typeof value.examRef !== 'string')
@@ -190,7 +201,7 @@ export function parseMasteryMapResponse(value: unknown): MasteryMapResponsePubli
     || value.coverage.mappedQuestions > value.coverage.totalQuestions
     || !finitePercent(value.coverage.percentage)
     || !Array.isArray(value.outcomes)
-    || !value.outcomes.every(validOutcome)
+    || !value.outcomes.every(outcome => validOutcome(outcome, canonical))
   ) return null
 
   const expectedPercentage = value.coverage.totalQuestions > 0
@@ -234,13 +245,14 @@ export function parseMasteryMapResponse(value: unknown): MasteryMapResponsePubli
   ) return null
 
   const leaves = new Map<string, { nodeCode: string; path: string[] }>()
-  if (!validGraphNode(value.graph, 0, new Set(), leaves, [])) return null
+  if (!validGraphNode(value.graph, 0, new Set(), leaves, [], canonical)) return null
   const seenOutcomes = new Set<string>()
   for (const outcome of value.outcomes as MasteryOutcomePublic[]) {
     if (seenOutcomes.has(outcome.code)) return null
     seenOutcomes.add(outcome.code)
     const leaf = leaves.get(outcome.code)
-    if (!leaf || leaf.nodeCode !== outcome.nodeCode || leaf.path.some((part, index) => part !== outcome.path[index])) {
+    if (!leaf || leaf.nodeCode !== outcome.nodeCode || leaf.path.length !== outcome.path.length
+      || leaf.path.some((part, index) => part !== outcome.path[index])) {
       return null
     }
   }

@@ -74,8 +74,8 @@ export function StudyHomeClient({ renderStudyTools }: { renderStudyTools?: (game
   return (
     <MobileHomeDemo
       renderStudyTools={renderStudyTools}
-      desktopSubject={selectedGame === 'wordquest' ? 'ingilizce' : selectedGame ?? undefined}
-      onDesktopSubjectChange={(subject) => { setGame(subject === 'ingilizce' ? 'wordquest' : subject); setCategory(null) }}
+      selectedSubject={selectedGame === 'wordquest' ? 'ingilizce' : selectedGame ?? undefined}
+      onSubjectChange={(subject) => { setGame(subject === 'ingilizce' ? 'wordquest' : subject); setCategory(null) }}
       mode="live"
       examLabel={profile?.exam_type === 'lgs' ? 'LGS' : 'YKS'}
       examRef={displayedExamRef}

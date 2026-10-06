@@ -58,8 +58,12 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
     expect(screen.getByRole('heading', { name: 'Önce kuralı yakala' })).toBeVisible()
 
     fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
-    expect(screen.getByRole('heading', { name: 'Yalnızca 4 soru kaldı!' })).toBeVisible()
-    expect(screen.getByRole('link', { name: /Başla/ })).toHaveAttribute('href', '/arena/matematik')
+    expect(screen.getByRole('heading', { name: 'Yalnızca 4 doğru cevap kaldı!' })).toBeVisible()
+    expect(screen.getByText('Her doğru cevap, günlük hedefine bir adım daha yaklaştırır.')).toBeVisible()
+    expect(screen.getByRole('link', { name: /Başla/ })).toHaveAttribute('href', '/arena/matematik?exam_ref=TYT')
+    fireEvent.click(screen.getByRole('button', { name: 'Koç penceresini kapat' }))
+    expect(screen.getByRole('region', { name: 'Günlük doğru cevap hedefi' })).toHaveTextContent('6 / 10')
+    expect(screen.queryByText('6 / 10 soru')).not.toBeInTheDocument()
   })
 
   test('ders seçimi içeriği ve hedef bağlantısını günceller', async () => {
@@ -70,7 +74,7 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
 
     expect(screen.getByRole('heading', { name: 'Türkçe Yolu' })).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Paragrafın Yapısı' })).toBeVisible()
-    expect(screen.getByRole('link', { name: /KONUYA GİT/ })).toHaveAttribute('href', '/arena/turkce')
+    expect(screen.getByRole('link', { name: /KONUYA GİT/ })).toHaveAttribute('href', '/arena/turkce?exam_ref=TYT')
   })
 
   test('tablet ve masaüstü koç penceresinde tüm oyunlar seçilebilir', async () => {
@@ -85,7 +89,7 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
     fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
-    expect(screen.getByRole('link', { name: /Başla/ })).toHaveAttribute('href', '/arena/fen')
+    expect(screen.getByRole('link', { name: /Başla/ })).toHaveAttribute('href', '/arena/fen?exam_ref=TYT')
   })
 
   test('üst ders sekmeleri masaüstünde ortalanır, mobil kısa adları korunur', () => {
@@ -138,6 +142,34 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
 })
 
 describe('MobileHomeDemo canlı öğrenme yolu', () => {
+  test('kaydırma yalnız görünür derslere gider, içerik ve bağlantı aynı dersi gösterir', () => {
+    render(<MobileHomeDemo mode="live" availableSubjects={['matematik', 'ingilizce']} />)
+    const math = screen.getByRole('heading', { name: 'Matematik Yolu' })
+    fireEvent.touchStart(math, { touches: [{ identifier: 1, clientX: 280, clientY: 400 }] })
+    fireEvent.touchEnd(math, { touches: [], changedTouches: [{ identifier: 1, clientX: 100, clientY: 405 }] })
+    const english = screen.getByRole('heading', { name: 'İngilizce Yolu' })
+    expect(english).toBeVisible()
+    expect(screen.getByRole('button', { name: 'İng.' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('link', { name: 'KONUYA GİT' })).toHaveAttribute('href', '/arena/wordquest?category=vocabulary')
+    fireEvent.touchStart(english, { touches: [{ identifier: 1, clientX: 100, clientY: 400 }] })
+    fireEvent.touchEnd(english, { touches: [], changedTouches: [{ identifier: 1, clientX: 280, clientY: 405 }] })
+    expect(screen.getByRole('heading', { name: 'Matematik Yolu' })).toBeVisible()
+  })
+
+  test('ders şeridini kaydırmak veya koç açıkken dokunmak dersi değiştirmez', () => {
+    render(<MobileHomeDemo mode="live" />)
+    const tabs = document.querySelector('[data-subject-tabs]')!
+    fireEvent.touchStart(tabs, { touches: [{ identifier: 1, clientX: 280, clientY: 90 }] })
+    fireEvent.touchEnd(tabs, { touches: [], changedTouches: [{ identifier: 1, clientX: 100, clientY: 90 }] })
+    expect(screen.getByRole('button', { name: 'Mat' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'Bilge Chan mesajlarını aç' }))
+    const message = screen.getByRole('heading', { name: 'Hazırsın, Bilgin!' })
+    fireEvent.touchStart(message, { touches: [{ identifier: 1, clientX: 280, clientY: 200 }] })
+    fireEvent.touchEnd(message, { touches: [], changedTouches: [{ identifier: 1, clientX: 100, clientY: 200 }] })
+    fireEvent.click(screen.getByRole('button', { name: 'Koç penceresini kapat' }))
+    expect(screen.getByRole('heading', { name: 'Matematik Yolu' })).toBeVisible()
+  })
+
   test('kalite görevlerini yalnız ayrı yayın kapısı açıkken gösterir', () => {
     const { rerender } = render(<MobileHomeDemo mode="live" />)
     expect(screen.queryByRole('link', { name: /Kalite görevleri/i })).not.toBeInTheDocument()
@@ -181,12 +213,21 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
     render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['matematik']} />)
 
     const step = await screen.findByRole('link', { name: 'Olasılık dersini aç' })
-    expect(step).toHaveAttribute('href', '/arena/matematik?category=olasilik')
+    expect(step).toHaveAttribute('href', '/arena/matematik?exam_ref=TYT&category=olasilik')
     expect(step).not.toHaveAttribute('aria-disabled')
 
     // Sıradaki konu = tamamlanmamis ilk konu (problemler)
     expect(screen.getByRole('link', { name: /KONUYA GİT/ }))
-      .toHaveAttribute('href', '/arena/matematik?category=problemler')
+      .toHaveAttribute('href', '/arena/matematik?exam_ref=TYT&category=problemler')
+  })
+
+  test('AYT öğrenme yolundan hazırlığa geçerken sınav ve konu bağlantıda korunur', async () => {
+    render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['matematik']} examRef="AYT-SAY" />)
+    const step = await screen.findByRole('link', { name: 'Olasılık dersini aç' })
+    const url = new URL(step.getAttribute('href')!, 'https://bilgearena.com')
+    expect(url.pathname).toBe('/arena/matematik')
+    expect(url.searchParams.get('exam_ref')).toBe('AYT-SAY')
+    expect(url.searchParams.get('category')).toBe('olasilik')
   })
 
   test('kimlik doğrulanmış canlı girişte Bugünün 15’i ilk DOM ve görsel akıştır', async () => {
@@ -226,7 +267,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
       <MobileHomeDemo
         mode="live"
         userId="user-1"
-        desktopSubject="ingilizce"
+        selectedSubject="ingilizce"
         availableSubjects={['ingilizce']}
         examRef="LGS"
         renderStudyTools={renderStudyTools}
