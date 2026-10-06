@@ -247,21 +247,17 @@ describe('useAuth signup analytics', () => {
     localStorage.removeItem('signup_tracked_u1')
   })
 
+  const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
+
   test('es zamanli profil yuklemeleri Signup eventini tek kez gonderir', async () => {
-    const freshProfile = { ...PROFILE, created_at: new Date().toISOString() }
-    fetchMock.mockImplementation((url: string) => {
-      if (String(url).includes('/api/profile/sync')) {
-        return jsonOk({ profile: freshProfile, isAdmin: false, updated: false })
-      }
-      return jsonOk({ profile: freshProfile, isAdmin: false })
-    })
-    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+    const newUser = { ...AUTH_USER, created_at: minutesAgo(0), email_confirmed_at: minutesAgo(0) }
+    supa.getUser.mockResolvedValue({ data: { user: newUser } })
 
     // Navbar + sayfa bileseni: iki useAuth ornegi, her biri getUser ile
     // yukler; Supabase'in INITIAL_SESSION bildirimi de ayni anda gelir.
     renderHook(() => useAuth())
     renderHook(() => useAuth())
-    act(() => supa.authStateCb!('INITIAL_SESSION', { user: AUTH_USER }))
+    act(() => supa.authStateCb!('INITIAL_SESSION', { user: newUser }))
 
     await waitFor(() => expect(store.setProfile).toHaveBeenCalledTimes(3))
     expect(signupCalls()).toEqual([['Signup', { props: { provider: 'google' } }]])
@@ -269,14 +265,34 @@ describe('useAuth signup analytics', () => {
     expect(localStorage.getItem('signup_tracked_u1')).toBe('1')
   })
 
-  test('profil API hata verse de flag yazilir, Signup gonderilmez', async () => {
-    fetchMock.mockResolvedValue({ ok: false, json: () => Promise.resolve({}) })
-    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+  test('magic link: e-posta 10 dk once istendi, link simdi tiklandi -> Signup', async () => {
+    // Satir (ve profil) e-posta istendiginde acilir; onay linke tiklaninca dolar.
+    const magicLinkUser = {
+      ...AUTH_USER,
+      app_metadata: { provider: 'email' },
+      created_at: minutesAgo(10),
+      email_confirmed_at: minutesAgo(0),
+    }
+    supa.getUser.mockResolvedValue({ data: { user: magicLinkUser } })
 
     renderHook(() => useAuth())
 
-    await waitFor(() => expect(localStorage.getItem('signup_tracked_u1')).toBe('1'))
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    expect(signupCalls()).toEqual([['Signup', { props: { provider: 'magic_link' } }]])
+  })
+
+  test('eski hesap: flag yazilir, Signup gonderilmez, kayit icin ek /api/profile istegi yok', async () => {
+    const returningUser = { ...AUTH_USER, created_at: minutesAgo(60 * 24), email_confirmed_at: minutesAgo(60 * 24) }
+    supa.getUser.mockResolvedValue({ data: { user: returningUser } })
+
+    renderHook(() => useAuth())
+
+    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    expect(localStorage.getItem('signup_tracked_u1')).toBe('1')
     expect(signupCalls()).toHaveLength(0)
+    const plainProfileGets = fetchMock.mock.calls.filter(
+      (c) => String(c[0]).includes('/api/profile') && !String(c[0]).includes('/sync'),
+    )
+    expect(plainProfileGets).toHaveLength(0)
   })
 })

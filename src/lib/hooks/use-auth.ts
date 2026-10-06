@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import * as Sentry from '@sentry/nextjs'
+import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
 import { trackEvent } from '@/lib/utils/plausible'
@@ -62,6 +63,21 @@ function applyRole(profile: Profile, isAdmin: boolean): Profile {
   } as Profile
 }
 
+const SIGNUP_WINDOW_MS = 2 * 60 * 1000
+
+/**
+ * Hesap az once mi acildi? Kayit ani = hesabin ilk dogrulandigi an.
+ * Magic link'te auth.users satiri (ve handle_new_user ile profil) e-posta
+ * ISTENDIGI anda olusur; email_confirmed_at ise linke tiklaninca dolar
+ * (canli projede mailer_autoconfirm=false). Google'da ikisi ayni andir.
+ * created_at'e bakmak, linke 2 dk'dan gec tiklayanlari hic saymiyordu.
+ */
+function isFreshSignup(authUser: User): boolean {
+  const confirmedAt = authUser.email_confirmed_at ?? authUser.confirmed_at ?? authUser.created_at
+  if (!confirmedAt) return false
+  return Date.now() - new Date(confirmedAt).getTime() < SIGNUP_WINDOW_MS
+}
+
 /**
  * Profil verisini API'den yeniden ceker ve auth-store'u gunceller.
  * Hook disinda da cagirilabilir (ornegin session save sonrasi).
@@ -119,30 +135,24 @@ export function useAuth() {
    * sonra guncel profili doner. Sync endpoint hata verirse GET'e dusup
    * mevcut profili gosterir.
    */
-  async function fetchProfileWithSync(authUser: { id: string; email?: string }) {
+  async function fetchProfileWithSync(authUser: User) {
     // 1) Analytics event'leri (eski fetchProfile davranisi)
     try {
       const signupKey = `signup_tracked_${authUser.id}`
       if (!localStorage.getItem(signupKey)) {
-        // Flag ilk await'ten ONCE yazilir: kontrol+yazma senkron kalir. Bu
-        // fonksiyon ayni yuklemede birden cok kez es zamanli kosar (getUser +
+        // Kontrol+yazma senkron kalmali, araya await girmemeli. Bu fonksiyon
+        // ayni yuklemede birden cok kez es zamanli kosar (getUser +
         // INITIAL_SESSION, ustelik useAuth'u kullanan her bilesen icin ayri);
-        // flag API cevabindan sonra yazildiginda hepsi bos flag gorup Signup'i
-        // tekrar gonderiyordu (Plausible toplam/tekil ~2,1). API hatasinda da
-        // flag kalir (Klipper review B1: her yuklemede /api/profile cagrilmasin).
+        // flag eskiden /api/profile cevabindan sonra yaziliyordu, hepsi bos
+        // flag gorup Signup'i tekrar gonderiyordu (Plausible toplam/tekil ~2,1).
+        // Kayit tespiti auth kullanicisindan yapildigi icin ek istek de yok.
         localStorage.setItem(signupKey, '1')
-        const initialData = await fetchProfileFromApi()
-        if (initialData?.profile?.created_at) {
-          const createdMs = new Date(initialData.profile.created_at).getTime()
-          const ageMs = Date.now() - createdMs
-          if (ageMs < 2 * 60 * 1000) {
-            const { data: { user: u } } = await supabase.auth.getUser()
-            const provider = u?.app_metadata?.provider === 'email'
-              ? 'magic_link'
-              : (u?.app_metadata?.provider ?? 'google')
-            trackEvent('Signup', { props: { provider } })
-            resetGuestQuizCount()
-          }
+        if (isFreshSignup(authUser)) {
+          const provider = authUser.app_metadata?.provider === 'email'
+            ? 'magic_link'
+            : (authUser.app_metadata?.provider ?? 'google')
+          trackEvent('Signup', { props: { provider } })
+          resetGuestQuizCount()
         }
       }
 
