@@ -8,7 +8,11 @@ import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join, isAbsolute } from 'node:path'
 import pg from 'pg'
-import { describe, it, before, after, beforeEach } from 'node:test'
+// The database contract job collects this file through Vitest; the dedicated
+// acceptance job uses node --test. Register with the active runner in both.
+const testing = process.env.VITEST ? await import('vitest') : await import('node:test')
+const before = testing.beforeAll ?? testing.before, after = testing.afterAll ?? testing.after
+const { describe, it, beforeEach } = testing
 
 const bin = process.env.CANONICAL_PG_BIN
 if (bin) assert.ok(isAbsolute(bin))
