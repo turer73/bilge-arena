@@ -241,6 +241,11 @@ jobs:
           CANONICAL_PG_BIN: /usr/lib/postgresql/16/bin
         run: node --test database/__tests__/formal-tyt-social-scope-postgres.integration.test.mjs
 
+      - name: Run TYT reviewed pool preflight acceptance
+        env:
+          CANONICAL_PG_BIN: /usr/lib/postgresql/16/bin
+        run: node --test database/__tests__/tyt-social-reviewed-pool-postgres.integration.test.mjs
+
   build:
     name: 🏗️ Build
     runs-on: ubuntu-latest
