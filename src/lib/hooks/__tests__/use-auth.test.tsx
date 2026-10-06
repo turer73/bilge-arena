@@ -16,10 +16,12 @@ const store = vi.hoisted(() => {
     user: null as unknown,
     profile: null as unknown,
     loading: true,
-    setUser: vi.fn(),
-    setProfile: vi.fn(),
+    // Gercek store gibi state tutar: profil yuklemesi cevabi yalniz oturum
+    // hala ayni kullanicidaysa uygular (isCurrentUser).
+    setUser: vi.fn((user: unknown) => { s.user = user }),
+    setProfile: vi.fn((profile: unknown) => { s.profile = profile }),
     setLoading: vi.fn(),
-    signOut: vi.fn(),
+    signOut: vi.fn(() => { s.user = null; s.profile = null }),
   }
   return s
 })
@@ -67,8 +69,18 @@ function jsonOk(data: Record<string, unknown>) {
   return Promise.resolve({ ok: true, json: () => Promise.resolve(data) })
 }
 
+/** Ucustaki tum (aninda cozulen mock) profil yuklemelerinin bitmesini bekler. */
+const settle = () => act(() => new Promise<void>((resolve) => setTimeout(resolve, 0)))
+
+const syncCalls = () => fetchMock.mock.calls.filter((c) => String(c[0]).includes('/api/profile/sync'))
+const getCalls = () => fetchMock.mock.calls.filter(
+  (c) => String(c[0]).includes('/api/profile') && !String(c[0]).includes('/sync'),
+)
+
 beforeEach(() => {
   vi.clearAllMocks()
+  store.user = null
+  store.profile = null
   localStorage.clear()
   sessionStorage.clear() // profile_synced_* guard'i testler arasi sizmasin
   // signup-analytics yan-yolunu sustur: kullanici "eski" gorunsun
@@ -81,6 +93,11 @@ beforeEach(() => {
     }
     return jsonOk({ profile: PROFILE, isAdmin: false })
   })
+})
+
+afterEach(async () => {
+  // Modul seviyesindeki ucustaki yukleme bir sonraki teste sizmasin.
+  await settle()
 })
 
 describe('useAuth', () => {
@@ -259,7 +276,8 @@ describe('useAuth signup analytics', () => {
     renderHook(() => useAuth())
     act(() => supa.authStateCb!('INITIAL_SESSION', { user: newUser }))
 
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    await settle()
     expect(signupCalls()).toEqual([['Signup', { props: { provider: 'google' } }]])
     expect(resetGuestQuizCount).toHaveBeenCalledOnce()
     expect(localStorage.getItem('signup_tracked_u1')).toBe('1')
@@ -318,10 +336,11 @@ describe('useAuth Day2Return analytics', () => {
     renderHook(() => useAuth())
     renderHook(() => useAuth())
     act(() => supa.authStateCb!('INITIAL_SESSION', { user }))
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(store.setProfile).toHaveBeenCalledTimes(1))
+    await settle()
 
     renderHook(() => useAuth())
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalledTimes(4))
+    await waitFor(() => expect(store.setProfile).toHaveBeenCalledTimes(2))
 
     expect(day2Calls()).toEqual([['Day2Return']])
     expect(localStorage.getItem('day2_return_tracked_u1')).toBe('1')
@@ -341,5 +360,188 @@ describe('useAuth Day2Return analytics', () => {
     await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
     expect(day2Calls()).toHaveLength(0)
     expect(localStorage.getItem('day2_return_tracked_u1')).toBeNull()
+  })
+})
+
+describe('useAuth profil yukleme yarisi', () => {
+  // Test erken duserse cozulmemis istek modul seviyesindeki single-flight
+  // kaydini acik birakip sonraki testlere sizmasin.
+  const unresolved: Array<(value: unknown) => void> = []
+  afterEach(() => {
+    unresolved.splice(0).forEach((resolve) => resolve({ ok: false, json: () => Promise.resolve({}) }))
+  })
+
+  function deferred<T>() {
+    let resolve!: (value: T) => void
+    const promise = new Promise<T>((r) => { resolve = r })
+    unresolved.push(resolve as (value: unknown) => void)
+    return { promise, resolve }
+  }
+
+  const okSync = (profile: Record<string, unknown> = PROFILE) =>
+    ({ ok: true, json: () => Promise.resolve({ profile, isAdmin: false, updated: false }) })
+  const okGet = (profile: Record<string, unknown> = PROFILE) =>
+    ({ ok: true, json: () => Promise.resolve({ profile, isAdmin: false }) })
+
+  test('es zamanli cagrilar tek sync istegini paylasir, profil bir kez yazilir', async () => {
+    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+
+    // Navbar + sayfa bileseni + INITIAL_SESSION: ayni kullanici icin 3 cagri.
+    renderHook(() => useAuth())
+    renderHook(() => useAuth())
+    act(() => supa.authStateCb!('INITIAL_SESSION', { user: AUTH_USER }))
+
+    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    await settle()
+    expect(syncCalls()).toHaveLength(1)
+    expect(getCalls()).toHaveLength(0)
+    expect(store.setProfile).toHaveBeenCalledOnce()
+    expect(sessionStorage.getItem('profile_synced_u1')).toBe('1')
+  })
+
+  test('sync 429 alirsa es zamanli cagrilar tek GET fallback paylasir, flag yazilmaz', async () => {
+    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+    fetchMock.mockImplementation((url: string) => {
+      if (String(url).includes('/api/profile/sync')) {
+        return Promise.resolve({ ok: false, status: 429, json: () => Promise.resolve({}) })
+      }
+      return jsonOk({ profile: PROFILE, isAdmin: false })
+    })
+
+    renderHook(() => useAuth())
+    renderHook(() => useAuth())
+    act(() => supa.authStateCb!('INITIAL_SESSION', { user: AUTH_USER }))
+
+    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    await settle()
+    expect(syncCalls()).toHaveLength(1)
+    expect(getCalls()).toHaveLength(1)
+    expect(store.setProfile).toHaveBeenCalledOnce()
+    expect(sessionStorage.getItem('profile_synced_u1')).toBeNull()
+  })
+
+  test('yukleme bitince yeni olay yeni yukleme baslatir (sync yapildiysa GET)', async () => {
+    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+    renderHook(() => useAuth())
+    await waitFor(() => expect(store.setProfile).toHaveBeenCalledOnce())
+    await settle()
+
+    act(() => supa.authStateCb!('TOKEN_REFRESHED', { user: AUTH_USER }))
+
+    await waitFor(() => expect(store.setProfile).toHaveBeenCalledTimes(2))
+    expect(syncCalls()).toHaveLength(1)
+    expect(getCalls()).toHaveLength(1)
+  })
+
+  test('istek ucarken cikis yapilirsa eski hesabin profili store a geri yazilmaz', async () => {
+    const pendingSync = deferred<unknown>()
+    fetchMock.mockImplementation((url: string) => {
+      if (String(url).includes('/api/profile/sync')) return pendingSync.promise
+      return jsonOk({ profile: PROFILE, isAdmin: false })
+    })
+    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+    renderHook(() => useAuth())
+    act(() => supa.authStateCb!('INITIAL_SESSION', { user: AUTH_USER }))
+    await waitFor(() => expect(syncCalls()).toHaveLength(1))
+    await waitFor(() => expect(store.setUser).toHaveBeenCalledTimes(2)) // getUser.then de calisti
+    expect(store.user).toEqual(AUTH_USER)
+
+    act(() => supa.authStateCb!('SIGNED_OUT', null))
+    expect(store.setProfile).toHaveBeenLastCalledWith(null)
+
+    pendingSync.resolve({ ok: true, json: () => Promise.resolve({ profile: PROFILE, isAdmin: false, updated: false }) })
+    await settle()
+
+    expect(store.setProfile).toHaveBeenLastCalledWith(null)
+    expect(store.profile).toBeNull()
+  })
+
+  test('sync beklerken gec gelen cagri (sekme odagi SIGNED_IN) ayni yuklemeye katilir', async () => {
+    const pendingSync = deferred<unknown>()
+    fetchMock.mockImplementation((url: string) => (
+      String(url).includes('/api/profile/sync') ? pendingSync.promise : Promise.resolve(okGet())
+    ))
+    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+    renderHook(() => useAuth())
+    act(() => supa.authStateCb!('INITIAL_SESSION', { user: AUTH_USER }))
+    await settle() // sync hala ucusta, bir makro gorev gecti
+
+    act(() => supa.authStateCb!('SIGNED_IN', { user: AUTH_USER }))
+    await settle()
+    expect(syncCalls()).toHaveLength(1)
+
+    pendingSync.resolve(okSync())
+    await settle()
+    expect(syncCalls()).toHaveLength(1)
+    expect(getCalls()).toHaveLength(0)
+    expect(store.setProfile).toHaveBeenCalledOnce()
+  })
+
+  test('429 sonrasi GET beklerken gec gelen cagri yeni sync/GET baslatmaz', async () => {
+    const pendingGet = deferred<unknown>()
+    fetchMock.mockImplementation((url: string) => (
+      String(url).includes('/api/profile/sync')
+        ? Promise.resolve({ ok: false, status: 429, json: () => Promise.resolve({}) })
+        : pendingGet.promise
+    ))
+    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+    renderHook(() => useAuth())
+    act(() => supa.authStateCb!('INITIAL_SESSION', { user: AUTH_USER }))
+    await settle()
+    expect(getCalls()).toHaveLength(1)
+
+    act(() => supa.authStateCb!('SIGNED_IN', { user: AUTH_USER }))
+    await settle()
+    expect([syncCalls().length, getCalls().length]).toEqual([1, 1])
+
+    pendingGet.resolve(okGet())
+    await settle()
+    expect([syncCalls().length, getCalls().length]).toEqual([1, 1])
+    expect(store.setProfile).toHaveBeenCalledOnce()
+  })
+
+  test('GET ucarken cikis yapilirsa eski hesabin profili store a geri yazilmaz', async () => {
+    sessionStorage.setItem('profile_synced_u1', '1') // tekrar yuklemeler GET dalini kullanir
+    const pendingGet = deferred<unknown>()
+    fetchMock.mockImplementation(() => pendingGet.promise)
+    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+    renderHook(() => useAuth())
+    act(() => supa.authStateCb!('INITIAL_SESSION', { user: AUTH_USER }))
+    await waitFor(() => expect(getCalls()).toHaveLength(1))
+    await waitFor(() => expect(store.setUser).toHaveBeenCalledTimes(2))
+
+    act(() => supa.authStateCb!('SIGNED_OUT', null))
+    pendingGet.resolve(okGet())
+    await settle()
+
+    expect(store.setProfile).toHaveBeenLastCalledWith(null)
+    expect(store.profile).toBeNull()
+  })
+
+  test('hesap degisirse eski hesabin gec gelen profili yeni hesabinkini ezmez', async () => {
+    localStorage.setItem('signup_tracked_u2', '1')
+    const u2 = { ...AUTH_USER, id: 'u2', email: 'other@test.com' }
+    const pendingU1Sync = deferred<unknown>()
+    let syncCount = 0
+    fetchMock.mockImplementation((url: string) => {
+      if (String(url).includes('/api/profile/sync')) {
+        syncCount += 1
+        return syncCount === 1 ? pendingU1Sync.promise : Promise.resolve(okSync({ id: 'u2', username: 'other' }))
+      }
+      return Promise.resolve(okGet())
+    })
+    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+    renderHook(() => useAuth())
+    act(() => supa.authStateCb!('INITIAL_SESSION', { user: AUTH_USER }))
+    await settle()
+
+    act(() => supa.authStateCb!('SIGNED_IN', { user: u2 }))
+    await settle()
+    expect(store.profile).toMatchObject({ id: 'u2' })
+
+    pendingU1Sync.resolve(okSync())
+    await settle()
+    expect(store.profile).toMatchObject({ id: 'u2' })
+    expect(syncCalls()).toHaveLength(2) // farkli kullanicilar ayri yukleme
   })
 })

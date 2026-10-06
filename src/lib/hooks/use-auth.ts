@@ -109,6 +109,69 @@ export async function refreshProfile(canApply?: () => boolean): Promise<void> {
   useAuthStore.getState().setProfile(applyRole(data.profile, data.isAdmin))
 }
 
+/** Cevap geldiginde oturum hala bu kullanicida mi? (cikis / hesap degisimi) */
+function isCurrentUser(userId: string): boolean {
+  return useAuthStore.getState().user?.id === userId
+}
+
+/**
+ * Profile fetch + Google sync (eski fetchProfile'in API tabanli versiyonu).
+ * Sync endpoint Google metadata'yi server-side okur ve gerekirse update eder;
+ * sonra guncel profili doner. Sync endpoint hata verirse GET'e dusup
+ * mevcut profili gosterir.
+ */
+async function loadProfile(userId: string): Promise<void> {
+  // Google metadata sync OTURUM BASINA 1 kez yeter: sessionStorage guard ile
+  // ilk basarili sync'ten sonra duz GET'e (/api/profile, 60/dk) dusulur.
+  const syncKey = `profile_synced_${userId}`
+  let alreadySynced = false
+  try { alreadySynced = sessionStorage.getItem(syncKey) === '1' } catch {}
+
+  if (!alreadySynced) {
+    const syncData = await syncProfileFromApi()
+    if (syncData) {
+      try { sessionStorage.setItem(syncKey, '1') } catch {}
+      if (isCurrentUser(userId)) {
+        useAuthStore.getState().setProfile(applyRole(syncData.profile, syncData.isAdmin))
+      }
+      return
+    }
+    // Sync basarisiz (429 dahil) → flag SET ETME (sonraki firsatta tekrar dene),
+    // asagidaki GET ile profili yine de goster.
+  }
+
+  // Zaten sync edildi VEYA sync basarisiz → duz GET (genis limit)
+  const getData = await fetchProfileFromApi()
+  // Istek ucarken cikis yapildiysa eski hesabin profili store'a geri yazilmasin.
+  if (getData && isCurrentUser(userId)) {
+    useAuthStore.getState().setProfile(applyRole(getData.profile, getData.isAdmin))
+  }
+}
+
+/**
+ * Kullanici basina ucustaki profil yuklemesi (single-flight).
+ *
+ * useAuth her tuketici bilesende (navbar, landing mini quiz, giris, kayit
+ * modali) ayri calisir; her ornek hem getUser hem INITIAL_SESSION ile yukler,
+ * Supabase sekme odaginda SIGNED_IN'i de yeniden yayinlar. sync guard'i
+ * cevaptan SONRA yazildigi icin bu cagrilarin hepsi /api/profile/sync'e
+ * (kullanici basina 5/dk) gidiyor, fazlasi 429 alip GET'e dusuyordu; 429'un
+ * GET'i basarili sync'ten eski profili sonradan yazabiliyordu. Ayni kullanici
+ * icin es zamanli cagrilar artik tek yuklemeyi paylasir; bittiginde kayit
+ * silinir, sonraki olaylar (TOKEN_REFRESHED vb.) yeni yukleme baslatir.
+ */
+const profileLoads = new Map<string, Promise<void>>()
+
+function loadProfileOnce(userId: string): Promise<void> {
+  const inflight = profileLoads.get(userId)
+  if (inflight) return inflight
+  const load = loadProfile(userId).finally(() => {
+    profileLoads.delete(userId)
+  })
+  profileLoads.set(userId, load)
+  return load
+}
+
 export function useAuth() {
   const { user, profile, loading, setUser, setProfile, setLoading } = useAuthStore()
   const supabase = createClient()
@@ -147,10 +210,8 @@ export function useAuth() {
   }, [])
 
   /**
-   * Profile fetch + Google sync (eski fetchProfile'in API tabanli versiyonu).
-   * Sync endpoint Google metadata'yi server-side okur ve gerekirse update eder;
-   * sonra guncel profili doner. Sync endpoint hata verirse GET'e dusup
-   * mevcut profili gosterir.
+   * Oturum acik kullanici icin auth analytics'i (Signup/Day2Return) gonderir
+   * ve profili yukler (bkz. loadProfileOnce).
    */
   async function fetchProfileWithSync(authUser: User) {
     // 1) Analytics event'leri (eski fetchProfile davranisi)
@@ -186,31 +247,8 @@ export function useAuth() {
       // localStorage yoksa sessizce atla (Safari private mode vb.)
     }
 
-    // 2) Sync endpoint (Google metadata + profile + roles tek istek)
-    // Google metadata sync OTURUM BASINA 1 kez yeter. Bu fonksiyon her mount'ta
-    // + onAuthStateChange'in INITIAL_SESSION'inda + her tam yuklemede cagriliyor;
-    // hepsi sync (5/dk) vurursa 429 olur (gercek bug). sessionStorage guard:
-    // ilk basarili sync'ten sonra duz GET'e (/api/profile, 60/dk) dusulur.
-    const syncKey = `profile_synced_${authUser.id}`
-    let alreadySynced = false
-    try { alreadySynced = sessionStorage.getItem(syncKey) === '1' } catch {}
-
-    if (!alreadySynced) {
-      const syncData = await syncProfileFromApi()
-      if (syncData) {
-        try { sessionStorage.setItem(syncKey, '1') } catch {}
-        setProfile(applyRole(syncData.profile, syncData.isAdmin))
-        return
-      }
-      // Sync basarisiz (429 dahil) → flag SET ETME (sonraki firsatta tekrar dene),
-      // asagidaki GET ile profili yine de goster.
-    }
-
-    // 3) Zaten sync edildi VEYA sync basarisiz → duz GET (genis limit)
-    const getData = await fetchProfileFromApi()
-    if (getData) {
-      setProfile(applyRole(getData.profile, getData.isAdmin))
-    }
+    // 2) Profil: ayni kullanici icin es zamanli cagrilar tek yuklemeyi paylasir
+    await loadProfileOnce(authUser.id)
   }
 
   async function signInWithGoogle(
