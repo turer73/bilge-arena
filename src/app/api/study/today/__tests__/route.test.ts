@@ -227,7 +227,7 @@ function socialContext(overrides: Record<string, unknown> = {}) {
     policyVersion: 'tyt-social-2026-v1', taxonomyVersion: 'ba-tyt-sosyal-v1',
     variant: 'questions_21_25', selectionEventId: SOCIAL_SELECTION_EVENT,
     selectionEffectiveAt: '2026-08-31T08:00:00.000Z',
-    allowedCategories: ['tarih', 'cografya', 'felsefe', 'sosyoloji'],
+    allowedCategories: ['tarih', 'cografya', 'felsefe'],
     rebuildRequired: false, legacyAggregateUsed: false,
     ...overrides,
   }

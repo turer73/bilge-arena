@@ -97,6 +97,15 @@ beforeEach(() => {
 })
 
 describe('TYT Social exam-role admin routes', () => {
+  it('keeps sociology visible for remediation without offering a formal TYT role', async () => {
+    mocks.rpc.mockResolvedValue({ data: { ...queue, items: [{ ...queue.items[0],
+      category: 'sosyoloji', allowedRoles: ['common_philosophy', 'alternate_philosophy'],
+    }] }, error: null })
+    const response = await operations(new Request('http://localhost/operations'))
+    expect(response.status).toBe(200)
+    expect((await response.json()).items[0]).toMatchObject({ category: 'sosyoloji', allowedRoles: [] })
+  })
+
   it('binds prepare to the server actor and exact migration 205 arguments', async () => {
     const response = await prepare(post('/api/admin/content-quality/tyt-social/exam-role/prepare', {
       revisionId: REVISION, examRole: 'common_history', rationale: 'Kaynak ve rol uyumu doğrulandı.', requestId: REQUEST,

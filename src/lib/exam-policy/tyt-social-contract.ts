@@ -54,8 +54,8 @@ export type GetTytSocialPolicyResponse = z.infer<typeof getTytSocialPolicyRespon
 export type SetTytSocialPolicyResponse = z.infer<typeof setTytSocialPolicyResponseSchema>
 
 const TYT_SOCIAL_ALLOWED_CATEGORIES: Record<TytSocialPolicyVariant, readonly string[]> = {
-  questions_16_20: ['tarih', 'cografya', 'felsefe', 'sosyoloji', 'din_kulturu'],
-  questions_21_25: ['tarih', 'cografya', 'felsefe', 'sosyoloji'],
+  questions_16_20: ['tarih', 'cografya', 'felsefe', 'din_kulturu'],
+  questions_21_25: ['tarih', 'cografya', 'felsefe'],
 }
 
 /**
@@ -68,4 +68,15 @@ export function getTytSocialAllowedCategories(
 ): readonly string[] {
   if (policyVersion !== TYT_SOCIAL_SUPPORTED_POLICY_VERSION) return []
   return TYT_SOCIAL_ALLOWED_CATEGORIES[variant]
+}
+
+/** Official booklet order, not a mastery/diagnostic score or content approval. */
+export function getTytSocialSectionCategories(
+  policyVersion: string,
+  variant: TytSocialPolicyVariant,
+): readonly string[] {
+  if (policyVersion !== TYT_SOCIAL_SUPPORTED_POLICY_VERSION) return []
+  return ['tarih', 'cografya', 'felsefe',
+    variant === 'questions_16_20' ? 'din_kulturu' : 'felsefe']
+    .flatMap(category => Array<string>(5).fill(category))
 }

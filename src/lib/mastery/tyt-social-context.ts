@@ -1,8 +1,9 @@
+import { TYT_SOCIAL_SUPPORTED_POLICY_VERSION } from '../exam-policy/tyt-social-contract'
+
 const TYT_SOCIAL_CATEGORIES = [
   'tarih',
   'cografya',
   'felsefe',
-  'sosyoloji',
   'din_kulturu',
 ] as const
 export type TytSocialCategory = (typeof TYT_SOCIAL_CATEGORIES)[number]
@@ -50,8 +51,7 @@ export function parseActiveTytSocialMasteryContext(
     value.status !== 'active'
     || value.available !== true
     || value.reason !== null
-    || typeof value.policyVersion !== 'string'
-    || !/^tyt-social-[0-9]{4}-v[0-9]+$/.test(value.policyVersion)
+    || value.policyVersion !== TYT_SOCIAL_SUPPORTED_POLICY_VERSION
     || value.taxonomyVersion !== 'ba-tyt-sosyal-v1'
     || (value.variant !== 'questions_16_20' && value.variant !== 'questions_21_25')
     || !isUuid(value.selectionEventId)
@@ -73,7 +73,7 @@ export function parseActiveTytSocialMasteryContext(
 
   const expected = value.variant === 'questions_16_20'
     ? new Set<TytSocialCategory>(TYT_SOCIAL_CATEGORIES)
-    : new Set<TytSocialCategory>(['tarih', 'cografya', 'felsefe', 'sosyoloji'])
+    : new Set<TytSocialCategory>(['tarih', 'cografya', 'felsefe'])
   if (
     allowedCategories.length !== expected.size
     || allowedCategories.some((category) => !expected.has(category as TytSocialCategory))
