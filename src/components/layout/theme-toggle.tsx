@@ -36,6 +36,14 @@ function Dot({ opt, size = 16 }: { opt: ThemeOption; size?: number }) {
   )
 }
 
+/** Giriş yapmış kullanıcının en son seçtiği tema (tüm seçici örnekleri için ortak). */
+let latestThemeChoice: Theme | null = null
+
+/** Yalnız olay işleyicisinden çağrılır (render sırasında değil). */
+function rememberThemeChoice(id: Theme) {
+  latestThemeChoice = id
+}
+
 /**
  * Tema seçici — tek tetikleyici butona basınca açılan popover.
  * (Önceden 6 renk dairesi navbar'da yan yana inline duruyordu, çok yer
@@ -93,7 +101,10 @@ export function ThemeToggle({ variant = 'menu' }: { variant?: 'menu' | 'panel' |
     // only this field into the latest profile, preserving concurrent cosmetics.
     const latest = useAuthStore.getState()
     if (latest.user?.id !== user.id) return
-    if (latest.profile) latest.setProfile({ ...latest.profile, preferred_theme: id })
+    rememberThemeChoice(id)
+    // Yama güncel profile uygulanır (eşzamanlı kozmetik değişiklikleri korunur);
+    // profil henüz yüklenmediyse ilk gelen profile uygulanmak üzere bekler.
+    latest.patchProfile({ preferred_theme: id })
     if (syncTimer.current) clearTimeout(syncTimer.current)
     syncTimer.current = setTimeout(() => {
       if (useAuthStore.getState().user?.id !== user.id) return
@@ -101,6 +112,14 @@ export function ThemeToggle({ variant = 'menu' }: { variant?: 'menu' | 'panel' |
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ preferred_theme: id }),
+      }).then((res) => {
+        // PATCH commit edildi. Commit'ten önce başlamış bir profil isteği eski
+        // temayı okumuş olabilir; cevabı store'a gelince tema geri dönmesin diye
+        // yamayı yazım kapısına yeniden bildir. Arada başka tema seçildiyse dokunma.
+        if (!res.ok || latestThemeChoice !== id) return
+        const now = useAuthStore.getState()
+        if (now.user?.id !== user.id) return
+        now.patchProfile({ preferred_theme: id })
       }).catch(() => {
         // Sessiz hata — localStorage tema çalışmaya devam eder
       })

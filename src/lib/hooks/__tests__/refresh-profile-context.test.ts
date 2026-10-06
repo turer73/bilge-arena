@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ setProfile: vi.fn() }))
+const mocks = vi.hoisted(() => ({ applyFetchedProfile: vi.fn(() => true) }))
 vi.mock('@/stores/auth-store', () => ({
-  useAuthStore: { getState: () => ({ setProfile: mocks.setProfile }) },
+  useAuthStore: {
+    getState: () => ({ beginProfileFetch: () => 1, applyFetchedProfile: mocks.applyFetchedProfile }),
+  },
 }))
 vi.mock('@/lib/supabase/client', () => ({ createClient: vi.fn() }))
 vi.mock('@sentry/nextjs', () => ({ setUser: vi.fn() }))
@@ -20,7 +22,7 @@ describe('refreshProfile session context boundary', () => {
     vi.stubGlobal('fetch', fetcher)
     await refreshProfile(() => false)
     expect(fetcher).not.toHaveBeenCalled()
-    expect(mocks.setProfile).not.toHaveBeenCalled()
+    expect(mocks.applyFetchedProfile).not.toHaveBeenCalled()
   })
 
   it('does not put the old profile in the global store after a context change', async () => {
@@ -31,14 +33,14 @@ describe('refreshProfile session context boundary', () => {
     current = false
     resolveResponse({ ok: true, json: async () => ({ profile, isAdmin: true }) })
     await pending
-    expect(mocks.setProfile).not.toHaveBeenCalled()
+    expect(mocks.applyFetchedProfile).not.toHaveBeenCalled()
   })
 
   it('retains the current context and existing unguarded callers', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ profile, isAdmin: false }) })))
     await refreshProfile(() => true)
     await refreshProfile()
-    expect(mocks.setProfile).toHaveBeenCalledTimes(2)
-    expect(mocks.setProfile).toHaveBeenLastCalledWith(profile)
+    expect(mocks.applyFetchedProfile).toHaveBeenCalledTimes(2)
+    expect(mocks.applyFetchedProfile).toHaveBeenLastCalledWith(1, profile)
   })
 })

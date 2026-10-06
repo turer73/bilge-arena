@@ -8,8 +8,8 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 
-const auth = vi.hoisted(() => ({
-  value: {
+const auth = vi.hoisted(() => {
+  const value = {
     user: { id: 'u1' } as { id: string } | null,
     profile: {
       username: 'Arenacı',
@@ -27,11 +27,17 @@ const auth = vi.hoisted(() => ({
       role: 'user',
     } as Record<string, unknown> | null,
     setProfile: vi.fn(),
+    // Gercek store gibi: yamayi render anindaki closure'a degil, mock'un EN
+    // GUNCEL profiline birlestirir (yalniz yamadaki alanlar degisir).
+    patchProfile: vi.fn((patch: Record<string, unknown>) => {
+      if (value.profile) value.profile = { ...value.profile, ...patch }
+    }),
     loading: false,
-  },
-}))
-// getState: applyAvatar concurrent-clobber fix (Codex PR#243) en guncel store
-// profilini useAuthStore.getState() ile okur — mock da saglamali.
+  }
+  return { value }
+})
+// getState: ThemeToggle tema yamasi icin useAuthStore.getState() okur — mock da
+// saglamali. Bilesenin kendi alan yazimlari patchProfile'dan gecer.
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: Object.assign(() => auth.value, { getState: () => auth.value }),
 }))
@@ -135,13 +141,35 @@ describe('KisisellestirClient', () => {
     // aria-label artık grup-içi benzersiz (Codex PR#243 a11y fix): "Bilge Chan avatar 1".
     fireEvent.click(screen.getByLabelText('Bilge Chan avatar 1'))
 
-    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(auth.value.patchProfile).toHaveBeenCalled())
     const call = fetchMock.mock.calls.find((c) => c[0] === '/api/profile/avatar/preset')!
     expect(call).toBeTruthy()
     expect(JSON.parse(call[1].body)).toHaveProperty('presetId')
-    expect(auth.value.setProfile.mock.calls[0][0]).toMatchObject({
+    // Yama YALNIZ sunucunun döndürdüğü alanı taşır; tüm profil değiştirilmez.
+    expect(auth.value.patchProfile).toHaveBeenCalledTimes(1)
+    expect(auth.value.patchProfile).toHaveBeenCalledWith({
       avatar_url: '/avatars/mascot/chan-avatar-3d-smile.webp',
     })
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+    expect(auth.value.profile).toMatchObject({
+      avatar_url: '/avatars/mascot/chan-avatar-3d-smile.webp',
+    })
+  })
+
+  test('avatar: sunucu avatar_url döndürmezse profil yamalanmaz (mevcut değer korunur)', async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('/api/profile/avatar/preset')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ backgrounds: [], badges: [] }) })
+    })
+    render(<KisisellestirClient />)
+    fireEvent.click(screen.getByLabelText('Bilge Chan avatar 1'))
+
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith('Avatar uygulandı ✨'))
+    expect(auth.value.patchProfile).not.toHaveBeenCalled()
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+    expect(auth.value.profile).toMatchObject({ avatar_url: null })
   })
 
   test('avatar kaydı EN GÜNCEL profili merge eder — eşzamanlı alanı ezmez (Codex PR#243)', async () => {
@@ -156,9 +184,14 @@ describe('KisisellestirClient', () => {
     render(<KisisellestirClient />)
     fireEvent.click(screen.getByLabelText('Bilge Chan avatar 1'))
 
-    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
-    // Bayat closure olsa selected_nameplate 'none'a dönerdi (clobber); fix EN GÜNCEL'i ('gece') korur.
-    expect(auth.value.setProfile.mock.calls[0][0]).toMatchObject({
+    await waitFor(() => expect(auth.value.patchProfile).toHaveBeenCalled())
+    // Yama bayat closure'dan alan taşımaz: yalnız avatar_url.
+    expect(auth.value.patchProfile).toHaveBeenCalledWith({
+      avatar_url: '/avatars/mascot/chan-avatar-3d-smile.webp',
+    })
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+    // Bayat closure olsa selected_nameplate 'none'a dönerdi (clobber); yama EN GÜNCEL'i ('gece') korur.
+    expect(auth.value.profile).toMatchObject({
       selected_nameplate: 'gece',
       avatar_url: '/avatars/mascot/chan-avatar-3d-smile.webp',
     })
@@ -204,10 +237,39 @@ describe('KisisellestirClient', () => {
     // 'Gece' ücretsiz panel — adına tıkla
     fireEvent.click(screen.getByText('Gece').closest('button')!)
 
-    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(auth.value.patchProfile).toHaveBeenCalled())
     const call = fetchMock.mock.calls.find((c) => c[0] === '/api/profile/nameplates/select')!
     expect(JSON.parse(call[1].body)).toEqual({ nameplateId: 'gece' })
-    expect(auth.value.setProfile.mock.calls[0][0]).toMatchObject({ selected_nameplate: 'gece' })
+    expect(auth.value.patchProfile).toHaveBeenCalledTimes(1)
+    expect(auth.value.patchProfile).toHaveBeenCalledWith({ selected_nameplate: 'gece' })
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+    expect(auth.value.profile).toMatchObject({ selected_nameplate: 'gece' })
+  })
+
+  test('isim paneli: eşzamanlı satın alma güncellemesini (bakiye/sahiplik) ezmez', async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('/api/profile/nameplates/select')) {
+        // Yanıt dönmeden ÖNCE store'a taze bakiye + sahiplik gelmiş gibi güncelle.
+        auth.value.profile = {
+          ...(auth.value.profile as Record<string, unknown>),
+          coin_balance: 4200,
+          owned_nameplates: ['none', 'gece', 'altin'],
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) })
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ backgrounds: [], badges: [] }) })
+    })
+    render(<KisisellestirClient />)
+    fireEvent.click(screen.getByRole('button', { name: /İsim Paneli/ }))
+    fireEvent.click(screen.getByText('Gece').closest('button')!)
+
+    await waitFor(() => expect(auth.value.patchProfile).toHaveBeenCalled())
+    expect(auth.value.patchProfile).toHaveBeenCalledWith({ selected_nameplate: 'gece' })
+    expect(auth.value.profile).toMatchObject({
+      selected_nameplate: 'gece',
+      coin_balance: 4200,
+      owned_nameplates: ['none', 'gece', 'altin'],
+    })
   })
 
   test('süs alanı: ücretsiz süs takma /select API POST eder + profil günceller', async () => {
@@ -216,10 +278,15 @@ describe('KisisellestirClient', () => {
     // Konfeti ücretsiz → takılabilir
     fireEvent.click(screen.getByText('Konfeti').closest('button')!)
 
-    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(auth.value.patchProfile).toHaveBeenCalled())
     const call = fetchMock.mock.calls.find((c) => c[0] === '/api/profile/avatar-decorations/select')!
     expect(JSON.parse(call[1].body)).toEqual({ decorationIds: ['konfeti'] })
-    expect(auth.value.setProfile.mock.calls[0][0]).toMatchObject({
+    expect(auth.value.patchProfile).toHaveBeenCalledTimes(1)
+    expect(auth.value.patchProfile).toHaveBeenCalledWith({
+      selected_avatar_decorations: ['konfeti'],
+    })
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+    expect(auth.value.profile).toMatchObject({
       selected_avatar_decorations: ['konfeti'],
     })
   })

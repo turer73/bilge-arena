@@ -16,18 +16,46 @@ const store = vi.hoisted(() => {
     user: null as unknown,
     profile: null as unknown,
     loading: true,
+    /** Store'a kabul edilen her profil yazimi: yerel setProfile ya da kabul edilen istek cevabi. */
+    profileWrite: vi.fn(),
     // Gercek store gibi state tutar: profil yuklemesi cevabi yalniz oturum
     // hala ayni kullanicidaysa uygular (isCurrentUser).
     setUser: vi.fn((user: unknown) => { s.user = user }),
-    setProfile: vi.fn((profile: unknown) => { s.profile = profile }),
+    setProfile: vi.fn(),
+    patchProfile: vi.fn(),
+    beginProfileFetch: vi.fn(),
+    applyFetchedProfile: vi.fn(),
     setLoading: vi.fn(),
-    signOut: vi.fn(() => { s.user = null; s.profile = null }),
+    signOut: vi.fn(),
   }
   return s
 })
-vi.mock('@/stores/auth-store', () => ({
-  useAuthStore: Object.assign(() => store, { getState: () => store }),
-}))
+vi.mock('@/stores/auth-store', async (importOriginal) => {
+  // Profil yazim eylemleri gercek store ile ayni baglamadan (createProfileWriter)
+  // gelir; mock yalniz state'i duz nesnede tutar.
+  const { createProfileWriter } = await importOriginal<typeof import('@/stores/auth-store')>()
+  type WriterProfile = Parameters<ReturnType<typeof createProfileWriter>['setProfile']>[0]
+  const writer = createProfileWriter(
+    () => ({
+      userId: (store.user as { id?: string } | null)?.id ?? null,
+      profile: store.profile as WriterProfile,
+    }),
+    (profile) => {
+      store.profile = profile
+      store.profileWrite(profile)
+    },
+  )
+  store.setProfile.mockImplementation(writer.setProfile)
+  store.patchProfile.mockImplementation(writer.patchProfile)
+  store.beginProfileFetch.mockImplementation(writer.beginProfileFetch)
+  store.applyFetchedProfile.mockImplementation(writer.applyFetchedProfile)
+  store.signOut.mockImplementation(() => {
+    writer.markReset()
+    store.user = null
+    store.profile = null
+  })
+  return { useAuthStore: Object.assign(() => store, { getState: () => store }) }
+})
 
 const supa = vi.hoisted(() => ({
   authStateCb: null as null | ((event: string, session: unknown) => void),
@@ -57,7 +85,7 @@ vi.mock('@/lib/hooks/use-guest-session', () => ({ resetGuestQuizCount: vi.fn() }
 
 import { trackEvent } from '@/lib/utils/plausible'
 import { resetGuestQuizCount } from '@/lib/hooks/use-guest-session'
-import { useAuth } from '../use-auth'
+import { useAuth, refreshProfile } from '../use-auth'
 
 const AUTH_USER = { id: 'u1', email: 'test@test.com', app_metadata: { provider: 'google' } }
 const PROFILE = { id: 'u1', username: 'test', is_premium: false, created_at: '2026-01-01T00:00:00Z' }
@@ -112,10 +140,10 @@ describe('useAuth', () => {
     supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
     renderHook(() => useAuth())
 
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(store.profileWrite).toHaveBeenCalled())
     expect(store.setUser).toHaveBeenCalledWith(AUTH_USER)
     expect(sentry.setUser).toHaveBeenCalledWith({ id: 'u1', email: 'test@test.com' })
-    const profileArg = store.setProfile.mock.calls.at(-1)![0]
+    const profileArg = store.profileWrite.mock.calls.at(-1)![0]
     expect(profileArg).toMatchObject({ id: 'u1', role: 'user' })
   })
 
@@ -124,7 +152,7 @@ describe('useAuth', () => {
     sessionStorage.setItem('profile_synced_u1', '1') // önceki yükleme sync etmiş
     renderHook(() => useAuth())
 
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(store.profileWrite).toHaveBeenCalled())
     const calledSync = fetchMock.mock.calls.some((c) => String(c[0]).includes('/api/profile/sync'))
     const calledGet = fetchMock.mock.calls.some(
       (c) => String(c[0]).includes('/api/profile') && !String(c[0]).includes('/sync'),
@@ -143,8 +171,8 @@ describe('useAuth', () => {
     })
 
     renderHook(() => useAuth())
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
-    const profileArg = store.setProfile.mock.calls.at(-1)![0]
+    await waitFor(() => expect(store.profileWrite).toHaveBeenCalled())
+    const profileArg = store.profileWrite.mock.calls.at(-1)![0]
     expect(profileArg).toMatchObject({ id: 'u1', role: 'admin' })
   })
 
@@ -155,7 +183,7 @@ describe('useAuth', () => {
 
     act(() => supa.authStateCb!('SIGNED_OUT', null))
     expect(store.setUser).toHaveBeenLastCalledWith(null)
-    expect(store.setProfile).toHaveBeenLastCalledWith(null)
+    expect(store.profileWrite).toHaveBeenLastCalledWith(null)
     expect(sentry.setUser).toHaveBeenLastCalledWith(null)
   })
 
@@ -276,7 +304,7 @@ describe('useAuth signup analytics', () => {
     renderHook(() => useAuth())
     act(() => supa.authStateCb!('INITIAL_SESSION', { user: newUser }))
 
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(store.profileWrite).toHaveBeenCalled())
     await settle()
     expect(signupCalls()).toEqual([['Signup', { props: { provider: 'google' } }]])
     expect(resetGuestQuizCount).toHaveBeenCalledOnce()
@@ -295,7 +323,7 @@ describe('useAuth signup analytics', () => {
 
     renderHook(() => useAuth())
 
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(store.profileWrite).toHaveBeenCalled())
     expect(signupCalls()).toEqual([['Signup', { props: { provider: 'magic_link' } }]])
   })
 
@@ -305,7 +333,7 @@ describe('useAuth signup analytics', () => {
 
     renderHook(() => useAuth())
 
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(store.profileWrite).toHaveBeenCalled())
     expect(localStorage.getItem('signup_tracked_u1')).toBe('1')
     expect(signupCalls()).toHaveLength(0)
     const plainProfileGets = fetchMock.mock.calls.filter(
@@ -336,11 +364,11 @@ describe('useAuth Day2Return analytics', () => {
     renderHook(() => useAuth())
     renderHook(() => useAuth())
     act(() => supa.authStateCb!('INITIAL_SESSION', { user }))
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(store.profileWrite).toHaveBeenCalledTimes(1))
     await settle()
 
     renderHook(() => useAuth())
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(store.profileWrite).toHaveBeenCalledTimes(2))
 
     expect(day2Calls()).toEqual([['Day2Return']])
     expect(localStorage.getItem('day2_return_tracked_u1')).toBe('1')
@@ -357,7 +385,7 @@ describe('useAuth Day2Return analytics', () => {
 
     renderHook(() => useAuth())
 
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(store.profileWrite).toHaveBeenCalled())
     expect(day2Calls()).toHaveLength(0)
     expect(localStorage.getItem('day2_return_tracked_u1')).toBeNull()
   })
@@ -391,11 +419,11 @@ describe('useAuth profil yukleme yarisi', () => {
     renderHook(() => useAuth())
     act(() => supa.authStateCb!('INITIAL_SESSION', { user: AUTH_USER }))
 
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(store.profileWrite).toHaveBeenCalled())
     await settle()
     expect(syncCalls()).toHaveLength(1)
     expect(getCalls()).toHaveLength(0)
-    expect(store.setProfile).toHaveBeenCalledOnce()
+    expect(store.profileWrite).toHaveBeenCalledOnce()
     expect(sessionStorage.getItem('profile_synced_u1')).toBe('1')
   })
 
@@ -412,23 +440,23 @@ describe('useAuth profil yukleme yarisi', () => {
     renderHook(() => useAuth())
     act(() => supa.authStateCb!('INITIAL_SESSION', { user: AUTH_USER }))
 
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(store.profileWrite).toHaveBeenCalled())
     await settle()
     expect(syncCalls()).toHaveLength(1)
     expect(getCalls()).toHaveLength(1)
-    expect(store.setProfile).toHaveBeenCalledOnce()
+    expect(store.profileWrite).toHaveBeenCalledOnce()
     expect(sessionStorage.getItem('profile_synced_u1')).toBeNull()
   })
 
   test('yukleme bitince yeni olay yeni yukleme baslatir (sync yapildiysa GET)', async () => {
     supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
     renderHook(() => useAuth())
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalledOnce())
+    await waitFor(() => expect(store.profileWrite).toHaveBeenCalledOnce())
     await settle()
 
     act(() => supa.authStateCb!('TOKEN_REFRESHED', { user: AUTH_USER }))
 
-    await waitFor(() => expect(store.setProfile).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(store.profileWrite).toHaveBeenCalledTimes(2))
     expect(syncCalls()).toHaveLength(1)
     expect(getCalls()).toHaveLength(1)
   })
@@ -447,12 +475,12 @@ describe('useAuth profil yukleme yarisi', () => {
     expect(store.user).toEqual(AUTH_USER)
 
     act(() => supa.authStateCb!('SIGNED_OUT', null))
-    expect(store.setProfile).toHaveBeenLastCalledWith(null)
+    expect(store.profileWrite).toHaveBeenLastCalledWith(null)
 
     pendingSync.resolve({ ok: true, json: () => Promise.resolve({ profile: PROFILE, isAdmin: false, updated: false }) })
     await settle()
 
-    expect(store.setProfile).toHaveBeenLastCalledWith(null)
+    expect(store.profileWrite).toHaveBeenLastCalledWith(null)
     expect(store.profile).toBeNull()
   })
 
@@ -474,7 +502,7 @@ describe('useAuth profil yukleme yarisi', () => {
     await settle()
     expect(syncCalls()).toHaveLength(1)
     expect(getCalls()).toHaveLength(0)
-    expect(store.setProfile).toHaveBeenCalledOnce()
+    expect(store.profileWrite).toHaveBeenCalledOnce()
   })
 
   test('429 sonrasi GET beklerken gec gelen cagri yeni sync/GET baslatmaz', async () => {
@@ -497,7 +525,7 @@ describe('useAuth profil yukleme yarisi', () => {
     pendingGet.resolve(okGet())
     await settle()
     expect([syncCalls().length, getCalls().length]).toEqual([1, 1])
-    expect(store.setProfile).toHaveBeenCalledOnce()
+    expect(store.profileWrite).toHaveBeenCalledOnce()
   })
 
   test('GET ucarken cikis yapilirsa eski hesabin profili store a geri yazilmaz', async () => {
@@ -514,7 +542,7 @@ describe('useAuth profil yukleme yarisi', () => {
     pendingGet.resolve(okGet())
     await settle()
 
-    expect(store.setProfile).toHaveBeenLastCalledWith(null)
+    expect(store.profileWrite).toHaveBeenLastCalledWith(null)
     expect(store.profile).toBeNull()
   })
 
@@ -543,5 +571,239 @@ describe('useAuth profil yukleme yarisi', () => {
     await settle()
     expect(store.profile).toMatchObject({ id: 'u2' })
     expect(syncCalls()).toHaveLength(2) // farkli kullanicilar ayri yukleme
+  })
+})
+
+describe('useAuth profil yazim sirasi', () => {
+  const unresolved: Array<(value: unknown) => void> = []
+  afterEach(() => {
+    unresolved.splice(0).forEach((resolve) => resolve({ ok: false, json: () => Promise.resolve({}) }))
+  })
+
+  function deferred<T>() {
+    let resolve!: (value: T) => void
+    const promise = new Promise<T>((r) => { resolve = r })
+    unresolved.push(resolve as (value: unknown) => void)
+    return { promise, resolve }
+  }
+
+  const withXp = (total_xp: number) => ({ ...PROFILE, total_xp })
+  const okBody = (profile: Record<string, unknown>) =>
+    ({ ok: true, json: () => Promise.resolve({ profile, isAdmin: false, updated: false }) })
+
+  async function signedIn() {
+    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+    renderHook(() => useAuth())
+    act(() => supa.authStateCb!('INITIAL_SESSION', { user: AUTH_USER }))
+    await waitFor(() => expect(store.setUser).toHaveBeenCalledTimes(2)) // getUser.then de calisti
+  }
+
+  test('sayfa acilisindaki yavas sync, gunluk giris sonrasi refreshProfile in yeni XP sini ezmez', async () => {
+    const pendingSync = deferred<unknown>()
+    fetchMock.mockImplementation((url: string) => (
+      String(url).includes('/api/profile/sync') ? pendingSync.promise : Promise.resolve(okBody(withXp(150)))
+    ))
+    await signedIn()
+    expect(syncCalls()).toHaveLength(1)
+
+    await act(() => refreshProfile()) // /api/daily-login sonrasi
+    expect(store.profile).toMatchObject({ total_xp: 150 })
+
+    pendingSync.resolve(okBody(withXp(100))) // sync, odulden once okudu
+    await settle()
+    expect(store.profile).toMatchObject({ total_xp: 150 })
+    expect(store.profileWrite).toHaveBeenCalledOnce()
+    expect(sessionStorage.getItem('profile_synced_u1')).toBe('1') // sync yine de yapildi
+  })
+
+  test('yukleme ucarken yerel yazim (tema): tema korunur, cevabin taze XP si uygulanir', async () => {
+    sessionStorage.setItem('profile_synced_u1', '1')
+    act(() => store.setProfile({ ...PROFILE, preferred_theme: 'dark' }))
+    const pendingGet = deferred<unknown>()
+    fetchMock.mockImplementation(() => pendingGet.promise)
+    await signedIn()
+    expect(getCalls()).toHaveLength(1)
+
+    act(() => store.patchProfile({ preferred_theme: 'light' }))
+    pendingGet.resolve(okBody({ ...withXp(150), preferred_theme: 'dark' }))
+    await settle()
+
+    expect(store.profile).toMatchObject({ preferred_theme: 'light', total_xp: 150 })
+  })
+
+  test('yerel yazimdan SONRA baslayan istek normal uygulanir', async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(okBody(withXp(200))))
+    act(() => store.setProfile(withXp(100)))
+
+    await act(() => refreshProfile())
+
+    expect(store.profile).toMatchObject({ total_xp: 200 })
+  })
+
+  test('once baslayip gec donen refreshProfile, sonra baslayanin sonucunu ezmez', async () => {
+    const slow = deferred<unknown>()
+    fetchMock
+      .mockImplementationOnce(() => slow.promise)
+      .mockImplementationOnce(() => Promise.resolve(okBody(withXp(150))))
+
+    const first = refreshProfile()
+    await act(() => refreshProfile())
+    expect(store.profile).toMatchObject({ total_xp: 150 })
+
+    slow.resolve(okBody(withXp(100)))
+    await act(() => first)
+    expect(store.profile).toMatchObject({ total_xp: 150 })
+  })
+
+  test('cikis sonrasi donen refreshProfile cevabi profili geri yazmaz', async () => {
+    const pending = deferred<unknown>()
+    fetchMock.mockImplementation(() => pending.promise)
+    act(() => store.setProfile(PROFILE))
+
+    const inflight = refreshProfile()
+    const { result } = renderHook(() => useAuth())
+    await act(() => result.current.signOut())
+    pending.resolve(okBody(withXp(999)))
+    await act(() => inflight)
+
+    expect(store.profile).toBeNull()
+  })
+
+  test('refreshProfile ucarken tema degisirse yeni XP kaybolmaz (seviye bildirimi icin)', async () => {
+    act(() => store.setProfile(withXp(100)))
+    const pending = deferred<unknown>()
+    fetchMock.mockImplementation(() => pending.promise)
+
+    const inflight = refreshProfile() // oturum kaydi sonrasi
+    act(() => store.patchProfile({ preferred_theme: 'light' }))
+    pending.resolve(okBody(withXp(250)))
+    await act(() => inflight)
+
+    expect(store.profile).toMatchObject({ total_xp: 250, preferred_theme: 'light' })
+  })
+
+  test('yukleme ucarken gecici oturumsuz olay + ayni kullanici: profil null da takili kalmaz', async () => {
+    sessionStorage.setItem('profile_synced_u1', '1')
+    const firstGet = deferred<unknown>()
+    fetchMock
+      .mockImplementationOnce(() => firstGet.promise)
+      .mockImplementation(() => Promise.resolve(okBody(withXp(120))))
+    await signedIn()
+    expect(getCalls()).toHaveLength(1)
+
+    act(() => supa.authStateCb!('INITIAL_SESSION', null)) // getSession yeniden denenebilir hata
+    act(() => supa.authStateCb!('TOKEN_REFRESHED', { user: AUTH_USER }))
+    await settle()
+    expect(getCalls()).toHaveLength(2)
+    expect(store.profile).toMatchObject({ id: 'u1', total_xp: 120 })
+
+    firstGet.resolve(okBody(withXp(1))) // sifirlamadan once baslamisti
+    await settle()
+    expect(store.profile).toMatchObject({ total_xp: 120 })
+  })
+
+  test('unutulan eski yukleme bitince yerine acilan yuklemenin kaydini silmez', async () => {
+    sessionStorage.setItem('profile_synced_u1', '1')
+    const firstGet = deferred<unknown>()
+    const secondGet = deferred<unknown>()
+    fetchMock
+      .mockImplementationOnce(() => firstGet.promise)
+      .mockImplementationOnce(() => secondGet.promise)
+      .mockImplementation(() => Promise.resolve(okBody(PROFILE)))
+    await signedIn()
+
+    act(() => supa.authStateCb!('INITIAL_SESSION', null))
+    act(() => supa.authStateCb!('TOKEN_REFRESHED', { user: AUTH_USER })) // ikinci yukleme ucusta
+    await settle()
+    firstGet.resolve(okBody(PROFILE)) // unutulan ilk yukleme biter
+    await settle()
+
+    act(() => supa.authStateCb!('SIGNED_IN', { user: AUTH_USER })) // sekme odagi
+    await settle()
+    expect(getCalls()).toHaveLength(2) // ikinci yuklemeye katildi, ucuncu GET yok
+    secondGet.resolve(okBody(PROFILE))
+    await settle()
+  })
+
+  test('sync ucarken SIGNED_OUT -> ayni kullanici SIGNED_IN: yeni yukleme profili getirir', async () => {
+    const firstSync = deferred<unknown>()
+    fetchMock
+      .mockImplementationOnce(() => firstSync.promise)
+      .mockImplementation(() => Promise.resolve(okBody(withXp(130))))
+    await signedIn()
+
+    act(() => supa.authStateCb!('SIGNED_OUT', null))
+    act(() => supa.authStateCb!('SIGNED_IN', { user: AUTH_USER }))
+    await settle()
+    expect(store.profile).toMatchObject({ id: 'u1', total_xp: 130 })
+
+    firstSync.resolve(okBody(withXp(1)))
+    await settle()
+    expect(store.profile).toMatchObject({ total_xp: 130 })
+  })
+
+  test.each([
+    ['sync', false],
+    ['GET', true],
+  ])('hesap degisimi (%s dali): eski hesabin cevabini kapi degil isCurrentUser durdurur', async (_label, synced) => {
+    localStorage.setItem('signup_tracked_u2', '1')
+    if (synced) {
+      sessionStorage.setItem('profile_synced_u1', '1')
+      sessionStorage.setItem('profile_synced_u2', '1')
+    }
+    const u1Response = deferred<unknown>()
+    const u2Response = deferred<unknown>()
+    fetchMock
+      .mockImplementationOnce(() => u1Response.promise)
+      .mockImplementationOnce(() => u2Response.promise)
+    await signedIn()
+
+    act(() => supa.authStateCb!('SIGNED_IN', { user: { ...AUTH_USER, id: 'u2' } }))
+    await settle()
+    u1Response.resolve(okBody(PROFILE)) // u2 henuz uygulanmadi: kapi bunu kabul ederdi
+    await settle()
+    expect(store.profile).toBeNull()
+
+    u2Response.resolve(okBody({ ...PROFILE, id: 'u2' }))
+    await settle()
+    expect(store.profile).toMatchObject({ id: 'u2' })
+  })
+
+  test('sync Google adini guncelledi ama cevabi daha yeni bir GET yuzunden atildi: tekrar GET', async () => {
+    const pendingSync = deferred<unknown>()
+    let getCount = 0
+    fetchMock.mockImplementation((url: string) => {
+      if (String(url).includes('/api/profile/sync')) return pendingSync.promise
+      getCount += 1
+      const name = getCount === 1 ? 'Eski Ad' : 'Yeni Ad'
+      return Promise.resolve(okBody({ ...PROFILE, display_name: name }))
+    })
+    await signedIn()
+
+    await act(() => refreshProfile()) // sync'in UPDATE'inden once okudu
+    expect(store.profile).toMatchObject({ display_name: 'Eski Ad' })
+
+    pendingSync.resolve({
+      ok: true,
+      json: () => Promise.resolve({ profile: { ...PROFILE, display_name: 'Yeni Ad' }, isAdmin: false, updated: true }),
+    })
+    await settle()
+    expect(getCalls()).toHaveLength(2)
+    expect(store.profile).toMatchObject({ display_name: 'Yeni Ad' })
+  })
+
+  test('SIGNED_OUT olayi ucustaki refreshProfile cevabini gecersiz kilar', async () => {
+    const pending = deferred<unknown>()
+    fetchMock.mockImplementation(() => pending.promise)
+    renderHook(() => useAuth())
+    await waitFor(() => expect(supa.authStateCb).not.toBeNull())
+    act(() => store.setProfile(PROFILE))
+
+    const inflight = refreshProfile()
+    act(() => supa.authStateCb!('SIGNED_OUT', null))
+    pending.resolve(okBody(withXp(999)))
+    await act(() => inflight)
+
+    expect(store.profile).toBeNull()
   })
 })

@@ -102,11 +102,14 @@ function isDayAfterSignup(authUser: User): boolean {
  */
 export async function refreshProfile(canApply?: () => boolean): Promise<void> {
   if (canApply && !canApply()) return
+  // Bilet istek BASLARKEN alinir: bu arada daha yeni bir istek uygulanir ya
+  // da yerel bir yazim olursa bu cevap atilir (bkz. createProfileWriteGate).
+  const ticket = useAuthStore.getState().beginProfileFetch()
   const data = await fetchProfileFromApi()
   // A session saver can leave its account/attempt while this request is in
   // flight. Check before writing the global store, not only after returning.
   if (!data || (canApply && !canApply())) return
-  useAuthStore.getState().setProfile(applyRole(data.profile, data.isAdmin))
+  useAuthStore.getState().applyFetchedProfile(ticket, applyRole(data.profile, data.isAdmin))
 }
 
 /** Cevap geldiginde oturum hala bu kullanicida mi? (cikis / hesap degisimi) */
@@ -127,24 +130,32 @@ async function loadProfile(userId: string): Promise<void> {
   let alreadySynced = false
   try { alreadySynced = sessionStorage.getItem(syncKey) === '1' } catch {}
 
+  // Her istek baslarken bilet alir ve cevabi store'un yazim kapisindan gecer
+  // (bkz. createProfileWriteGate). Ornek: sayfa acilisindaki yavas sync, gunluk
+  // giris sonrasi refreshProfile'in getirdigi yeni XP'yi eski XP ile ezmez.
   if (!alreadySynced) {
+    const syncTicket = useAuthStore.getState().beginProfileFetch()
     const syncData = await syncProfileFromApi()
     if (syncData) {
       try { sessionStorage.setItem(syncKey, '1') } catch {}
-      if (isCurrentUser(userId)) {
-        useAuthStore.getState().setProfile(applyRole(syncData.profile, syncData.isAdmin))
-      }
-      return
+      if (!isCurrentUser(userId)) return
+      const applied = useAuthStore.getState()
+        .applyFetchedProfile(syncTicket, applyRole(syncData.profile, syncData.isAdmin))
+      // Sync Google ad/avatarini YAZDIYSA ve cevabi daha yeni bir istek yuzunden
+      // atildiysa, o istek UPDATE'ten once okumus olabilir. UPDATE commit
+      // edildi: asagidaki GET yeni bir biletle guncel profili getirir.
+      if (applied || !syncData.updated) return
     }
     // Sync basarisiz (429 dahil) → flag SET ETME (sonraki firsatta tekrar dene),
     // asagidaki GET ile profili yine de goster.
   }
 
   // Zaten sync edildi VEYA sync basarisiz → duz GET (genis limit)
+  const getTicket = useAuthStore.getState().beginProfileFetch()
   const getData = await fetchProfileFromApi()
   // Istek ucarken cikis yapildiysa eski hesabin profili store'a geri yazilmasin.
   if (getData && isCurrentUser(userId)) {
-    useAuthStore.getState().setProfile(applyRole(getData.profile, getData.isAdmin))
+    useAuthStore.getState().applyFetchedProfile(getTicket, applyRole(getData.profile, getData.isAdmin))
   }
 }
 
@@ -166,10 +177,21 @@ function loadProfileOnce(userId: string): Promise<void> {
   const inflight = profileLoads.get(userId)
   if (inflight) return inflight
   const load = loadProfile(userId).finally(() => {
-    profileLoads.delete(userId)
+    // Yalniz kendi kaydini sil: arada unutulup yerine yenisi acildiysa dokunma.
+    if (profileLoads.get(userId) === load) profileLoads.delete(userId)
   })
   profileLoads.set(userId, load)
   return load
+}
+
+/**
+ * Profil sifirlandiginda (cikis, oturumsuz olay) ucustaki yuklemeleri unut.
+ * Sifirlamadan once baslamis bir yuklemenin cevabi yazim kapisindan doner;
+ * ayni kullanici icin hemen gelen yeni bir olay o yuklemeye katilirsa profil
+ * null'da takili kalirdi. Unutulan yukleme bitmeye devam eder, cevabi atilir.
+ */
+function forgetProfileLoads(): void {
+  profileLoads.clear()
 }
 
 export function useAuth() {
@@ -202,6 +224,7 @@ export function useAuth() {
       } else {
         Sentry.setUser(null)
         setProfile(null)
+        forgetProfileLoads()
       }
     })
 
@@ -316,6 +339,7 @@ export function useAuth() {
   async function signOut() {
     await supabase.auth.signOut()
     useAuthStore.getState().signOut()
+    forgetProfileLoads()
   }
 
   return { user, profile, loading, signInWithGoogle, signInWithMagicLink, signOut }

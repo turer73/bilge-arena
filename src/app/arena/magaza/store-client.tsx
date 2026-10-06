@@ -32,7 +32,7 @@ import { isStaff } from '@/lib/utils/is-staff'
  * Seçim localStorage'da (profil çerçevesi deseniyle aynı).
  */
 export function StoreClient() {
-  const { user, profile, setProfile } = useAuthStore()
+  const { user, profile, patchProfile } = useAuthStore()
   const [category, setCategory] = useState<string>('all')
   const [selectedId, setSelectedId] = useState(PROFILE_BACKGROUNDS[1].id)
   const [appliedId, setAppliedId] = useState('none')
@@ -127,13 +127,13 @@ export function StoreClient() {
         toast.error('Satın alınamadı', data.error ?? 'Bir şeyler ters gitti')
         return
       }
-      if (profile) {
-        setProfile({
-          ...profile,
-          coin_balance: data.coin_balance,
-          owned_backgrounds: data.owned_backgrounds,
-        })
-      }
+      // Yalnız sunucunun döndürdüğü alanları yamala: render anındaki profili
+      // yaymak, istek sürerken gelen taze XP/coin değerlerini eski kopyayla
+      // ezerdi. Profil henüz yüklenmediyse yama bekler, ilk cevaba uygulanır.
+      patchProfile({
+        coin_balance: data.coin_balance,
+        owned_backgrounds: data.owned_backgrounds,
+      })
       applyBackground(selected.id)
       toast.success('Satın alındı! 🪙', `Yeni bakiye: ${data.coin_balance}`)
     } catch {

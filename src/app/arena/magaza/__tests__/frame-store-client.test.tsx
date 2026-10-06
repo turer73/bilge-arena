@@ -7,6 +7,9 @@
  *   - en ucuz çerçevenin gerçekten listelendiği
  *   - yetersiz bakiyede "ne kadar eksik" bilgisinin gösterildiği
  *   - seçimin localStorage'a yazıldığı (DB değil — kişiselleştirme ile aynı anahtar)
+ *   - satın alma sonucunun yalnız dönen alanlarla yamalandığı (patchProfile):
+ *     render anındaki profil kopyası yayılırsa istek sürerken gelen taze
+ *     XP/coin değerleri ezilir
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
@@ -21,7 +24,10 @@ const auth = vi.hoisted(() => ({
       owned_frames: ['none', 'mavi'],
       avatar_url: null,
     } as Record<string, unknown> | null,
-    setProfile: vi.fn(),
+    // Gerçek store gibi: setProfile profilin tamamını değiştirir, patchProfile
+    // verilen alanları GÜNCEL profile birleştirir.
+    setProfile: vi.fn<(profile: Record<string, unknown> | null) => void>(),
+    patchProfile: vi.fn<(patch: Record<string, unknown>) => void>(),
   },
 }))
 vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => auth.value }))
@@ -44,6 +50,12 @@ beforeEach(() => {
   localStorage.clear()
   auth.value.user = { id: 'u1' }
   auth.value.profile = { coin_balance: 100, owned_frames: ['none', 'mavi'], avatar_url: null }
+  auth.value.setProfile.mockImplementation((profile) => {
+    auth.value.profile = profile
+  })
+  auth.value.patchProfile.mockImplementation((patch) => {
+    if (auth.value.profile) auth.value.profile = { ...auth.value.profile, ...patch }
+  })
   fetchMock.mockResolvedValue({
     ok: true,
     json: () => Promise.resolve({
@@ -87,12 +99,53 @@ describe('FrameStoreClient', () => {
     expect(url).toBe('/api/profile/frames/purchase')
     expect(JSON.parse(options.body).frameId).toBe(CHEAPEST.id)
 
-    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
-    const next = auth.value.setProfile.mock.calls[0][0]
-    expect(next.coin_balance).toBe(100 - (CHEAPEST.coinCost ?? 0))
-    expect(next.owned_frames).toContain(CHEAPEST.id)
+    await waitFor(() => expect(auth.value.patchProfile).toHaveBeenCalledOnce())
+    // Yama yalnız sunucunun döndürdüğü iki alanı içerir — profilin geri kalanı yok.
+    expect(auth.value.patchProfile).toHaveBeenCalledWith({
+      coin_balance: 100 - (CHEAPEST.coinCost ?? 0),
+      owned_frames: ['none', 'mavi', CHEAPEST.id],
+    })
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+    // Diğer alanlar korunur.
+    expect(auth.value.profile).toEqual({
+      coin_balance: 100 - (CHEAPEST.coinCost ?? 0),
+      owned_frames: ['none', 'mavi', CHEAPEST.id],
+      avatar_url: null,
+    })
     // Otomatik uygula → localStorage (DB değil)
     expect(localStorage.getItem(FRAME_STORAGE_KEY)).toBe(CHEAPEST.id)
+  })
+
+  test('satın alma sürerken gelen taze XP, render anındaki profil kopyasıyla ezilmez', async () => {
+    let resolveFetch!: (response: unknown) => void
+    fetchMock.mockReturnValue(new Promise((resolve) => { resolveFetch = resolve }))
+    render(<FrameStoreClient />)
+    fireEvent.click(screen.getByLabelText(`${CHEAPEST.name} önizleme`))
+    fireEvent.click(screen.getByText('Şimdi Al'))
+    fireEvent.click(screen.getByText('Onayla'))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce())
+
+    // İstek uçarken store'a taze bir değer gelir (ör. günlük giriş ödülü).
+    // Bileşen yeniden render olmaz; closure'daki profil artık eski.
+    auth.value.profile = { ...auth.value.profile, total_xp: 500 }
+    resolveFetch({
+      ok: true,
+      json: () => Promise.resolve({
+        success: true,
+        frameId: CHEAPEST.id,
+        coin_balance: 100 - (CHEAPEST.coinCost ?? 0),
+        owned_frames: ['none', 'mavi', CHEAPEST.id],
+      }),
+    })
+
+    await waitFor(() => expect(auth.value.patchProfile).toHaveBeenCalledOnce())
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+    expect(auth.value.profile).toEqual({
+      coin_balance: 100 - (CHEAPEST.coinCost ?? 0),
+      owned_frames: ['none', 'mavi', CHEAPEST.id],
+      avatar_url: null,
+      total_xp: 500,
+    })
   })
 
   test('sahip olunan çerçeveye Uygula: localStorage yazılır, API çağrılmaz', () => {
@@ -130,6 +183,7 @@ describe('FrameStoreClient', () => {
     fireEvent.click(screen.getByText('Onayla'))
 
     await waitFor(() => expect(toastMock.error).toHaveBeenCalled())
+    expect(auth.value.patchProfile).not.toHaveBeenCalled()
     expect(auth.value.setProfile).not.toHaveBeenCalled()
     expect(localStorage.getItem(FRAME_STORAGE_KEY)).toBeNull()
   })

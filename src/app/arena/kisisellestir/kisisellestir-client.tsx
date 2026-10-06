@@ -84,7 +84,7 @@ const AREAS: { id: Area; label: string; Icon: LucideIcon; hint: string }[] = [
  * Sahiplik guard'ı her alanda: personel (RBAC rolü) tümünü ücretsiz kullanır.
  */
 export function KisisellestirClient() {
-  const { user, profile, setProfile, loading } = useAuthStore()
+  const { user, profile, patchProfile, loading } = useAuthStore()
 
   useEffect(() => {
     document.body.classList.add('mobile-studio-active')
@@ -273,7 +273,9 @@ export function KisisellestirClient() {
         toast.error('Uygulanamadı', data.error ?? 'Bir şeyler ters gitti')
         return
       }
-      setProfile({ ...profile, selected_avatar_decorations: next })
+      // Yalnız bu alanı yama: closure'daki eski `profile` yayılırsa araya giren
+      // taze değerler (XP, bakiye, sahiplik) ezilirdi.
+      patchProfile({ selected_avatar_decorations: next })
     } catch {
       setDecorationIds(prev)
       toast.error('Bağlantı hatası', 'Tekrar dene')
@@ -312,11 +314,12 @@ export function KisisellestirClient() {
         toast.error('Uygulanamadı', data.error ?? 'Bir şeyler ters gitti')
         return
       }
-      // EN GÜNCEL profili oku (Codex PR#243 avatar-clobber dersi). Satın alma
+      // Yalnız bu alanı yama (Codex PR#243 avatar-clobber dersi). Satın alma
       // hemen öncesinde bakiyeyi ve sahiplik dizisini güncellemiş olabilir;
-      // closure'daki eski `profile` yazılırsa o güncelleme ezilir.
-      const latest = useAuthStore.getState().profile ?? profile
-      setProfile({ ...latest, selected_nameplate: id })
+      // closure'daki eski `profile` yazılırsa o güncelleme ezilirdi. patchProfile
+      // EN GÜNCEL store profiline yazar ve uçuştaki eski bir profil cevabı bu
+      // seçimi geri alamaz.
+      patchProfile({ selected_nameplate: id })
       toast.success('İsim paneli uygulandı', 'Sıralama ve profilinde görünecek ✨')
     } catch {
       toast.error('Bağlantı hatası', 'Tekrar dene')
@@ -342,12 +345,14 @@ export function KisisellestirClient() {
         toast.error('Uygulanamadı', data?.error ?? 'Avatar seçilemedi')
         return
       }
-      // P2 fix (Codex PR#243): closure'daki bayat `profile` yerine EN GUNCEL store
-      // profilini oku + yalniz avatar_url'i merge et. Avatar POST donerken eszamanli
-      // nameplate/sus kaydi yapilmissa onu ezme (stale-spread clobber'i onler).
-      const latest = useAuthStore.getState().profile
-      if (latest) {
-        setProfile({ ...latest, avatar_url: data?.avatar_url ?? latest.avatar_url })
+      // P2 fix (Codex PR#243): closure'daki bayat `profile` yayilmaz; patchProfile
+      // EN GUNCEL store profiline yalniz avatar_url'i yazar. Avatar POST donerken
+      // eszamanli nameplate/sus kaydi yapilmissa onu ezmez (stale-spread clobber'i
+      // onler) ve ucustaki eski bir profil cevabi yeni avatari geri alamaz.
+      // Sunucu avatar_url dondurmediyse (null/undefined) mevcut deger korunur.
+      const avatarUrl = data?.avatar_url
+      if (avatarUrl !== undefined && avatarUrl !== null) {
+        patchProfile({ avatar_url: avatarUrl })
       }
       toast.success('Avatar uygulandı ✨')
     } catch {
