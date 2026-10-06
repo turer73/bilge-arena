@@ -1,11 +1,11 @@
 /**
  * Bilge Arena: useAuth çekirdek akış smoke testleri (Codex follow-up #901).
  * Kapsam: oturum-var/yok başlangıcı, profil sync→GET fallback, auth-state
- * değişiminde logout temizliği, signOut. Analytics yan-yollarından yalnız
- * Signup tekilliği kapsanır (en alttaki describe); Day2Return kapsam dışı.
+ * değişiminde logout temizliği, signOut. Analytics yan-yolları (Signup ve
+ * Day2Return) en alttaki iki describe'da.
  */
 
-import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 
 const sentry = vi.hoisted(() => ({ setUser: vi.fn() }))
@@ -294,5 +294,52 @@ describe('useAuth signup analytics', () => {
       (c) => String(c[0]).includes('/api/profile') && !String(c[0]).includes('/sync'),
     )
     expect(plainProfileGets).toHaveLength(0)
+  })
+})
+
+describe('useAuth Day2Return analytics', () => {
+  const day2Calls = () => vi.mocked(trackEvent).mock.calls.filter(([name]) => name === 'Day2Return')
+  const userConfirmedAt = (iso: string) => ({ ...AUTH_USER, created_at: iso, email_confirmed_at: iso })
+
+  beforeEach(() => {
+    // Yalniz Date sahte: waitFor'un zamanlayicilari gercek kalir.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-06T09:00:00Z')) // TR 6 Ekim 12:00
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  test('kayit gununu izleyen TR gununde tek Day2Return gider, sonraki yuklemelerde tekrar etmez', async () => {
+    const user = userConfirmedAt('2026-10-05T15:00:00Z') // TR 5 Ekim 18:00
+    supa.getUser.mockResolvedValue({ data: { user } })
+
+    renderHook(() => useAuth())
+    renderHook(() => useAuth())
+    act(() => supa.authStateCb!('INITIAL_SESSION', { user }))
+    await waitFor(() => expect(store.setProfile).toHaveBeenCalledTimes(3))
+
+    renderHook(() => useAuth())
+    await waitFor(() => expect(store.setProfile).toHaveBeenCalledTimes(4))
+
+    expect(day2Calls()).toEqual([['Day2Return']])
+    expect(localStorage.getItem('day2_return_tracked_u1')).toBe('1')
+  })
+
+  test.each([
+    ['ayni TR gunu (UTC gunu farkli)', '2026-10-05T22:30:00Z'], // TR 6 Ekim 01:30
+    ['kayittan 2 TR gunu sonra', '2026-10-04T09:00:00Z'],
+    ['eski hesap', '2026-09-01T09:00:00Z'],
+  ])('%s: Day2Return gitmez', async (_label, confirmedAt) => {
+    // Eski mantik bu cihazda dunku bir ziyareti gorunce her donusu sayiyordu.
+    localStorage.setItem('last_seen_u1', '2026-10-05')
+    supa.getUser.mockResolvedValue({ data: { user: userConfirmedAt(confirmedAt) } })
+
+    renderHook(() => useAuth())
+
+    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    expect(day2Calls()).toHaveLength(0)
+    expect(localStorage.getItem('day2_return_tracked_u1')).toBeNull()
   })
 })

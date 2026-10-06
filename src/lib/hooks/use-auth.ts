@@ -9,6 +9,7 @@ import { trackEvent } from '@/lib/utils/plausible'
 import { resetGuestQuizCount } from '@/lib/hooks/use-guest-session'
 import type { Profile } from '@/types/database'
 import { safeAuthNext } from '@/lib/auth/safe-next'
+import { trDayString, trYesterdayString } from '@/lib/utils/tr-date'
 
 interface ProfileApiResponse {
   profile: Profile
@@ -66,16 +67,32 @@ function applyRole(profile: Profile, isAdmin: boolean): Profile {
 const SIGNUP_WINDOW_MS = 2 * 60 * 1000
 
 /**
- * Hesap az once mi acildi? Kayit ani = hesabin ilk dogrulandigi an.
+ * Kayit ani = hesabin ilk dogrulandigi an.
  * Magic link'te auth.users satiri (ve handle_new_user ile profil) e-posta
  * ISTENDIGI anda olusur; email_confirmed_at ise linke tiklaninca dolar
  * (canli projede mailer_autoconfirm=false). Google'da ikisi ayni andir.
  * created_at'e bakmak, linke 2 dk'dan gec tiklayanlari hic saymiyordu.
  */
-function isFreshSignup(authUser: User): boolean {
+function signupDate(authUser: User): Date | null {
   const confirmedAt = authUser.email_confirmed_at ?? authUser.confirmed_at ?? authUser.created_at
-  if (!confirmedAt) return false
-  return Date.now() - new Date(confirmedAt).getTime() < SIGNUP_WINDOW_MS
+  if (!confirmedAt) return null
+  const date = new Date(confirmedAt)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+/** Hesap az once mi acildi? */
+function isFreshSignup(authUser: User): boolean {
+  const signedUpAt = signupDate(authUser)
+  return signedUpAt !== null && Date.now() - signedUpAt.getTime() < SIGNUP_WINDOW_MS
+}
+
+/**
+ * Bugun, kayit gununu izleyen TR takvim gunu mu? (D1 donusu)
+ * Gun siniri streak/daily-login ile ayni: Europe/Istanbul (tr-date).
+ */
+function isDayAfterSignup(authUser: User): boolean {
+  const signedUpAt = signupDate(authUser)
+  return signedUpAt !== null && trDayString(signedUpAt) === trYesterdayString()
 }
 
 /**
@@ -156,14 +173,15 @@ export function useAuth() {
         }
       }
 
-      // Day2Return event — son goruldugu gun != bugun ise
-      const today = new Date().toISOString().split('T')[0]
-      const lastSeenKey = `last_seen_${authUser.id}`
-      const lastSeen = localStorage.getItem(lastSeenKey)
-      if (lastSeen && lastSeen !== today) {
-        trackEvent('Day2Return', { props: { daysSinceLast: daysBetween(lastSeen, today) } })
+      // Day2Return: kayit gununu izleyen TR gununde ilk gorulme, hesap basina
+      // (cihaz basina) bir kez. Eskiden "bu cihazda son gorulen gunden farkli
+      // herhangi bir gun" sayiliyordu; eski kullanicilarin her donusu de
+      // giriyordu. Flag, Signup'taki gibi await'siz yazilir.
+      const day2Key = `day2_return_tracked_${authUser.id}`
+      if (!localStorage.getItem(day2Key) && isDayAfterSignup(authUser)) {
+        localStorage.setItem(day2Key, '1')
+        trackEvent('Day2Return')
       }
-      localStorage.setItem(lastSeenKey, today)
     } catch {
       // localStorage yoksa sessizce atla (Safari private mode vb.)
     }
@@ -263,11 +281,4 @@ export function useAuth() {
   }
 
   return { user, profile, loading, signInWithGoogle, signInWithMagicLink, signOut }
-}
-
-/** YYYY-MM-DD stringleri arasi gun farki (analytics icin) */
-function daysBetween(fromISO: string, toISO: string): number {
-  const from = new Date(fromISO).getTime()
-  const to = new Date(toISO).getTime()
-  return Math.max(1, Math.round((to - from) / (1000 * 60 * 60 * 24)))
 }
