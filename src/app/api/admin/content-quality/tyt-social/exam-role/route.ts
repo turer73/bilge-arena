@@ -46,6 +46,10 @@ export async function GET(request: Request) {
   }
   const result = examRoleOperationsSchema.safeParse(data)
   return result.success
-    ? contentNoStoreJson(result.data)
+    ? contentNoStoreJson({ ...result.data, items: result.data.items.map(item => ({ ...item,
+      // Migration 210's queue can still report legacy role suggestions. Keep
+      // the row visible for remediation, but never offer an invalid TYT role.
+      allowedRoles: item.category === 'sosyoloji' ? [] : item.allowedRoles,
+    })) })
     : contentNoStoreJson({ error: 'TYT Sosyal yönetişim kuyruğu alınamadı' }, { status: 500 })
 }

@@ -1,4 +1,5 @@
 import 'server-only'
+import { getTytSocialSectionCategories } from '@/lib/exam-policy/tyt-social-contract'
 import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
@@ -235,13 +236,16 @@ export async function issueVerifiedTytSocialOfficialSection(
     throw new Error('tyt_social_section_expired')
   }
   const snapshots = parsed.data.snapshot.items
+  const expectedCategories = getTytSocialSectionCategories(parsed.data.policyVersion, parsed.data.variant)
   const questionIds = new Set(snapshots.map((snapshot) => snapshot.questionId))
   if (
-    questionIds.size !== 20
+    questionIds.size !== 20 || expectedCategories.length !== 20
     || snapshots.some((snapshot, index) => (
       snapshot.position !== index + 1
       || snapshot.metadata.game !== 'sosyal'
       || snapshot.metadata.examRef !== 'TYT'
+      || snapshot.metadata.category !== expectedCategories[index]
+      || snapshot.content.options.length !== 5
     ))
   ) throw new Error('tyt_social_section_issue_failed')
 
