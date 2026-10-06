@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { canonicalPlanInputs, parseCanonicalMasteryContext, type CanonicalMasteryContext } from '@/lib/mastery/canonical'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
@@ -325,6 +326,16 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  let canonicalContext: CanonicalMasteryContext | null = null
+  if (masteryScope?.mappingMode === 'canonical_reviewed') {
+    const result = await admin.rpc('read_canonical_mastery_context' as never, {
+      p_user_id: user.id, p_game: game, p_exam_ref: masteryScope.displayExamRef,
+      p_taxonomy_version: masteryScope.taxonomyVersion,
+    } as never)
+    canonicalContext = result.error ? null : parseCanonicalMasteryContext(result.data, masteryScope)
+    if (!canonicalContext) return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 503 })
+  }
+
   let baseQuery = admin
     .from('questions')
     .select('*')
@@ -334,7 +345,7 @@ export async function GET(request: NextRequest) {
     ? baseQuery.is('exam_ref', null)
     : baseQuery.eq('exam_ref', examRef)
 
-  const outcomePromise = masteryScope
+  const outcomePromise = masteryScope && !canonicalContext
     ? admin
       .from('curriculum_outcomes')
       .select('id,code,category,sort_order')
@@ -398,7 +409,7 @@ export async function GET(request: NextRequest) {
     }
     allowedOutcomeCategories = new Set(context.allowedCategories)
   }
-  const outcomes = (outcomeResult.data ?? [])
+  let outcomes = (outcomeResult.data ?? [])
     .filter((row) => !allowedOutcomeCategories || allowedOutcomeCategories.has(row.category))
     .map((row) => ({
       id: row.id,
@@ -406,6 +417,9 @@ export async function GET(request: NextRequest) {
       category: row.category,
       sortOrder: row.sort_order,
     }))
+  if (canonicalContext) outcomes = canonicalContext.items.flatMap((item, index) => (
+    item.aliases.map(alias => ({ id: alias.id, code: alias.code, category: alias.category, sortOrder: index }))
+  ))
   const outcomeIds = outcomes.map((outcome) => outcome.id)
   const outcomeIdSet = new Set(outcomeIds)
 
@@ -414,7 +428,9 @@ export async function GET(request: NextRequest) {
 
   if (outcomeIds.length > 0) {
     const [stateResult, mappingResult] = await Promise.all([
-      isScopedSocial
+      canonicalContext
+        ? Promise.resolve({ data: canonicalContext.states, error: null })
+        : isScopedSocial
         ? admin.rpc('read_tyt_social_mastery_outcome_state', { p_user_id: user.id })
         : admin
           .from('user_outcome_state')
@@ -446,6 +462,13 @@ export async function GET(request: NextRequest) {
     mappings = (mappingResult.data ?? [])
       .filter((row) => outcomeIdSet.has(row.outcome_id))
       .map((row) => ({ questionId: row.question_id, outcomeId: row.outcome_id }))
+  }
+
+  if (canonicalContext) {
+    const canonical = canonicalPlanInputs(canonicalContext, mappings, choiceCategory)
+    outcomes = canonical.outcomes
+    outcomeStates = canonical.outcomeStates
+    mappings = canonical.mappings
   }
 
   const recentQuestionIds = (historyResult.data ?? [])
