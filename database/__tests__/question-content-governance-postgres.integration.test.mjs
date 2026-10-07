@@ -29,6 +29,7 @@ const modelFreePosteriorMigration = readFileSync(join(dirname(fileURLToPath(impo
 const modelGateMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '213_question_quality_model_gate.sql'), 'utf8')
 const modelGateRetentionMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '214_question_quality_model_gate_retention.sql'), 'utf8')
 const turkishRestorationMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '215_question_turkish_letter_restoration.sql'), 'utf8')
+const singleSourceReviewMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '217_question_source_review_single_approval.sql'), 'utf8')
 const turkishRestorationSocialGuardMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '218_question_turkish_restoration_tyt_social_guard.sql'), 'utf8')
 
 suite('106 content governance disposable PostgreSQL acceptance', () => {
@@ -163,6 +164,7 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(modelGateMigration)
     await client.query(modelGateRetentionMigration)
     await client.query(turkishRestorationMigration)
+    await client.query(singleSourceReviewMigration)
     await client.query(turkishRestorationSocialGuardMigration)
     legacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id
     candidateLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[candidateQuestion])).rows[0].published_revision_id

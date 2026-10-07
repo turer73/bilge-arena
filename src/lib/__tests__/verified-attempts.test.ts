@@ -191,18 +191,21 @@ describe('verified attempts helper', () => {
     expect(rpc).not.toHaveBeenCalled()
   })
 
-  it('issues an exact official TYT Social section only through the composer', async () => {
+  it.each(['questions_16_20', 'questions_21_25'] as const)('issues an exact official TYT Social section only through the composer: %s', async variant => {
     const items = Array.from({ length: 20 }, (_, index) => normalSnapshotItem(
       `20000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
       index + 1,
       'sosyal',
-    ))
+    )).map((item, index) => ({ ...item,
+      content: { ...item.content, options: ['A', 'B', 'C', 'D', 'E'] },
+      metadata: { ...item.metadata, category: ['tarih', 'cografya', 'felsefe', variant === 'questions_16_20' ? 'din_kulturu' : 'felsefe'][Math.floor(index / 5)] },
+    }))
     rpc.mockResolvedValue({
       data: {
         attemptId: ATTEMPT_ID,
         expiresAt: FUTURE,
         policyVersion: 'tyt-social-2026-v1',
-        variant: 'questions_16_20',
+        variant,
         artifactKind: 'official_section',
         snapshot: { items },
         replayed: false,
@@ -229,6 +232,27 @@ describe('verified attempts helper', () => {
     expect(result.questionSnapshots).toHaveLength(20)
     expect({ ...result }).not.toHaveProperty('questionSnapshots')
     expect(JSON.stringify(result)).not.toContain('questions_16_20')
+  })
+
+  it.each(['sosyoloji', 'wrong-branch', 'short-options', 'wrong-order', 'unknown-policy'])('rejects invalid formal-section snapshot: %s', async fault => {
+    const items = Array.from({ length: 20 }, (_, index) => ({
+      ...normalSnapshotItem(`20000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`, index + 1, 'sosyal'),
+      content: { question: 'Soru?', options: ['A', 'B', 'C', 'D', 'E'], answer: 1 },
+      metadata: { game: 'sosyal', examRef: 'TYT', difficulty: 2, basePoints: 20,
+        category: ['tarih', 'cografya', 'felsefe', 'felsefe'][Math.floor(index / 5)] },
+    }))
+    if (fault === 'sosyoloji') items[10].metadata.category = 'sosyoloji'
+    if (fault === 'wrong-branch') items[15].metadata.category = 'din_kulturu'
+    if (fault === 'wrong-order') items[0].metadata.category = 'cografya'
+    if (fault === 'short-options') items[0].content.options.pop()
+    rpc.mockResolvedValue({ data: { attemptId: ATTEMPT_ID, expiresAt: FUTURE,
+      policyVersion: fault === 'unknown-policy' ? 'tyt-social-2027-v1' : 'tyt-social-2026-v1',
+      variant: 'questions_21_25', artifactKind: 'official_section', snapshot: { items },
+      replayed: false, composerVersion: 'tyt-social-official-section-v1' }, error: null })
+    await expect(issueVerifiedTytSocialOfficialSection(admin, {
+      userId: '30000000-0000-4000-8000-000000000001',
+      requestId: '40000000-0000-4000-8000-000000000001',
+    })).rejects.toThrow('tyt_social_section_issue_failed')
   })
 
   it.each([
