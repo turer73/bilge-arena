@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuthStore } from '@/stores/auth-store'
+import { useAuthStore, type ProfilePatch } from '@/stores/auth-store'
 import { toast } from '@/stores/toast-store'
 
 /**
@@ -56,7 +56,7 @@ export interface PurchaseArgs {
 }
 
 export function useCosmeticPurchase() {
-  const { profile, setProfile } = useAuthStore()
+  const { patchProfile } = useAuthStore()
   /** Satın alınmakta olan ürünün id'si (aynı anda tek satın alma). */
   const [busyId, setBusyId] = useState<string | null>(null)
 
@@ -79,13 +79,12 @@ export function useCosmeticPurchase() {
         return false
       }
       // Sunucunun döndürdüğü değerler otoriter — yerel hesap yapılmaz.
-      if (profile) {
-        setProfile({
-          ...profile,
-          coin_balance: data.coin_balance,
-          [cfg.ownedKey]: data[cfg.ownedKey],
-        })
-      }
+      // Yalnız sunucunun döndürdüğü iki alanı yamala: render anındaki profili
+      // yaymak, istek sürerken gelen taze XP/coin değerlerini eski kopyayla
+      // ezerdi. Profil henüz yüklenmediyse yama bekler, ilk cevaba uygulanır.
+      const patch: ProfilePatch = { coin_balance: data.coin_balance }
+      patch[cfg.ownedKey] = data[cfg.ownedKey]
+      patchProfile(patch)
       toast.success(`${itemName} alındı! 🪙`, `Yeni bakiye: ${data.coin_balance}`)
       return true
     } catch {

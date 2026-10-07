@@ -8,7 +8,7 @@ import { act, render, screen, fireEvent } from '@testing-library/react'
 
 const mockSetTheme = vi.hoisted(() => vi.fn())
 const mockTheme = vi.hoisted(() => ({ value: 'dark' as string }))
-const auth = vi.hoisted(() => ({ user: null as {id:string} | null, profile: null as {preferred_theme:string; selected_nameplate?:string} | null, setProfile:vi.fn() }))
+const auth = vi.hoisted(() => ({ user: null as {id:string} | null, profile: null as {preferred_theme:string; selected_nameplate?:string} | null, setProfile:vi.fn(), patchProfile:vi.fn() }))
 
 vi.mock('@/stores/ui-store', () => ({
   useUIStore: () => ({ theme: mockTheme.value, setTheme: mockSetTheme }),
@@ -25,6 +25,7 @@ beforeEach(() => {
   auth.user = null
   auth.profile = null
   auth.setProfile.mockImplementation((profile) => { auth.profile = profile })
+  auth.patchProfile.mockImplementation((patch) => { if (auth.profile) auth.profile = { ...auth.profile, ...patch } })
 })
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
@@ -78,6 +79,53 @@ describe('ThemeToggle personalization variants', () => {
     mockSetTheme.mockClear()
     render(<ThemeToggle variant="sync-only" />)
     expect(mockSetTheme).toHaveBeenLastCalledWith('mor-gece')
+    await act(async () => { vi.advanceTimersByTime(600) })
+  })
+
+  test('PATCH commit edilince tema yazim kapisina yeniden bildirilir (eski GET geri almasin)', async () => {
+    vi.useFakeTimers()
+    auth.user = {id:'student'}
+    auth.profile = {preferred_theme:'dark'}
+    let resolvePatch!: (value: unknown) => void
+    vi.stubGlobal('fetch', vi.fn(() => new Promise((resolve) => { resolvePatch = resolve })))
+    render(<ThemeToggle variant="panel" />)
+    fireEvent.click(screen.getByRole('radio', {name:'Renk teması: Mor Gece'}))
+    await act(async () => { vi.advanceTimersByTime(600) })
+    auth.patchProfile.mockClear()
+
+    await act(async () => { resolvePatch({ok:true}) })
+
+    expect(auth.patchProfile).toHaveBeenCalledWith({preferred_theme:'mor-gece'})
+  })
+
+  test('profil henuz yuklenmeden secilen tema yine yama olarak kapiya bildirilir', () => {
+    auth.user = {id:'student'}
+    auth.profile = null
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ok:true}))
+    render(<ThemeToggle variant="panel" />)
+
+    fireEvent.click(screen.getByRole('radio', {name:'Renk teması: Mor Gece'}))
+
+    expect(auth.patchProfile).toHaveBeenCalledWith({preferred_theme:'mor-gece'})
+    expect(auth.setProfile).not.toHaveBeenCalled()
+  })
+
+  test('PATCH donmeden yeni tema secildiyse eski PATCH temayi geri yazmaz', async () => {
+    vi.useFakeTimers()
+    auth.user = {id:'student'}
+    auth.profile = {preferred_theme:'dark'}
+    const resolvers: Array<(value: unknown) => void> = []
+    vi.stubGlobal('fetch', vi.fn(() => new Promise((resolve) => { resolvers.push(resolve) })))
+    render(<ThemeToggle variant="panel" />)
+    fireEvent.click(screen.getByRole('radio', {name:'Renk teması: Kadim Orman'}))
+    await act(async () => { vi.advanceTimersByTime(600) })
+    fireEvent.click(screen.getByRole('radio', {name:'Renk teması: Mor Gece'}))
+    auth.patchProfile.mockClear()
+
+    await act(async () => { resolvers[0]({ok:true}) })
+
+    expect(auth.patchProfile).not.toHaveBeenCalled()
+    expect(auth.profile).toEqual({preferred_theme:'mor-gece'})
     await act(async () => { vi.advanceTimersByTime(600) })
   })
 

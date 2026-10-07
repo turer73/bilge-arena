@@ -35,7 +35,7 @@ const CATEGORIES: { id: FrameRarity | 'all'; label: string; icon: string }[] = [
 ]
 
 export function FrameStoreClient() {
-  const { user, profile, setProfile } = useAuthStore()
+  const { user, profile, patchProfile } = useAuthStore()
   const [category, setCategory] = useState<FrameRarity | 'all'>('all')
   const [selectedId, setSelectedId] = useState(PROFILE_FRAMES[1].id)
   const [appliedId, setAppliedId] = useState('none')
@@ -89,13 +89,13 @@ export function FrameStoreClient() {
         toast.error('Satın alınamadı', data.error ?? 'Bir şeyler ters gitti')
         return
       }
-      if (profile) {
-        setProfile({
-          ...profile,
-          coin_balance: data.coin_balance,
-          owned_frames: data.owned_frames,
-        })
-      }
+      // Yalnız sunucunun döndürdüğü alanları yamala: render anındaki profili
+      // yaymak, istek sürerken gelen taze XP/coin değerlerini eski kopyayla
+      // ezerdi. Profil henüz yüklenmediyse yama bekler, ilk cevaba uygulanır.
+      patchProfile({
+        coin_balance: data.coin_balance,
+        owned_frames: data.owned_frames,
+      })
       // Satın alındı → otomatik uygula (nameplate akışıyla aynı his; burada
       // uygulama localStorage olduğu için ikinci bir istek gerekmez).
       apply(selected.id)

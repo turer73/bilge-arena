@@ -45,7 +45,7 @@ export type EventName =
   | 'StreakMilestone'     // Streak 3/7/14/30 milestone
   | 'DailyLogin'          // Gunluk giris XP'si alindi
   | 'PremiumUpsell'       // Premium'a gec CTA'si tiklandi
-  | 'Day2Return'          // Kayit olan 2. gun geri geldi
+  | 'Day2Return'          // Kayit gununu izleyen TR takvim gununde geri geldi (D1)
   // Gun 2 — Guest signup escalation modal
   | 'PromptShown'         // Modal gosterildi (level 1/2/3)
   | 'PromptCtaClicked'    // Primary CTA tiklandi (signup) veya Level 3 exit_lobby

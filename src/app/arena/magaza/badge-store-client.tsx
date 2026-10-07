@@ -19,7 +19,7 @@ import { isStaff } from '@/lib/utils/is-staff'
  * olunan rozetler gösterilir).
  */
 export function BadgeStoreClient() {
-  const { user, profile, setProfile } = useAuthStore()
+  const { user, profile, patchProfile } = useAuthStore()
   const [items, setItems] = useState<StoreBadgeItem[]>([])
   const [loaded, setLoaded] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -69,13 +69,13 @@ export function BadgeStoreClient() {
         toast.error('Satın alınamadı', data.error ?? 'Bir şeyler ters gitti')
         return
       }
-      if (profile) {
-        setProfile({
-          ...profile,
-          coin_balance: data.coin_balance,
-          owned_cosmetic_badges: data.owned_cosmetic_badges,
-        })
-      }
+      // Yalnız sunucunun döndürdüğü alanları yamala: render anındaki profili
+      // yaymak, istek sürerken gelen taze XP/coin değerlerini eski kopyayla
+      // ezerdi. Profil henüz yüklenmediyse yama ilk gelen profile uygulanır.
+      patchProfile({
+        coin_balance: data.coin_balance,
+        owned_cosmetic_badges: data.owned_cosmetic_badges,
+      })
       toast.success('Rozet alındı! 🏅', 'Profilinde görüntülenecek')
     } catch {
       toast.error('Bağlantı hatası', 'Tekrar dene')

@@ -8,6 +8,10 @@ const mocks = vi.hoisted(() => ({
     leaderboard_opt_in: false,
   },
   setProfile: vi.fn(),
+  // Gercek store gibi: yamayi guncel profile birlestirir.
+  patchProfile: vi.fn((patch: Record<string, unknown>) => {
+    Object.assign(mocks.profile, patch)
+  }),
   success: vi.fn(),
   error: vi.fn(),
 }))
@@ -16,6 +20,7 @@ vi.mock('@/stores/auth-store', () => ({
   useAuthStore: (selector: (state: unknown) => unknown) => selector({
     profile: mocks.profile,
     setProfile: mocks.setProfile,
+    patchProfile: mocks.patchProfile,
   }),
 }))
 
@@ -50,7 +55,12 @@ describe('LeaderboardVisibilitySettings', () => {
       method: 'PATCH',
       body: JSON.stringify({ leaderboard_opt_in: true }),
     })))
-    expect(mocks.setProfile).toHaveBeenCalledWith(expect.objectContaining({ leaderboard_opt_in: true }))
+    expect(mocks.patchProfile).toHaveBeenCalledWith({ leaderboard_opt_in: true })
+    expect(mocks.setProfile).not.toHaveBeenCalled()
+    expect(mocks.profile).toEqual({
+      id: '11111111-2222-4333-8444-555555555555',
+      leaderboard_opt_in: true,
+    })
     expect(mocks.success).toHaveBeenCalledWith('Açık sıralamaya isteğinle katıldın')
   })
 
@@ -60,6 +70,8 @@ describe('LeaderboardVisibilitySettings', () => {
     fireEvent.click(screen.getByRole('switch', { name: 'Açık sıralamaya katılım' }))
 
     await waitFor(() => expect(mocks.error).toHaveBeenCalledWith('Sıralama tercihi güncellenemedi'))
+    expect(mocks.patchProfile).not.toHaveBeenCalled()
     expect(mocks.setProfile).not.toHaveBeenCalled()
+    expect(mocks.profile.leaderboard_opt_in).toBe(false)
   })
 })
