@@ -230,6 +230,12 @@ jobs:
       - name: Install local PostgreSQL binaries for canonical reader acceptance
         run: sudo apt-get update && sudo apt-get install -y postgresql-16
 
+      - name: Run source-review v2 and AI-owner native acceptance without optional skip
+        env:
+          SOURCE_REVIEW_PG_BIN: /usr/lib/postgresql/16/bin
+          SOURCE_REVIEW_PG_REQUIRED: '1'
+        run: node node_modules/vitest/vitest.mjs run --config vitest.database.config.ts database/__tests__/question-source-review-wasm.test.mjs database/__tests__/source-comparison-review.test.mjs
+
       - name: Run canonical identity and deduplicated evidence acceptance
         env:
           CANONICAL_PG_BIN: /usr/lib/postgresql/16/bin

@@ -3,15 +3,21 @@ import { readFileSync, existsSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { startSourceReviewPostgres } from './helpers/isolated-source-review-postgres.mjs'
 
 // Isolated optional PostgreSQL WASM engine, never a production database.
 // npm install --prefix secure/sql-test-runtime --no-save --package-lock=false --ignore-scripts @electric-sql/pglite@0.5.8
 const runtime = resolve(process.env.PGLITE_RUNTIME_PATH ?? 'secure/sql-test-runtime/node_modules/@electric-sql/pglite/dist')
-const suite = existsSync(resolve(runtime, 'index.js')) ? describe : describe.skip
+const nativeBin = process.env.SOURCE_REVIEW_PG_BIN
+if (process.env.SOURCE_REVIEW_PG_REQUIRED === '1' && !nativeBin) throw new Error('SOURCE_REVIEW_PG_BIN is required; native acceptance may not skip')
+const suite = nativeBin || existsSync(resolve(runtime, 'index.js')) ? describe : describe.skip
 const migration = name => readFileSync(resolve('database/migrations', name), 'utf8')
 const base = migration('106_question_content_governance.sql')
 const scope = migration('164_question_revision_outcome_scope.sql')
 const sql217 = migration('217_question_source_review_single_approval.sql')
+const sql219 = migration('219_curriculum_canonical_identity.sql')
+const sqlV2 = migration('20261008183619_question_source_curriculum_v2.sql')
+const sqlAiOwner = migration('20261008200746_question_source_ai_owner_acceptance.sql')
 function sqlFunction(sql, name) {
   const start = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`)
   if (start < 0) throw new Error('Missing function ' + name)
@@ -25,7 +31,7 @@ function table(name) {
   return base.slice(start, base.indexOf('\n);', start) + 3)
 }
 
-suite('217 source review PostgreSQL WASM acceptance (not a concurrent/native rehearsal)', () => {
+suite(`217/219/v2 source review PostgreSQL ${nativeBin ? 'native' : 'WASM'} acceptance (isolated fixture)`, () => {
   let db, qid, rid, oldRid, author, reviewer, reviewer2, publisher, outcome, report
   const scalar = async (sql, values = []) => (await db.query(sql, values)).rows[0].result
   const rpc = async (sql, values = []) => {
@@ -51,9 +57,12 @@ suite('217 source review PostgreSQL WASM acceptance (not a concurrent/native reh
     expect(await scalar('SELECT count(*)::int AS result FROM public.question_revision_approvals')).toBe(0)
   }
   beforeAll(async () => {
-    const { PGlite } = await import(pathToFileURL(resolve(runtime, 'index.js')).href)
-    const { pgcrypto } = await import(pathToFileURL(resolve(runtime, 'contrib/pgcrypto.js')).href)
-    db = new PGlite({ extensions: { pgcrypto } })
+    if (nativeBin) db = await startSourceReviewPostgres(nativeBin)
+    else {
+      const { PGlite } = await import(pathToFileURL(resolve(runtime, 'index.js')).href)
+      const { pgcrypto } = await import(pathToFileURL(resolve(runtime, 'contrib/pgcrypto.js')).href)
+      db = new PGlite({ extensions: { pgcrypto } })
+    }
     await db.exec(`CREATE SCHEMA extensions; CREATE EXTENSION pgcrypto WITH SCHEMA extensions;
       CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
       GRANT USAGE ON SCHEMA public TO anon,authenticated,service_role;
@@ -62,7 +71,7 @@ suite('217 source review PostgreSQL WASM acceptance (not a concurrent/native reh
       CREATE FUNCTION public.has_permission(uuid,text) RETURNS boolean LANGUAGE sql AS $$
         SELECT EXISTS(SELECT 1 FROM public.fixture_permissions WHERE user_id=$1 AND permission=$2) $$;
       CREATE TABLE public.curriculum_nodes(id uuid PRIMARY KEY,parent_id uuid,node_type text,game text,category text,exam_ref text,taxonomy_version text,is_active boolean DEFAULT true);
-      CREATE TABLE public.curriculum_outcomes(id uuid PRIMARY KEY,node_id uuid,game text,category text,exam_ref text,taxonomy_version text,is_active boolean DEFAULT true);
+      CREATE TABLE public.curriculum_outcomes(id uuid PRIMARY KEY,node_id uuid,game text,category text,exam_ref text,taxonomy_version text,is_active boolean DEFAULT true,title text DEFAULT 'Fixture',code text DEFAULT 'F.1');
       CREATE TABLE public.questions(id uuid PRIMARY KEY,content jsonb,game text,category text,subcategory text,topic text,difficulty smallint,level_tag text,exam_ref text,is_boss boolean,is_active boolean,published_revision_id uuid);
       CREATE TABLE public.question_outcomes(question_id uuid,outcome_id uuid,weight numeric,is_primary boolean);`)
     for (const name of ['content_governance_requests','question_content_revisions','question_revision_sources','question_revision_approvals','question_revision_outcomes','question_governance_events']) await db.exec(table(name))
@@ -79,6 +88,9 @@ suite('217 source review PostgreSQL WASM acceptance (not a concurrent/native reh
       CREATE TABLE public.question_validation_decisions(revision_id uuid,question_id uuid,content_sha256 text,policy_version text,verdict text);
       GRANT EXECUTE ON FUNCTION public.review_question_content_revision(uuid,uuid,smallint,text,text,uuid) TO service_role;`)
     await db.exec(sql217)
+    await db.exec(sql219)
+    await db.exec(sqlV2)
+    await db.exec(sqlAiOwner)
     await db.exec('REVOKE ALL ON FUNCTION public.publish_question_content_revision(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated; GRANT EXECUTE ON FUNCTION public.publish_question_content_revision(uuid,uuid,uuid) TO service_role;')
   }, 60_000)
   afterAll(async () => { await db?.close() })
@@ -142,6 +154,92 @@ suite('217 source review PostgreSQL WASM acceptance (not a concurrent/native reh
     await expect(accept(report,author)).rejects.toMatchObject({code:'22023'})
     await expect(accept(report,publisher)).rejects.toMatchObject({code:'42501'})
   })
+  async function ownerPreparation() {
+    for (const permission of ['content.prepare','content.publish']) await db.query('INSERT INTO public.fixture_permissions VALUES($1,$2)',[author,permission])
+    return {version:'ai-preparation-declaration@1',agent:'TEST ONLY AI',evidenceRef:'fixture:ai-preparation',evidenceSha256:'9'.repeat(64),
+      revisionEvidenceFingerprint:await scalar('SELECT public.question_source_review_fingerprint($1) AS result',[rid]),acknowledgesNonIndependentReview:true,acceptsResponsibility:true}
+  }
+  const acceptAi = (preparation, input=report, user=author, request=randomUUID()) => rpc(
+    'public.accept_question_revision_ai_source_review($1,$2,$3,$4,$5,$6)',[user,rid,JSON.stringify(input),'TEST ONLY accountable owner review',request,JSON.stringify(preparation)])
+  it('records explicit AI-owner mode, publishes only after exact quality, and preserves history',async()=>{
+    const preparation=await ownerPreparation()
+    expect(await status()).toMatchObject({canAcceptAiPrepared:false,acceptanceMode:null})
+    expect(await rpc('public.get_question_revision_source_review($1,$2)',[author,rid])).toMatchObject({canAcceptAiPrepared:true,evidenceFingerprint:preparation.revisionEvidenceFingerprint})
+    await expect(accept(report,author)).rejects.toMatchObject({code:'22023'})
+    expect(await acceptAi(preparation)).toMatchObject({status:'stage1_approved',acceptanceMode:'ai_assisted_owner'})
+    expect(await status()).toMatchObject({accepted:true,acceptanceMode:'ai_assisted_owner',readyToPublish:false})
+    await expect(publish()).rejects.toMatchObject({code:'22023'})
+    await decision(); expect(await status()).toMatchObject({readyToPublish:true})
+    expect(await publish()).toMatchObject({status:'published'})
+    expect(await scalar('SELECT count(*)::int AS result FROM public.question_revision_approvals')).toBe(1)
+    expect(await scalar('SELECT status AS result FROM public.question_content_revisions WHERE id=$1',[oldRid])).toBe('superseded')
+    expect(await scalar('SELECT policy_version AS result FROM public.question_revision_source_reviews')).toBe('source-review-ai-owner@1')
+  })
+  it.each(['content.prepare','content.review.stage1','content.publish'])('requires owner permission %s conjunctively',async permission=>{
+    const preparation=await ownerPreparation()
+    await db.query('DELETE FROM public.fixture_permissions WHERE user_id=$1 AND permission=$2',[author,permission])
+    await expect(acceptAi(preparation)).rejects.toMatchObject({code:'42501'})
+    expect(await scalar('SELECT count(*)::int AS result FROM public.question_revision_approvals')).toBe(0)
+  })
+  it.each(['agent','evidenceRef','evidenceSha256','revisionEvidenceFingerprint','acknowledgesNonIndependentReview','acceptsResponsibility','version'])('rejects missing AI declaration field %s',async field=>{
+    const preparation=await ownerPreparation();delete preparation[field]
+    await expect(acceptAi(preparation)).rejects.toMatchObject({code:'22023'})
+  })
+  it.each([null,[],{}, {version:'ai-preparation-declaration@1'},false])('rejects invalid AI preparation %j',async invalid=>{
+    await ownerPreparation();await expect(acceptAi(invalid)).rejects.toMatchObject({code:'22023'})
+  })
+  it('requires current fingerprint and rejects extra/self-certified independent fields',async()=>{
+    const preparation=await ownerPreparation()
+    await expect(acceptAi({...preparation,independent:true})).rejects.toMatchObject({code:'22023'})
+    await expect(acceptAi({...preparation,acceptsResponsibility:false})).rejects.toMatchObject({code:'22023'})
+    await expect(acceptAi({...preparation,acknowledgesNonIndependentReview:'true'})).rejects.toMatchObject({code:'22023'})
+    await db.query("UPDATE public.question_revision_sources SET source_title='Changed source' WHERE revision_id=$1",[rid])
+    await expect(acceptAi(preparation)).rejects.toMatchObject({code:'22023'})
+  })
+  it('does not turn another preparer or mapper into this owner',async()=>{
+    const preparation=await ownerPreparation()
+    await db.query('UPDATE public.question_content_revisions SET outcomes_prepared_by=$1 WHERE id=$2',[reviewer,rid])
+    await expect(acceptAi(preparation)).rejects.toMatchObject({code:'22023'})
+    await db.query('UPDATE public.question_content_revisions SET outcomes_prepared_by=NULL,prepared_by=$1 WHERE id=$2',[reviewer,rid])
+    await expect(acceptAi(preparation)).rejects.toMatchObject({code:'22023'})
+  })
+  it('keeps report, provenance and new LGS v2 gates on the AI path',async()=>{
+    const preparation=await ownerPreparation(),bad=structuredClone(report)
+    bad.optionChecks.pop(); await expect(acceptAi(preparation,bad)).rejects.toMatchObject({code:'22023'})
+    await db.query("UPDATE public.question_revision_sources SET provenance_ref='legacy:unknown' WHERE revision_id=$1",[rid])
+    preparation.revisionEvidenceFingerprint=await scalar('SELECT public.question_source_review_fingerprint($1) AS result',[rid])
+    await expect(acceptAi(preparation)).rejects.toMatchObject({code:'22023'})
+    await db.query("UPDATE public.question_content_revisions SET exam_ref='LGS' WHERE id=$1",[rid])
+    await expect(acceptAi(preparation)).rejects.toMatchObject({code:'22023'})
+  })
+  it('AI replay is exact, does not overwrite evidence and cannot be replayed as independent',async()=>{
+    const preparation=await ownerPreparation(),request=randomUUID()
+    await acceptAi(preparation,report,author,request)
+    expect(await acceptAi(preparation,report,author,request)).toMatchObject({replayed:true,acceptanceMode:'ai_assisted_owner'})
+    await expect(acceptAi({...preparation,agent:'changed'},report,author,request)).rejects.toMatchObject({code:'22023'})
+    await expect(accept(report,author,request)).rejects.toMatchObject({code:'22023'})
+    await db.exec('SAVEPOINT immutable_ai')
+    await expect(db.exec("UPDATE public.question_revision_source_reviews SET acceptance_mode='separate_reviewer'")).rejects.toMatchObject({code:'42501'})
+    await db.exec('ROLLBACK TO SAVEPOINT immutable_ai')
+  })
+  it('stale policy and changed scope invalidate AI readiness without rewriting acceptance',async()=>{
+    await acceptAi(await ownerPreparation());await decision()
+    await db.exec("UPDATE public.question_validation_runtime SET required_policy_version='question-quality@next'")
+    expect(await status()).toMatchObject({accepted:true,readyToPublish:false})
+    await db.exec("UPDATE public.question_validation_runtime SET required_policy_version='question-quality@2'")
+    await db.query('UPDATE public.curriculum_outcomes SET is_active=false WHERE id=$1',[outcome])
+    expect(await status()).toMatchObject({readyToPublish:false})
+    await expect(publish()).rejects.toMatchObject({code:'22023'})
+  })
+  it('reapplying the AI migration preserves an accepted declaration, approval and readiness',async()=>{
+    await acceptAi(await ownerPreparation());await decision()
+    const before=(await db.query('SELECT * FROM public.question_revision_source_reviews WHERE revision_id=$1',[rid])).rows
+    const inTransaction=sql=>sql.replace(/^BEGIN;$/m,'').replace(/^COMMIT;$/m,'')
+    await db.exec(inTransaction(sqlAiOwner));await db.exec(inTransaction(sqlAiOwner))
+    expect((await db.query('SELECT * FROM public.question_revision_source_reviews WHERE revision_id=$1',[rid])).rows).toEqual(before)
+    expect(await status()).toMatchObject({accepted:true,acceptanceMode:'ai_assisted_owner',readyToPublish:true})
+    expect(await scalar('SELECT count(*)::int AS result FROM public.question_revision_approvals')).toBe(1)
+  })
   it('rejects the outcome preparer even when different from the content author', async () => {
     await db.query('UPDATE public.question_content_revisions SET outcomes_prepared_by=$1 WHERE id=$2',[reviewer,rid])
     await expect(accept()).rejects.toMatchObject({code:'22023'})
@@ -192,10 +290,101 @@ suite('217 source review PostgreSQL WASM acceptance (not a concurrent/native reh
     await rpc('public.review_question_content_revision($1,$2,2::smallint,\'approved\',\'Fixture\',$3)',[reviewer2,rid,randomUUID()])
     expect(await publish()).toMatchObject({status:'published'})
   })
+  async function lgsFixture() {
+    await db.exec("UPDATE public.questions SET exam_ref='LGS',content=jsonb_set(content,'{options}',(content->'options')-4); UPDATE public.question_content_revisions SET exam_ref='LGS',content=jsonb_set(content,'{options}',(content->'options')-4); UPDATE public.curriculum_nodes SET exam_ref='LGS'; UPDATE public.curriculum_outcomes SET exam_ref='LGS'")
+    report.claims=report.claims.filter(c=>c.id!=='option4'); report.optionChecks.pop()
+  }
+  async function v2Fixture({catalog=true,year=true}={}) {
+    await lgsFixture()
+    report.format='source-comparison@2'
+    report.sources.push({...report.sources[1],id:'exam',kind:'official_exam',url:'https://example.org/2026-guide',retrievedTextSha256:'3'.repeat(64),retrievalRef:'fixture:exam-year'})
+    report.claims.find(c=>c.target==='curriculum').evidence=report.claims.find(c=>c.target==='curriculum').evidence.slice(0,1)
+    const canonicalId='fixture@2018:grade8:LGS:8.2.2'
+    report.curriculumBinding={examRef:'LGS',examYear:2026,mappings:[{claimId:'curriculum',outcomeId:outcome,canonicalId,programKey:'fixture',programEdition:'2018',grade:8,officialCode:'8.2.2',programSourceId:'s0',programPageTextSha256:'1'.repeat(64),examScopeSourceId:'exam',examScopeLocator:'Table 1'}]}
+    if(catalog) {
+      await db.query(`INSERT INTO public.curriculum_canonical_outcomes(canonical_id,program_key,program_edition,grade,exam_ref,game,official_code,title,official_path,source_receipt)
+        VALUES($1,'fixture','2018',8,'LGS','sosyal','8.2.2','Fixture',$2,$3)`,[canonicalId,JSON.stringify([{nodeType:'course',title:'Fixture course'},{nodeType:'outcome',title:'Fixture',officialCode:'8.2.2'}]),JSON.stringify({reviewedCanonicalId:canonicalId,url:report.sources[0].url,responseSha256:'4'.repeat(64),pageTextSha256:'1'.repeat(64),pdfPage:44,extractor:'fixture',extractorVersion:'1',packageSha256:'5'.repeat(64)})])
+      await db.query('INSERT INTO public.curriculum_outcome_canonical_links(outcome_id,canonical_id,taxonomy_version,package_sha256) VALUES($1,$2,\'fixture-v1\',$3)',[outcome,canonicalId,'5'.repeat(64)])
+      if(year) await db.query('INSERT INTO public.curriculum_canonical_exam_scopes(canonical_id,exam_year,source_receipt,reviewed_by) VALUES($1,2026,$2,$3)',[canonicalId,JSON.stringify({kind:'official_exam',url:report.sources[2].url,retrievedTextSha256:'3'.repeat(64),retrievalRef:'fixture:exam-year',locator:'Table 1',acceptanceRef:'fixture:owner-reviewed'}),reviewer2])
+    }
+  }
+  it('v2 accepts one official program for curriculum, still requiring content corroboration and an authorized reviewer',async()=>{
+    await v2Fixture(); await decision()
+    await expect(accept(report,author)).rejects.toMatchObject({code:'22023'})
+    expect(await accept()).toMatchObject({status:'stage1_approved'})
+    expect((await status()).readyToPublish).toBe(true)
+    expect(await publish()).toMatchObject({status:'published'})
+  })
+  it.each(['missing-catalog','missing-year'])('v2 rejects fabricated declarations with %s',async kind=>{
+    await v2Fixture({catalog:kind!=='missing-catalog',year:kind!=='missing-year'}); await invalidReport(report)
+  })
+  it.each(['examRef','examYear','outcomeId','canonicalId','programKey','programEdition','grade','officialCode','programPageTextSha256','program-url','program-hash','scope-url','scope-hash','scope-ref','scope-kind','scope-locator','claim','scopeMatch','duplicate','null','unmapped'])('v2 rejects %s drift',async kind=>{
+    await v2Fixture()
+    const b=report.curriculumBinding,m=b.mappings[0]
+    if(kind==='examRef') b.examRef='TYT'
+    else if(kind==='examYear') b.examYear=2027
+    else if(kind==='outcomeId') m.outcomeId=randomUUID()
+    else if(['canonicalId','programKey','programEdition','officialCode'].includes(kind)) m[kind]='changed'
+    else if(kind==='grade') m.grade=7
+    else if(kind==='programPageTextSha256') m.programPageTextSha256='e'.repeat(64)
+    else if(kind==='program-url') report.sources[0].url='https://example.org/wrong'
+    else if(kind==='program-hash') report.sources[0].retrievedTextSha256='e'.repeat(64)
+    else if(kind==='scope-url') report.sources[2].url='https://example.org/wrong'
+    else if(kind==='scope-hash') report.sources[2].retrievedTextSha256='e'.repeat(64)
+    else if(kind==='scope-ref') report.sources[2].retrievalRef='wrong'
+    else if(kind==='scope-kind') report.sources[2].kind='textbook'
+    else if(kind==='scope-locator') m.examScopeLocator='Wrong table'
+    else if(kind==='claim') m.claimId='stem'
+    else if(kind==='scopeMatch') report.claims.find(c=>c.id==='curriculum').evidence[0].scopeMatch=false
+    else if(kind==='duplicate') b.mappings.push({...m})
+    else if(kind==='null') report.curriculumBinding=null
+    else if(kind==='unmapped') report.claims.push({...report.claims.find(c=>c.id==='curriculum'),id:'unmapped'})
+    await invalidReport(report)
+  })
+  it.each(['one-content-source','contradiction','inactive','taxonomy','title'])('v2 preserves %s guard',async kind=>{
+    await v2Fixture()
+    if(kind==='one-content-source') report.claims[0].evidence.pop()
+    if(kind==='contradiction') report.claims[0].evidence[0].relation='contradicts'
+    if(kind==='inactive') await db.exec('UPDATE public.curriculum_nodes SET is_active=false')
+    if(kind==='taxonomy') await db.exec("UPDATE public.curriculum_outcomes SET taxonomy_version='changed'")
+    if(kind==='title') await db.exec("UPDATE public.curriculum_outcomes SET title='changed'")
+    await invalidReport(report)
+  })
+  it('requires v2 for new LGS acceptance but preserves already accepted v1 and exact replay',async()=>{
+    await lgsFixture()
+    await expect(accept()).rejects.toThrow('source-comparison@2 required')
+    const inTransaction=sql=>sql.replace(/^BEGIN;$/m,'').replace(/^COMMIT;$/m,'')
+    await db.exec(inTransaction(sql217)) // Simulate pre-upgrade accepted history, not a production rollback.
+    await decision(); const request=randomUUID(); await accept(report,reviewer,request)
+    await db.exec(inTransaction(sqlV2)); await db.exec(inTransaction(sqlV2))
+    expect((await status()).readyToPublish).toBe(true)
+    expect(await accept(report,reviewer,request)).toMatchObject({replayed:true})
+    expect(await publish()).toMatchObject({status:'published'})
+  })
+  it('keeps exam-year records immutable and denies all application writes/helper execution',async()=>{
+    await v2Fixture()
+    for(const role of ['anon','authenticated','service_role']) {
+      for(const privilege of ['INSERT','UPDATE','DELETE']) expect(await scalar("SELECT has_table_privilege($1,'public.curriculum_canonical_exam_scopes',$2) AS result",[role,privilege])).toBe(false)
+      expect(await scalar("SELECT has_function_privilege($1,'public.question_source_curriculum_binding_valid(uuid,jsonb)','EXECUTE') AS result",[role])).toBe(false)
+    }
+    expect(await scalar("SELECT relrowsecurity AS result FROM pg_class WHERE oid='public.curriculum_canonical_exam_scopes'::regclass")).toBe(true)
+    await expect(db.exec('UPDATE public.curriculum_canonical_exam_scopes SET exam_year=2027')).rejects.toMatchObject({code:'42501'})
+  })
+  it.each(['kind','url','retrievedTextSha256','retrievalRef','locator','acceptanceRef'])('requires a non-null owner receipt %s',async key=>{
+    await v2Fixture({year:false})
+    const receipt={kind:'official_exam',url:'https://example.org/guide',retrievedTextSha256:'3'.repeat(64),retrievalRef:'fixture:exam',locator:'Table 1',acceptanceRef:'fixture:review'}
+    receipt[key]=null
+    await expect(db.query('INSERT INTO public.curriculum_canonical_exam_scopes(canonical_id,exam_year,source_receipt,reviewed_by) VALUES($1,2026,$2,$3)',[report.curriculumBinding.mappings[0].canonicalId,JSON.stringify(receipt),reviewer])).rejects.toMatchObject({code:'23514'})
+  })
   it('does not grant clients evidence access or an acceptance RPC', async () => {
     for(const role of ['anon','authenticated','service_role']) expect(await scalar('SELECT has_table_privilege($1,\'public.question_revision_source_reviews\',\'SELECT\') AS result',[role])).toBe(false)
     for(const role of ['anon','authenticated']) expect(await scalar("SELECT has_function_privilege($1,'public.accept_question_revision_source_review(uuid,uuid,jsonb,text,uuid)','EXECUTE') AS result",[role])).toBe(false)
     expect(await scalar("SELECT has_function_privilege('service_role','public.accept_question_revision_source_review(uuid,uuid,jsonb,text,uuid)','EXECUTE') AS result")).toBe(true)
+    for(const role of ['anon','authenticated']) expect(await scalar("SELECT has_function_privilege($1,'public.accept_question_revision_ai_source_review(uuid,uuid,jsonb,text,uuid,jsonb)','EXECUTE') AS result",[role])).toBe(false)
+    expect(await scalar("SELECT has_function_privilege('service_role','public.accept_question_revision_ai_source_review(uuid,uuid,jsonb,text,uuid,jsonb)','EXECUTE') AS result")).toBe(true)
+    for(const role of ['anon','authenticated','service_role']) for(const signature of ['public.question_ai_preparation_declaration_valid(jsonb)','public.question_source_review_actor_valid(uuid,uuid)']) {
+      expect(await scalar('SELECT has_function_privilege($1,$2,\'EXECUTE\') AS result',[role,signature])).toBe(false)
+    }
   })
   it.each(['revisionId','questionId','contentSha256'])('rejects wrong %s', async key => {
     report[key]=key==='contentSha256'?'b'.repeat(64):randomUUID(); await invalidReport(report)

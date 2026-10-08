@@ -60,17 +60,24 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!row.success || row.data.published_revision_id !== id.data) return contentNoStoreJson({ error: 'Revizyon kanıtı doğrulanamadı' }, { status: 500 })
   const normalized = toDraft(row.data, { strictExamOptionCount: true })
   if (!normalized.ok) return contentNoStoreJson({ error: 'Soru yapısal kontrolü geçmedi' }, { status: 409 })
+  // PostgreSQL requires v2 for NEW LGS acceptances after checking exact replay.
+  // Do not block historical v1 request replay before the authoritative RPC.
   const evaluation = evaluateSourceComparison(normalized.draft, body.data.report)
   if (evaluation.status !== 'evidence_complete') return contentNoStoreJson({
     error: 'Kaynak karşılaştırması tamamlanmadı', status: evaluation.status,
     issues: evaluation.issues, conflicts: evaluation.conflicts,
   }, { status: 409 })
-  const { data, error } = await contentRpc(context.admin, 'accept_question_revision_source_review', {
+  const aiOwner = body.data.acceptanceMode === 'ai_assisted_owner'
+  // The dedicated RPC checks prepare AND stage1 AND publish and actual ownership.
+  // No client actor override or implicit fallback to the independent-review path.
+  const { data, error } = await contentRpc(context.admin, aiOwner ? 'accept_question_revision_ai_source_review' : 'accept_question_revision_source_review', {
     p_user_id: context.userId, p_revision_id: id.data, p_report: body.data.report,
     p_rationale: body.data.rationale, p_request_id: body.data.requestId,
+    ...(body.data.acceptanceMode === 'ai_assisted_owner' ? { p_preparation: body.data.preparation } : {}),
   })
   if (error) return contentNoStoreJson({ error: 'Kaynak kabulü kaydedilemedi' }, { status: contentGovernanceRpcStatus(error.code) })
   const result = revisionReviewResultSchema.safeParse(data)
   if (!result.success || result.data.revisionId !== id.data || result.data.status !== 'stage1_approved') return contentNoStoreJson({ error: 'Kaynak kabulü kaydedilemedi' }, { status: 500 })
-  return contentNoStoreJson({ ...result.data, warnings: evaluation.warnings })
+  if (aiOwner && (data as { acceptanceMode?: unknown }).acceptanceMode !== 'ai_assisted_owner') return contentNoStoreJson({ error: 'Kabul türü doğrulanamadı' }, { status: 500 })
+  return contentNoStoreJson({ ...result.data, ...(aiOwner ? { acceptanceMode: 'ai_assisted_owner' } : {}), warnings: evaluation.warnings })
 }

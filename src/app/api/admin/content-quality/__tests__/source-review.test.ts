@@ -19,6 +19,10 @@ function fixture(): SourceComparison {
 const snapshot = () => ({revisionId:REV,accepted:false,readyToPublish:false,draft:{id:Q,game:'matematik',category:'Temel',topic:null,exam_ref:'LGS',content:{question:'2+3 kaçtır?',options:['3','4','5','6'],answer:2,solution:'2+3=5'},published_revision_id:REV,content_sha256:'a'.repeat(64)}})
 const request = (body: unknown) => new Request('https://example.org/source-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
 const body = () => ({report:fixture(),rationale:'Kaynaklar ve tüm seçenekler incelendi',requestId:REQUEST})
+const aiBody = () => ({...body(),acceptanceMode:'ai_assisted_owner',preparation:{
+  version:'ai-preparation-declaration@1',agent:'TEST AI',evidenceRef:'fixture:preparation',evidenceSha256:'9'.repeat(64),
+  revisionEvidenceFingerprint:'8'.repeat(64),acknowledgesNonIndependentReview:true,acceptsResponsibility:true,
+}})
 beforeEach(()=>{
   vi.clearAllMocks()
   mocks.context.mockResolvedValue({ok:true,userId:USER,admin:{}})
@@ -26,6 +30,56 @@ beforeEach(()=>{
     ?{data:snapshot(),error:null}:{data:{revisionId:REV,status:'stage1_approved',replayed:false,privateNote:'PRIVATE'},error:null}))
 })
 describe('source-comparison single acceptance route',()=>{
+  it('uses a distinct AI-owner RPC, authenticated actor and explicit declaration',async()=>{
+    mocks.rpc.mockImplementation((_admin,name)=>Promise.resolve(name==='get_question_revision_source_review'?{data:snapshot(),error:null}:{data:{revisionId:REV,status:'stage1_approved',acceptanceMode:'ai_assisted_owner',replayed:false},error:null}))
+    const response=await POST(request(aiBody()),params)
+    expect(response.status).toBe(200)
+    expect(mocks.rpc.mock.calls[1][1]).toBe('accept_question_revision_ai_source_review')
+    expect(mocks.rpc.mock.calls[1][2]).toMatchObject({p_user_id:USER,p_preparation:aiBody().preparation})
+    expect((await response.json()).acceptanceMode).toBe('ai_assisted_owner')
+  })
+  it.each(['preparation','acceptanceMode'])('does not infer AI mode with missing %s',async field=>{
+    const input:Record<string,unknown>=aiBody();delete input[field]
+    expect((await POST(request(input),params)).status).toBe(400)
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+  it.each(['acceptsResponsibility','acknowledgesNonIndependentReview'])('requires affirmative %s acknowledgement',async field=>{
+    const input=aiBody();Object.assign(input.preparation,{[field]:false})
+    expect((await POST(request(input),params)).status).toBe(400)
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+  it('does not fall back when owner permission is denied',async()=>{
+    mocks.rpc.mockImplementation((_admin,name)=>Promise.resolve(name==='get_question_revision_source_review'?{data:snapshot(),error:null}:{data:null,error:{code:'42501'}}))
+    expect((await POST(request(aiBody()),params)).status).toBe(403)
+    expect(mocks.rpc.mock.calls.some(c=>c[1]==='accept_question_revision_source_review')).toBe(false)
+  })
+  it('rejects actor injection and mismatched mode in an AI result',async()=>{
+    expect((await POST(request({...aiBody(),userId:Q}),params)).status).toBe(400)
+    expect((await POST(request(aiBody()),params)).status).toBe(500)
+  })
+  it('exposes mode and capability but no private evidence or actor in status',async()=>{
+    mocks.rpc.mockResolvedValue({data:{...snapshot(),acceptanceMode:'ai_assisted_owner',canAcceptAiPrepared:true,evidenceFingerprint:'8'.repeat(64),preparation:aiBody().preparation,actorId:USER},error:null})
+    const response=await GET(new Request('https://example.org'),params)
+    expect(await response.json()).toEqual({revisionId:REV,accepted:false,readyToPublish:false,acceptanceMode:'ai_assisted_owner',canAcceptAiPrepared:true,evidenceFingerprint:'8'.repeat(64)})
+  })
+  it('passes strict v2 declarations to authoritative RPC, never treating local coverage as acceptance',async()=>{
+    const input=body()
+    input.report={...input.report,format:'source-comparison@2',curriculumBinding:{examRef:'LGS',examYear:2026,mappings:[{
+      claimId:'curriculum',outcomeId:USER,canonicalId:'fixture@2018:grade8:LGS:8.2.2',programKey:'fixture',programEdition:'2018',grade:8,officialCode:'8.2.2',programSourceId:'s0',programPageTextSha256:'1'.repeat(64),examScopeSourceId:'s0',examScopeLocator:'Table 1',
+    }]}}
+    input.report.claims.find(c=>c.id==='curriculum')!.evidence.splice(1)
+    mocks.rpc.mockImplementation((_admin,name)=>Promise.resolve(name==='get_question_revision_source_review'?{data:snapshot(),error:null}:{data:null,error:{code:'22023'}}))
+    const response=await POST(request(input),params)
+    expect(response.status).toBe(409)
+    expect(mocks.rpc.mock.calls[1][2].p_report.format).toBe('source-comparison@2')
+  })
+  it('rejects v2 null bindings before acceptance',async()=>{
+    const input=body(); input.report={...input.report,format:'source-comparison@2',curriculumBinding:null}
+    const response=await POST(request(input),params)
+    expect(response.status).toBe(409)
+    expect((await response.json()).issues).toContain('CURRICULUM_BINDING_REQUIRED')
+    expect(mocks.rpc).toHaveBeenCalledTimes(1)
+  })
   it.each([401,403,503])('applies the %s gate before parsing or RPC',async status=>{
     mocks.context.mockResolvedValue({ok:false,response:new Response(null,{status})})
     expect((await POST(request({invalid:true}),params)).status).toBe(status)

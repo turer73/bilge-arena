@@ -31,6 +31,9 @@ const modelGateRetentionMigration = readFileSync(join(dirname(fileURLToPath(impo
 const turkishRestorationMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '215_question_turkish_letter_restoration.sql'), 'utf8')
 const singleSourceReviewMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '217_question_source_review_single_approval.sql'), 'utf8')
 const turkishRestorationSocialGuardMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '218_question_turkish_restoration_tyt_social_guard.sql'), 'utf8')
+const canonicalCatalogMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '219_curriculum_canonical_identity.sql'), 'utf8')
+const sourceV2Migration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '20261008183619_question_source_curriculum_v2.sql'), 'utf8')
+const aiOwnerMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '20261008200746_question_source_ai_owner_acceptance.sql'), 'utf8')
 
 suite('106 content governance disposable PostgreSQL acceptance', () => {
   let turkishQuestion; let spellingTopicQuestion; let toolQuestion; let socialQuestion; let socialOpenQuestion
@@ -166,6 +169,10 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(turkishRestorationMigration)
     await client.query(singleSourceReviewMigration)
     await client.query(turkishRestorationSocialGuardMigration)
+    // Actual production outcome columns needed by 219 (legacy fixture was minimal).
+    await client.query(canonicalCatalogMigration)
+    await client.query(sourceV2Migration)
+    await client.query(aiOwnerMigration)
     legacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id
     candidateLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[candidateQuestion])).rows[0].published_revision_id
     ydtLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[ydtQuestion])).rows[0].published_revision_id
@@ -1185,5 +1192,156 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     const open = await prepare(socialOpenQuestion)
     const out = await rpc(call,[publisher,socialOpenQuestion,open.base,JSON.stringify(open.restored),randomUUID()])
     expect(out).toEqual(expect.objectContaining({ status:'published', words:['Asagidaki>Aşağıdaki','once>önce'] }))
+  })
+  it('v2: real governance chain binds catalog/year, separates acceptance from quality/publication, and serializes replay', async () => {
+    // Earlier migration replay tests intentionally install older definitions.
+    // Restore the current source path, without replacing real governance helpers.
+    await client.query(singleSourceReviewMigration)
+    await client.query(sourceV2Migration)
+    const mappedOutcome = randomUUID()
+    let parent = null
+    for (const nodeType of ['course','unit','topic','outcome']) {
+      const id = randomUUID()
+      await client.query("INSERT INTO public.curriculum_nodes(id,game,category,exam_ref,parent_id,node_type,taxonomy_version) VALUES($1,'sosyal','din_kulturu','LGS',$2,$3,'fixture-source-v2')", [id,parent,nodeType])
+      parent = id
+    }
+    await client.query("INSERT INTO public.curriculum_outcomes(id,code,title,game,category,exam_ref,node_id,taxonomy_version) VALUES($1,'FIXTURE-8.2.2','TEST ONLY','sosyal','din_kulturu','LGS',$2,'fixture-source-v2')", [mappedOutcome,parent])
+    const content = { question:'TEST ONLY: 2 + 3?', options:['3','4','5','6'], answer:2, solution:'TEST ONLY: 2 + 3 = 5.' }
+    const draft = await rpc('public.create_governed_question($1,$2::jsonb,$3)', [author,JSON.stringify({
+      content, metadata:{game:'sosyal',category:'din_kulturu',difficulty:2,examRef:'LGS'},
+      outcomes:[{outcomeId:mappedOutcome,weight:1,primary:true}],
+      source:{kind:'original',title:'TEST ONLY',licenseCode:'INTERNAL',provenanceRef:'fixture:source-v2'},
+      changeKind:'create',summary:'Disposable fixture, not a real academic claim',
+    }),randomUUID()])
+    const { content_sha256: hash } = (await client.query('SELECT content_sha256 FROM public.question_content_revisions WHERE id=$1',[draft.revisionId])).rows[0]
+    const canonicalId = 'fixture@2018:grade8:LGS:8.2.2'
+    const report = {
+      format:'source-comparison@2', questionId:draft.questionId, revisionId:draft.revisionId, contentSha256:hash,
+      sources:[0,1,2].map(i => ({ id:'s'+i,title:'TEST ONLY',institutionOrAuthor:'Fixture '+i,editionOrDate:'2026',language:'tr',
+        kind:['official_curriculum','textbook','official_exam'][i],url:'https://example.org/source'+i,workId:'w'+i,independenceGroup:'g'+i,
+        independenceRationale:'TEST ONLY',access:'inspected_section',locator:'Section',accessedAt:'2026-10-01T00:00:00Z',
+        retrievalRef:'fixture:'+i,retrievedTextSha256:String(i+1).repeat(64),license:{code:'UNKNOWN',url:null,checked:false,usage:'reference_only'} })),
+      claims:['stem','solution','curriculum','option0','option1','option2','option3'].map(target => ({
+        id:target,target:target.startsWith('option')?'option':target,optionIndex:target.startsWith('option')?Number(target.at(-1)):null,
+        statement:'TEST ONLY',reasoningSummary:'TEST ONLY',evidence:(target==='curriculum'?[0]:[0,1]).map(i => ({
+          sourceId:'s'+i,relation:'supports',locator:'Section',scopeMatch:true,scopeNote:'TEST ONLY',explanation:'TEST ONLY',
+        })),
+      })),
+      optionChecks:content.options.map((_,index) => ({index,assessment:index===2?'supported':'excluded',claimIds:['option'+index],explanation:'TEST ONLY'})),
+      examComparison:{status:'not_found',sourceIds:[],reference:null,comparison:'TEST ONLY',optionOrderChecked:false,answerKeyTransfer:false},
+      terminology:[],limitations:['Synthetic structural fixture, not source evidence'],
+      curriculumBinding:{examRef:'LGS',examYear:2026,mappings:[{claimId:'curriculum',outcomeId:mappedOutcome,canonicalId,
+        programKey:'fixture',programEdition:'2018',grade:8,officialCode:'8.2.2',programSourceId:'s0',programPageTextSha256:'1'.repeat(64),
+        examScopeSourceId:'s2',examScopeLocator:'Table 1'}]},
+    }
+    const acceptCall = 'public.accept_question_revision_source_review($1,$2,$3::jsonb,$4,$5)'
+    const acceptArgs = [reviewer1,draft.revisionId,JSON.stringify(report),'TEST ONLY',randomUUID()]
+    const state = () => rpc('public.get_question_revision_source_review($1,$2)',[reviewer1,draft.revisionId])
+    const publishCall = 'public.publish_question_content_revision($1,$2,$3)'
+    const publishArgs = [publisher,draft.revisionId,randomUUID()]
+    // Valid-looking declarations cannot substitute for actual registered rows.
+    await err(() => rpc(acceptCall,acceptArgs),'22023')
+    await client.query(`INSERT INTO public.curriculum_canonical_outcomes(canonical_id,program_key,program_edition,grade,exam_ref,game,official_code,title,official_path,source_receipt)
+      VALUES($1,'fixture','2018',8,'LGS','sosyal','8.2.2','TEST ONLY',$2::jsonb,$3::jsonb)`,[canonicalId,
+      JSON.stringify([{nodeType:'course',title:'TEST ONLY'},{nodeType:'outcome',title:'TEST ONLY',officialCode:'8.2.2'}]),
+      JSON.stringify({reviewedCanonicalId:canonicalId,url:report.sources[0].url,responseSha256:'4'.repeat(64),pageTextSha256:'1'.repeat(64),pdfPage:44,extractor:'fixture',extractorVersion:'1',packageSha256:'5'.repeat(64)})])
+    await client.query("INSERT INTO public.curriculum_outcome_canonical_links(outcome_id,canonical_id,taxonomy_version,package_sha256) VALUES($1,$2,'fixture-source-v2',$3)",[mappedOutcome,canonicalId,'5'.repeat(64)])
+    await err(() => rpc(acceptCall,acceptArgs),'22023') // Still no exam-year receipt.
+    await client.query('INSERT INTO public.curriculum_canonical_exam_scopes(canonical_id,exam_year,source_receipt,reviewed_by) VALUES($1,2026,$2::jsonb,$3)',[canonicalId,
+      JSON.stringify({kind:'official_exam',url:report.sources[2].url,retrievedTextSha256:'3'.repeat(64),retrievalRef:'fixture:2',locator:'Table 1',acceptanceRef:'fixture:owner'}),reviewer2])
+    await err(() => rpc(acceptCall,[author,...acceptArgs.slice(1)]),'22023')
+    await err(() => userRpc(reviewer1,'aal2',acceptCall,acceptArgs),'42501')
+    const concurrent = await concurrentReplay(acceptCall,acceptArgs)
+    expect(concurrent.map(r => r.replayed)).toEqual([false,true])
+    expect(concurrent[0]).toMatchObject({status:'stage1_approved'})
+    expect((await client.query('SELECT count(*)::int AS n FROM public.question_revision_approvals WHERE revision_id=$1',[draft.revisionId])).rows[0].n).toBe(1)
+    expect((await client.query('SELECT count(*)::int AS n FROM public.question_revision_source_reviews WHERE revision_id=$1',[draft.revisionId])).rows[0].n).toBe(1)
+    expect(await state()).toMatchObject({accepted:true,readyToPublish:false})
+    await err(() => rpc(publishCall,publishArgs),'22023')
+    expect((await client.query('SELECT is_active,published_revision_id FROM public.questions WHERE id=$1',[draft.questionId])).rows[0]).toEqual({is_active:false,published_revision_id:null})
+    const previous = (await client.query('SELECT enforce_publish_gate,required_policy_version FROM public.question_validation_runtime WHERE singleton')).rows[0]
+    await client.query("UPDATE public.question_validation_runtime SET enforce_publish_gate=true,required_policy_version='question-quality@2' WHERE singleton")
+    try {
+      // Even an APPROVED decision for the wrong hash must not unlock publication.
+      const insertDecision = testHash => client.query("INSERT INTO public.question_validation_decisions(question_id,revision_id,content_sha256,policy_version,verdict,findings,rationale,run_id,decided_at) VALUES($1,$2,$3,'question-quality@2','APPROVED','[]','TEST ONLY',$4,clock_timestamp())",[draft.questionId,draft.revisionId,testHash,randomUUID()])
+      await insertDecision('0'.repeat(64))
+      expect((await state()).readyToPublish).toBe(false)
+      await err(() => rpc(publishCall,publishArgs),'22023')
+      await insertDecision(hash)
+      expect((await state()).readyToPublish).toBe(true)
+      await err(() => client.query('UPDATE public.questions SET is_active=true WHERE id=$1',[draft.questionId]),'42501')
+      expect(await rpc(publishCall,publishArgs)).toMatchObject({status:'published',replayed:false})
+      expect(await rpc(publishCall,publishArgs)).toMatchObject({status:'published',replayed:true})
+      expect((await client.query('SELECT is_active,published_revision_id,content FROM public.questions WHERE id=$1',[draft.questionId])).rows[0]).toEqual({is_active:true,published_revision_id:draft.revisionId,content})
+      expect((await client.query('SELECT outcome_id FROM public.question_outcomes WHERE question_id=$1',[draft.questionId])).rows).toEqual([{outcome_id:mappedOutcome}])
+      // Revision immutability is a client/service privilege boundary, not an
+      // assertion that the database owner cannot repair its own tables.
+      await client.query('SET ROLE service_role')
+      try {
+        await err(() => client.query("UPDATE public.question_content_revisions SET content='{}'::jsonb WHERE id=$1",[draft.revisionId]),'42501')
+      } finally { await client.query('RESET ROLE') }
+      expect((await client.query('SELECT content FROM public.question_content_revisions WHERE id=$1',[draft.revisionId])).rows[0].content).toEqual(content)
+      await err(() => client.query("UPDATE public.question_revision_source_reviews SET report='{}'::jsonb WHERE revision_id=$1",[draft.revisionId]),'42501')
+    } finally {
+      await client.query('UPDATE public.question_validation_runtime SET enforce_publish_gate=$1,required_policy_version=$2 WHERE singleton',[previous.enforce_publish_gate,previous.required_policy_version])
+    }
+  })
+  it('AI owner: real RBAC, concurrent replay, source/year validation and quality-gated publication', async () => {
+    await client.query(aiOwnerMigration)
+    // Reuse the synthetic catalog/report above, not any production source evidence.
+    const report = (await client.query("SELECT report FROM public.question_revision_source_reviews WHERE report->'curriculumBinding'->'mappings'->0->>'canonicalId'='fixture@2018:grade8:LGS:8.2.2'")).rows[0].report
+    const mappedOutcome = report.curriculumBinding.mappings[0].outcomeId
+    const content = {question:'TEST ONLY owner flow: 2 + 3?',options:['3','4','5','6'],answer:2,solution:'TEST ONLY: 2 + 3 = 5.'}
+    const draft = await rpc('public.create_governed_question($1,$2::jsonb,$3)', [author,JSON.stringify({
+      content,metadata:{game:'sosyal',category:'din_kulturu',difficulty:2,examRef:'LGS'},
+      outcomes:[{outcomeId:mappedOutcome,weight:1,primary:true}],
+      source:{kind:'original',title:'TEST ONLY AI owner',licenseCode:'INTERNAL',provenanceRef:'fixture:ai-owner'},
+      changeKind:'create',summary:'Synthetic AI owner governance test',
+    }),randomUUID()])
+    const pinned = (await client.query('SELECT content_sha256,prepared_by,outcomes_prepared_by FROM public.question_content_revisions WHERE id=$1',[draft.revisionId])).rows[0]
+    Object.assign(report,{questionId:draft.questionId,revisionId:draft.revisionId,contentSha256:pinned.content_sha256})
+    const state = () => rpc('public.get_question_revision_source_review($1,$2)',[author,draft.revisionId])
+    expect((await state()).canAcceptAiPrepared).toBe(false)
+    const preparation={version:'ai-preparation-declaration@1',agent:'TEST ONLY AI',evidenceRef:'fixture:ai-preparation',evidenceSha256:'9'.repeat(64),
+      revisionEvidenceFingerprint:(await client.query('SELECT public.question_source_review_fingerprint($1) AS value',[draft.revisionId])).rows[0].value,
+      acknowledgesNonIndependentReview:true,acceptsResponsibility:true}
+    const call='public.accept_question_revision_ai_source_review($1,$2,$3::jsonb,$4,$5,$6::jsonb)'
+    const args=[author,draft.revisionId,JSON.stringify(report),'TEST ONLY non-independent owner acceptance',randomUUID(),JSON.stringify(preparation)]
+    await err(()=>rpc(call,args),'42501') // Existing prepare + stage1 alone is insufficient.
+    await client.query("INSERT INTO public.role_permissions(role_id,permission) SELECT id,'content.publish' FROM public.roles WHERE slug='author' ON CONFLICT DO NOTHING")
+    const previous=(await client.query('SELECT enforce_publish_gate,required_policy_version FROM public.question_validation_runtime WHERE singleton')).rows[0]
+    try {
+      await client.query("UPDATE public.question_validation_runtime SET enforce_publish_gate=true,required_policy_version='question-quality@2' WHERE singleton")
+      expect(await state()).toMatchObject({canAcceptAiPrepared:true,evidenceFingerprint:preparation.revisionEvidenceFingerprint,accepted:false,readyToPublish:false})
+      await err(()=>userRpc(author,'aal2',call,args),'42501')
+      await err(()=>rpc('public.accept_question_revision_source_review($1,$2,$3::jsonb,$4,$5)',args.slice(0,5)),'22023')
+      const wrongYear=structuredClone(report);wrongYear.curriculumBinding.examYear=2027
+      await err(()=>rpc(call,[...args.slice(0,2),JSON.stringify(wrongYear),...args.slice(3)]),'22023')
+      expect((await client.query('SELECT count(*)::int AS n FROM public.question_revision_approvals WHERE revision_id=$1',[draft.revisionId])).rows[0].n).toBe(0)
+      const results=await concurrentReplay(call,args)
+      expect(results.map(r=>r.replayed)).toEqual([false,true])
+      expect(results[0]).toMatchObject({status:'stage1_approved',acceptanceMode:'ai_assisted_owner'})
+      expect(await state()).toMatchObject({accepted:true,acceptanceMode:'ai_assisted_owner',canAcceptAiPrepared:false,readyToPublish:false})
+      const publishCall='public.publish_question_content_revision($1,$2,$3)'
+      const publishArgs=[author,draft.revisionId,randomUUID()]
+      await err(()=>rpc(publishCall,publishArgs),'22023')
+      const insertDecision=testHash=>client.query("INSERT INTO public.question_validation_decisions(question_id,revision_id,content_sha256,policy_version,verdict,findings,rationale,run_id,decided_at) VALUES($1,$2,$3,'question-quality@2','APPROVED','[]','TEST ONLY',$4,clock_timestamp())",[draft.questionId,draft.revisionId,testHash,randomUUID()])
+      await insertDecision('0'.repeat(64));await err(()=>rpc(publishCall,publishArgs),'22023')
+      await insertDecision(pinned.content_sha256)
+      expect((await state()).readyToPublish).toBe(true)
+      expect(await rpc(publishCall,publishArgs)).toMatchObject({status:'published',replayed:false})
+      expect(await rpc(publishCall,publishArgs)).toMatchObject({status:'published',replayed:true})
+      expect((await client.query('SELECT is_active,published_revision_id,content FROM public.questions WHERE id=$1',[draft.questionId])).rows[0]).toEqual({is_active:true,published_revision_id:draft.revisionId,content})
+      expect((await client.query('SELECT prepared_by,outcomes_prepared_by FROM public.question_content_revisions WHERE id=$1',[draft.revisionId])).rows[0]).toEqual({prepared_by:pinned.prepared_by,outcomes_prepared_by:pinned.outcomes_prepared_by})
+      expect((await client.query('SELECT stage,reviewer_id FROM public.question_revision_approvals WHERE revision_id=$1',[draft.revisionId])).rows).toEqual([{stage:1,reviewer_id:author}])
+      const evidence=(await client.query('SELECT acceptance_mode,policy_version,ai_preparation FROM public.question_revision_source_reviews WHERE revision_id=$1',[draft.revisionId])).rows
+      expect(evidence).toEqual([{acceptance_mode:'ai_assisted_owner',policy_version:'source-review-ai-owner@1',ai_preparation:preparation}])
+      await client.query(aiOwnerMigration) // Replay on a real accepted row preserves history.
+      expect((await state()).readyToPublish).toBe(true)
+      await err(()=>client.query("UPDATE public.question_revision_source_reviews SET ai_preparation='{}' WHERE revision_id=$1",[draft.revisionId]),'42501')
+    } finally {
+      await client.query("DELETE FROM public.role_permissions WHERE permission='content.publish' AND role_id IN (SELECT id FROM public.roles WHERE slug='author')")
+      await client.query('UPDATE public.question_validation_runtime SET enforce_publish_gate=$1,required_policy_version=$2 WHERE singleton',[previous.enforce_publish_gate,previous.required_policy_version])
+    }
   })
 })

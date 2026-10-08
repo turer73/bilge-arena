@@ -21,11 +21,12 @@ async function modules() {
     }
   } finally { await server.close() }
 }
-export async function prepareSourceComparison(input, output) {
+export async function prepareSourceComparison(input, output, format = 'source-comparison@1') {
   if (!Array.isArray(input.rows) || input.rows.length < 1 || input.rows.length > 5000) throw new Error('Invalid rows')
   if (existsSync(output)) throw new Error('Use a new directory')
   const {source, review} = await modules()
-  const guidance = readFileSync(join(root, 'docs/quality/antigravity/source-comparison-v1.md'), 'utf8')
+  if (![review.SOURCE_COMPARISON_VERSION, review.SOURCE_COMPARISON_V2].includes(format)) throw new Error('Invalid format')
+  const guidance = readFileSync(join(root, `docs/quality/antigravity/source-comparison-${format === review.SOURCE_COMPARISON_V2 ? 'v2' : 'v1'}.md`), 'utf8')
   const seen = new Set()
   const drafts = input.rows.map(row => {
     const result = source.toDraft(row, {strictExamOptionCount: true})
@@ -35,11 +36,11 @@ export async function prepareSourceComparison(input, output) {
     return result.draft
   })
   mkdirSync(output, {recursive: true})
-  const manifest = {version: review.SOURCE_COMPARISON_VERSION, runId: randomUUID(),
+  const manifest = {version: format, runId: randomUUID(),
     candidateEvidenceOnly: true, containsAnswerKey: true, tasks: []}
   for (const draft of drafts) {
     const taskId = randomUUID()
-    const task = review.buildSourceComparisonPrompt(draft)
+    const task = review.buildSourceComparisonPrompt(draft, format)
     const folder = join(output, taskId)
     mkdirSync(folder)
     write(join(folder, 'task.json'), task)
@@ -52,7 +53,7 @@ export async function prepareSourceComparison(input, output) {
 export async function validateSourceComparison(directory) {
   const {review} = await modules()
   const manifest = read(join(directory, 'manifest.json'))
-  if (manifest.version !== review.SOURCE_COMPARISON_VERSION || !Array.isArray(manifest.tasks)) throw new Error('Invalid manifest')
+  if (![review.SOURCE_COMPARISON_VERSION, review.SOURCE_COMPARISON_V2].includes(manifest.version) || !Array.isArray(manifest.tasks)) throw new Error('Invalid manifest')
   const seen = new Set()
   const results = []
   for (const task of manifest.tasks) {
@@ -61,16 +62,19 @@ export async function validateSourceComparison(directory) {
     const folder = join(directory, task.taskId)
     const input = read(join(folder, 'task.json'))
     if (hash(input) !== task.inputSha256) throw new Error('Task changed')
+    if (input.version !== manifest.version) throw new Error('Task format changed')
     if (!existsSync(join(folder, 'response.json'))) {
       results.push({questionId: input.question.questionId, status:'missing'}); continue
     }
     try {
-      results.push(review.evaluateSourceComparison(input.question, read(join(folder, 'response.json'))))
+      const response = read(join(folder, 'response.json'))
+      if (response.format !== manifest.version) throw new Error('Response format changed')
+      results.push(review.evaluateSourceComparison(input.question, response))
     } catch {
       results.push({questionId: input.question.questionId, status:'invalid'})
     }
   }
-  const report = {version:review.SOURCE_COMPARISON_VERSION, runId:manifest.runId,
+  const report = {version:manifest.version, runId:manifest.runId,
     candidateEvidenceOnly:true, publicationAuthorized:false, results}
   const output = join(directory, 'source-summary-' + randomUUID() + '.json')
   write(output, report)
@@ -83,6 +87,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const [command, input, output] = process.argv.slice(2)
   try {
     if (command === 'prepare' && input && output) console.log(JSON.stringify(await prepareSourceComparison(read(resolve(input)),resolve(output))))
+    else if (command === 'prepare-v2' && input && output) console.log(JSON.stringify(await prepareSourceComparison(read(resolve(input)),resolve(output),'source-comparison@2')))
     else if (command === 'validate' && input && !output) console.log(JSON.stringify(await validateSourceComparison(resolve(input))))
     else throw new Error('Invalid command')
   } catch {
