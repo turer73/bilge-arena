@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { FiveModelReviewReport } from './five-model-review-report'
+import { aiPreparationDeclarationSchema } from '@/lib/content-governance/source-review-contract'
 
 interface QueueItem { revisionId: string; questionId: string; status: string; createdAt: string }
 interface RevisionDetail {
@@ -64,9 +65,14 @@ export function ContentGovernancePanel() {
   const [outcomeOptions, setOutcomeOptions] = useState<OutcomeOption[]>([])
   const [selectedOutcomeId, setSelectedOutcomeId] = useState('')
   const [outcomeLoadState, setOutcomeLoadState] = useState<'idle' | 'loading' | 'ready' | 'unavailable'>('idle')
-  const [sourceReview, setSourceReview] = useState<{ accepted: boolean; readyToPublish: boolean } | null>(null)
+  const [sourceReview, setSourceReview] = useState<{ accepted: boolean; readyToPublish: boolean; acceptanceMode?: 'separate_reviewer' | 'ai_assisted_owner' | null; canAcceptAiPrepared?: boolean; evidenceFingerprint?: string | null } | null>(null)
   const [sourceReport, setSourceReport] = useState<unknown>(null)
   const [sourceReportName, setSourceReportName] = useState('')
+  const [aiOwnerMode, setAiOwnerMode] = useState(false)
+  const [aiAgent, setAiAgent] = useState('')
+  const [aiEvidenceRef, setAiEvidenceRef] = useState('')
+  const [aiEvidenceHash, setAiEvidenceHash] = useState('')
+  const [aiResponsibility, setAiResponsibility] = useState(false)
   const visibleRevisionRef = useRef<string | null>(null)
   const reportReadRef = useRef(0)
   const revisionRequestRef = useRef<AbortController | null>(null)
@@ -97,6 +103,7 @@ export function ContentGovernancePanel() {
     visibleRevisionRef.current = revisionId
     reportReadRef.current++
     setSourceReview(null); setSourceReport(null); setSourceReportName('')
+    setAiOwnerMode(false); setAiAgent(''); setAiEvidenceRef(''); setAiEvidenceHash(''); setAiResponsibility(false)
     setError('')
     setDetail(null)
     setOutcomeOptions([])
@@ -196,6 +203,7 @@ export function ContentGovernancePanel() {
   const uploadSourceReport = async (file: File | undefined) => {
     const readId = ++reportReadRef.current
     setSourceReport(null); setSourceReportName('')
+    setAiResponsibility(false)
     if (!file || !detail) return
     const revisionId = detail.revisionId
     try {
@@ -211,6 +219,14 @@ export function ContentGovernancePanel() {
 
   const acceptSourceReview = async () => {
     if (!detail || !sourceReport) return
+    const preparation = aiOwnerMode ? aiPreparationDeclarationSchema.safeParse({
+      version: 'ai-preparation-declaration@1', agent: aiAgent, evidenceRef: aiEvidenceRef,
+      evidenceSha256: aiEvidenceHash, revisionEvidenceFingerprint: sourceReview?.evidenceFingerprint,
+      acknowledgesNonIndependentReview: aiResponsibility, acceptsResponsibility: aiResponsibility,
+    }) : null
+    if (aiOwnerMode && (!sourceReview?.canAcceptAiPrepared || !preparation?.success)) {
+      setError('AI hazırlık kaydı, SHA-256 ve sorumluluk beyanı gerekli'); return
+    }
     const rationale = window.prompt('Kaynakları, her şıkkı ve kazanımı karşılaştırarak verdiğiniz onayın gerekçesi:')?.trim()
     if (!rationale) return
     const revisionId = detail.revisionId
@@ -218,7 +234,9 @@ export function ContentGovernancePanel() {
     try {
       const response = await fetch(`/api/admin/content-quality/revisions/${revisionId}/source-review`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ report: sourceReport, rationale, requestId: crypto.randomUUID() }),
+        body: JSON.stringify({ report: sourceReport, rationale, requestId: crypto.randomUUID(),
+          ...(aiOwnerMode && preparation?.success ? { acceptanceMode: 'ai_assisted_owner', preparation: preparation.data } : {}),
+        }),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error ?? 'Kaynak kabulü kaydedilemedi')
@@ -383,9 +401,19 @@ export function ContentGovernancePanel() {
                       <input key={detail.revisionId} type="file" accept=".json,application/json" disabled={busy} onChange={(event) => void uploadSourceReport(event.target.files?.[0])} className="mt-2 block max-w-full text-xs" />
                     </label>
                     <p className="mt-2 text-xs text-[var(--text-sub)]">{sourceReportName || 'Rapor revizyon, her şık, çözüm ve kazanım kanıtlarını içermeli. AI raporu tek başına onay değildir.'}</p>
-                    <button disabled={busy || !sourceReport} onClick={() => void acceptSourceReview()} className="mt-2 min-h-11 rounded-lg bg-[var(--focus)] px-4 text-xs font-bold text-white disabled:opacity-50">Kaynak karşılaştırmasıyla onayla</button>
+                    {sourceReview.canAcceptAiPrepared && <div className="mt-3 space-y-2 text-xs">
+                      <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={aiOwnerMode} onChange={event => { setAiOwnerMode(event.target.checked); setAiResponsibility(false) }} disabled={busy} />AI hazırlığı için tek yetkili kabulü</label>
+                      {aiOwnerMode && <>
+                        <p>Bu işlem bağımsız insan incelemesi değildir. AI hazırlık kaydını belirtin; kaynakları, seçenekleri ve kazanımı kontrol ederek sorumluluğu siz üstlenirsiniz. Kalite ve yayın kapıları değişmez.</p>
+                        <label className="block">Hazırlayan AI / araç<input className="mt-1 block w-full rounded border p-2" value={aiAgent} onChange={event => { setAiAgent(event.target.value); setAiResponsibility(false) }} maxLength={120} disabled={busy} /></label>
+                        <label className="block">AI hazırlık kaydı referansı<input className="mt-1 block w-full rounded border p-2" value={aiEvidenceRef} onChange={event => { setAiEvidenceRef(event.target.value); setAiResponsibility(false) }} maxLength={1000} disabled={busy} /></label>
+                        <label className="block">AI hazırlık kaydı SHA-256<input className="mt-1 block w-full rounded border p-2 font-mono" value={aiEvidenceHash} onChange={event => { setAiEvidenceHash(event.target.value); setAiResponsibility(false) }} maxLength={64} disabled={busy} /></label>
+                        <label className="flex min-h-11 items-start gap-2"><input type="checkbox" checked={aiResponsibility} onChange={event => setAiResponsibility(event.target.checked)} disabled={busy} />Taslak ve kazanım eşlemesi AI yardımıyla hazırlandı. Bunun bağımsız inceleme olmadığını biliyorum; kaynak kabulünün sorumluluğunu üstleniyorum.</label>
+                      </>}
+                    </div>}
+                    <button disabled={busy || !sourceReport || (aiOwnerMode && (!aiResponsibility || !aiAgent.trim() || !aiEvidenceRef.trim() || !/^[a-f0-9]{64}$/.test(aiEvidenceHash)))} onClick={() => void acceptSourceReview()} className="mt-2 min-h-11 rounded-lg bg-[var(--focus)] px-4 text-xs font-bold text-white disabled:opacity-50">{aiOwnerMode ? 'AI hazırlığını yetkili olarak kabul et' : 'Kaynak karşılaştırmasıyla onayla'}</button>
                   </div>}
-                  {sourceReview?.accepted && <p className="w-full text-xs text-[var(--text-sub)]">Kaynak karşılaştırmalı tek onay kayıtlı. {sourceReview.readyToPublish ? 'Yayın kanıtları hazır.' : 'Güncel kalite kararı veya diğer yayın kanıtları henüz tamamlanmadı.'}</p>}
+                  {sourceReview?.accepted && <p className="w-full text-xs text-[var(--text-sub)]">{sourceReview.acceptanceMode === 'ai_assisted_owner' ? 'AI hazırlığı için yetkili kabulü kayıtlı; bağımsız insan incelemesi değildir.' : 'Kaynak karşılaştırmalı tek onay kayıtlı.'} {sourceReview.readyToPublish ? 'Yayın kanıtları hazır.' : 'Güncel kalite kararı veya diğer yayın kanıtları henüz tamamlanmadı.'}</p>}
                   {detail.status === 'draft' && <><button disabled={busy} onClick={() => void review(1, 'approved')} className="min-h-11 rounded-lg bg-[var(--focus)] px-4 text-xs font-bold text-white disabled:opacity-50">1. aşama onayla</button><button disabled={busy} onClick={() => void review(1, 'rejected')} className="min-h-11 rounded-lg border border-[var(--urgency)] px-4 text-xs font-bold text-[var(--urgency)]">Reddet</button></>}
                   {detail.status === 'stage1_approved' && !sourceReview?.accepted && <><button disabled={busy || (detail.outcomes?.length ?? 0) === 0 || detail.outcomes?.some((outcome) => outcome.scopeValid === false)} onClick={() => void review(2, 'approved')} className="min-h-11 rounded-lg bg-[var(--focus)] px-4 text-xs font-bold text-white disabled:opacity-50">2. aşama onayla</button><button disabled={busy} onClick={() => void review(2, 'rejected')} className="min-h-11 rounded-lg border border-[var(--urgency)] px-4 text-xs font-bold text-[var(--urgency)]">Reddet</button></>}
                   {(detail.status === 'stage2_approved' || (detail.status === 'stage1_approved' && sourceReview?.readyToPublish)) && <button disabled={busy} onClick={() => void post(`/api/admin/content-quality/revisions/${detail.revisionId}/publish`, { requestId: crypto.randomUUID() })} className="min-h-11 rounded-lg bg-[var(--growth)] px-4 text-xs font-bold text-white disabled:opacity-50">Yayınla</button>}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildSourceComparisonPrompt, evaluateSourceComparison, SOURCE_COMPARISON_VERSION, type SourceComparison } from '../source-comparison'
+import { buildSourceComparisonPrompt, evaluateSourceComparison, SOURCE_COMPARISON_VERSION, SOURCE_COMPARISON_V2, type SourceComparison } from '../source-comparison'
 import type { QuestionDraft } from '../types'
 
 const draft: QuestionDraft = {
@@ -31,6 +31,54 @@ function fixture(): SourceComparison {
     terminology:[],limitations:['Fixture only'],
   }
 }
+
+function v2Fixture(): Extract<SourceComparison, {format:'source-comparison@2'}> {
+  const report=fixture()
+  report.sources.push({...report.sources[1],id:'exam',kind:'official_exam'})
+  report.claims.find(c=>c.id==='curriculum')!.evidence.splice(1)
+  return {...report,format:SOURCE_COMPARISON_V2,curriculumBinding:{examRef:'LGS',examYear:2026,mappings:[{
+    claimId:'curriculum',outcomeId:'33333333-3333-4333-8333-333333333333',canonicalId:'fixture@2018:grade8:LGS:8.2.2',
+    programKey:'fixture',programEdition:'2018',grade:8,officialCode:'8.2.2',programSourceId:'s0',
+    programPageTextSha256:'1'.repeat(64),examScopeSourceId:'exam',examScopeLocator:'Table 1',
+  }]}}
+}
+
+describe('source-comparison@2 curriculum declarations',()=>{
+  it('separates official program coverage from content corroboration without claiming database acceptance',()=>{
+    const result=evaluateSourceComparison(draft,v2Fixture())
+    expect(result).toMatchObject({version:SOURCE_COMPARISON_V2,status:'evidence_complete',candidateEvidenceOnly:true,publicationAuthorized:false})
+    expect(result.warnings).toContain('CURRICULUM_CATALOG_ACCEPTANCE_REQUIRES_DATABASE_CHECK')
+    const legacy=fixture(); legacy.claims.find(c=>c.id==='curriculum')!.evidence.splice(1)
+    expect(evaluateSourceComparison(draft,legacy).issues).toContain('INSUFFICIENT_INDEPENDENT_EVIDENCE:curriculum')
+  })
+  it.each(['null','exam','grade','program-page','program-kind','scope','claim','duplicate','unmapped'])('does not accept %s binding',kind=>{
+    const r=v2Fixture(),b=r.curriculumBinding!,m=b.mappings[0]
+    if(kind==='null') r.curriculumBinding=null
+    if(kind==='exam') b.examRef='TYT'
+    if(kind==='grade') m.grade=7
+    if(kind==='program-page') m.programPageTextSha256='e'.repeat(64)
+    if(kind==='program-kind') r.sources[0].kind='reference'
+    if(kind==='scope') r.sources[2].kind='textbook'
+    if(kind==='claim') m.claimId='stem'
+    if(kind==='duplicate') b.mappings.push({...m})
+    if(kind==='unmapped') r.claims.push({...r.claims.find(c=>c.id==='curriculum')!,id:'other'})
+    expect(evaluateSourceComparison(draft,r).status).toBe('insufficient_evidence')
+  })
+  it('keeps two-source content and contradiction checks',()=>{
+    const r=v2Fixture(); r.claims[0].evidence.pop()
+    expect(evaluateSourceComparison(draft,r).issues).toContain('INSUFFICIENT_INDEPENDENT_EVIDENCE:stem')
+    r.claims[0].evidence[0].relation='contradicts'
+    expect(evaluateSourceComparison(draft,r).status).toBe('conflicting_evidence')
+  })
+  it('pins single-version schemas and forbids unknown or absent binding fields',()=>{
+    const r=v2Fixture()
+    expect(()=>evaluateSourceComparison(draft,{...r,curriculumBinding:undefined})).toThrow()
+    expect(()=>evaluateSourceComparison(draft,{...r,curriculumBinding:{...r.curriculumBinding,accepted:true}})).toThrow()
+    expect(buildSourceComparisonPrompt(draft).version).toBe(SOURCE_COMPARISON_VERSION)
+    expect(buildSourceComparisonPrompt(draft,SOURCE_COMPARISON_V2).system).toContain('source-comparison-v2.md')
+    expect(buildSourceComparisonPrompt(draft,SOURCE_COMPARISON_V2).responseSchema.properties?.format).toMatchObject({const:SOURCE_COMPARISON_V2})
+  })
+})
 describe('source comparison evidence contract', () => {
   it('reports coverage, never publication authority or real access verification', () => {
     expect(evaluateSourceComparison(draft,fixture())).toMatchObject({status:'evidence_complete',publicationAuthorized:false,candidateEvidenceOnly:true,provenance:'declared_retrieval_not_independently_verified'})
