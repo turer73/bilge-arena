@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { QuestionDraft } from './types'
+import { evaluateSourceEvidenceException } from './source-evidence-exceptions'
 
 export const SOURCE_COMPARISON_VERSION = 'source-comparison@1'
 export const SOURCE_COMPARISON_V2 = 'source-comparison@2'
@@ -123,11 +124,14 @@ function independentGroups(sources: SourceComparison['sources']): number {
   return new Set(parent.map((_, i) => root(i))).size
 }
 
-export function evaluateSourceComparison(draft: QuestionDraft, input: unknown) {
+export function evaluateSourceComparison(draft: QuestionDraft, input: unknown, exception?: unknown) {
   const report = sourceComparisonSchema.parse(input)
   const issues: string[] = []
   const conflicts: string[] = []
   const warnings: string[] = []
+  const exceptionResult = exception === undefined ? null : evaluateSourceEvidenceException(draft, report, exception, input)
+  if (exceptionResult && !exceptionResult.valid) issues.push(exceptionResult.reason!)
+  if (exceptionResult?.valid) warnings.push('EXCEPTION_OWNER_ACCEPTANCE_REQUIRES_DATABASE_CHECK')
   const identityMatches = report.questionId === draft.questionId
     && report.revisionId === draft.revisionId && report.contentSha256 === draft.contentSha256
   if (!identityMatches) issues.push('REVISION_MISMATCH')
@@ -148,12 +152,17 @@ export function evaluateSourceComparison(draft: QuestionDraft, input: unknown) {
     for (const evidence of claim.evidence) {
       const source = sourceMap.get(evidence.sourceId)
       if (!source) { issues.push('UNKNOWN_SOURCE:' + evidence.sourceId); continue }
-      if (evidence.relation === 'contradicts') conflicts.push('SOURCE_CONTRADICTION:' + claim.id)
+      if (evidence.relation === 'contradicts') {
+        if (exceptionResult?.valid && exceptionResult.resolvedContradictions.includes(claim.id + ':' + evidence.sourceId)) {
+          warnings.push('ADJUDICATED_CONTRADICTION_RETAINED:' + claim.id + ':' + evidence.sourceId)
+        } else conflicts.push('SOURCE_CONTRADICTION:' + claim.id)
+      }
       if (source.access !== 'inspected_section' || !source.retrievalRef || !source.retrievedTextSha256) continue
       if (evidence.relation === 'supports' && evidence.scopeMatch) supports.push(source)
     }
     if (!(report.format === SOURCE_COMPARISON_V2 && claim.target === 'curriculum')
-      && independentGroups(supports) < SOURCE_COMPARISON_POLICY.minIndependentGroups) {
+      && independentGroups(supports) < (exceptionResult?.valid && exceptionResult.singleSourceClaims.includes(claim.id)
+        ? 1 : SOURCE_COMPARISON_POLICY.minIndependentGroups)) {
       issues.push('INSUFFICIENT_INDEPENDENT_EVIDENCE:' + claim.id)
     }
     if (claim.target === 'curriculum' && !supports.some(s => s.kind === 'official_curriculum')) {

@@ -34,6 +34,7 @@ const turkishRestorationSocialGuardMigration = readFileSync(join(dirname(fileURL
 const canonicalCatalogMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '219_curriculum_canonical_identity.sql'), 'utf8')
 const sourceV2Migration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '20261008183619_question_source_curriculum_v2.sql'), 'utf8')
 const aiOwnerMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '20261008200746_question_source_ai_owner_acceptance.sql'), 'utf8')
+const sourceExceptionsMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '20261009200000_question_source_evidence_exceptions.sql'), 'utf8')
 
 suite('106 content governance disposable PostgreSQL acceptance', () => {
   let turkishQuestion; let spellingTopicQuestion; let toolQuestion; let socialQuestion; let socialOpenQuestion
@@ -173,6 +174,7 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(canonicalCatalogMigration)
     await client.query(sourceV2Migration)
     await client.query(aiOwnerMigration)
+    await client.query(sourceExceptionsMigration)
     legacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id
     candidateLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[candidateQuestion])).rows[0].published_revision_id
     ydtLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[ydtQuestion])).rows[0].published_revision_id

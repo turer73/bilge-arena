@@ -18,6 +18,7 @@ const sql217 = migration('217_question_source_review_single_approval.sql')
 const sql219 = migration('219_curriculum_canonical_identity.sql')
 const sqlV2 = migration('20261008183619_question_source_curriculum_v2.sql')
 const sqlAiOwner = migration('20261008200746_question_source_ai_owner_acceptance.sql')
+const sqlExceptions = migration('20261009200000_question_source_evidence_exceptions.sql')
 const basicGuard = migration('079_questions_content_basic_guard.sql')
 const examGuard = migration('20261009063101_question_content_exam_option_guard.sql')
 function sqlFunction(sql, name) {
@@ -67,6 +68,9 @@ suite(`217/219/v2 source review PostgreSQL ${nativeBin ? 'native' : 'WASM'} acce
     }
     await db.exec(`CREATE SCHEMA extensions; CREATE EXTENSION pgcrypto WITH SCHEMA extensions;
       CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
+      CREATE SCHEMA auth;
+      CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT COALESCE(NULLIF(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;
+      CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT (auth.jwt()->>'sub')::uuid $$;
       GRANT USAGE ON SCHEMA public TO anon,authenticated,service_role;
       CREATE TABLE public.profiles(id uuid PRIMARY KEY);
       CREATE TABLE public.fixture_permissions(user_id uuid,permission text);
@@ -93,6 +97,8 @@ suite(`217/219/v2 source review PostgreSQL ${nativeBin ? 'native' : 'WASM'} acce
     await db.exec(sql219)
     await db.exec(sqlV2)
     await db.exec(sqlAiOwner)
+    await db.exec(sqlFunction(migration('166_question_outcome_mapping_candidates.sql'),'question_outcome_mapping_actor_has_aal2'))
+    await db.exec(sqlExceptions)
     // Publication must exercise the real table trigger, not just source/quality gates.
     await db.exec(basicGuard)
     await db.exec(examGuard)
@@ -299,20 +305,147 @@ suite(`217/219/v2 source review PostgreSQL ${nativeBin ? 'native' : 'WASM'} acce
     await db.exec("UPDATE public.questions SET exam_ref='LGS',content=jsonb_set(content,'{options}',(content->'options')-4); UPDATE public.question_content_revisions SET exam_ref='LGS',content=jsonb_set(content,'{options}',(content->'options')-4); UPDATE public.curriculum_nodes SET exam_ref='LGS'; UPDATE public.curriculum_outcomes SET exam_ref='LGS'")
     report.claims=report.claims.filter(c=>c.id!=='option4'); report.optionChecks.pop()
   }
-  async function v2Fixture({catalog=true,year=true}={}) {
-    await lgsFixture()
+  async function v2Fixture({catalog=true,year=true,examRef='LGS',examYear=2026}={}) {
+    if(examRef==='LGS') await lgsFixture()
     report.format='source-comparison@2'
     report.sources.push({...report.sources[1],id:'exam',kind:'official_exam',url:'https://example.org/2026-guide',retrievedTextSha256:'3'.repeat(64),retrievalRef:'fixture:exam-year'})
     report.claims.find(c=>c.target==='curriculum').evidence=report.claims.find(c=>c.target==='curriculum').evidence.slice(0,1)
-    const canonicalId='fixture@2018:grade8:LGS:8.2.2'
-    report.curriculumBinding={examRef:'LGS',examYear:2026,mappings:[{claimId:'curriculum',outcomeId:outcome,canonicalId,programKey:'fixture',programEdition:'2018',grade:8,officialCode:'8.2.2',programSourceId:'s0',programPageTextSha256:'1'.repeat(64),examScopeSourceId:'exam',examScopeLocator:'Table 1'}]}
+    const canonicalId=`fixture@2018:grade8:${examRef}:8.2.2`
+    report.curriculumBinding={examRef,examYear,mappings:[{claimId:'curriculum',outcomeId:outcome,canonicalId,programKey:'fixture',programEdition:'2018',grade:8,officialCode:'8.2.2',programSourceId:'s0',programPageTextSha256:'1'.repeat(64),examScopeSourceId:'exam',examScopeLocator:'Table 1'}]}
     if(catalog) {
       await db.query(`INSERT INTO public.curriculum_canonical_outcomes(canonical_id,program_key,program_edition,grade,exam_ref,game,official_code,title,official_path,source_receipt)
-        VALUES($1,'fixture','2018',8,'LGS','sosyal','8.2.2','Fixture',$2,$3)`,[canonicalId,JSON.stringify([{nodeType:'course',title:'Fixture course'},{nodeType:'outcome',title:'Fixture',officialCode:'8.2.2'}]),JSON.stringify({reviewedCanonicalId:canonicalId,url:report.sources[0].url,responseSha256:'4'.repeat(64),pageTextSha256:'1'.repeat(64),pdfPage:44,extractor:'fixture',extractorVersion:'1',packageSha256:'5'.repeat(64)})])
+        VALUES($1,'fixture','2018',8,$4,'sosyal','8.2.2','Fixture',$2,$3)`,[canonicalId,JSON.stringify([{nodeType:'course',title:'Fixture course'},{nodeType:'outcome',title:'Fixture',officialCode:'8.2.2'}]),JSON.stringify({reviewedCanonicalId:canonicalId,url:report.sources[0].url,responseSha256:'4'.repeat(64),pageTextSha256:'1'.repeat(64),pdfPage:44,extractor:'fixture',extractorVersion:'1',packageSha256:'5'.repeat(64)}),examRef])
       await db.query('INSERT INTO public.curriculum_outcome_canonical_links(outcome_id,canonical_id,taxonomy_version,package_sha256) VALUES($1,$2,\'fixture-v1\',$3)',[outcome,canonicalId,'5'.repeat(64)])
-      if(year) await db.query('INSERT INTO public.curriculum_canonical_exam_scopes(canonical_id,exam_year,source_receipt,reviewed_by) VALUES($1,2026,$2,$3)',[canonicalId,JSON.stringify({kind:'official_exam',url:report.sources[2].url,retrievedTextSha256:'3'.repeat(64),retrievalRef:'fixture:exam-year',locator:'Table 1',acceptanceRef:'fixture:owner-reviewed'}),reviewer2])
+      if(year) await db.query('INSERT INTO public.curriculum_canonical_exam_scopes(canonical_id,exam_year,source_receipt,reviewed_by) VALUES($1,$4,$2,$3)',[canonicalId,JSON.stringify({kind:'official_exam',url:report.sources[2].url,retrievedTextSha256:'3'.repeat(64),retrievalRef:'fixture:exam-year',locator:'Table 1',acceptanceRef:'fixture:owner-reviewed',acceptancePurpose:'preparation_only',officialExamCertification:false}),reviewer2,examYear])
     }
   }
+  async function exceptionFixture(kind='dataset') {
+    await v2Fixture({examRef:'TYT',examYear:2027})
+    await db.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:author,role:'authenticated',aal:'aal2'})])
+    let basis
+    if(kind==='dataset') {
+      await db.exec("UPDATE public.questions SET category='cografya'; UPDATE public.question_content_revisions SET category='cografya'; UPDATE public.curriculum_nodes SET category='cografya'; UPDATE public.curriculum_outcomes SET category='cografya'")
+      const regions=['Karadeniz Bölgesi','Akdeniz Bölgesi','Marmara Bölgesi','Ege Bölgesi','Doğu Anadolu Bölgesi','İç Anadolu Bölgesi','Güneydoğu Anadolu Bölgesi']
+      await db.query("UPDATE public.question_content_revisions SET content=jsonb_set(jsonb_set(content,'{options}',$1),'{answer}','0') WHERE id=$2",[JSON.stringify(regions.slice(0,5)),rid])
+      report.optionChecks.forEach(o=>{o.assessment=o.index===0?'supported':'excluded'})
+      report.sources[1].url='https://www.mgm.gov.tr/TEST-ONLY'
+      for(const c of report.claims) if(c.target!=='curriculum') c.evidence=c.evidence.filter(e=>e.sourceId==='s1')
+      basis={kind:'mgm_regional_normal_maximum@1',sourceId:'s1',claimIds:report.claims.filter(c=>c.target!=='curriculum').map(c=>c.id),periodStart:1991,periodEnd:2020,statistic:'annual_areal_precipitation_mean',unit:'tenths_mm',values:regions.map((region,i)=>({region,value:7000-i*100}))}
+    } else {
+      const c=report.claims.find(c=>c.target==='solution')
+      report.sources.push({...report.sources[1],id:'early',url:'https://history.state.gov/TEST-ONLY',workId:'early',independenceGroup:'early',retrievedTextSha256:'4'.repeat(64)},
+        {...report.sources[1],id:'late',url:'https://www.icj-cij.org/TEST-ONLY',workId:'late',independenceGroup:'late',retrievedTextSha256:'5'.repeat(64)})
+      c.evidence[0].relation='contradicts'
+      for(const id of ['early','late']) c.evidence.push({...c.evidence[1],sourceId:id})
+      basis={kind:'dated_record_order@1',claimIds:[c.id],contradictingSourceIds:['s0'],calendar:'gregorian',earlier:{name:'TEST ONLY earlier event',date:'1856-02-18',sourceIds:['early']},later:{name:'TEST ONLY later event',date:'1856-02-25',sourceIds:['late']},conclusion:'earlier_precedes_later'}
+    }
+    const preparation=await ownerPreparation()
+    const exception={version:'source-evidence-exception@1',reportSnapshot:structuredClone(report),revisionEvidenceFingerprint:preparation.revisionEvidenceFingerprint,rationale:'TEST ONLY explicit accountable exception',basis}
+    return {exception,preparation}
+  }
+  const acceptException = ({exception,preparation},user=author,request=randomUUID()) => rpc(
+    'public.accept_question_revision_source_exception_review($1,$2,$3,$4,$5,$6,$7)',[user,rid,JSON.stringify(report),JSON.stringify(exception),'TEST ONLY explicit owner responsibility',request,JSON.stringify(preparation)])
+  it.each(['dataset','chronology'])('exception %s is denied until a real owner receipt; does not publish or skip quality',async kind=>{
+    const input=await exceptionFixture(kind)
+    expect(await scalar('SELECT public.question_source_report_valid($1,$2) AS result',[rid,JSON.stringify(report)])).toBe(false)
+    await expect(acceptAi(input.preparation)).rejects.toMatchObject({code:'22023'})
+    expect(await acceptException(input)).toMatchObject({status:'stage1_approved',publicationAuthorized:false})
+    expect(await scalar('SELECT public.question_source_report_valid($1,$2) AS result',[rid,JSON.stringify(report)])).toBe(true)
+    expect(await status()).toMatchObject({accepted:true,readyToPublish:false})
+    await expect(publish()).rejects.toMatchObject({code:'22023'})
+    const saved=await scalar('SELECT declaration AS result FROM public.question_revision_source_exceptions')
+    expect(saved).toEqual(input.exception)
+    expect(await scalar('SELECT count(*)::int AS result FROM public.question_revision_approvals')).toBe(1)
+    await decision();expect(await publish()).toMatchObject({status:'published'})
+    expect(await scalar('SELECT status AS result FROM public.question_content_revisions WHERE id=$1',[oldRid])).toBe('superseded')
+  })
+  it('keeps stem conflicts blocked until explicitly bound to the same dated records',async()=>{
+    const input=await exceptionFixture('chronology')
+    const solution=report.claims.find(c=>c.target==='solution'),stem=report.claims.find(c=>c.target==='stem')
+    stem.evidence=structuredClone(solution.evidence)
+    input.exception.reportSnapshot=structuredClone(report)
+    await expect(acceptException(input)).rejects.toMatchObject({code:'22023'})
+    input.exception.basis.claimIds.push('stem')
+    expect(await acceptException(input)).toMatchObject({status:'stage1_approved'})
+  })
+  it.each(['aal1','missing-jwt','wrong-sub','permission','null-user'])('exception rejects unauthorized %s',async kind=>{
+    const input=await exceptionFixture()
+    if(kind==='aal1')await db.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:author,aal:'aal1',role:'authenticated'})])
+    if(kind==='missing-jwt')await db.exec("SELECT set_config('request.jwt.claims','{}',true)")
+    if(kind==='wrong-sub')await db.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:reviewer,aal:'aal2',role:'authenticated'})])
+    if(kind==='permission')await db.query("DELETE FROM public.fixture_permissions WHERE user_id=$1 AND permission='content.publish'",[author])
+    await expect(acceptException(input,kind==='null-user'?null:author)).rejects.toMatchObject({code:'42501'})
+  })
+  it.each(['tie','wrong-key','missing-region','duplicate-region','negative','fraction','period','unknown-field','curriculum','hash','report-drift','year','contradiction','unread','fake-host','missing-claim','source-drift','missing-option'])('dataset exception fails closed for %s',async kind=>{
+    const input=await exceptionFixture(),b=input.exception.basis
+    if(kind==='tie')b.values[1].value=b.values[0].value
+    if(kind==='wrong-key')b.values[1].value=b.values[0].value+1
+    if(kind==='missing-region')b.values.pop()
+    if(kind==='duplicate-region')b.values[1].region=b.values[0].region
+    if(kind==='negative')b.values[1].value=-1
+    if(kind==='fraction')b.values[1].value=1.5
+    if(kind==='period')b.periodEnd=2021
+    if(kind==='unknown-field')input.exception.approved=true
+    if(kind==='curriculum')b.claimIds.push('curriculum')
+    if(kind==='hash')input.exception.revisionEvidenceFingerprint='0'.repeat(64)
+    if(kind==='report-drift')input.exception.reportSnapshot.limitations.push('changed')
+    if(kind==='year')report.curriculumBinding.examYear=2028
+    if(kind==='contradiction')report.claims[0].evidence.push({...report.claims[0].evidence[0],sourceId:'s0',relation:'contradicts'})
+    if(kind==='unread')report.sources[1].access='abstract_only'
+    if(kind==='fake-host')report.sources[1].url='https://www.mgm.gov.tr.example.com/TEST-ONLY'
+    if(kind==='missing-claim')b.claimIds.push('not-found')
+    if(kind==='source-drift')await db.exec("UPDATE public.question_revision_sources SET source_title='changed'")
+    if(kind==='missing-option')report.optionChecks.pop()
+    if(kind!=='report-drift')input.exception.reportSnapshot=structuredClone(report)
+    await expect(acceptException(input)).rejects.toMatchObject({code:'22023'})
+    expect(await scalar('SELECT count(*)::int AS result FROM public.question_revision_source_exceptions')).toBe(0)
+    expect(await scalar('SELECT count(*)::int AS result FROM public.question_revision_approvals')).toBe(0)
+  })
+  it.each(['reversed','equal','invalid-date','calendar','non-solution','remove-contrary','unread-contrary','not-archive','duplicate','new-conflict','one-content-source'])('chronology exception rejects %s',async kind=>{
+    const input=await exceptionFixture('chronology'),b=input.exception.basis
+    if(kind==='reversed')b.earlier.date='1856-03-01'
+    if(kind==='equal')b.earlier.date=b.later.date
+    if(kind==='invalid-date')b.later.date='1856-02-31'
+    if(kind==='calendar')b.calendar='julian'
+    if(kind==='non-solution')b.claimIds=['curriculum']
+    if(kind==='remove-contrary')report.claims.find(c=>c.target==='solution').evidence.shift()
+    if(kind==='unread-contrary')report.sources[0].access='abstract_only'
+    if(kind==='not-archive')report.sources.find(s=>s.id==='early').url='https://example.org/TEST-ONLY'
+    if(kind==='duplicate')b.later.sourceIds=['early']
+    if(kind==='new-conflict')report.claims[0].evidence[0].relation='contradicts'
+    if(kind==='one-content-source')report.claims[0].evidence.pop()
+    input.exception.reportSnapshot=structuredClone(report)
+    await expect(acceptException(input)).rejects.toMatchObject({code:'22023'})
+  })
+  it('exception fails atomically when ordinary source provenance fails',async()=>{
+    const input=await exceptionFixture()
+    await db.exec("UPDATE public.question_revision_sources SET provenance_ref='legacy:missing'")
+    input.preparation.revisionEvidenceFingerprint=await scalar('SELECT public.question_source_review_fingerprint($1) AS result',[rid])
+    input.exception.revisionEvidenceFingerprint=input.preparation.revisionEvidenceFingerprint
+    await expect(acceptException(input)).rejects.toMatchObject({code:'22023'})
+    expect(await scalar('SELECT count(*)::int AS result FROM public.question_revision_source_exceptions')).toBe(0)
+  })
+  it('exception replay retains original contrary evidence and immutable receipt; migration replay is idempotent',async()=>{
+    const input=await exceptionFixture('chronology'),request=randomUUID()
+    await acceptException(input,author,request)
+    expect(await acceptException(input,author,request)).toMatchObject({replayed:true})
+    await expect(acceptException({...input,exception:{...input.exception,rationale:'Changed exception rationale'}},author,request)).rejects.toMatchObject({code:'22023'})
+    const original=(await db.query('SELECT * FROM public.question_revision_source_exceptions')).rows
+    for(let i=0;i<2;i++)await db.exec(sqlExceptions.replace(/^BEGIN;$/m,'').replace(/^COMMIT;$/m,''))
+    expect((await db.query('SELECT * FROM public.question_revision_source_exceptions')).rows).toEqual(original)
+    expect(await scalar('SELECT report AS result FROM public.question_revision_source_reviews')).toEqual(report)
+    for(const role of ['anon','authenticated','service_role']) {
+      for(const priv of ['INSERT','UPDATE','DELETE','SELECT'])expect(await scalar("SELECT has_table_privilege($1,'public.question_revision_source_exceptions',$2) AS result",[role,priv])).toBe(false)
+      expect(await scalar("SELECT has_function_privilege($1,'public.question_source_report_evidence_valid(uuid,jsonb,jsonb)','EXECUTE') AS result",[role])).toBe(false)
+    }
+    for(const role of ['anon','authenticated'])expect(await scalar("SELECT has_function_privilege($1,'public.accept_question_revision_source_exception_review(uuid,uuid,jsonb,jsonb,text,uuid,jsonb)','EXECUTE') AS result",[role])).toBe(false)
+    expect(await scalar("SELECT relrowsecurity AS result FROM pg_class WHERE oid='public.question_revision_source_exceptions'::regclass")).toBe(true)
+    await db.exec('SAVEPOINT mutation')
+    await expect(db.exec("UPDATE public.question_revision_source_exceptions SET declaration='{}'")).rejects.toMatchObject({code:'42501'})
+    await db.exec('ROLLBACK TO SAVEPOINT mutation')
+    report.limitations.push('Drift after acceptance')
+    expect(await scalar('SELECT public.question_source_report_valid($1,$2) AS result',[rid,JSON.stringify(report)])).toBe(false)
+  })
   it('v2 accepts one official program for curriculum, still requiring content corroboration and an authorized reviewer',async()=>{
     await v2Fixture(); await decision()
     await expect(accept(report,author)).rejects.toMatchObject({code:'22023'})
