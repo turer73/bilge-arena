@@ -69,7 +69,8 @@ export async function validateSourceComparison(directory) {
     try {
       const response = read(join(folder, 'response.json'))
       if (response.format !== manifest.version) throw new Error('Response format changed')
-      results.push(review.evaluateSourceComparison(input.question, response))
+      const exceptionPath=join(folder,'exception.json')
+      results.push(review.evaluateSourceComparison(input.question, response, existsSync(exceptionPath)?read(exceptionPath):undefined))
     } catch {
       results.push({questionId: input.question.questionId, status:'invalid'})
     }
