@@ -2018,6 +2018,7 @@ export type Database = {
           database_actor: string
           enabled: boolean
           id: string
+          onboarding_mode: string
           previous_enabled: boolean
           readiness_ref: string | null
         }
@@ -2028,6 +2029,7 @@ export type Database = {
           database_actor: string
           enabled: boolean
           id?: string
+          onboarding_mode?: string
           previous_enabled: boolean
           readiness_ref?: string | null
         }
@@ -2038,6 +2040,7 @@ export type Database = {
           database_actor?: string
           enabled?: boolean
           id?: string
+          onboarding_mode?: string
           previous_enabled?: boolean
           readiness_ref?: string | null
         }
