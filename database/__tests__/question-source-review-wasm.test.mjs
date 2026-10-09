@@ -18,6 +18,8 @@ const sql217 = migration('217_question_source_review_single_approval.sql')
 const sql219 = migration('219_curriculum_canonical_identity.sql')
 const sqlV2 = migration('20261008183619_question_source_curriculum_v2.sql')
 const sqlAiOwner = migration('20261008200746_question_source_ai_owner_acceptance.sql')
+const basicGuard = migration('079_questions_content_basic_guard.sql')
+const examGuard = migration('20261009063101_question_content_exam_option_guard.sql')
 function sqlFunction(sql, name) {
   const start = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`)
   if (start < 0) throw new Error('Missing function ' + name)
@@ -91,6 +93,9 @@ suite(`217/219/v2 source review PostgreSQL ${nativeBin ? 'native' : 'WASM'} acce
     await db.exec(sql219)
     await db.exec(sqlV2)
     await db.exec(sqlAiOwner)
+    // Publication must exercise the real table trigger, not just source/quality gates.
+    await db.exec(basicGuard)
+    await db.exec(examGuard)
     await db.exec('REVOKE ALL ON FUNCTION public.publish_question_content_revision(uuid,uuid,uuid) FROM PUBLIC,anon,authenticated; GRANT EXECUTE ON FUNCTION public.publish_question_content_revision(uuid,uuid,uuid) TO service_role;')
   }, 60_000)
   afterAll(async () => { await db?.close() })
@@ -317,6 +322,22 @@ suite(`217/219/v2 source review PostgreSQL ${nativeBin ? 'native' : 'WASM'} acce
   })
   it.each(['missing-catalog','missing-year'])('v2 rejects fabricated declarations with %s',async kind=>{
     await v2Fixture({catalog:kind!=='missing-catalog',year:kind!=='missing-year'}); await invalidReport(report)
+  })
+  it('publishes a changed four-option LGS revision via AI-owner mode with the real basic guard',async()=>{
+    await v2Fixture()
+    // Publish must change content, so a legacy content-only trigger would run too.
+    await db.query("UPDATE public.question_content_revisions SET content=jsonb_set(content,'{solution}',to_jsonb('TEST ONLY: 2 + 3 equals 5.'::text)) WHERE id=$1",[rid])
+    const previous=await scalar('SELECT content AS result FROM public.questions WHERE id=$1',[qid])
+    const preparation=await ownerPreparation()
+    await expect(acceptAi(preparation)).resolves.toMatchObject({status:'stage1_approved'})
+    await expect(publish()).rejects.toMatchObject({code:'22023'})
+    await decision()
+    await expect(publish()).resolves.toMatchObject({status:'published'})
+    const current=await scalar('SELECT content AS result FROM public.questions WHERE id=$1',[qid])
+    expect(current.options).toHaveLength(4)
+    expect(current.solution).toBe('TEST ONLY: 2 + 3 equals 5.')
+    expect(await scalar('SELECT content AS result FROM public.question_content_revisions WHERE id=$1',[oldRid])).toEqual(previous)
+    expect(await scalar('SELECT status AS result FROM public.question_content_revisions WHERE id=$1',[oldRid])).toBe('superseded')
   })
   it.each(['examRef','examYear','outcomeId','canonicalId','programKey','programEdition','grade','officialCode','programPageTextSha256','program-url','program-hash','scope-url','scope-hash','scope-ref','scope-kind','scope-locator','claim','scopeMatch','duplicate','null','unmapped'])('v2 rejects %s drift',async kind=>{
     await v2Fixture()
