@@ -36,3 +36,14 @@ Kapsamlı moda dönüş: önce ücretsiz oluşturmayı kapatın; sonra geçerli,
 tüketilmemiş hazırlık kaydıyla `app.institution_onboarding_mode=comprehensive`
 ve `app.institution_readiness_ref` kullanarak yeniden açın. Basit onay kapsamlı
 kanıt yerine geçmez. Yeni mod, yalnızca sonraki kurum oluşturmalarına uygulanır.
+
+## 9 Ekim 2026 uygulama kaydı
+
+- Kullanıcı basit/kapsamlı ayrımını ve canlı pilot açılışını bu sohbet içinde onayladı.
+- Canlı migration: `20261009200126_institution_basic_pilot_onboarding`.
+- Açılış referansı: `OWNER-APPROVED-BASIC-PILOT-20261009`.
+- `free_provisioning=true`, olay modu `basic`, `readiness_ref=NULL`.
+- `commercial_provisioning=false`; mevcut iki aktif legacy kurum değiştirilmedi.
+- Gerçek PostgreSQL: 45 test; yönetim sayfası/API: 36 test başarılı.
+- Yeni kurum oluşturulmadı; gerçek e-posta teslimi ve kullanıcı oturumuyla form
+  gönderimi bu kaydın kapsamında doğrulanmış değildir.

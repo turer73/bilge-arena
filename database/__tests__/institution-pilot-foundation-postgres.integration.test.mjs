@@ -98,7 +98,7 @@ const freePilotClosedGateReplaySql = readFileSync(
   'utf8',
 )
 const basicPilotSql = readFileSync(
-  join(migrationsDir, '20261009195631_institution_basic_pilot_onboarding.sql'), 'utf8',
+  join(migrationsDir, '20261009200126_institution_basic_pilot_onboarding.sql'), 'utf8',
 )
 const institutionScopeAlignmentSql = readFileSync(
   join(migrationsDir, '182_institution_math_scope_registry_alignment.sql'),
