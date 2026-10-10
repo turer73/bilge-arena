@@ -130,6 +130,21 @@ suite('private-context Social publication keeps exact reviewed outcomes',()=>{
   expect(await scalar('SELECT count(*)::int AS result FROM public.question_outcomes')).toBe(1)
   expect(await scalar('SELECT mapping_source AS result FROM public.question_outcomes')).toBe('manual')
  })
+ it('does not run the category trigger for the actual 218 restoration UPDATE columns',async()=>{
+  const restoration=func('218_question_turkish_restoration_tyt_social_guard.sql','publish_question_turkish_restoration')
+  expect(restoration).toMatch(/UPDATE public.questions SET content=r.content,published_revision_id=r.id\s+WHERE id=p_question_id/)
+  // Active legacy fixture, without an approval. The source/restoration rules are
+  // not reimplemented here: this test is specifically the real UPDATE trigger boundary.
+  await db.exec('ALTER TABLE public.questions DISABLE TRIGGER trg_sync_taxonomy_auto_question_outcomes; UPDATE public.content_governance_runtime SET enforce_direct_mutation=false')
+  await db.query('UPDATE public.questions SET is_active=true WHERE id=$1',[q])
+  await db.exec('ALTER TABLE public.questions ENABLE TRIGGER trg_sync_taxonomy_auto_question_outcomes; UPDATE public.content_governance_runtime SET enforce_direct_mutation=true')
+  await db.query("UPDATE public.question_content_revisions SET status='draft' WHERE id=$1",[r])
+  await context()
+  await db.query('UPDATE public.questions SET content=(SELECT content FROM public.question_content_revisions WHERE id=$1),published_revision_id=$1 WHERE id=$2',[r,q])
+  expect(await scalar('SELECT published_revision_id AS result FROM public.questions WHERE id=$1',[q])).toBe(r)
+  // The same draft WOULD be rejected if an actually watched column was written.
+  await expect(update()).rejects.toMatchObject({code:'23514'})
+ })
  it.each(['anon','authenticated','service_role'])('keeps context and trigger inaccessible to %s',async role=>{
   expect(await scalar("SELECT has_function_privilege($1,'public.trg_sync_taxonomy_auto_question_outcomes()','EXECUTE') AS result",[role])).toBe(false)
   expect(await scalar("SELECT has_function_privilege($1,'public.content_governance_authorize_question_write(uuid,text)','EXECUTE') AS result",[role])).toBe(false)

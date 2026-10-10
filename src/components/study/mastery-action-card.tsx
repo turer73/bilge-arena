@@ -8,6 +8,7 @@ import { useMasteryMap, type MasteryOutcome } from '@/lib/hooks/use-mastery-map'
 import { useSocialPilot } from '@/lib/hooks/use-social-pilot'
 import { SOCIAL_DISCOVERY_DESCRIPTION, SOCIAL_DISCOVERY_LABEL } from '@/lib/diagnostic/social-pilot-public'
 import { useGameStore } from '@/stores/game-store'
+import { TytSocialPreparationCard } from './tyt-social-preparation-card'
 import { DiagnosticExplainerDialog } from './diagnostic-explainer-dialog'
 
 interface MasteryActionCardProps {
@@ -91,7 +92,7 @@ export function MasteryActionCard({
         </article>
       )
     }
-    return (
+    const fallback = (
       <article className="rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-border)]">
         <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-accent-text)]">KEŞİF SEVİYESİ HAZIRLANIYOR</p>
         <h2 className="mt-1 text-sm font-black text-[var(--app-text)]">{GAMES[game].name} kanıt haritası doğrulanıyor</h2>
@@ -103,6 +104,7 @@ export function MasteryActionCard({
         </Link>
       </article>
     )
+    return pilotEligible ? <TytSocialPreparationCard key={userId} userId={userId} fallback={fallback} /> : fallback
   }
 
   if (!response || outcomes.length === 0) return null

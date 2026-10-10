@@ -21,6 +21,9 @@ describe('sensitive workspace telemetry policy', () => {
     '/api/admin/institutions',
     '/api/institution/workspace',
     '/api/teacher/classrooms/abc',
+    '/arena/tani/sosyal-hazirlik',
+    '/api/study/tyt-social-preparation',
+    '/arena/tani/%73osyal-hazirlik?range=private',
   ])('%s yolunda ucuncu taraf telemetriyi engeller', (pathname) => {
     expect(isSensitiveWorkspacePath(pathname)).toBe(true)
   })
