@@ -3,6 +3,8 @@ const SENSITIVE_WORKSPACE_PREFIXES = [
   '/arena/kurum',
   '/arena/sinif',
   '/hesap/guvenlik',
+  '/arena/tani/sosyal-hazirlik',
+  '/api/study/tyt-social-preparation',
   '/api/admin',
   '/api/institution',
   '/api/teacher',
