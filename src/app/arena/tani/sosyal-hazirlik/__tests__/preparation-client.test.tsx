@@ -1,5 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+vi.mock('next/navigation', () => ({ usePathname: () => '/arena/tani/sosyal-hazirlik' }))
+vi.mock('next/link', () => ({ default: ({ href, children }: React.ComponentProps<'a'>) => <a href={href} data-next-link="true">{children}</a> }))
 const mocks = vi.hoisted(() => ({ grade: vi.fn(), auth: { user: { id: 'one' }, loading: false } }))
 vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => mocks.auth }))
 vi.mock('@/lib/questions/grade-question', () => ({ gradeQuestion: mocks.grade }))
@@ -19,6 +21,7 @@ describe('preparation learner session', () => {
     let resolve: (r: Response) => void = () => {}
     const fetcher = vi.fn().mockResolvedValueOnce(response(context)).mockImplementation(() => new Promise<Response>(r => { resolve = r }))
     vi.stubGlobal('fetch', fetcher); render(<Client />)
+    expect(screen.getByRole('link', { name: 'Sosyal çalışmasına dön' })).not.toHaveAttribute('data-next-link')
     await screen.findByText('Cevaplama düzenini seç'); expect(screen.getByRole('button', { name: '20 soruluk turu başlat' })).toBeDisabled()
     await choose(); const start = screen.getByRole('button', { name: '20 soruluk turu başlat' })
     fireEvent.click(start); fireEvent.click(start); expect(fetcher).toHaveBeenCalledTimes(2)

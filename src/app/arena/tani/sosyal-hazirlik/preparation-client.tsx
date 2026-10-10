@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { DocumentBoundaryLink } from '@/components/privacy/document-boundary-link'
 import { useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { renderRichText } from '@/lib/utils/rich-text'
@@ -16,12 +16,12 @@ export default function PreparationClient() {
   const { user, loading } = useAuthStore()
   return <main className="mx-auto max-w-3xl space-y-5 px-4 pt-6 pb-32 text-[var(--app-text)]">
     <header className="space-y-3">
-      <Link className="inline-flex min-h-11 items-center font-bold text-[var(--app-accent-text)]" href="/arena/sosyal?exam_ref=TYT">Sosyal çalışmasına dön</Link>
+      <DocumentBoundaryLink className="inline-flex min-h-11 items-center font-bold text-[var(--app-accent-text)]" href="/arena/sosyal?exam_ref=TYT">Sosyal çalışmasına dön</DocumentBoundaryLink>
       <h1 className="text-xl font-black">2027 TYT Sosyal hazırlık pilotu</h1>
       <p className="text-sm leading-6">{PREPARATION_DESCRIPTION}</p>
     </header>
     {loading ? <p role="status">Yükleniyor…</p> : !user
-      ? <Link className={button} href={`/giris?${new URLSearchParams({ next: PREPARATION_HREF })}`}>Başlamak için giriş yap</Link>
+      ? <DocumentBoundaryLink className={button} href={`/giris?${new URLSearchParams({ next: PREPARATION_HREF })}`}>Başlamak için giriş yap</DocumentBoundaryLink>
       : <PreparationSession key={user.id} />}
   </main>
 }
@@ -117,7 +117,7 @@ export function PreparationSession() {
       <h2 className="text-lg font-bold">Hazırlık turu kaydedildi</h2>
       <p className="mt-3 text-lg">{result.correct} doğru · {result.wrong} yanlış / 20 soru</p>
       <p className="mt-3 text-sm leading-6">Bu turdaki gözlemin kaydedildi. Aynı havuzla tekrar çalışma yapılabilir; tekrar sonucu bağımsız seviye ölçümü sayılmaz.</p>
-      <Link href="/arena/sosyal?exam_ref=TYT" className="mt-4 inline-flex min-h-11 items-center font-bold text-[var(--app-accent-text)]">Çalışmaya dön</Link>
+      <DocumentBoundaryLink href="/arena/sosyal?exam_ref=TYT" className="mt-4 inline-flex min-h-11 items-center font-bold text-[var(--app-accent-text)]">Çalışmaya dön</DocumentBoundaryLink>
     </section> : ticket && current ? <section className={card}>
       <p className="mb-4 text-sm">Soru {position + 1} / 20 · {ticket.progress.length} yanıt kaydedildi</p>
       {expired && <p role="alert">Oturumun iki saatlik süresi doldu. Yeni bir tur için sayfayı yenile.</p>}

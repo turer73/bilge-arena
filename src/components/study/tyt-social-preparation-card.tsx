@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { DocumentBoundaryLink } from '@/components/privacy/document-boundary-link'
 import { useEffect, useState, type ReactNode } from 'react'
 import { preparationContextSchema, PREPARATION_DESCRIPTION, PREPARATION_HREF } from '@/lib/diagnostic/tyt-social-preparation'
 
@@ -21,6 +21,6 @@ export function TytSocialPreparationCard({ userId, fallback }: { userId: string;
     <p className="text-xs font-black text-[var(--app-accent-text)]">2027 TYT SOSYAL · HAZIRLIK PİLOTU</p>
     <h2 className="mt-2 font-black text-[var(--app-text)]">20 soruyla çalışma yönünü keşfet</h2>
     <p className="mt-2 text-sm leading-6 text-[var(--app-text-sub)]">{PREPARATION_DESCRIPTION}</p>
-    <Link href={PREPARATION_HREF} className="mt-4 flex min-h-12 items-center justify-center rounded-xl bg-[var(--app-accent)] px-4 font-bold text-white">Hazırlık turunu aç</Link>
+    <DocumentBoundaryLink href={PREPARATION_HREF} className="mt-4 flex min-h-12 items-center justify-center rounded-xl bg-[var(--app-accent)] px-4 font-bold text-white">Hazırlık turunu aç</DocumentBoundaryLink>
   </article>
 }

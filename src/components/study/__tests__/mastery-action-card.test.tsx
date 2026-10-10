@@ -8,6 +8,7 @@ import { useGameStore } from '@/stores/game-store'
 
 const pushMock = vi.fn()
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/arena/sosyal',
   useRouter: () => ({ push: pushMock }),
 }))
 vi.mock('@/lib/hooks/use-mastery-map', () => ({

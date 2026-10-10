@@ -1,5 +1,7 @@
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
+vi.mock('next/navigation', () => ({ usePathname: () => '/arena/sosyal' }))
+vi.mock('next/link', () => ({ default: ({ href, children }: React.ComponentProps<'a'>) => <a href={href} data-next-link="true">{children}</a> }))
 import { TytSocialPreparationCard } from '../tyt-social-preparation-card'
 const context = { available: true, policyVersion: 'tyt-social-2027-v1', examYear: 2027, variant: null, resume: null,
   candidateQuestionCount: 20, bookletQuestionCount: 25, officialExamCertification: false, wholeCurriculumMeasurement: false }
@@ -8,6 +10,7 @@ it('shows preparation only after the exact server context is ready', async () =>
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(context))))
   render(<TytSocialPreparationCard userId="one" fallback={<p>Kapalı</p>} />)
   expect(await screen.findByRole('link', { name: 'Hazırlık turunu aç' })).toHaveAttribute('href', '/arena/tani/sosyal-hazirlik')
+  expect(screen.getByRole('link', { name: 'Hazırlık turunu aç' })).not.toHaveAttribute('data-next-link')
   expect(screen.getByText(/resmî sınav onayı/)).toBeInTheDocument()
 })
 it('ignores old-account response after the user changes', async () => {
