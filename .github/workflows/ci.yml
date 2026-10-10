@@ -234,7 +234,7 @@ jobs:
         env:
           SOURCE_REVIEW_PG_BIN: /usr/lib/postgresql/16/bin
           SOURCE_REVIEW_PG_REQUIRED: '1'
-        run: node node_modules/vitest/vitest.mjs run --config vitest.database.config.ts database/__tests__/question-source-review-wasm.test.mjs database/__tests__/source-comparison-review.test.mjs database/__tests__/question-basic-guard-postgres.test.mjs database/__tests__/tyt-social-reviewed-preparation-pool.test.mjs
+        run: node node_modules/vitest/vitest.mjs run --config vitest.database.config.ts database/__tests__/question-source-review-wasm.test.mjs database/__tests__/source-comparison-review.test.mjs database/__tests__/question-basic-guard-postgres.test.mjs database/__tests__/tyt-social-reviewed-preparation-pool.test.mjs database/__tests__/governed-social-outcome-projection.test.mjs
 
       - name: Run canonical identity and deduplicated evidence acceptance
         env:
