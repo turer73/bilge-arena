@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { tytSocialPolicyVariantSchema } from '@/lib/exam-policy/tyt-social-contract'
 
 // Deliberately a bounded 2027 preparation contract, not the official 2026 reader.
+export const PREPARATION_HREF = '/arena/tani/sosyal-hazirlik'
 export const preparationPolicy = z.literal('tyt-social-2027-v1')
 export const preparationRequestSchema = z.object({
   requestId: z.uuid(), variant: tytSocialPolicyVariantSchema, noticeAccepted: z.literal(true),

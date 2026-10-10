@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { renderRichText } from '@/lib/utils/rich-text'
 import { gradeQuestion } from '@/lib/questions/grade-question'
-import { preparationContextSchema, preparationTicketSchema, PREPARATION_DESCRIPTION,
+import { preparationContextSchema, preparationTicketSchema, PREPARATION_DESCRIPTION, PREPARATION_HREF,
   type PreparationContext, type PreparationRequest, type PreparationTicket } from '@/lib/diagnostic/tyt-social-preparation'
 
 const card = 'rounded-2xl border border-[var(--app-border)] bg-[var(--app-card)] p-5'
@@ -21,7 +21,7 @@ export default function PreparationClient() {
       <p className="text-sm leading-6">{PREPARATION_DESCRIPTION}</p>
     </header>
     {loading ? <p role="status">Yükleniyor…</p> : !user
-      ? <Link className={button} href="/giris?next=%2Farena%2Ftani%2Fsosyal-hazirlik">Başlamak için giriş yap</Link>
+      ? <Link className={button} href={`/giris?${new URLSearchParams({ next: PREPARATION_HREF })}`}>Başlamak için giriş yap</Link>
       : <PreparationSession key={user.id} />}
   </main>
 }
