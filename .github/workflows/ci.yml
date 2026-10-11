@@ -240,7 +240,7 @@ jobs:
         env:
           SOURCE_REVIEW_PG_BIN: /usr/lib/postgresql/16/bin
           SOURCE_REVIEW_PG_REQUIRED: '1'
-        run: node node_modules/vitest/vitest.mjs run --config vitest.database.config.ts database/__tests__/controlled-measurement.test.mjs database/__tests__/social-calibration-readiness.test.mjs database/__tests__/measurement-readiness.test.mjs
+        run: node node_modules/vitest/vitest.mjs run --config vitest.database.config.ts database/__tests__/controlled-measurement.test.mjs database/__tests__/social-calibration-readiness.test.mjs database/__tests__/measurement-readiness.test.mjs database/__tests__/measurement-release-check.test.mjs
 
       - name: Run canonical identity and deduplicated evidence acceptance
         env:

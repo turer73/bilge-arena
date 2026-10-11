@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { startSourceReviewPostgres } from './helpers/isolated-source-review-postgres.mjs'
+import { measurementReleaseSql, verifyMeasurementRelease } from '../measurement-release-check.mjs'
 
 const migration = readFileSync(new URL('../migrations/20261011062902_controlled_measurement.sql', import.meta.url), 'utf8')
 const id = n => `00000000-0000-4000-8000-${String(n).padStart(12,'0')}`
@@ -34,6 +35,12 @@ if(process.env.SOURCE_REVIEW_PG_REQUIRED==='1'&&!bin) throw new Error('Native PG
    CREATE FUNCTION public.question_revision_single_review_ready(rid uuid) RETURNS boolean LANGUAGE sql AS $$SELECT accepted FROM public.question_content_revisions WHERE id=rid$$;
    CREATE FUNCTION public.question_source_curriculum_binding_valid(rid uuid,report jsonb) RETURNS boolean LANGUAGE sql AS $$SELECT report->>'valid'='true'$$;`)
   await db.exec(migration)
+  await db.exec(`CREATE TABLE public.game_sessions(id uuid,user_id uuid);
+    ALTER TABLE public.session_answers ADD COLUMN session_id uuid;
+    CREATE TABLE public.teacher_assignment_submissions(id uuid,student_id uuid);
+    CREATE TABLE public.teacher_assignment_submission_items(submission_id uuid);
+    CREATE FUNCTION public.export_tyt_social_candidate_policy_data(uuid) RETURNS jsonb LANGUAGE sql AS $$
+      SELECT '{"selectionEvents":[],"attemptProvenance":[],"dailyPlanProvenance":[]}'::jsonb $$;`)
  },60000)
  afterAll(async()=>{await db?.close()})
  beforeEach(async()=>{
@@ -52,6 +59,12 @@ if(process.env.SOURCE_REVIEW_PG_REQUIRED==='1'&&!bin) throw new Error('Native PG
   await db.query('INSERT INTO measurement_form_releases VALUES($1,true)',[form])
  })
  it('can apply migration twice',async()=>{await db.exec(migration);expect(await call('measurement_form_ready',[form])).toBe(true)})
+ it('verifies exact deployed bodies, grants and empty default-off rollout',async()=>{
+  await db.exec('TRUNCATE measurement_items,measurement_sessions,measurement_form_releases,measurement_forms CASCADE')
+  const results=await db.query(measurementReleaseSql('readback'))
+  const receipt=results.find(result=>result.rows?.[0]?.receipt)?.rows[0].receipt
+  expect(verifyMeasurementRelease(receipt)).toMatchObject({ok:true,activationAuthorized:false,calibrated:false})
+ })
  it('denies direct tables and RPCs to browser roles; service cannot import forms',async()=>{
   for(const role of ['anon','authenticated','service_role']){
    expect(await scalar("SELECT has_table_privilege($1,'measurement_forms','INSERT') result",[role])).toBe(false)
@@ -165,6 +178,25 @@ if(process.env.SOURCE_REVIEW_PG_REQUIRED==='1'&&!bin) throw new Error('Native PG
   expect(await call('measurement_form_ready',[form])).toBe(false)
  })
  it('cannot edit immutable form pins',async()=>{await expect(db.query('UPDATE measurement_forms SET exam_year=2028 WHERE id=$1',[form])).rejects.toThrow(/immutable/)})
+ it('exports only the subject measurement answers including incomplete sessions',async()=>{
+  const own=await start();await answer(own.id,1,1)
+  const theirs=await call('start_measurement',[other,form,id(350)]);
+  const exported=await call('export_account_data',[user])
+  expect(exported.coverage.relatedTables).toContain('measurement_items')
+  expect(exported.tables.measurement_items).toHaveLength(5)
+  expect(exported.tables.measurement_items.every(item=>item.session_id===own.id)).toBe(true)
+  expect(exported.tables.measurement_items[0].selected_option).toBe(1)
+  expect(JSON.stringify(exported)).not.toContain(theirs.id)
+  expect(exported.tables.measurement_items[0]).not.toHaveProperty('content')
+  expect(exported.tables.measurement_items[0]).not.toHaveProperty('answer')
+  for(const role of ['anon','authenticated']) expect(await scalar("SELECT has_function_privilege($1,'export_account_data(uuid)','EXECUTE') result",[role])).toBe(false)
+ })
+ it('removes measurement responses with their account without deleting immutable forms',async()=>{
+  const s=await call('start_measurement',[other,form,id(350)])
+  await db.query('DELETE FROM profiles WHERE id=$1',[other])
+  expect(await scalar('SELECT count(*)::int result FROM measurement_items WHERE session_id=$1',[s.id])).toBe(0)
+  expect(await scalar('SELECT count(*)::int result FROM measurement_forms')).toBe(1)
+ })
  it.each([
   "UPDATE question_content_revisions SET accepted=false",
   "UPDATE questions SET is_active=false",

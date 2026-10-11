@@ -55,9 +55,14 @@ engellendiği iddia edilmez. Gerçek öğrenci örneklemi bu sınırlara göre i
 
 ## Yayın sırası ve geri dönüş
 
-1. Migration ve tam zincir provası; RPC izinleri: browser yok, yalnız bağlı
+1. Migration uyum kontrolü ve izole PostgreSQL provası; RPC izinleri: browser yok, yalnız bağlı
    service_role API çağrıları. Native testte dış governance tabloları/helper'ları
    minimal fikstürdür; tam zincir testi yerine geçmez.
+   `node database/measurement-release-check.mjs sql preflight` canlı bağımlılıkları
+   ve çakışmayı salt-okuma denetler. `sql readback` yedi fonksiyon gövdesinin
+   hash'ini, RLS/ACL sınırlarını ve boş/kapalı başlangıcı denetler. Canlı şema
+   uyum kontrolü de tam tarihsel migration zinciri provası değildir; form açılışı
+   öncesinde gerçek hesap akışı ayrıca doğrulanmalıdır.
 2. Kod dağıtımı; `MEASUREMENT_SCHEMA_READY=true` yalnız migration doğrulanınca.
    Bu bayrak grade/coach korumasını açar; yeni tur açmaz.
 3. Kaynak/kazanım/kalite kabulü geçmiş güncel revizyonlarla sabit form oluştur;
@@ -109,3 +114,8 @@ ve sunucu sözleşmesinde sabittir; yalnız n artması seviye yayınına yol aç
 Bilinen yayın engeli: henüz kabul edilmiş Matematik ölçüm formu yoktur.
 Hiçbir ders kalibre edildi olarak işaretlenmedi. CI işlerine testler eklendi;
 yerel test sonuçları uzak CI veya deployment sonucu diye sunulmaz.
+
+Yayın öncesi ek kontrol: kullanıcı dışa aktarımı ölçüm oturumu üzerinden yalnız
+kendi `measurement_items` cevaplarını da içerir; cevap anahtarı eklenmez.
+Hesap silinmesinde oturum ve cevaplar cascade ile silinir, değişmez form kalır.
+Bu iki sınır ve fonksiyon/izin geri-okuması native PostgreSQL testindedir.
