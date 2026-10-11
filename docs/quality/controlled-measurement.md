@@ -90,7 +90,10 @@ Bu değişiklikte canlı migration, form kabulü, feature-flag açılışı veya
 Tekrarlanabilir salt-okuma sorgusu: `node database/measurement-readiness.mjs sql`.
 Aktif olmak kabul edilmiş ölçüm sorusu olmak değildir. İlk Matematik formu için
 5–30 soruluk sınırlı içerik/kazanım inceleme paketi gerekir. LGS'de 227 mevcut
-taslak korunur; dört Matematik sorusundaki eksik taslak ayrıca tamamlanır.
+taslak korunur. Dört Matematik sorusunda taslak bulunmaması unutulmuş iş
+değildir: önceki kapsam incelemesi bunları koni/piramit hacmi ve benzerlikte
+alan hesabı sınırları nedeniyle beklemeye almıştır. Yeni kapsam kanıtı veya
+uygun yeni soru olmadan bu dört kaydın beklemesi kaldırılmaz.
 Beşinci seçenek otomatik silinmez; doğru anahtar ve çeldirici kapsamı incelenir.
 
 Öğrenci verisi geldikten sonra CTT/Wilson/şık davranışı, örneklem çeşitliliği,
@@ -119,3 +122,18 @@ Yayın öncesi ek kontrol: kullanıcı dışa aktarımı ölçüm oturumu üzeri
 kendi `measurement_items` cevaplarını da içerir; cevap anahtarı eklenmez.
 Hesap silinmesinde oturum ve cevaplar cascade ile silinir, değişmez form kalır.
 Bu iki sınır ve fonksiyon/izin geri-okuması native PostgreSQL testindedir.
+
+Ek doğrulama: 35 native PostgreSQL ve 14 yayın sözleşmesi testi geçti.
+İlk uzak CI'da hesap dışa aktarımındaki eşdeğer `SET search_path TO 'pg_catalog'`
+yazımı statik güvenlik denetçisine takıldı; diğer fonksiyonlarla aynı
+`SET search_path = pg_catalog` biçimine getirildi ve regresyon testi eklendi.
+Yetki sınırı değiştirilmedi. Windows CLI giriş noktası denetimi nedeniyle
+izin taraması ayrıca fonksiyon doğrudan içe aktarılarak çalıştırıldı.
+
+TYT Matematik için altı farklı kategoride, tümü mevcut zorluk etiketi 2 olan
+sınırlı aday taslak hazırlandı. Bu, dengeli bir sınav formu veya tüm TYT'yi
+temsil eden örneklem değildir. 11 Ekim kullanıcı özgün üretim beyanı kaynak
+kaydına işlendi; bağımsız lisans/akademik onay değildir. Eski yayımlı revizyonlar
+korundu; yeni taslakların kaynak/kazanım kabulü ve hash'e bağlı kalite kararı
+henüz yoktur. Tarihsel kararları yalnız revizyon ID'si eşleşiyor diye taşıma:
+602 eski APPROVED kararı güncel DB içerik hash'iyle eşleşmemektedir.
