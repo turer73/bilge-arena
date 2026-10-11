@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { measurementFeedbackGuard } from '@/lib/measurement/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import {
@@ -340,6 +341,8 @@ export async function POST(request: Request) {
   }
 
   const supabase = createServiceRoleClient()
+  const blocked = await measurementFeedbackGuard(supabase, user.id, questionId)
+  if (blocked) return blocked
   const { data: attemptData, error: attemptError } = await supabase
     .from('verified_attempts')
     .select('id, user_id, question_ids, expires_at, completed_at')
