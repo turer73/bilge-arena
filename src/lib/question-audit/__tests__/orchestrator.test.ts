@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_AUDIT_CONFIG, executeAudit, auditQuestion, type AuditProviders } from '../orchestrator'
 import { ProviderHttpError, type LlmProvider, type LlmRawResponse } from '../provider'
-import type { QuestionDraft } from '../types'
+import type { GroundedSolutionVerifierPayload, QuestionDraft } from '../types'
 
 function draft(overrides: Partial<QuestionDraft> = {}): QuestionDraft {
   return {
@@ -34,6 +34,7 @@ interface FakeOptions {
   findings?: unknown[]
   concludesText?: string | null
   completeness?: 'adequate' | 'terse'
+  verifierPayload?: Partial<GroundedSolutionVerifierPayload>
   error?: Error
 }
 
@@ -67,6 +68,10 @@ function fakeProvider(id: string, opts: FakeOptions = {}) {
           reasoning: 'takip ettim',
           solutionConcludesIndex: idx === -1 ? null : idx,
           solutionCompleteness: opts.completeness ?? 'adequate',
+          evidenceVersion: 'solution-evidence@1',
+          questionDemand: 'reasoning',
+          supportingQuotes: opts.completeness === 'terse' ? [] : [JSON.parse(req.user.split('\n')[1]).solutionText],
+          ...opts.verifierPayload,
         }
       }
       return { text: JSON.stringify(body), finishReason: 'STOP', inputTokens: 100, outputTokens: 60 }
@@ -228,7 +233,7 @@ describe('kismi ariza', () => {
 
 describe('4 sikli soru', () => {
   it('LGS sorusu uctan uca calisir', async () => {
-    const d = draft({ examRef: 'LGS', options: ['2', '4', '6', '8'], markedAnswerIndex: 3, solutionText: 'sonuc 8.' })
+    const d = draft({ examRef: 'LGS', questionText: '2x=16 ise x?', options: ['2', '4', '6', '8'], markedAnswerIndex: 3, solutionText: 'x=16/2=8.' })
     const { run, verdict } = await auditQuestion(
       d,
       providers({ blind: { picksText: '8' }, verifier: { concludesText: '8' } }),
@@ -237,5 +242,44 @@ describe('4 sikli soru', () => {
     expect(run.optionCount).toBe(4)
     expect(verdict.verdict).toBe('APPROVED')
     expect(verdict.blindConsensusIndex).toBe(3)
+  })
+})
+
+describe('yazar metnine bagli cozum denetimi', () => {
+  const missing = draft({
+    examRef: 'LGS', questionText: '12+18-7 kactir?', options: ['23', '25', '27', '29'],
+    markedAnswerIndex: 0, solutionText: 'Yanıt 23.',
+  })
+
+  it.each([['12+18-7=23'], ['Yanıt 23.'], []])('sahte veya sonuc-tekrari dayanagi APPROVED yapmaz: %j', async (...quotes) => {
+    const p = providers({ blind: { picksText: '23' }, verifier: {
+      concludesText: '23', verifierPayload: { supportingQuotes: quotes },
+    } })
+    const { run, verdict } = await auditQuestion(missing, p, fastConfig)
+    expect(run.verifier).toMatchObject({ status: 'failed', error: { kind: 'schema' } })
+    expect(verdict.verdict).toBe('INCONCLUSIVE')
+    expect(verdict.findings).toEqual([]) // model arizasi soru kusuru DEGIL
+    expect(run.blind.every((out) => out.status === 'ok')).toBe(true)
+    expect(run.adversarial.status).toBe('ok')
+  })
+
+  it('gecerli eksik-dayanak karari INCOMPLETE_SOLUTION ile incelemeye gider', async () => {
+    const { run, verdict } = await auditQuestion(missing, providers({
+      blind: { picksText: '23' }, verifier: { concludesText: '23', completeness: 'terse' },
+    }), fastConfig)
+    expect(run.verifier.status).toBe('ok')
+    expect(verdict.verdict).toBe('NEEDS_REVIEW')
+    expect(verdict.findings.map((f) => f.code)).toEqual(['INCOMPLETE_SOLUTION'])
+  })
+
+  it('kisa ama gosterilmis hesap gecer; yeni kanit alanlari kaybolmaz', async () => {
+    const { run, verdict } = await auditQuestion({ ...missing, solutionText: '12+18-7=23' }, providers({
+      blind: { picksText: '23' }, verifier: { concludesText: '23' },
+    }), fastConfig)
+    expect(verdict.verdict).toBe('APPROVED')
+    expect(run.verifier).toMatchObject({ status: 'ok', data: {
+      evidenceVersion: 'solution-evidence@1', questionDemand: 'reasoning', supportingQuotes: ['12+18-7=23'],
+    } })
+    expect(run.execution.promptVersions.verifier).toBe('solution-verifier@4')
   })
 })

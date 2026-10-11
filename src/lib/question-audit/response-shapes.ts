@@ -87,15 +87,22 @@ export function solutionVerifierShape(optionCount: number): GeminiSchema {
   return {
     type: 'OBJECT',
     properties: {
-      reasoning: { type: 'STRING', description: 'Cozum metnini takip ederek nereye vardigi.' },
+      reasoning: { type: 'STRING', description: 'Yazarin metninde bulunan veya eksik dayanak icin kisa gerekce. Yeni cozum uretme.' },
       solutionConcludesIndex: {
         type: 'INTEGER',
         nullable: true,
         description: `Cozumun vardigi secenek indeksi (0-${maxIdx}). Hicbirine varmiyorsa null.`,
       },
       solutionCompleteness: { type: 'STRING', enum: ['adequate', 'terse'] },
+      evidenceVersion: { type: 'STRING', enum: ['solution-evidence@1'] },
+      questionDemand: { type: 'STRING', enum: ['recall', 'reasoning'] },
+      supportingQuotes: {
+        type: 'ARRAY',
+        items: { type: 'STRING' },
+        description: 'Yalniz solutionText icinde birebir bulunan dayanaklar. Kendi cozumun veya soru koku sayilmaz. Yoksa bos dizi.',
+      },
     },
-    required: ['reasoning', 'solutionConcludesIndex', 'solutionCompleteness'],
-    propertyOrdering: ['reasoning', 'solutionConcludesIndex', 'solutionCompleteness'],
+    required: ['reasoning', 'solutionConcludesIndex', 'evidenceVersion', 'questionDemand', 'supportingQuotes', 'solutionCompleteness'],
+    propertyOrdering: ['reasoning', 'solutionConcludesIndex', 'evidenceVersion', 'questionDemand', 'supportingQuotes', 'solutionCompleteness'],
   }
 }

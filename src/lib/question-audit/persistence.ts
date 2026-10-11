@@ -11,7 +11,7 @@
  *   puanlanabildi, cunku yalniz turetilmis CalibrationItem saklanmisti.
  */
 
-import { adversarialSchema, blindSolverSchema, solutionVerifierSchema } from './schemas'
+import { adversarialSchema, blindSolverSchema, legacySolutionVerifierSchema, solutionVerifierSchema } from './schemas'
 import type {
   AdversarialPayload,
   AgentErrorKind,
@@ -227,6 +227,18 @@ function outcomeOf<T>(row: ValidationRunRow, parse: (value: unknown) => T): Agen
   return { status: 'ok', data: parse(row.parsed_output), telemetry, raw: row.raw_output }
 }
 
+function parseStoredVerifier(row: ValidationRunRow, draft: QuestionDraft): SolutionVerifierPayload {
+  if (row.prompt_version === 'solution-verifier@4') {
+    return solutionVerifierSchema(draft.options, draft.solutionText ?? '').parse(row.parsed_output)
+  }
+  // Eski raporlar yeniden uretilebilir kalir; eski kaniti yeni sozlesmeyle
+  // etiketlemek veya bilinmeyen surumu eski parser'a dusurmek YASAK.
+  if (['solution-verifier@1', 'solution-verifier@2', 'solution-verifier@3'].includes(row.prompt_version)) {
+    return legacySolutionVerifierSchema(draft.options.length).parse(row.parsed_output)
+  }
+  throw new Error(`desteklenmeyen solution verifier prompt surumu: ${row.prompt_version}`)
+}
+
 /** Saklanmis ham satirlardan para harcamadan yeniden puanlanabilir AuditRun kurar. */
 export function fromValidationRunRows(rows: readonly ValidationRunRow[]): AuditRun {
   if (rows.length === 0) throw new Error('question_validation_runs bos')
@@ -271,7 +283,7 @@ export function fromValidationRunRows(rows: readonly ValidationRunRow[]): AuditR
     execution,
     blind: blindRows.map((row) => outcomeOf<BlindSolverPayload>(row, (v) => blindSolverSchema(optionCount).parse(v))),
     adversarial: outcomeOf<AdversarialPayload>(advRows[0]!, (v) => adversarialSchema(optionCount).parse(v)),
-    verifier: outcomeOf<SolutionVerifierPayload>(verifierRows[0]!, (v) => solutionVerifierSchema(optionCount).parse(v)),
+    verifier: outcomeOf<SolutionVerifierPayload>(verifierRows[0]!, () => parseStoredVerifier(verifierRows[0]!, inputSnapshot)),
     executedAt: assertSame(rows, (r) => r.executed_at, 'executed_at'),
   }
 }

@@ -185,7 +185,7 @@ export interface AdversarialPayload {
  * hangi sikka vardigini CIKARIR. Karsilastirmayi `deriveVerdict` yapar.
  *
  * Gerekce: "cozum isaretli cevabi destekliyor mu?" yonlendirici bir sorudur ve
- * bu ajan anahtari da cozumu de gordugu icin sycophancy'ye en acik olanidir —
+ * anahtar ve cozumu birlikte gostermek sycophancy'ye acik olurdu —
  * yani mevcut production judge'inin basarisiz oldugu tam kurulum. Cikarim +
  * kodda karsilastirma, ayni bilgiyi yanlilik yuzeyi olmadan verir.
  */
@@ -193,6 +193,15 @@ export interface SolutionVerifierPayload {
   reasoning: string
   solutionConcludesIndex: number | null
   solutionCompleteness: 'adequate' | 'terse'
+}
+
+/** @4+ cagrilar icin zorunlu; eski payload yalniz tarihsel replay icindir. */
+export interface GroundedSolutionVerifierPayload extends SolutionVerifierPayload {
+  evidenceVersion: 'solution-evidence@1'
+  /** Model yargisidir, bagimsiz olarak dogrulanmis soru sinifi DEGILDIR. */
+  questionDemand: 'recall' | 'reasoning'
+  /** Yalniz solutionText icinden birebir parcalar. Varlik != mantiksal dogruluk. */
+  supportingQuotes: string[]
 }
 
 // ── Kosu kaydi ve verdict ──────────────────────────────────────────────────

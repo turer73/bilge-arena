@@ -70,13 +70,53 @@ export const adversarialSchema = (optionCount: number) =>
  *
  * Model KARSILASTIRMA yapmaz — yalniz cozumun hangi sikka vardigini cikarir.
  * `solutionConcludesIndex` KANONIK indekstir (bu ajan permute edilmemis
- * gorunum alir, cunku isaretli cevabi zaten gorur).
+ * gorunum alir). Isaretli cevap modele gonderilmez.
+ * Eski sozlesme yalniz @1/@2/@3 arsivlerinin yeniden okunmasinda kullanilir.
  */
-export const solutionVerifierSchema = (optionCount: number) =>
+export const legacySolutionVerifierSchema = (optionCount: number) =>
   z.object({
     reasoning: z.string().min(1),
     solutionConcludesIndex: z.number().int().min(0).max(optionCount - 1).nullable(),
     solutionCompleteness: z.enum(['adequate', 'terse']),
+  })
+
+/**
+ * Yalniz acik cevap tekrarlarini ayirt eder; matematiksel esdegerlik cozumlemez.
+ * Isaret, kesir, ondalik ve birim aynen kalir. Soru turunu tahmin etmez.
+ */
+function isBareOption(quote: string, options: readonly string[]): boolean {
+  const fold = (text: string) => text.trim().toLocaleLowerCase('tr-TR')
+    .replace(/\s+/g, ' ').replace(/[.!;]+$/, '').trim()
+  const value = fold(quote).replace(/^(?:(?:doğru|dogru) )?(?:yanıt|yanit|cevap|sonuç|sonuc)\s*:?\s+/u, '')
+  return options.some((option) => value === fold(option))
+}
+
+/**
+ * @4: kanit kaynagi soru/gerekce DEGIL, yazarın solutionText'idir.
+ * Uydurma alinti bir ajan/sozlesme hatasidir; soru kusuru diye kaydedilmez.
+ * Semantik yeterlilik hala model yargisidir; bu kontrol terfi benchmark'i degildir.
+ */
+export const solutionVerifierSchema = (options: readonly string[], solutionText: string) =>
+  legacySolutionVerifierSchema(options.length).extend({
+    evidenceVersion: z.literal('solution-evidence@1'),
+    questionDemand: z.enum(['recall', 'reasoning']),
+    supportingQuotes: z.array(z.string().min(1).max(2000)).max(8),
+  }).strict().superRefine((value, ctx) => {
+    value.supportingQuotes.forEach((quote, index) => {
+      if (!quote.trim() || !solutionText.includes(quote)) {
+        ctx.addIssue({ code: 'custom', path: ['supportingQuotes', index], message: 'alinti solutionText icinde birebir bulunmuyor' })
+      }
+    })
+    if (value.solutionCompleteness !== 'adequate') return
+    if (value.supportingQuotes.length === 0) {
+      ctx.addIssue({ code: 'custom', path: ['supportingQuotes'], message: 'adequate karari yazarin metninden dayanak gerektirir' })
+    }
+    if (value.questionDemand === 'reasoning' && (
+      isBareOption(solutionText, options) ||
+      (value.supportingQuotes.length > 0 && value.supportingQuotes.every((quote) => isBareOption(quote, options)))
+    )) {
+      ctx.addIssue({ code: 'custom', path: ['supportingQuotes'], message: 'yalniz cevap tekrari hesap/cikarim dayanagi olamaz' })
+    }
   })
 
 export type BlindSolverParsed = z.infer<ReturnType<typeof blindSolverSchema>>

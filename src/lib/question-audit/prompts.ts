@@ -26,7 +26,9 @@ export const PROMPT_VERSION = {
   // ("1:100.000 -> 1 cm = 1 km. 2 cm = 2 km.") sirf kisa oldugu icin terse
   // isaretlenmisti.
   // @3: cozum metni de ayni guven sinirina alindi.
-  solutionVerifier: 'solution-verifier@3',
+  // @4: sonuc cikarimi ile yeterlilik ayrildi. Metinde gercekten bulunan
+  // dayanak zorunlu; denetcinin kendi cozum adimlari kanit sayilmaz.
+  solutionVerifier: 'solution-verifier@4',
 } as const
 
 /**
@@ -143,14 +145,14 @@ ${jsonOnly([
 // ── 3. Cozum Denetcisi ─────────────────────────────────────────────────────
 
 /**
- * Tek ajan ki isaretli cevabi ve cozumu gorur.
+ * Cozumu goren tek ajan; isaretli cevabi bu ajan da GORMEZ.
  *
  * KRITIK: modele "cozum isaretli cevabi destekliyor mu?" DIYE SORMUYORUZ. O
- * yonlendirici bir sorudur ve bu ajan zaten anahtari gordugu icin sycophancy'ye
- * en acik olanidir — mevcut production judge'inin basarisiz oldugu tam kurulum.
+ * yonlendirici bir sorudur; anahtar ile cozum birlikte verilirse sycophancy
+ * riski dogar — bu nedenle burada anahtar tamamen gizlidir.
  * Bunun yerine cozumun HANGI SIKKA VARDIGINI cikartiyoruz; karsilastirmayi
- * `deriveVerdict` kodda yapiyor. Boylece celiski bir model gorusu degil,
- * hesaplanmis bir olgu oluyor.
+ * `deriveVerdict` kodda yapiyor. Indeks karsilastirmasi deterministiktir;
+ * metinden cikarilan indeksin dogrulugu ise hala model yargisidir.
  *
  * Bu nedenle prompt isaretli cevabi ne soyler ne ima eder.
  */
@@ -166,15 +168,24 @@ ve yazarin yazdigi cozum metni verilecek.
 
 ${UNTRUSTED_DATA_RULE}
 
-Gorevin TEK sey: cozum metninin kendi ic mantigiyla HANGI SECENEGE vardigini
-belirlemek. Cozumun dogru olup olmadigini tartisma; soruyu kendin cozme.
-Yalniz "bu metin nereye variyor?" sorusunu yanitla.
+Iki AYRI inceleme yap: (1) yazarin cozumu hangi secenege variyor,
+(2) yazar bu sonucu desteklemek icin metinde gercekten ne gostermis?
+Soruyu kendin cozme, eksik hesabi/cikarimi tamamlama. Kendi bildigin veya
+soru kokunde gordugun islem, yazarın cozumunde YOKSA dayanak sayilmaz.
 
 Cozum bir secenege varmiyorsa (or. sonucu siklarda yok, ya da hic sonuc
 sunmuyorsa) solutionConcludesIndex = null.
 
-Ayrica cozumun yeterliligini siniflandir. Olcu UZUNLUK DEGIL, sorunun
-TURUNE gore yeterlilik:
+questionDemand: dogrudan tanim/kelime/hatirlama ise "recall"; bir islem bile
+gerektiren hesap, uygulama, karsilastirma veya neden-sonuc cikarimi ise "reasoning".
+Sorunun sayilarini/formulunu gormek yeterli degildir; cozum metnini denetliyorsun.
+
+supportingQuotes: YALNIZ solutionText icindeki birebir, kesintisiz alintilar.
+Hesap/cikarim icin islem veya ilkeyi sonuca baglayan ifade; hatirlama icin
+ilgili tanim/fakt. Sorudan, secenekten veya kendi reasoning alanindan alinti
+yapma. Parcalari birlestirme, yazimi/sembolleri duzeltme. Dayanak yoksa [].
+
+Yeterlilik olcusu UZUNLUK DEGIL, gercekten GOSTERILEN dayanaktir:
 
 - "adequate": cozum, o sorunun gerektirdigi kadarini veriyor.
   Tanim, kelime anlami, deyim, ek/kural bilgisi gibi HATIRLAMA sorularinda
@@ -182,15 +193,23 @@ TURUNE gore yeterlilik:
   Hesap gerektiren sorularda da adimlar kisa yazilmissa ama sonuca goturuyorsa
   "adequate"tir. Ornek: "1:100.000 -> 1 cm = 1 km. 2 cm = 2 km." TAMDIR.
 
-- "terse": soru BIRDEN COK ADIMLI bir turetme/hesap gerektiriyor, fakat cozum
-  yalnizca nihai sonucu bildiriyor ve ara adimlarin hicbirini gostermiyor.
-  Ornek: "Cevap 42'dir." (nasil bulundugu yok)
+- "terse": gerekli hesap/cikarim dayanagi eksik veya yeterliligi belirsiz.
+  Tek bir islem gerektirse bile sadece sonucu tekrarlamak gerekce DEGILDIR.
+  Ornek: kütle hesabi isteyen bir soruda cozum yalniz "Yanit 23." ise
+  supportingQuotes=[], solutionCompleteness="terse". Senin 12+18-7=23
+  hesaplayabilmen bunu DEGISTIRMEZ. Ama yazar "12+18-7=23" yazmissa bu
+  kisa ifade yeterli olabilir; birebir alintiyla "adequate" degerlendir.
 
-Suphede kalirsan "adequate" sec. Kisa olmasi tek basina kusur DEGILDIR.
+Suphede kalirsan "terse" ile incelemeye birak; emin olmadigin bir dayanagi
+uydurma. Kisa olmasi TEK BASINA kusur DEGILDIR. "Tree = agac." tam bir
+kelime-anlami aciklamasidir (recall), cok adimli hesapla karistirma.
 
 ${jsonOnly([
-      '"reasoning": <string — cozum metnini takip ederek nereye vardigi>',
+      '"reasoning": <string — metinde bulunan/eksik dayanak icin kisa gerekce; yeni cozum uretme>',
       `"solutionConcludesIndex": <integer 0-${maxIdx}, veya hicbir secenege varmiyorsa null>`,
+      '"evidenceVersion": "solution-evidence@1"',
+      '"questionDemand": "recall" | "reasoning"',
+      '"supportingQuotes": <string[] — yalniz solutionText icinden birebir dayanaklar, yoksa []>',
       '"solutionCompleteness": "adequate" | "terse"',
     ])}`,
     user: renderUntrustedData({

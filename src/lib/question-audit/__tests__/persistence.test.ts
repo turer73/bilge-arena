@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { fromValidationRunRows, toValidationDecisionRow, toValidationRunRows } from '../persistence'
 import { deriveVerdict } from '../verdict'
-import type { AgentOutcome, AgentTelemetry, AuditRun } from '../types'
+import type { AgentOutcome, AgentTelemetry, AuditRun, GroundedSolutionVerifierPayload } from '../types'
 
 const telemetry: AgentTelemetry = {
   providerId: 'gemini:test',
@@ -15,6 +15,52 @@ const telemetry: AgentTelemetry = {
 
 const ok = <T>(data: T, promptVersion = 'blind-solver@1'): AgentOutcome<T> => ({
   status: 'ok', data, telemetry: { ...telemetry, promptVersion }, raw: '{"a":1}',
+})
+
+describe('surumlu verifier replay', () => {
+  it.each(['solution-verifier@1', 'solution-verifier@2', 'solution-verifier@3'])('%s eski sonucunu yeni kanit uydurmadan korur', (version) => {
+    const source = run()
+    source.execution.promptVersions.verifier = version
+    if (source.verifier.status === 'ok') source.verifier.telemetry.promptVersion = version
+    const restored = fromValidationRunRows(toValidationRunRows(source, 'legacy'))
+    expect(restored.verifier).toEqual(source.verifier)
+    expect(restored.execution.promptVersions.verifier).toBe(version)
+  })
+
+  function groundedRun() {
+    const source = run()
+    source.inputSnapshot.solutionText = '2+2=4'
+    source.execution.promptVersions.verifier = 'solution-verifier@4'
+    source.verifier = ok<GroundedSolutionVerifierPayload>({
+      reasoning: 'Yazarin islemi var.', solutionConcludesIndex: 2, solutionCompleteness: 'adequate',
+      evidenceVersion: 'solution-evidence@1', questionDemand: 'reasoning', supportingQuotes: ['2+2=4'],
+    }, 'solution-verifier@4')
+    return source
+  }
+
+  it('yeni kanit alanlari DB mapper gidis-donusunda aynen kalir', () => {
+    const source = groundedRun()
+    const rows = toValidationRunRows(source, 'grounded')
+    expect(fromValidationRunRows(rows)).toEqual({ ...source, sourceRunId: 'grounded' })
+  })
+
+  it('saklanmis alinti tekrar input snapshot ile dogrulanir', () => {
+    const source = groundedRun()
+    source.inputSnapshot.solutionText = 'Yanıt 4.'
+    expect(() => fromValidationRunRows(toValidationRunRows(source, 'tampered'))).toThrow('alinti')
+  })
+
+  it('eski payload @4 etiketi altinda kanitsiz okunamaz', () => {
+    const source = run()
+    source.execution.promptVersions.verifier = 'solution-verifier@4'
+    expect(() => fromValidationRunRows(toValidationRunRows(source, 'old-mislabeled'))).toThrow()
+  })
+
+  it('bilinmeyen gelecek surum eski parsera dusmez', () => {
+    const source = groundedRun()
+    source.execution.promptVersions.verifier = 'solution-verifier@5'
+    expect(() => fromValidationRunRows(toValidationRunRows(source, 'future'))).toThrow('desteklenmeyen')
+  })
 })
 const failed = <T>(): AgentOutcome<T> => ({
   status: 'failed',
