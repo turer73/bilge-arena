@@ -10,7 +10,12 @@ CREATE TABLE IF NOT EXISTS public.question_validation_revision_policies (
   question_id uuid NOT NULL REFERENCES public.questions(id),
   content_sha256 text NOT NULL CHECK(content_sha256 ~ '^[a-f0-9]{64}$'),
   base_policy_version text NOT NULL CHECK(base_policy_version='question-quality@2'),
-  policy_version text NOT NULL CHECK(policy_version='question-quality@4'),
+  policy_version text NOT NULL CHECK(policy_version='question-quality@5'),
+  audit_policy_version text NOT NULL CHECK(audit_policy_version='question-quality@4'),
+  audit_execution jsonb NOT NULL CHECK(jsonb_typeof(audit_execution)='object'
+    AND audit_execution->>'policyVersion'='question-quality@4'
+    AND audit_execution->'generationConfig'->>'blindSamples'='3'),
+  audit_code_commit text NOT NULL CHECK(audit_code_commit ~ '^[a-f0-9]{40}$'),
   run_id uuid NOT NULL,
   benchmark_ref text NOT NULL CHECK(length(btrim(benchmark_ref)) BETWEEN 1 AND 1000),
   benchmark_sha256 text NOT NULL CHECK(benchmark_sha256 ~ '^[a-f0-9]{64}$'),
@@ -24,6 +29,44 @@ REVOKE ALL ON TABLE public.question_validation_revision_policies FROM PUBLIC,ano
 GRANT SELECT ON TABLE public.question_validation_revision_policies TO service_role;
 COMMENT ON TABLE public.question_validation_revision_policies IS
   'DB-owner-only append-only exact-revision policy rollout; local evidence hashes are receipts, not server-verified file contents. No human acceptance or scope activation.';
+
+-- Offline decision version and original paid execution version are distinct.
+-- A decision row alone is not a replayable audit: all five exact raw agents
+-- must still exist. JSON values are compared as data, never executed.
+CREATE OR REPLACE FUNCTION public.question_revision_validation_run_complete(b public.question_validation_revision_policies)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $complete$
+  SELECT count(*)=5 AND count(DISTINCT (v.agent,v.sample_index))=5 AND COALESCE(bool_and((
+    v.question_id=b.question_id AND v.revision_id=b.revision_id AND v.content_sha256=b.content_sha256
+    AND v.policy_version=b.audit_policy_version AND v.status='ok'
+    AND v.error_kind IS NULL AND v.skip_reason IS NULL
+    AND NULLIF(btrim(v.raw_output),'') IS NOT NULL AND jsonb_typeof(v.parsed_output)='object'
+    AND v.input_snapshot->>'questionId'=b.question_id::text
+    AND v.input_snapshot->>'revisionId'=b.revision_id::text
+    AND v.input_snapshot->>'contentSha256'=b.content_sha256
+    AND v.generation_config=b.audit_execution->'generationConfig'
+    AND v.generation_config_sha256=b.audit_execution->>'generationConfigSha256'
+    AND v.provider_id=b.audit_execution->'providerIds'->>CASE v.agent WHEN 'blind_solver' THEN 'blind' WHEN 'adversarial' THEN 'adversarial' ELSE 'verifier' END
+    AND v.model_id=b.audit_execution->'modelIds'->>CASE v.agent WHEN 'blind_solver' THEN 'blind' WHEN 'adversarial' THEN 'adversarial' ELSE 'verifier' END
+    AND v.prompt_version=b.audit_execution->'promptVersions'->>CASE v.agent WHEN 'blind_solver' THEN 'blind' WHEN 'adversarial' THEN 'adversarial' ELSE 'verifier' END
+    AND ((v.agent='blind_solver' AND v.sample_index IN (0,1,2))
+      OR (v.agent IN ('adversarial','solution_verifier') AND v.sample_index=0))
+  ) IS TRUE),false)
+  FROM public.question_validation_runs v WHERE v.run_id=b.run_id AND v.question_id=b.question_id
+$complete$;
+
+CREATE OR REPLACE FUNCTION public.lock_question_revision_validation_run(p_revision_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $lockrun$
+DECLARE b public.question_validation_revision_policies%ROWTYPE; current_policy text;
+BEGIN
+  SELECT required_policy_version INTO current_policy FROM public.question_validation_runtime WHERE singleton FOR SHARE;
+  SELECT * INTO b FROM public.question_validation_revision_policies WHERE revision_id=p_revision_id FOR SHARE;
+  IF FOUND AND b.base_policy_version=current_policy THEN
+    PERFORM 1 FROM public.question_validation_runs WHERE run_id=b.run_id AND question_id=b.question_id FOR SHARE;
+    IF NOT public.question_revision_validation_run_complete(b) THEN
+      RAISE EXCEPTION 'complete exact raw validation run required' USING ERRCODE='22023';
+    END IF;
+  END IF;
+END $lockrun$;
 
 CREATE OR REPLACE FUNCTION public.tg_question_revision_policy_guard()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $guard$
@@ -50,6 +93,10 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'exact approved validation run required' USING ERRCODE='22023';
   END IF;
+  PERFORM 1 FROM public.question_validation_runs WHERE run_id=NEW.run_id AND question_id=NEW.question_id FOR SHARE;
+  IF NOT public.question_revision_validation_run_complete(NEW) THEN
+    RAISE EXCEPTION 'complete exact raw validation run required' USING ERRCODE='22023';
+  END IF;
   RETURN NEW;
 END $guard$;
 DROP TRIGGER IF EXISTS trg_question_revision_policy_guard ON public.question_validation_revision_policies;
@@ -61,6 +108,7 @@ RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS 
   SELECT CASE WHEN b.revision_id IS NOT NULL AND b.base_policy_version=rt.required_policy_version
     THEN CASE WHEN r.question_id=b.question_id AND r.content_sha256=b.content_sha256
       AND r.game='fen' AND r.exam_ref='LGS'
+      AND public.question_revision_validation_run_complete(b)
       AND EXISTS(SELECT 1 FROM public.question_validation_decisions d
         WHERE d.revision_id=r.id AND d.question_id=r.question_id AND d.content_sha256=r.content_sha256
           AND d.policy_version=b.policy_version AND d.run_id=b.run_id AND d.verdict='APPROVED')
@@ -148,6 +196,7 @@ BEGIN
   END IF;
   PERFORM public.lock_question_revision_outcome_scope(r.id);
   PERFORM 1 FROM public.question_revision_sources WHERE revision_id=r.id FOR SHARE;
+  PERFORM public.lock_question_revision_validation_run(r.id);
   IF single_review THEN
     -- Freeze policy and its exact authoritative decision through projection write.
     PERFORM 1 FROM public.question_validation_runtime WHERE singleton FOR SHARE;
@@ -236,6 +285,7 @@ BEGIN
   END IF;
   IF v_revision.change_kind = 'retire' THEN RETURN NEW; END IF;
 
+  PERFORM public.lock_question_revision_validation_run(v_revision.id);
   v_policy := public.question_revision_validation_policy(v_revision.id);
 
   SELECT verdict INTO v_verdict
@@ -255,10 +305,11 @@ BEGIN
 END $fn$;
 
 REVOKE ALL ON FUNCTION public.tg_question_revision_policy_guard(),
+  public.question_revision_validation_run_complete(public.question_validation_revision_policies),
+  public.lock_question_revision_validation_run(uuid),
   public.question_revision_validation_policy(uuid),
   public.question_revision_single_review_ready(uuid),
   public.tg_require_question_validation_decision()
   FROM PUBLIC,anon,authenticated,service_role;
 -- Existing service-role-only publisher ACL is retained by CREATE OR REPLACE.
 COMMIT;
-

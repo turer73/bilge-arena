@@ -367,6 +367,9 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
           content_sha256: string
           base_policy_version: string
           policy_version: string
+          audit_policy_version: string
+          audit_execution: Json
+          audit_code_commit: string
           run_id: string
           benchmark_ref: string
           benchmark_sha256: string

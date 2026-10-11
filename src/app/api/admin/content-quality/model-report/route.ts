@@ -43,16 +43,18 @@ export async function GET(request: Request) {
   const policy = z.string().min(1).max(100).safeParse(runtime.data?.required_policy_version)
   if (runtime.error || !policy.success) return contentNoStoreJson({ error: 'Doğrulama politikası alınamadı' }, { status: 503 })
   const binding = await context.admin.from('question_validation_revision_policies')
-    .select('revision_id,question_id,content_sha256,base_policy_version,policy_version,run_id').eq('revision_id', revision.data.id).maybeSingle()
+    .select('revision_id,question_id,content_sha256,base_policy_version,policy_version,audit_policy_version,run_id').eq('revision_id', revision.data.id).maybeSingle()
   // Deploy-before-migration compatibility only; any other error stays closed.
   if (binding.error && !['42P01', 'PGRST205'].includes(binding.error.code)) return contentNoStoreJson({ error: 'Revizyon politikası alınamadı' }, { status: 503 })
   let effectivePolicy = policy.data
+  let decisionPolicy = policy.data
   let boundRunId: string | undefined
   if (binding.data) {
-    const pin = z.object({ revision_id: uuid, question_id: uuid, content_sha256: z.string(), base_policy_version: z.string(), policy_version: z.string(), run_id: uuid }).safeParse(binding.data)
+    const pin = z.object({ revision_id: uuid, question_id: uuid, content_sha256: z.string(), base_policy_version: z.string(), policy_version: z.string().min(1), audit_policy_version: z.string().min(1), run_id: uuid }).safeParse(binding.data)
     if (!pin.success || pin.data.revision_id !== revision.data.id || pin.data.question_id !== revision.data.question_id || pin.data.content_sha256 !== revision.data.content_sha256) return contentNoStoreJson({ error: 'Revizyon politikası doğrulanamadı' }, { status: 503 })
     if (pin.data.base_policy_version === effectivePolicy) {
-      effectivePolicy = pin.data.policy_version
+      effectivePolicy = pin.data.audit_policy_version
+      decisionPolicy = pin.data.policy_version
       boundRunId = pin.data.run_id
     }
   }
@@ -65,5 +67,5 @@ export async function GET(request: Request) {
   const capped = (rawRuns?.length ?? 0) > 200
   const rows = z.array(runSchema).safeParse((rawRuns ?? []).slice(0, 200))
   if (!rows.success) return contentNoStoreJson({ error: 'Model raporu güvenli olarak okunamadı' }, { status: 500 })
-  return contentNoStoreJson({ report: buildFiveModelReport({ questionId: revision.data.question_id, revisionId: revision.data.id, contentSha256: revision.data.content_sha256, policyVersion: effectivePolicy, revisionStatus: revision.data.status, questionText, options: content.options, markedAnswerIndex }, rows.data as FiveModelRunRow[], capped) })
+  return contentNoStoreJson({ decisionPolicy, report: buildFiveModelReport({ questionId: revision.data.question_id, revisionId: revision.data.id, contentSha256: revision.data.content_sha256, policyVersion: effectivePolicy, revisionStatus: revision.data.status, questionText, options: content.options, markedAnswerIndex }, rows.data as FiveModelRunRow[], capped) })
 }

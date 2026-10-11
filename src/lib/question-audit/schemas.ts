@@ -89,7 +89,8 @@ export const legacySolutionVerifierSchema = (optionCount: number) =>
 function isBareOption(quote: string, options: readonly string[]): boolean {
   const fold = (text: string) => text.trim().toLocaleLowerCase('tr-TR')
     .replace(/\s+/g, ' ').replace(/[.!;]+$/, '').trim()
-  const value = fold(quote).replace(/^(?:(?:doğru|dogru) )?(?:yanıt|yanit|cevap|sonuç|sonuc)\s*:?\s+/u, '')
+  // Accept compact colon prefixes without stripping words like 'cevaplama'.
+  const value = fold(quote).replace(/^(?:(?:doğru|dogru) )?(?:yanıt|yanit|cevap|sonuç|sonuc)(?:\s*:\s*|\s+)/u, '')
   return options.some((option) => value === fold(option))
 }
 

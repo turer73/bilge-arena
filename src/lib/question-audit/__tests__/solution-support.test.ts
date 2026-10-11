@@ -28,7 +28,7 @@ function run(text = snapshot.solutionText, patch: Partial<SolutionVerifierWirePa
 }
 
 describe('solution evidence @3 preserves claim vs assessment', () => {
-  it.each(['23', 'Yanıt 23.', 'Cevap: 23', 'Doğru cevap 23.'])('only answer %s cannot become adequate reasoning', (text) => {
+  it.each(['23', 'Yanıt 23.', 'Cevap: 23', 'Doğru cevap 23.', 'Cevap:23', 'Yanıt:23', 'sonuç:23', 'Doğru cevap:23'])('only answer %s cannot become adequate reasoning', (text) => {
     const r = run(text)
     expect(r.verifier).toMatchObject({ status: 'ok', data: { solutionCompleteness: 'adequate', supportAssessment: 'answer_only_for_reported_reasoning' } })
     expect(deriveVerdict(r)).toMatchObject({ verdict: 'NEEDS_REVIEW', findings: [{ code: 'INCOMPLETE_SOLUTION' }] })
@@ -36,9 +36,16 @@ describe('solution evidence @3 preserves claim vs assessment', () => {
   })
 
   it.each(['-10', '1,5', '1/2', '%50'])('preserves significant answer characters %s', (answer) => {
-    const p = solutionVerifierSchema([answer, '0', '1', '2'], `Yanıt ${answer}.`).parse(wire())
-    expect(p.supportAssessment).toBe('answer_only_for_reported_reasoning')
-    expect(p.solutionCompleteness).toBe('adequate')
+    for (const prefix of ['Yanıt ', 'Cevap:', 'sonuç:']) {
+      const p = solutionVerifierSchema([answer, '0', '1', '2'], `${prefix}${answer}.`).parse(wire())
+      expect(p.supportAssessment).toBe('answer_only_for_reported_reasoning')
+      expect(p.solutionCompleteness).toBe('adequate')
+    }
+  })
+
+  it('does not strip an answer-prefix substring inside another word', () => {
+    const p = solutionVerifierSchema(['lama', '0', '1', '2'], 'cevaplama').parse(wire())
+    expect(p.supportAssessment).toBe('not_established')
   })
 
   it('missing citations or only-answer citations require review, not an invented content defect', () => {

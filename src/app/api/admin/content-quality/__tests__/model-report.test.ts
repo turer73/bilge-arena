@@ -28,18 +28,18 @@ beforeEach(() => vi.clearAllMocks())
 
 describe('model report route security and read contract', () => {
   it('uses only the exact revision-bound @4 run', async () => {
-    const binding = { revision_id: RID, question_id: QID, content_sha256: HASH, base_policy_version: 'question-quality@2', policy_version: 'question-quality@4', run_id: '33333333-3333-4333-8333-333333333333' }
+    const binding = { revision_id: RID, question_id: QID, content_sha256: HASH, base_policy_version: 'question-quality@2', policy_version: 'question-quality@5', audit_policy_version: 'question-quality@4', run_id: '33333333-3333-4333-8333-333333333333' }
     const f = fakeAdmin({ question_validation_revision_policies: { data: binding, error: null }, question_validation_runs: { data: [], error: null } })
     mocks.context.mockResolvedValue({ ok: true, admin: f.admin })
     const response = await GET(req(`revisionId=${RID}`))
     expect(response.status).toBe(200)
-    expect((await response.json()).report.policyVersion).toBe('question-quality@4')
+    expect(await response.json()).toMatchObject({ decisionPolicy: 'question-quality@5', report: { policyVersion: 'question-quality@4' } })
     expect(f.calls.eq).toContainEqual(['question_validation_runs', 'run_id', binding.run_id])
     expect(f.calls.eq).toContainEqual(['question_validation_runs', 'policy_version', 'question-quality@4'])
   })
   it('fails closed for stale binding content and unavailable policy reads', async () => {
     for (const over of [
-      { question_validation_revision_policies: { data: { revision_id: RID, question_id: QID, content_sha256: 'b'.repeat(64), base_policy_version: 'question-quality@2', policy_version: 'question-quality@4', run_id: QID }, error: null } },
+      { question_validation_revision_policies: { data: { revision_id: RID, question_id: QID, content_sha256: 'b'.repeat(64), base_policy_version: 'question-quality@2', policy_version: 'question-quality@5', audit_policy_version: 'question-quality@4', run_id: QID }, error: null } },
       { question_validation_revision_policies: { data: null, error: { code: '42501' } } },
       { question_validation_runtime: { data: null, error: { code: 'PGRST205' } } },
     ]) {
@@ -52,7 +52,7 @@ describe('model report route security and read contract', () => {
     mocks.context.mockResolvedValue({ ok: true, admin: f.admin })
     expect((await GET(req(`revisionId=${RID}`))).status).toBe(200)
     expect(f.calls.eq).toContainEqual(['question_validation_runs', 'policy_version', 'question-quality@2'])
-    const next = fakeAdmin({ question_validation_runtime: { data: { required_policy_version: 'question-quality@5' }, error: null }, question_validation_revision_policies: { data: { revision_id: RID, question_id: QID, content_sha256: HASH, base_policy_version: 'question-quality@2', policy_version: 'question-quality@4', run_id: QID }, error: null } })
+    const next = fakeAdmin({ question_validation_runtime: { data: { required_policy_version: 'question-quality@5' }, error: null }, question_validation_revision_policies: { data: { revision_id: RID, question_id: QID, content_sha256: HASH, base_policy_version: 'question-quality@2', policy_version: 'question-quality@5', audit_policy_version: 'question-quality@4', run_id: QID }, error: null } })
     mocks.context.mockResolvedValue({ ok: true, admin: next.admin })
     expect((await GET(req(`revisionId=${RID}`))).status).toBe(200)
     expect(next.calls.eq).toContainEqual(['question_validation_runs', 'policy_version', 'question-quality@5'])

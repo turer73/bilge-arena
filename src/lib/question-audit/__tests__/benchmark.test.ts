@@ -177,6 +177,21 @@ describe('insan-altin benchmark', () => {
 })
 
 describe('terfi kaniti kimlik bagi', () => {
+  const bounded = (ids: unknown[], conditions: unknown = ['clean', 'wrong', 'incomplete']) => ({
+    ...promotionEvidence(), extraReleaseConditionsPassed: true,
+    boundedScope: { releaseConditions: conditions },
+    checks: ids.map((conditionId) => ({ conditionId, passed: true })),
+  })
+  it('requires exact coverage of every declared release condition', () => {
+    expect(() => assertPromotionEvidence(bounded(['wrong', 'clean', 'incomplete']), identity)).not.toThrow()
+  })
+  it.each([['clean'], ['clean', 'wrong'], ['clean', 'wrong', 'wrong'], ['clean', 'wrong', 'other'],
+    ['clean', 'wrong', 'incomplete', 'extra'], [undefined, undefined, undefined]])('rejects missing/duplicate/unknown conditions %j', (...ids) => {
+    expect(() => assertPromotionEvidence(bounded(ids), identity)).toThrow('ek kosul')
+  })
+  it.each([[], ['clean', 'clean'], [''], null])('rejects malformed declared conditions %j', (conditions) => {
+    expect(() => assertPromotionEvidence(bounded(['clean'], conditions), identity)).toThrow('ek kosul')
+  })
   it.each([false, null, 'true', 1, undefined])('beyan edilmis ek kosul %j ise varsayilan yesil olsa da reddeder', (extra) => {
     const evidence = { ...promotionEvidence(), extraReleaseConditionsPassed: extra }
     expect(() => assertPromotionEvidence(evidence, identity)).toThrow('ek')

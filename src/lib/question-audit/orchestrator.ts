@@ -90,9 +90,10 @@ export interface AuditProviders {
  * surumu arar ve HICBIR yayin gecmez (fail-closed). Sira: once yeni surumle
  * kosup kararlari yaz, sonra runtime'i cevir.
  */
-// Local @4 candidate: exact-text selection and negative consistency checks.
-// Old @2/@3 evidence cannot promote it. No production runtime is changed here.
-export const QUESTION_QUALITY_POLICY_VERSION = 'question-quality@4'
+// @5: compact answer-only prefixes are checked as rigorously as spaced ones.
+// Stored @4 executions keep their identity; offline @5 decisions are separate.
+// No production runtime or historical decision is changed by this constant.
+export const QUESTION_QUALITY_POLICY_VERSION = 'question-quality@5'
 
 /** Yalniz model ciktisini etkileyen ayarlar hash'e girer; retry/rate ayarlari girmez. */
 export function auditExecutionIdentity(
