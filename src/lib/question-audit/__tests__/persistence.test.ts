@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { fromValidationRunRows, toValidationDecisionRow, toValidationRunRows } from '../persistence'
 import { deriveVerdict } from '../verdict'
+import { solutionVerifierSchema } from '../schemas'
 import type { AgentOutcome, AgentTelemetry, AuditRun, GroundedSolutionVerifierPayload } from '../types'
 
 const telemetry: AgentTelemetry = {
@@ -58,8 +59,37 @@ describe('surumlu verifier replay', () => {
 
   it('bilinmeyen gelecek surum eski parsera dusmez', () => {
     const source = groundedRun()
-    source.execution.promptVersions.verifier = 'solution-verifier@5'
+    source.execution.promptVersions.verifier = 'solution-verifier@999'
     expect(() => fromValidationRunRows(toValidationRunRows(source, 'future'))).toThrow('desteklenmeyen')
+  })
+
+  function referencedRun() {
+    const source = groundedRun()
+    source.execution.promptVersions.verifier = 'solution-verifier@5'
+    source.verifier = ok(solutionVerifierSchema(source.inputSnapshot.options, '2+2=4').parse({
+      reasoning: 'Islem yazarin metninde.', solutionConcludesIndex: 2, solutionCompleteness: 'adequate',
+      evidenceVersion: 'solution-evidence@2', questionDemand: 'reasoning', supportingUnitIds: ['author:0'],
+    }), 'solution-verifier@5')
+    return source
+  }
+
+  it('@5 kimlik ve kod kaynakli alinti tam gidis-donus yapar', () => {
+    const source = referencedRun()
+    expect(fromValidationRunRows(toValidationRunRows(source, 'refs'))).toEqual({ ...source, sourceRunId: 'refs' })
+  })
+
+  it.each(['snapshot', 'quotation', 'unit', 'version'])('@5 saklanan %s degisikligi sessizce onarilmaz', (variant) => {
+    const rows = toValidationRunRows(referencedRun(), 'bad-refs')
+    const row = rows.find((r) => r.agent === 'solution_verifier')!
+    if (variant === 'snapshot') {
+      for (const r of rows) r.input_snapshot.solutionText = '2+2=5'
+    } else {
+      row.parsed_output = { ...(row.parsed_output as object), ...{
+        quotation: { supportingQuotes: ['W=F*s'] }, unit: { supportingUnitIds: ['author:9'] },
+        version: { evidenceVersion: 'solution-evidence@1' },
+      }[variant] }
+    }
+    expect(() => fromValidationRunRows(rows)).toThrow()
   })
 })
 const failed = <T>(): AgentOutcome<T> => ({

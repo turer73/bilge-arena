@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildSolutionVerifierPrompt, PROMPT_VERSION } from '../prompts'
 import { solutionVerifierShape } from '../response-shapes'
-import { legacySolutionVerifierSchema, solutionVerifierSchema } from '../schemas'
+import { legacySolutionVerifierSchema, quotedSolutionVerifierSchema as solutionVerifierSchema } from '../schemas'
 import type { GroundedSolutionVerifierPayload, QuestionDraft } from '../types'
 
 const options = ['23', '25', '27', '29']
@@ -118,17 +118,18 @@ describe('prompt ve provider sozlesmesi', () => {
       options, markedAnswerIndex: 0, solutionText: 'Yanıt 23.',
     }
     const prompt = buildSolutionVerifierPrompt(draft)
-    expect(PROMPT_VERSION.solutionVerifier).toBe('solution-verifier@4')
+    expect(PROMPT_VERSION.solutionVerifier).toBe('solution-verifier@5')
     expect(prompt.system).toContain('Soruyu kendin cozme')
-    expect(prompt.system).toContain('YALNIZ solutionText')
+    expect(prompt.system).toContain('YALNIZ authorEvidenceUnits')
     expect(prompt.system).toContain('Suphede kalirsan "terse"')
     expect(prompt.system).not.toContain('Gorevin TEK sey')
     expect(prompt).toEqual(buildSolutionVerifierPrompt({ ...draft, markedAnswerIndex: 3 }))
     expect(JSON.parse(prompt.user.split('\n')[1]).solutionText).toBe('Yanıt 23.')
     const shape = solutionVerifierShape(4)
     expect(shape.required).toEqual(shape.propertyOrdering)
-    expect(shape.required).toContain('supportingQuotes')
-    expect(shape.properties?.evidenceVersion.enum).toEqual(['solution-evidence@1'])
-    expect(shape.properties?.supportingQuotes.items?.type).toBe('STRING')
+    expect(shape.required).toContain('supportingUnitIds')
+    expect(shape.properties?.evidenceVersion.enum).toEqual(['solution-evidence@2'])
+    expect(shape.properties?.supportingUnitIds.items?.type).toBe('STRING')
+    expect(shape.properties).not.toHaveProperty('supportingQuotes')
   })
 })

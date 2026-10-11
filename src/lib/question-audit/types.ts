@@ -195,7 +195,7 @@ export interface SolutionVerifierPayload {
   solutionCompleteness: 'adequate' | 'terse'
 }
 
-/** @4+ cagrilar icin zorunlu; eski payload yalniz tarihsel replay icindir. */
+/** @4 arsivleri: model alintilari birebir kaynakla dogrulanir. */
 export interface GroundedSolutionVerifierPayload extends SolutionVerifierPayload {
   evidenceVersion: 'solution-evidence@1'
   /** Model yargisidir, bagimsiz olarak dogrulanmis soru sinifi DEGILDIR. */
@@ -203,6 +203,17 @@ export interface GroundedSolutionVerifierPayload extends SolutionVerifierPayload
   /** Yalniz solutionText icinden birebir parcalar. Varlik != mantiksal dogruluk. */
   supportingQuotes: string[]
 }
+
+/** @5: model yalniz kodun verdigi yazar parcasi kimliklerini secer. */
+export interface ReferencedSolutionVerifierPayload extends SolutionVerifierPayload {
+  evidenceVersion: 'solution-evidence@2'
+  questionDemand: 'recall' | 'reasoning'
+  supportingUnitIds: string[]
+  /** Model ciktisi DEGIL. Dogrulanmis kimliklerden kodun cikardigi metin. */
+  supportingQuotes: string[]
+}
+
+export type SolutionVerifierWirePayload = Omit<ReferencedSolutionVerifierPayload, 'supportingQuotes'>
 
 // ── Kosu kaydi ve verdict ──────────────────────────────────────────────────
 

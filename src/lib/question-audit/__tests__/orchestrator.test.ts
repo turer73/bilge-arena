@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_AUDIT_CONFIG, executeAudit, auditQuestion, type AuditProviders } from '../orchestrator'
 import { ProviderHttpError, type LlmProvider, type LlmRawResponse } from '../provider'
-import type { GroundedSolutionVerifierPayload, QuestionDraft } from '../types'
+import type { SolutionVerifierWirePayload, QuestionDraft } from '../types'
 
 function draft(overrides: Partial<QuestionDraft> = {}): QuestionDraft {
   return {
@@ -34,7 +34,7 @@ interface FakeOptions {
   findings?: unknown[]
   concludesText?: string | null
   completeness?: 'adequate' | 'terse'
-  verifierPayload?: Partial<GroundedSolutionVerifierPayload>
+  verifierPayload?: Partial<SolutionVerifierWirePayload>
   error?: Error
 }
 
@@ -68,9 +68,9 @@ function fakeProvider(id: string, opts: FakeOptions = {}) {
           reasoning: 'takip ettim',
           solutionConcludesIndex: idx === -1 ? null : idx,
           solutionCompleteness: opts.completeness ?? 'adequate',
-          evidenceVersion: 'solution-evidence@1',
+          evidenceVersion: 'solution-evidence@2',
           questionDemand: 'reasoning',
-          supportingQuotes: opts.completeness === 'terse' ? [] : [JSON.parse(req.user.split('\n')[1]).solutionText],
+          supportingUnitIds: opts.completeness === 'terse' ? [] : [JSON.parse(req.user.split('\n')[1]).authorEvidenceUnits[0].id],
           ...opts.verifierPayload,
         }
       }
@@ -251,9 +251,9 @@ describe('yazar metnine bagli cozum denetimi', () => {
     markedAnswerIndex: 0, solutionText: 'Yanıt 23.',
   })
 
-  it.each([['12+18-7=23'], ['Yanıt 23.'], []])('sahte veya sonuc-tekrari dayanagi APPROVED yapmaz: %j', async (...quotes) => {
+  it.each([['question:0'], ['author:0'], []])('sahte veya sonuc-tekrari dayanagi APPROVED yapmaz: %j', async (...ids) => {
     const p = providers({ blind: { picksText: '23' }, verifier: {
-      concludesText: '23', verifierPayload: { supportingQuotes: quotes },
+      concludesText: '23', verifierPayload: { supportingUnitIds: ids },
     } })
     const { run, verdict } = await auditQuestion(missing, p, fastConfig)
     expect(run.verifier).toMatchObject({ status: 'failed', error: { kind: 'schema' } })
@@ -278,8 +278,8 @@ describe('yazar metnine bagli cozum denetimi', () => {
     }), fastConfig)
     expect(verdict.verdict).toBe('APPROVED')
     expect(run.verifier).toMatchObject({ status: 'ok', data: {
-      evidenceVersion: 'solution-evidence@1', questionDemand: 'reasoning', supportingQuotes: ['12+18-7=23'],
+      evidenceVersion: 'solution-evidence@2', questionDemand: 'reasoning', supportingUnitIds: ['author:0'], supportingQuotes: ['12+18-7=23'],
     } })
-    expect(run.execution.promptVersions.verifier).toBe('solution-verifier@4')
+    expect(run.execution.promptVersions.verifier).toBe('solution-verifier@5')
   })
 })

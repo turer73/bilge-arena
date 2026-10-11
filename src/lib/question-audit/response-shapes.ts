@@ -94,15 +94,15 @@ export function solutionVerifierShape(optionCount: number): GeminiSchema {
         description: `Cozumun vardigi secenek indeksi (0-${maxIdx}). Hicbirine varmiyorsa null.`,
       },
       solutionCompleteness: { type: 'STRING', enum: ['adequate', 'terse'] },
-      evidenceVersion: { type: 'STRING', enum: ['solution-evidence@1'] },
+      evidenceVersion: { type: 'STRING', enum: ['solution-evidence@2'] },
       questionDemand: { type: 'STRING', enum: ['recall', 'reasoning'] },
-      supportingQuotes: {
+      supportingUnitIds: {
         type: 'ARRAY',
         items: { type: 'STRING' },
-        description: 'Yalniz solutionText icinde birebir bulunan dayanaklar. Kendi cozumun veya soru koku sayilmaz. Yoksa bos dizi.',
+        description: 'Yalniz authorEvidenceUnits listesindeki benzersiz id degerleri. Alinti metni veya yeni kimlik yazma. Dayanak yoksa bos dizi.',
       },
     },
-    required: ['reasoning', 'solutionConcludesIndex', 'evidenceVersion', 'questionDemand', 'supportingQuotes', 'solutionCompleteness'],
-    propertyOrdering: ['reasoning', 'solutionConcludesIndex', 'evidenceVersion', 'questionDemand', 'supportingQuotes', 'solutionCompleteness'],
+    required: ['reasoning', 'solutionConcludesIndex', 'evidenceVersion', 'questionDemand', 'supportingUnitIds', 'solutionCompleteness'],
+    propertyOrdering: ['reasoning', 'solutionConcludesIndex', 'evidenceVersion', 'questionDemand', 'supportingUnitIds', 'solutionCompleteness'],
   }
 }

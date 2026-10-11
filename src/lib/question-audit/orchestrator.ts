@@ -25,7 +25,7 @@ import type {
   BlindSolverPayload,
   QuestionDraft,
   SolutionVerifierPayload,
-  GroundedSolutionVerifierPayload,
+  ReferencedSolutionVerifierPayload,
   AuditExecutionIdentity,
 } from './types'
 import { deriveVerdict, DEFAULT_DERIVE_OPTIONS, type DeriveOptions } from './verdict'
@@ -236,7 +236,7 @@ export async function executeAudit(
   const verifierPromise: Promise<AgentOutcome<SolutionVerifierPayload>> = hasSolution
     ? (() => {
         const vPrompt = buildSolutionVerifierPrompt(draft)
-        return runAgent<GroundedSolutionVerifierPayload>({
+        return runAgent<ReferencedSolutionVerifierPayload>({
           provider: providers.verifier,
           promptVersion: PROMPT_VERSION.solutionVerifier,
           request: {

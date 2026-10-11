@@ -18,6 +18,7 @@
 
 import { z } from 'zod'
 import { FLAW_SEVERITY, type FlawCode } from './types'
+import { authorEvidenceUnits } from './solution-evidence'
 
 const FLAW_CODES = Object.keys(FLAW_SEVERITY) as [FlawCode, ...FlawCode[]]
 
@@ -96,7 +97,7 @@ function isBareOption(quote: string, options: readonly string[]): boolean {
  * Uydurma alinti bir ajan/sozlesme hatasidir; soru kusuru diye kaydedilmez.
  * Semantik yeterlilik hala model yargisidir; bu kontrol terfi benchmark'i degildir.
  */
-export const solutionVerifierSchema = (options: readonly string[], solutionText: string) =>
+export const quotedSolutionVerifierSchema = (options: readonly string[], solutionText: string) =>
   legacySolutionVerifierSchema(options.length).extend({
     evidenceVersion: z.literal('solution-evidence@1'),
     questionDemand: z.enum(['recall', 'reasoning']),
@@ -118,6 +119,54 @@ export const solutionVerifierSchema = (options: readonly string[], solutionText:
       ctx.addIssue({ code: 'custom', path: ['supportingQuotes'], message: 'yalniz cevap tekrari hesap/cikarim dayanagi olamaz' })
     }
   })
+
+/** @5 wire contract: arbitrary model quotations are not accepted. */
+export const solutionVerifierSchema = (options: readonly string[], solutionText: string) => {
+  const units = new Map(authorEvidenceUnits(solutionText).map((unit) => [unit.id, unit.text]))
+  return legacySolutionVerifierSchema(options.length).extend({
+    evidenceVersion: z.literal('solution-evidence@2'),
+    questionDemand: z.enum(['recall', 'reasoning']),
+    supportingUnitIds: z.array(z.string().regex(/^author:\d+$/)).max(8),
+  }).strict().transform((value, ctx) => {
+    const seen = new Set<string>()
+    const supportingQuotes: string[] = []
+    value.supportingUnitIds.forEach((id, index) => {
+      const quote = units.get(id)
+      if (quote === undefined || seen.has(id)) {
+        ctx.addIssue({ code: 'custom', path: ['supportingUnitIds', index], message: 'bilinmeyen veya tekrarlanan yazar parcasi' })
+      } else {
+        supportingQuotes.push(quote)
+        seen.add(id)
+      }
+    })
+    if (value.solutionCompleteness === 'adequate') {
+      if (supportingQuotes.length === 0) {
+        ctx.addIssue({ code: 'custom', path: ['supportingUnitIds'], message: 'adequate karari yazarin metninden dayanak gerektirir' })
+      }
+      if (value.questionDemand === 'reasoning' && (isBareOption(solutionText, options) ||
+        (supportingQuotes.length > 0 && supportingQuotes.every((quote) => isBareOption(quote, options))))) {
+        ctx.addIssue({ code: 'custom', path: ['supportingUnitIds'], message: 'yalniz cevap tekrari hesap/cikarim dayanagi olamaz' })
+      }
+    }
+    return { ...value, supportingQuotes }
+  })
+}
+
+/** Stored @5 output includes code-derived quotes: verify, never silently replace. */
+export const storedSolutionVerifierSchema = (options: readonly string[], solutionText: string) =>
+  z.object({ supportingQuotes: z.array(z.string().min(1).max(2000)).max(8) }).passthrough()
+    .transform(({ supportingQuotes, ...wire }, ctx) => {
+      const result = solutionVerifierSchema(options, solutionText).safeParse(wire)
+      if (!result.success) {
+        for (const issue of result.error.issues) ctx.addIssue({ code: 'custom', path: issue.path, message: issue.message })
+        return z.NEVER
+      }
+      if (JSON.stringify(supportingQuotes) !== JSON.stringify(result.data.supportingQuotes)) {
+        ctx.addIssue({ code: 'custom', path: ['supportingQuotes'], message: 'saklanan alintilar yazar parcalariyla eslesmiyor' })
+        return z.NEVER
+      }
+      return result.data
+    })
 
 export type BlindSolverParsed = z.infer<ReturnType<typeof blindSolverSchema>>
 export type AdversarialParsed = z.infer<ReturnType<typeof adversarialSchema>>

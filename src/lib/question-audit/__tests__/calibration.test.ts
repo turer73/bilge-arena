@@ -50,8 +50,8 @@ function makeProviders(o: {
         const idx = shown.indexOf(o.verifierText ?? 'A2')
         body = {
           reasoning: 'r', solutionConcludesIndex: idx === -1 ? null : idx, solutionCompleteness: 'adequate',
-          evidenceVersion: 'solution-evidence@1', questionDemand: 'recall',
-          supportingQuotes: [JSON.parse(req.user.split('\n')[1]).solutionText],
+          evidenceVersion: 'solution-evidence@2', questionDemand: 'recall',
+          supportingUnitIds: [JSON.parse(req.user.split('\n')[1]).authorEvidenceUnits[0].id],
         }
       }
       return { text: JSON.stringify(body), finishReason: 'STOP', inputTokens: 10, outputTokens: 5 }
@@ -179,7 +179,7 @@ describe('kosu mekanigi', () => {
     expect(replay.cache).toEqual({ hits: 1, misses: 0 })
     expect(replay.cost).toEqual({ inputTokens: 0, outputTokens: 0, totalLatencyMs: 0 })
     expect(replay.promptVersions).toEqual({
-      blind: 'blind-solver@2', adversarial: 'adversarial@2', verifier: 'solution-verifier@4',
+      blind: 'blind-solver@2', adversarial: 'adversarial@2', verifier: 'solution-verifier@5',
     })
     expect(persistedAgain).toBe(false)
     expect(decisions).toBe(1)

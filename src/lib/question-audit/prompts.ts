@@ -11,6 +11,7 @@
 
 import type { BlindQuestionView } from './blind-view'
 import type { QuestionDraft } from './types'
+import { authorEvidenceUnits } from './solution-evidence'
 
 export const PROMPT_VERSION = {
   // @2: soru metni, oncul ve secenekler guvenilmeyen veri olarak JSON icinde
@@ -28,7 +29,8 @@ export const PROMPT_VERSION = {
   // @3: cozum metni de ayni guven sinirina alindi.
   // @4: sonuc cikarimi ile yeterlilik ayrildi. Metinde gercekten bulunan
   // dayanak zorunlu; denetcinin kendi cozum adimlari kanit sayilmaz.
-  solutionVerifier: 'solution-verifier@4',
+  // @5: alinti yazdirmak yerine yazar metninden kodun verdigi parca ID'leri.
+  solutionVerifier: 'solution-verifier@5',
 } as const
 
 /**
@@ -158,8 +160,8 @@ ${jsonOnly([
  */
 export function buildSolutionVerifierPrompt(draft: QuestionDraft): { system: string; user: string } {
   const maxIdx = draft.options.length - 1
-  const solution = (draft.solutionText ?? '').trim()
-  if (!solution) {
+  const solution = draft.solutionText ?? ''
+  if (!solution.trim()) {
     throw new Error('buildSolutionVerifierPrompt: cozum metni bos — ajan atlanmali (skipped)')
   }
   return {
@@ -178,12 +180,20 @@ sunmuyorsa) solutionConcludesIndex = null.
 
 questionDemand: dogrudan tanim/kelime/hatirlama ise "recall"; bir islem bile
 gerektiren hesap, uygulama, karsilastirma veya neden-sonuc cikarimi ise "reasoning".
+Kokte cevap aynen verilip tekrar secilmesi isteniyorsa dogrudan eslestirme
+"recall"dir. Verilen kuralla YENI bir ornek/sonuc hesaplamak "reasoning"dir.
+Ornek: "yalniz aa cekiniktir, hangisi cekiniktir?" recall;
+bir caprazlamanin olasiligini hesaplamak reasoning. Konu adi karar verdirmez.
 Sorunun sayilarini/formulunu gormek yeterli degildir; cozum metnini denetliyorsun.
 
-supportingQuotes: YALNIZ solutionText icindeki birebir, kesintisiz alintilar.
+supportingUnitIds: YALNIZ authorEvidenceUnits listesindeki parca id degerleri.
+Bu listeyi kod solutionText'ten cikardi; soru kokunden hicbir parca yoktur.
 Hesap/cikarim icin islem veya ilkeyi sonuca baglayan ifade; hatirlama icin
-ilgili tanim/fakt. Sorudan, secenekten veya kendi reasoning alanindan alinti
-yapma. Parcalari birlestirme, yazimi/sembolleri duzeltme. Dayanak yoksa [].
+ilgili tanim/fakt tasiyan parcayi sec. Alinti metni YAZMA; supportingQuotes
+alani DONDURME. Kod sectigin id'lerden metni aynen alacak. Girdide verilmeyen
+kimlik, soru-koku kimligi veya kendi cozumune kimlik uydurma. Dayanak yoksa [].
+Parcanin mevcut olmasi yeterlilik kaniti degildir; gerekli islemi gercekten
+iceriyor mu incele. Yalniz cevabi tekrarlayan parcayi hesap kaniti sayma.
 
 Yeterlilik olcusu UZUNLUK DEGIL, gercekten GOSTERILEN dayanaktir:
 
@@ -196,9 +206,9 @@ Yeterlilik olcusu UZUNLUK DEGIL, gercekten GOSTERILEN dayanaktir:
 - "terse": gerekli hesap/cikarim dayanagi eksik veya yeterliligi belirsiz.
   Tek bir islem gerektirse bile sadece sonucu tekrarlamak gerekce DEGILDIR.
   Ornek: kütle hesabi isteyen bir soruda cozum yalniz "Yanit 23." ise
-  supportingQuotes=[], solutionCompleteness="terse". Senin 12+18-7=23
+  supportingUnitIds=[], solutionCompleteness="terse". Senin 12+18-7=23
   hesaplayabilmen bunu DEGISTIRMEZ. Ama yazar "12+18-7=23" yazmissa bu
-  kisa ifade yeterli olabilir; birebir alintiyla "adequate" degerlendir.
+  kisa ifade yeterli olabilir; onu iceren yazar parcasi ile "adequate" degerlendir.
 
 Suphede kalirsan "terse" ile incelemeye birak; emin olmadigin bir dayanagi
 uydurma. Kisa olmasi TEK BASINA kusur DEGILDIR. "Tree = agac." tam bir
@@ -207,9 +217,9 @@ kelime-anlami aciklamasidir (recall), cok adimli hesapla karistirma.
 ${jsonOnly([
       '"reasoning": <string — metinde bulunan/eksik dayanak icin kisa gerekce; yeni cozum uretme>',
       `"solutionConcludesIndex": <integer 0-${maxIdx}, veya hicbir secenege varmiyorsa null>`,
-      '"evidenceVersion": "solution-evidence@1"',
+      '"evidenceVersion": "solution-evidence@2"',
       '"questionDemand": "recall" | "reasoning"',
-      '"supportingQuotes": <string[] — yalniz solutionText icinden birebir dayanaklar, yoksa []>',
+      '"supportingUnitIds": <string[] — authorEvidenceUnits listesinden benzersiz id degerleri, yoksa []>',
       '"solutionCompleteness": "adequate" | "terse"',
     ])}`,
     user: renderUntrustedData({
@@ -218,6 +228,7 @@ ${jsonOnly([
       optionCount: draft.options.length,
       options: draft.options.map((text, index) => ({ index, text })),
       solutionText: solution,
+      authorEvidenceUnits: authorEvidenceUnits(solution),
     }),
   }
 }
