@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION public.sync_taxonomy_auto_question_outcomes(p_questio
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'pg_catalog'
+ SET search_path=pg_catalog
 AS $function$
 DECLARE
   v_scope public.curriculum_scope_releases%ROWTYPE;
@@ -122,7 +122,7 @@ CREATE OR REPLACE FUNCTION public.trg_sync_taxonomy_auto_question_outcomes()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'pg_catalog'
+ SET search_path=pg_catalog
 AS $function$
 BEGIN
   IF TG_OP='UPDATE' AND NEW.is_active IS TRUE
