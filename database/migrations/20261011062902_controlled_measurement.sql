@@ -289,7 +289,7 @@ CREATE OR REPLACE FUNCTION public.export_account_data(p_user_id uuid)
  RETURNS jsonb
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
- SET search_path TO 'pg_catalog'
+ SET search_path = pg_catalog
 AS $function$
 DECLARE
   v_table record;

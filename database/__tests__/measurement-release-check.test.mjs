@@ -1,8 +1,16 @@
 import { describe,it,expect } from 'vitest'
 import { measurementReleaseSql,verifyMeasurementRelease } from '../measurement-release-check.mjs'
+import { readFileSync } from 'node:fs'
+import { securityDefinerFunctions } from '../lint-function-grants.mjs'
 const before={version:'measurement-release@1',phase:'preflight',databaseWrites:0,serverSupported:true,missingColumns:[],helpersPresent:true,newObjectsAbsent:true}
 const after={version:'measurement-release@1',phase:'readback',databaseWrites:0,matchingFunctionBodies:7,privateRlsTables:4,privateView:true,browserRpcGrants:0,serviceRpcGrants:5,formCount:0,enabledFormCount:0,sessionCount:0}
 describe('measurement release read-only gates',()=>{
+ it('uses the repository fixed search path convention for all privileged functions',()=>{
+  const sql=readFileSync(new URL('../migrations/20261011062902_controlled_measurement.sql',import.meta.url),'utf8')
+  const functions=securityDefinerFunctions(sql)
+  expect(functions).toHaveLength(7)
+  expect(functions.every(fn=>fn.fixedSearchPath)).toBe(true)
+ })
  it('accepts complete evidence without authorizing activation',()=>{
   for(const r of [before,after])expect(verifyMeasurementRelease(r)).toEqual({ok:true,errors:[],activationAuthorized:false,calibrated:false})
  })
