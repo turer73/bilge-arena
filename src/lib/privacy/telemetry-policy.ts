@@ -5,6 +5,8 @@ const SENSITIVE_WORKSPACE_PREFIXES = [
   '/hesap/guvenlik',
   '/arena/tani/sosyal-hazirlik',
   '/api/study/tyt-social-preparation',
+  '/arena/olcum',
+  '/api/study/measurement',
   '/api/admin',
   '/api/institution',
   '/api/teacher',

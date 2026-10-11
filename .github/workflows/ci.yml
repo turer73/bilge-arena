@@ -236,6 +236,12 @@ jobs:
           SOURCE_REVIEW_PG_REQUIRED: '1'
         run: node node_modules/vitest/vitest.mjs run --config vitest.database.config.ts database/__tests__/question-source-review-wasm.test.mjs database/__tests__/source-comparison-review.test.mjs database/__tests__/question-basic-guard-postgres.test.mjs database/__tests__/tyt-social-reviewed-preparation-pool.test.mjs database/__tests__/governed-social-outcome-projection.test.mjs database/__tests__/tyt-social-preparation-learner-flow.test.mjs
 
+      - name: Run controlled measurement and calibration readiness acceptance
+        env:
+          SOURCE_REVIEW_PG_BIN: /usr/lib/postgresql/16/bin
+          SOURCE_REVIEW_PG_REQUIRED: '1'
+        run: node node_modules/vitest/vitest.mjs run --config vitest.database.config.ts database/__tests__/controlled-measurement.test.mjs database/__tests__/social-calibration-readiness.test.mjs database/__tests__/measurement-readiness.test.mjs
+
       - name: Run canonical identity and deduplicated evidence acceptance
         env:
           CANONICAL_PG_BIN: /usr/lib/postgresql/16/bin
@@ -306,7 +312,7 @@ jobs:
       # (ilk CI kosusunda deterministik gecti). Tam suite icin operatorun
       # SUPABASE_SERVICE_KEY secret'i eklemesi gerekir (follow-up).
       - name: Run E2E smoke (chromium, backend-independent)
-        run: npm run test:e2e -- --project=chromium e2e/oda-routes.spec.ts e2e/proxy-admin-guard.spec.ts e2e/tyt-social-preparation.spec.ts
+        run: npm run test:e2e -- --project=chromium e2e/oda-routes.spec.ts e2e/proxy-admin-guard.spec.ts e2e/tyt-social-preparation.spec.ts e2e/controlled-measurement.spec.ts
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}

@@ -1,0 +1,111 @@
+# Kontrollü ölçüm toplama — v1
+
+Bu kod **kalibrasyon sonucu değildir**. Varsayılan kapalı bir veri toplama
+altyapısıdır. Matematik TYT ile başlanır; aynı sözleşme LGS'de dört seçenek
+zorlar. Sosyal hazırlık, mevcut kısa taramalar, puanlar ve ustalık değişmez.
+
+## Sözleşme
+
+- `measurement_forms`: sıralı 5–30 değişmez soru/revizyon/hash pini; ders,
+  sınav/yıl/protokol dahil kanonik PostgreSQL JSON hash'i. Ayrı form kabul
+  referansı ve yetkili sahibi. Form `enabled=false` olmadan otomatik açılmaz.
+- `measurement_sessions` / `measurement_items`: kimliği doğrulanmış öğrenci,
+  ilk seçim, sunucu zamanları, konum, render sürümü/beyanı ve tekrar işaretleri.
+  Soru metni/anahtar yeniden yazılmaz; mevcut immutable revizyon kullanılır.
+  `verified_attempts` ödül oturumu oluşturulmaz; bu ayrı ölçüm amacı normal
+  oyun veya eski v3 psikometri verisiyle kendiliğinden karışmaz.
+- Anahtar/çözüm, son cevap kaydedilene kadar SQL RPC sonucunda bile yoktur.
+  Public JSON allowlist ayrıca doğrulanır. Tamamlandıktan sonra doğru seçenek
+  **metin** olarak verilir; çözümde harf/indeks dayatılmaz.
+- Oturum başlatma ve cevap tekrarları idempotent; kullanıcı başına tek aktif
+  tur, satır kilidi ve ilk seçim koruması. Boş seçim `-1`, yanlış indeks ret.
+- GET kullanıcıya son turu gösterir; eski/çekilmiş form yeni soru vermez.
+  Bırakma, form çekilmiş veya süre dolmuş olsa bile mümkündür; çözüm açılmaz.
+- Formlar sadece kontrollü operatör kabulüyle içe aktarılabilir: browser ve
+  service_role tablo yazamaz. Kaynak/kazanım/kalite için mevcut
+  `question_revision_single_review_ready` yeniden çalışır. LGS için ayrıca
+  aynı sınav yılına bağlı `source-comparison@2` kabulü gerekir. Bu kod bu
+  kabulleri üretmez, kimse adına imza veya yayın kararı yazmaz.
+
+## Gösterim ve veri sınırı
+
+İlk sürüm sade/Unicode metin ve mevcut güvenli `<u>` göstericisidir.
+LaTeX, görsel, SVG, tablo veya başka HTML gerektiren içerik form kapısından
+geçmez. Bunlar için test edilmiş ayrı renderer gerekir; var olmayan KaTeX
+render testi iddia edilmez. Ekran genişliğinde yatay taşma kap içerisinde
+kaydırılır. Ekran kaydı, inanç bilgisi, cihaz parmak izi veya reklam telemetrisi
+alınmaz; ölçüm yolu hassas alan olarak işaretlidir.
+
+Gösterim onayı ve yardım kullanımı **öğrenci beyanıdır**, harici yardımın
+yokluğunun kanıtı değildir. Sekme gizlenmesi işaretlenir; ağ/sekme süresi dahil
+sunucu gönderim–cevap aralığı saf düşünme süresi değildir. 1–600 saniye ilk
+operasyon filtresidir; psikometrik bilimsel eşik veya doğru/yanlış kararı değil.
+
+`measurement_evidence_v1` özel görünümü tamamlanmamış, boş, önceki kayıtlı
+gösterim/cevap, yardım, bozuk render, kesinti, süre ve çekilmiş revizyonları
+gerekçeleriyle ayırır. Kayıtlı ilk gösterim, gerçek hayatta ilk görme demek
+değildir. Eski sürümdeki cevap da aynı soru kimliğinde tekrar sayılır.
+Tur bitene kadarki normal pratik/diagnostic kayıtları ayrıca dışlanır;
+sonraki öğrenme çalışmaları geçmiş ölçümü geriye dönük bozmaz.
+
+Normal `/api/questions/grade` ve `/api/coach/hint`, aynı hesabın aktif turundaki
+**tüm** form sorularının geri bildirimini engeller. Oturum ID'si normal oyun
+denemesi değildir. Başka hesap, misafir erişimi, kitap veya harici asistanın
+engellendiği iddia edilmez. Gerçek öğrenci örneklemi bu sınırlara göre incelenir.
+
+## Yayın sırası ve geri dönüş
+
+1. Migration ve tam zincir provası; RPC izinleri: browser yok, yalnız bağlı
+   service_role API çağrıları. Native testte dış governance tabloları/helper'ları
+   minimal fikstürdür; tam zincir testi yerine geçmez.
+2. Kod dağıtımı; `MEASUREMENT_SCHEMA_READY=true` yalnız migration doğrulanınca.
+   Bu bayrak grade/coach korumasını açar; yeni tur açmaz.
+3. Kaynak/kazanım/kalite kabulü geçmiş güncel revizyonlarla sabit form oluştur;
+   hash ve ayrı form inceleme makbuzunu doğrula. Varsayılan release satırı kapalı.
+4. Form bazlı açılış + `MEASUREMENT_ENABLED=true`; girişli gerçek hesap ve
+   telefon/tablet testi, tur sonu geri bildirim ve kişisel veri sınırı doğrula.
+5. Durdurmak için `MEASUREMENT_ENABLED=false`: yeni başlangıçlar durur,
+   mevcut tur tamamlanabilir/bırakılabilir. Gerekirse form release kapatılır.
+   Aktif turlar bitmeden/iptal edilmeden `MEASUREMENT_SCHEMA_READY` kapatılmaz.
+   Tablolar veya geçmiş cevaplar silinmez.
+
+Bu değişiklikte canlı migration, form kabulü, feature-flag açılışı veya
+öğrenci hesabı işlemi yapılmamıştır.
+
+## 11 Ekim 2026 başlangıç bulgusu
+
+| Havuz | Aktif | Doğru seçenek sayısı | Kaynak+kazanım+kalite kabulü | Dört şıklı taslak bulunan |
+|---|---:|---:|---:|---:|
+| Matematik TYT | 630 | 630 | 0 | — |
+| Matematik LGS | 86 | 0 | 0 | 82 |
+| Türkçe LGS | 53 | 0 | 0 | 53 |
+| Fen LGS | 70 | 0 | 0 | 70 |
+| Sosyal LGS | 24 | 2 | 2 | 22 |
+
+Tekrarlanabilir salt-okuma sorgusu: `node database/measurement-readiness.mjs sql`.
+Aktif olmak kabul edilmiş ölçüm sorusu olmak değildir. İlk Matematik formu için
+5–30 soruluk sınırlı içerik/kazanım inceleme paketi gerekir. LGS'de 227 mevcut
+taslak korunur; dört Matematik sorusundaki eksik taslak ayrıca tamamlanır.
+Beşinci seçenek otomatik silinmez; doğru anahtar ve çeldirici kapsamı incelenir.
+
+Öğrenci verisi geldikten sonra CTT/Wilson/şık davranışı, örneklem çeşitliliği,
+boyutluluk, model uyumu ve kesme noktaları incelenir. `calibrated=false` istemci
+ve sunucu sözleşmesinde sabittir; yalnız n artması seviye yayınına yol açmaz.
+
+## Yerel doğrulama (11 Ekim 2026)
+
+- Tam uygulama: 509 dosya / 4.851 test geçti.
+- Kontrollü ölçüm + Sosyal hazırlık raporu + kapsam sorgusu: 82 test geçti;
+  bunların 46'sı izole gerçek PostgreSQL üzerinde (32 yeni akış, 14 rapor).
+- TypeScript, ESLint, migration sırası/idempotency ve SECURITY DEFINER izin
+  denetimleri geçti. Üretim derlemesi başarılı; ölçüm sayfası dinamik.
+- İki tarayıcı senaryosu geçti (TYT ve LGS; 390/768 px). Playwright'ın sabit
+  Chromium indirmesi zaman aşımına uğradı; doğrulanmış yerel Chrome
+  155.0.8059.39 kullanıldı. CI varsayılan sabit Chromium kullanacak.
+- Tarayıcı testi sentetik auth/API yanıtlarıyla çalışır; DB güvenliği ayrı
+  native testtedir. Bu, canlı migration zinciri / gerçek hesap / fiziksel
+  telefon-tablet / temsil edici öğrenci örneklemi kanıtı değildir.
+
+Bilinen yayın engeli: henüz kabul edilmiş Matematik ölçüm formu yoktur.
+Hiçbir ders kalibre edildi olarak işaretlenmedi. CI işlerine testler eklendi;
+yerel test sonuçları uzak CI veya deployment sonucu diye sunulmaz.
