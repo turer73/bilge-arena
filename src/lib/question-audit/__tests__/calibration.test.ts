@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { runCalibration } from '../calibration'
 import { DEFAULT_AUDIT_CONFIG, type AuditProviders } from '../orchestrator'
 import { ProviderHttpError, type LlmProvider, type LlmRawResponse } from '../provider'
@@ -22,8 +22,8 @@ function draft(id: string, opts: Partial<QuestionDraft> = {}): QuestionDraft {
 }
 
 function parseShown(userPrompt: string): string[] {
-  const payload = JSON.parse(userPrompt.split('\n')[1]) as { options: Array<{ index: number; text: string }> }
-  return payload.options.sort((a, b) => a.index - b.index).map((option) => option.text)
+  const payload = JSON.parse(userPrompt.split('\n')[1]) as { options: Array<string | { index: number; text: string }> }
+  return payload.options.map((option) => typeof option === 'string' ? option : option.text)
 }
 
 /** Kor cozucu her zaman `pickText` metnini secer; ekran indeksini prompt'tan bulur. */
@@ -43,12 +43,16 @@ function makeProviders(o: {
       let body: unknown
       if (role === 'blind') {
         const idx = shown.indexOf(o.pickText ?? 'A2')
-        body = { reasoning: 'r', predictedAnswerIndex: idx === -1 ? null : idx, computedValue: null }
+        body = { reasoning: 'r', selectedOptionText: idx === -1 ? null : shown[idx], computedValue: null }
       } else if (role === 'adversarial') {
         body = { reasoning: 'r', findings: [] }
       } else {
         const idx = shown.indexOf(o.verifierText ?? 'A2')
-        body = { reasoning: 'r', solutionConcludesIndex: idx === -1 ? null : idx, solutionCompleteness: 'adequate' }
+        body = {
+          reasoning: 'r', selectedOptionText: idx === -1 ? null : shown[idx], solutionCompleteness: 'adequate',
+          evidenceVersion: 'solution-evidence@4', questionDemand: 'recall',
+          supportingUnitIds: [JSON.parse(req.user.split('\n')[1]).authorEvidenceUnits[0].id],
+        }
       }
       return { text: JSON.stringify(body), finishReason: 'STOP', inputTokens: 10, outputTokens: 5 }
     },
@@ -175,7 +179,7 @@ describe('kosu mekanigi', () => {
     expect(replay.cache).toEqual({ hits: 1, misses: 0 })
     expect(replay.cost).toEqual({ inputTokens: 0, outputTokens: 0, totalLatencyMs: 0 })
     expect(replay.promptVersions).toEqual({
-      blind: 'blind-solver@2', adversarial: 'adversarial@2', verifier: 'solution-verifier@3',
+      blind: 'blind-solver@4', adversarial: 'adversarial@3', verifier: 'solution-verifier@7',
     })
     expect(persistedAgain).toBe(false)
     expect(decisions).toBe(1)
@@ -210,6 +214,27 @@ describe('kosu mekanigi', () => {
       drafts: [draft('cache-tamper')], categoryOf, providers, config: cfg,
       loadRun: async () => tampered,
     })).rejects.toThrow('onbellek butunluk hatasi')
+  })
+
+  it.each(['prompt', 'model', 'provider', 'policy', 'config', 'configHash'])('%s kimligi farkli cache yeni karar yazamaz', async (variant) => {
+    const providers = makeProviders({})
+    const source = draft('old-identity')
+    let stored: AuditRun | null = null
+    await runCalibration({ drafts: [source], categoryOf, providers, config: cfg, onRun: (r) => { stored = r } })
+    const old = structuredClone(stored!)
+    if (variant === 'prompt') old.execution.promptVersions.verifier = 'solution-verifier@3'
+    if (variant === 'model') old.execution.modelIds.verifier = 'another-model'
+    if (variant === 'provider') old.execution.providerIds.verifier = 'another-provider'
+    if (variant === 'policy') old.execution.policyVersion = 'question-quality@1'
+    if (variant === 'config') old.execution.generationConfig.verifierTemperature = 0.8
+    if (variant === 'configHash') old.execution.generationConfigSha256 = '0'.repeat(64)
+    const onDecision = vi.fn()
+    const verifierCall = vi.spyOn(providers.verifier, 'call')
+    await expect(runCalibration({
+      drafts: [source], categoryOf, providers, config: cfg, loadRun: async () => old, onDecision,
+    })).rejects.toThrow('onbellek kimlik hatasi')
+    expect(onDecision).not.toHaveBeenCalled()
+    expect(verifierCall).not.toHaveBeenCalled()
   })
 
   it('es zamanlilik sinirina ragmen TUM sorular islenir ve sira korunur', async () => {

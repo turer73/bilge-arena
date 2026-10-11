@@ -24,6 +24,8 @@ import {
   type Finding,
   type VerdictResult,
 } from './types'
+import { storedSolutionVerifierSchema } from './schemas'
+import { storedOptionTextBlindSolverSchema, storedOptionTextSolutionVerifierSchema, optionTextRawMatches } from './schemas'
 
 /** Gecerli orneklerden cogunluk indeksi. Beraberlik veya cogunluk yoksa null. */
 function consensus(indexes: readonly (number | null)[]): { index: number | null; ratio: number } | null {
@@ -94,6 +96,9 @@ export const DEFAULT_DERIVE_OPTIONS: DeriveOptions = { minBlindAgreement: 2 / 3 
 export function deriveVerdict(run: AuditRun, opts: DeriveOptions = DEFAULT_DERIVE_OPTIONS): VerdictResult {
   const findings: Finding[] = []
   let inconclusive = false
+  let supportConflict = false
+  let selectionConflict = false
+  let selectionInvalid = false
   const notes: string[] = []
 
   // ── Kor Cozucu ───────────────────────────────────────────────────────────
@@ -101,6 +106,20 @@ export function deriveVerdict(run: AuditRun, opts: DeriveOptions = DEFAULT_DERIV
     (o): o is Extract<AgentOutcome<BlindSolverPayload>, { status: 'ok' }> => o.status === 'ok',
   )
   const blindAttempted = run.blind.filter((o) => o.status !== 'skipped').length
+  // Never replace a model's chosen option using computedValue or a code answer.
+  // A conflicting witness cannot corroborate a rejection or silently approve.
+  for (const o of blindOk) {
+    if (o.telemetry.promptVersion !== 'blind-solver@4') continue
+    const parsed = storedOptionTextBlindSolverSchema(run.inputSnapshot.options).safeParse(o.data)
+    if (!parsed.success || !optionTextRawMatches(o.raw, parsed.data, run.inputSnapshot.options)) {
+      selectionInvalid = true
+      inconclusive = true
+      notes.push('kor secenek secimi ham yanit ve girdiden dogrulanamadi')
+    } else if (['numeric_conflict', 'value_without_selection'].includes(parsed.data.selectionAssessment)) {
+      selectionConflict = true
+      notes.push(`model sonuc/secenek uyusmazligi: ${parsed.data.selectionAssessment}`)
+    }
+  }
 
   let blindConsensusIndex: number | null = null
   let blindAgreementRatio: number | null = null
@@ -120,7 +139,9 @@ export function deriveVerdict(run: AuditRun, opts: DeriveOptions = DEFAULT_DERIV
       blindConsensusIndex = c.index
       blindAgreementRatio = c.ratio
 
-      if (c.ratio < opts.minBlindAgreement) {
+      if (selectionConflict || selectionInvalid) {
+        notes.push('celiskili/gecersiz secimden soru kusuru turetilmedi')
+      } else if (c.ratio < opts.minBlindAgreement) {
         notes.push(`kor cozucu mutabakati dusuk (${(c.ratio * 100).toFixed(0)}%)`)
       } else if (c.index === null) {
         // computedValue kaniti insan incelemesini hizlandirir; ancak degeri
@@ -156,17 +177,38 @@ export function deriveVerdict(run: AuditRun, opts: DeriveOptions = DEFAULT_DERIV
   // Karsilastirmayi BURASI yapar, model degil.
   if (run.verifier.status === 'ok') {
     const { solutionConcludesIndex, solutionCompleteness } = run.verifier.data
-    if (solutionConcludesIndex !== null && solutionConcludesIndex !== run.markedAnswerIndex) {
+    // Old versions keep their original meaning. Never trust caller-supplied
+    // derived fields without resolving again from this exact input snapshot.
+    let answerOnly = false
+    let verifierEvidenceValid = true
+    if (['solution-verifier@6', 'solution-verifier@7'].includes(run.verifier.telemetry.promptVersion)) {
+      const current = run.verifier.telemetry.promptVersion === 'solution-verifier@7'
+      const schema = current ? storedOptionTextSolutionVerifierSchema : storedSolutionVerifierSchema
+      const assessed = schema(run.inputSnapshot.options, run.inputSnapshot.solutionText ?? '')
+        .safeParse(run.verifier.data)
+      if (!assessed.success || (current && !optionTextRawMatches(run.verifier.raw, assessed.data, run.inputSnapshot.options, run.inputSnapshot.solutionText ?? ''))) {
+        verifierEvidenceValid = false
+        inconclusive = true
+        notes.push('cozum dayanagi saklanan girdiden dogrulanamadi')
+      } else {
+        answerOnly = assessed.data.supportAssessment === 'answer_only_for_reported_reasoning'
+        supportConflict = assessed.data.supportAssessment !== 'not_established'
+        if (supportConflict) notes.push(`kod dayanak degerlendirmesi: ${assessed.data.supportAssessment}; model yeterliligi: ${solutionCompleteness}`)
+      }
+    }
+    if (verifierEvidenceValid && solutionConcludesIndex !== null && solutionConcludesIndex !== run.markedAnswerIndex) {
       findings.push({
         code: 'SOLUTION_CONTRADICTS_ANSWER',
         evidence: `cozum metni idx${solutionConcludesIndex}'e variyor, isaretli cevap idx${run.markedAnswerIndex}`,
         optionIndexes: [solutionConcludesIndex, run.markedAnswerIndex],
       })
     }
-    if (solutionCompleteness === 'terse') {
+    if (verifierEvidenceValid && (solutionCompleteness === 'terse' || answerOnly)) {
       findings.push({
         code: 'INCOMPLETE_SOLUTION',
-        evidence: 'cozum metni sonuca goturen adimlari icermiyor',
+        evidence: answerOnly
+          ? 'kod: yazar metni yalniz secenek tekrari; model soru talebini reasoning bildirdi (soru sinifi bagimsiz dogrulanmadi)'
+          : 'cozum metni sonuca goturen adimlari icermiyor',
       })
     }
   } else if (run.verifier.status === 'failed') {
@@ -230,6 +272,8 @@ export function deriveVerdict(run: AuditRun, opts: DeriveOptions = DEFAULT_DERIV
   else if (inconclusive) verdict = 'INCONCLUSIVE'
   else if (
     advisory ||
+    supportConflict ||
+    selectionConflict ||
     uncorroboratedWrongKey ||
     uncorroboratedSolution ||
     unverifiableNoOption ||

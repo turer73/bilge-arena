@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { PROMPT_VERSION } from '../prompts'
 import { buildFiveModelReport, type FiveModelRunRow } from '../five-model-report'
 
 const q = '11111111-1111-4111-8111-111111111111'
@@ -10,10 +9,30 @@ const identities = [
   ['deepseek:deepseek-chat', 'deepseek-chat'], ['gemini:gemini-2.5-flash-lite', 'gemini-2.5-flash-lite'], ['openai:gpt-5.6-terra', 'gpt-5.6-terra'], ['openai:gpt-5.6-luna', 'gpt-5.6-luna'], ['openai:gpt-5.6-sol', 'gpt-5.6-sol'],
 ] as const
 function row(n: number, over: Partial<FiveModelRunRow> = {}): FiveModelRunRow {
-  return { question_id: q, revision_id: r, content_sha256: hash, agent: 'blind_solver', sample_index: 0, provider_id: identities[n]![0], model_id: identities[n]![1], prompt_version: PROMPT_VERSION.blindSolver, policy_version: 'question-quality@2', generation_config: { blindSamples: 1 }, generation_config_sha256: 'b'.repeat(64), run_id: '33333333-3333-4333-8333-333333333333', status: 'ok', parsed_output: { reasoning: 'Kısa çözüm', predictedAnswerIndex: 3, computedValue: null }, input_snapshot: { questionId: q, revisionId: r, contentSha256: hash, questionText: subject.questionText, options: subject.options, markedAnswerIndex: subject.markedAnswerIndex }, executed_at: '2026-09-06T10:00:00.000Z', ...over }
+  return { question_id: q, revision_id: r, content_sha256: hash, agent: 'blind_solver', sample_index: 0, provider_id: identities[n]![0], model_id: identities[n]![1], prompt_version: 'blind-solver@1', policy_version: 'question-quality@2', generation_config: { blindSamples: 1 }, generation_config_sha256: 'b'.repeat(64), run_id: '33333333-3333-4333-8333-333333333333', status: 'ok', parsed_output: { reasoning: 'Kısa çözüm', predictedAnswerIndex: 3, computedValue: null }, input_snapshot: { questionId: q, revisionId: r, contentSha256: hash, questionText: subject.questionText, options: subject.options, markedAnswerIndex: subject.markedAnswerIndex }, executed_at: '2026-09-06T10:00:00.000Z', ...over }
 }
 
 describe('buildFiveModelReport', () => {
+  it.each(['numeric_conflict', 'value_without_selection'])('never counts %s as positive model agreement', (assessment) => {
+    const v4 = { ...subject, policyVersion: 'question-quality@4' }
+    const output = { reasoning: 'Sonuç ve seçim tutarsız', computedValue: assessment === 'numeric_conflict' ? '3' : '4', selectedOptionText: assessment === 'numeric_conflict' ? '4' : null, predictedAnswerIndex: assessment === 'numeric_conflict' ? 3 : null, selectionVersion: 'option-text@1', selectionAssessment: assessment }
+    const rows = identities.map((_, n) => row(n, { policy_version: v4.policyVersion, prompt_version: 'blind-solver@4', parsed_output: output }))
+    const report = buildFiveModelReport(v4, rows)
+    expect(report).toMatchObject({ completedModels: 0, agreement: 'incomplete', matchesKey: null })
+    expect(report.models.every(m => m.status === 'conflict')).toBe(true)
+    const mixed = [rows[0]!, ...identities.slice(1).map((_, n) => row(n + 1, { policy_version: v4.policyVersion }))]
+    expect(buildFiveModelReport(v4, mixed)).toMatchObject({ completedModels: 4, agreement: 'incomplete', matchesKey: null })
+  })
+  it('reads an exact option-text contract without claiming five-model agreement', () => {
+    const v4 = { ...subject, policyVersion: 'question-quality@4' }
+    const output = { reasoning: 'Dört', computedValue: '4', selectedOptionText: '4', predictedAnswerIndex: 3, selectionVersion: 'option-text@1', selectionAssessment: 'numeric_match' }
+    const current = row(1, { policy_version: v4.policyVersion, prompt_version: 'blind-solver@4', parsed_output: output })
+    const result = buildFiveModelReport(v4, [current])
+    expect(result.models[1]).toMatchObject({ status: 'complete', answerIndex: 3 })
+    expect(result).toMatchObject({ completedModels: 1, agreement: 'incomplete' })
+    expect(buildFiveModelReport(v4, [{ ...current, parsed_output: { ...output, predictedAnswerIndex: 2 } }]).models[1]!.status).toBe('invalid')
+    expect(buildFiveModelReport(v4, [{ ...current, parsed_output: { reasoning: 'old', predictedAnswerIndex: 3 } }]).models[1]!.status).toBe('invalid')
+  })
   it('beş güvenilir, güncel, kanonik kör çözücü sonucunu gözlemsel uzlaşma yapar', () => {
     const report = buildFiveModelReport(subject, identities.map((_, n) => row(n)))
     expect(report).toMatchObject({ completedModels: 5, agreement: 'unanimous', matchesKey: true, requiredModels: 5 })

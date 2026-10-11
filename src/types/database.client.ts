@@ -359,6 +359,29 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
       PublicSchema['Tables'],
       'profiles' | 'user_achievements' | 'curriculum_outcomes' | 'question_outcomes' | 'user_outcome_state' | 'institution_study_programs'
     > & {
+      // Forward migration overlay: application roles can only read bindings.
+      question_validation_revision_policies: {
+        Row: {
+          revision_id: string
+          question_id: string
+          content_sha256: string
+          base_policy_version: string
+          policy_version: string
+          audit_policy_version: string
+          audit_execution: Json
+          audit_code_commit: string
+          run_id: string
+          benchmark_ref: string
+          benchmark_sha256: string
+          evidence_ref: string
+          evidence_sha256: string
+          code_commit: string
+          created_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       profiles: ProfilesWithPrivacyPreferences
       user_achievements: UserAchievementsWithSource
       curriculum_nodes: {

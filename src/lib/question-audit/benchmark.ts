@@ -201,6 +201,29 @@ export function assertPromotionEvidence(
   const benchmark = record(root.benchmark)
   const promotion = record(benchmark.promotion)
   if (promotion.passed !== true) throw new Error('terfi kaniti benchmark kapisini gecmemis')
+  // Optional preregistered stricter conditions are ADDITIONAL, never discarded
+  // merely because the common statistical thresholds happened to pass.
+  const scope = root.boundedScope === undefined ? null : record(root.boundedScope)
+  const declaresExtras = Object.hasOwn(root, 'extraReleaseConditionsPassed') ||
+    Object.hasOwn(root, 'checks') || (scope !== null && Object.hasOwn(scope, 'releaseConditions'))
+  if (declaresExtras) {
+    if (root.extraReleaseConditionsPassed !== true) throw new Error('terfi kaniti ek kosullari gecmemis')
+    if (!Array.isArray(root.checks) || root.checks.length === 0 || root.checks.some((check) =>
+      !check || typeof check !== 'object' || Array.isArray(check) || (check as Record<string, unknown>).passed !== true)) {
+      throw new Error('terfi kaniti ek kontrol kanitlari eksik veya basarisiz')
+    }
+    if (scope !== null && Object.hasOwn(scope, 'releaseConditions')) {
+      const conditions = scope.releaseConditions
+      const conditionIds = root.checks.map((check) => (check as Record<string, unknown>).conditionId)
+      if (!Array.isArray(conditions) || conditions.length === 0 ||
+        conditions.some((id) => typeof id !== 'string' || !id.trim()) ||
+        new Set(conditions).size !== conditions.length ||
+        conditionIds.length !== conditions.length || new Set(conditionIds).size !== conditionIds.length ||
+        conditionIds.some((id) => !conditions.includes(id))) {
+        throw new Error('terfi kaniti ek kosul kimlikleri eksik, yinelenmis veya bilinmiyor')
+      }
+    }
+  }
   if (canonicalJson(promotion.policy) !== canonicalJson(DEFAULT_PROMOTION_POLICY)) {
     throw new Error('terfi kaniti varsayilan guvence politikasini kullanmiyor')
   }

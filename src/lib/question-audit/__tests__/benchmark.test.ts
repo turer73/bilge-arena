@@ -177,6 +177,45 @@ describe('insan-altin benchmark', () => {
 })
 
 describe('terfi kaniti kimlik bagi', () => {
+  const bounded = (ids: unknown[], conditions: unknown = ['clean', 'wrong', 'incomplete']) => ({
+    ...promotionEvidence(), extraReleaseConditionsPassed: true,
+    boundedScope: { releaseConditions: conditions },
+    checks: ids.map((conditionId) => ({ conditionId, passed: true })),
+  })
+  it('requires exact coverage of every declared release condition', () => {
+    expect(() => assertPromotionEvidence(bounded(['wrong', 'clean', 'incomplete']), identity)).not.toThrow()
+  })
+  it.each([['clean'], ['clean', 'wrong'], ['clean', 'wrong', 'wrong'], ['clean', 'wrong', 'other'],
+    ['clean', 'wrong', 'incomplete', 'extra'], [undefined, undefined, undefined]])('rejects missing/duplicate/unknown conditions %j', (...ids) => {
+    expect(() => assertPromotionEvidence(bounded(ids), identity)).toThrow('ek kosul')
+  })
+  it.each([[], ['clean', 'clean'], [''], null])('rejects malformed declared conditions %j', (conditions) => {
+    expect(() => assertPromotionEvidence(bounded(['clean'], conditions), identity)).toThrow('ek kosul')
+  })
+  it.each([false, null, 'true', 1, undefined])('beyan edilmis ek kosul %j ise varsayilan yesil olsa da reddeder', (extra) => {
+    const evidence = { ...promotionEvidence(), extraReleaseConditionsPassed: extra }
+    expect(() => assertPromotionEvidence(evidence, identity)).toThrow('ek')
+  })
+
+  it('ek bayrak silinmis ama kosullar beyan edilmisse kabul etmez', () => {
+    const evidence = { ...promotionEvidence(), boundedScope: { releaseConditions: ['all controls'] } }
+    expect(() => assertPromotionEvidence(evidence, identity)).toThrow('ek')
+  })
+
+  it('ek bayrak yesil olsa bile tekil kontrol basarisizsa reddeder', () => {
+    const evidence = { ...promotionEvidence(), extraReleaseConditionsPassed: true, checks: [{ passed: false }] }
+    expect(() => assertPromotionEvidence(evidence, identity)).toThrow('ek')
+  })
+
+  it('butun acik ek kontroller gectiyse diger kimlik kapilari korunur', () => {
+    const evidence = { ...promotionEvidence(), extraReleaseConditionsPassed: true, checks: [{ passed: true }] }
+    expect(() => assertPromotionEvidence(evidence, identity)).not.toThrow()
+  })
+
+  it.each([undefined, [], null, [{ passed: 'true' }], [null], [true]])('ek onay tek basina yeterli degil: %j', (checks) => {
+    expect(() => assertPromotionEvidence({ ...promotionEvidence(), extraReleaseConditionsPassed: true, checks }, identity)).toThrow('ek kontrol')
+  })
+
   it('ayni policy/provider/model/prompt/ayar raporunu kabul eder', () => {
     expect(() => assertPromotionEvidence(promotionEvidence(), identity)).not.toThrow()
   })

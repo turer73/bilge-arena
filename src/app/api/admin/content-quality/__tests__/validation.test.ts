@@ -7,7 +7,7 @@ vi.mock('@/lib/content-governance/route-context', () => ({
 }))
 
 import { GET } from '../validation/route'
-import { QUESTION_QUALITY_POLICY_VERSION } from '@/lib/question-audit/orchestrator'
+const QUESTION_QUALITY_POLICY_VERSION = 'question-quality@2'
 
 const USER = '11111111-1111-4111-8111-111111111111'
 const QID = '22222222-2222-4222-8222-222222222222'
@@ -20,7 +20,7 @@ function fakeAdmin(rows: unknown[], count = rows.length) {
     builder[m] = (...args: unknown[]) => { calls[m].push(args); return builder }
   }
   builder.then = (resolve: (v: unknown) => unknown) => resolve({ data: rows, error: null, count })
-  return { admin: { from: () => builder }, calls }
+  return { admin: { from: (name: string) => name === 'question_validation_runtime' ? { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { required_policy_version: 'question-quality@2' }, error: null }) }) }) } : builder }, calls }
 }
 
 const row = (over: Record<string, unknown> = {}) => ({
@@ -63,7 +63,7 @@ describe('yetki ve dogrulama', () => {
 })
 
 describe('listeleme', () => {
-  it('verdict ve GUNCEL policy surumune gore filtreler', async () => {
+  it('verdict ve canli global @2 surumune gore filtreler; kod @4 olsa da eski kuyruk kalir', async () => {
     const { admin, calls } = fakeAdmin([row()])
     mocks.context.mockResolvedValue({ ok: true, userId: USER, admin })
     const res = await GET(req('verdict=NEEDS_REVIEW'))

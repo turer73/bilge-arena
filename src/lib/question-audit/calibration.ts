@@ -18,7 +18,7 @@
  */
 
 import type { AuditConfig, AuditProviders } from './orchestrator'
-import { auditQuestion, QUESTION_QUALITY_POLICY_VERSION } from './orchestrator'
+import { auditExecutionIdentity, auditQuestion, QUESTION_QUALITY_POLICY_VERSION } from './orchestrator'
 import { PROMPT_VERSION } from './prompts'
 import type { AgentOutcome, AuditRun, Finding, QuestionDraft, Verdict, VerdictResult } from './types'
 import type { DeriveOptions } from './verdict'
@@ -180,11 +180,17 @@ export async function runCalibration(input: CalibrationInput): Promise<Calibrati
   const deriveOptions = input.deriveOptions ?? DEFAULT_DERIVE_OPTIONS
   const errorKinds: Record<string, number> = {}
   let cacheHits = 0
+  const identity = auditExecutionIdentity(input.providers, input.config)
 
   const items = await mapPool(input.drafts, input.concurrency ?? 4, async (draft, i) => {
     const cachedRun = await input.loadRun?.(draft)
     if (cachedRun && canonicalJson(cachedRun.inputSnapshot) !== canonicalJson(draft)) {
       throw new Error(`onbellek butunluk hatasi: ${draft.questionId} girdisi saklanan snapshot ile ayni degil`)
+    }
+    if (cachedRun && canonicalJson(cachedRun.execution) !== canonicalJson(identity)) {
+      // DB adapter'i filtrelese de yerel loadRun ayni guvenceyi vermeyebilir.
+      // Eski prompt'a ait olumlu karar yeni surumun raporuna/kararina tasinmaz.
+      throw new Error(`onbellek kimlik hatasi: ${draft.questionId} model/prompt/politika/ayar kimligi farkli`)
     }
     const cached = cachedRun !== null && cachedRun !== undefined
     const result = cached
