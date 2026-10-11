@@ -106,3 +106,33 @@ export function solutionVerifierShape(optionCount: number): GeminiSchema {
     propertyOrdering: ['reasoning', 'solutionConcludesIndex', 'evidenceVersion', 'questionDemand', 'supportingUnitIds', 'solutionCompleteness'],
   }
 }
+
+/** Current contracts select exact option text. These fields contain no key. */
+export function optionTextBlindSolverShape(options: readonly string[]): GeminiSchema {
+  return {
+    type: 'OBJECT',
+    properties: {
+      reasoning: { type: 'STRING', description: 'Cozumun kisa, denetlenebilir gerekcesi.' },
+      computedValue: { type: 'STRING', nullable: true, description: 'Bulunan ham sonuc. Yoksa null.' },
+      selectedOptionText: { type: 'STRING', enum: [...options], nullable: true, description: 'Sonucun denk geldigi secenek metnini AYNEN sec. Eslesme yoksa null. Indeks veya harf uretme.' },
+    },
+    required: ['reasoning', 'computedValue', 'selectedOptionText'],
+    propertyOrdering: ['reasoning', 'computedValue', 'selectedOptionText'],
+  }
+}
+
+export function optionTextSolutionVerifierShape(options: readonly string[]): GeminiSchema {
+  const old = solutionVerifierShape(options.length)
+  const { solutionConcludesIndex: _index, ...properties } = old.properties!
+  const fields = ['reasoning', 'selectedOptionText', 'evidenceVersion', 'questionDemand', 'supportingUnitIds', 'solutionCompleteness']
+  return {
+    type: 'OBJECT',
+    properties: {
+      ...properties,
+      selectedOptionText: { type: 'STRING', enum: [...options], nullable: true, description: 'Yazarin cozumunun vardigi secenek metnini AYNEN sec. Indeks/harf uretme. Yoksa null.' },
+      evidenceVersion: { type: 'STRING', enum: ['solution-evidence@4'] },
+    },
+    required: fields,
+    propertyOrdering: fields,
+  }
+}

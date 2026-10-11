@@ -1,5 +1,9 @@
 # Fen: yerel sayım ve çözüm-dayanak korumaları
 
+Bu belge @3 politika adayının tarihsel sözleşmesini anlatır. Sonraki yerel
+@4 adayında [şık metni seçimi](question-audit-option-selection.md) eklenmiştir;
+@3 kayıtları veya başarısız benchmark sonuçları yeniden etiketlenmez.
+
 Bu sürüm yerel adaydır; üretim yayını, yeni ücretli koşu veya öğrenci
 kalibrasyonu değildir. Başarısız Fen v5 benchmark'ı başarısız olarak kalır.
 

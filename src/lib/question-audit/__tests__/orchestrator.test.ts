@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_AUDIT_CONFIG, executeAudit, auditQuestion, type AuditProviders } from '../orchestrator'
 import { ProviderHttpError, type LlmProvider, type LlmRawResponse } from '../provider'
+import { fromValidationRunRows, toValidationRunRows } from '../persistence'
+import { deriveVerdict } from '../verdict'
 import type { SolutionVerifierWirePayload, QuestionDraft } from '../types'
 
 function draft(overrides: Partial<QuestionDraft> = {}): QuestionDraft {
@@ -20,14 +22,14 @@ function draft(overrides: Partial<QuestionDraft> = {}): QuestionDraft {
   }
 }
 
-/** Prompt'taki "N (X): metin" satirlarindan ekranda gosterilen sik listesini cikarir. */
+/** Current blind/verifier use text-only options; adversarial retains indexed findings. */
 function parseShownOptions(userPrompt: string): string[] {
-  const payload = JSON.parse(userPrompt.split('\n')[1]) as { options: Array<{ index: number; text: string }> }
-  return payload.options.sort((a, b) => a.index - b.index).map((option) => option.text)
+  const payload = JSON.parse(userPrompt.split('\n')[1]) as { options: Array<string | { index: number; text: string }> }
+  return payload.options.map((option) => typeof option === 'string' ? option : option.text)
 }
 
 interface FakeOptions {
-  /** Kor cozucu bu METNI secer; ekrandaki indeksini prompt'tan bulur. */
+  /** Kor cozucu bu METNI secer; indeks uretmez. */
   picksText?: string
   /** Hicbir sikla eslesmedigini bildirir. */
   picksNull?: boolean
@@ -57,7 +59,7 @@ function fakeProvider(id: string, opts: FakeOptions = {}) {
           : shown.indexOf(opts.picksText ?? '')
         body = {
           reasoning: 'cozdum',
-          predictedAnswerIndex: idx === -1 ? null : idx,
+          selectedOptionText: idx === -1 || idx === null ? null : shown[idx],
           computedValue: opts.picksText ?? null,
         }
       } else if (id === 'adversarial') {
@@ -66,9 +68,9 @@ function fakeProvider(id: string, opts: FakeOptions = {}) {
         const idx = opts.concludesText === null ? null : shown.indexOf(opts.concludesText ?? '')
         body = {
           reasoning: 'takip ettim',
-          solutionConcludesIndex: idx === -1 ? null : idx,
+          selectedOptionText: idx === -1 || idx === null ? null : shown[idx],
           solutionCompleteness: opts.completeness ?? 'adequate',
-          evidenceVersion: 'solution-evidence@3',
+          evidenceVersion: 'solution-evidence@4',
           questionDemand: 'reasoning',
           supportingUnitIds: opts.completeness === 'terse' ? [] : [JSON.parse(req.user.split('\n')[1]).authorEvidenceUnits[0].id],
           ...opts.verifierPayload,
@@ -95,11 +97,26 @@ const fastConfig = { ...DEFAULT_AUDIT_CONFIG, maxAttempts: 1, timeoutMs: 1000 }
 
 /**
  * EN KRITIK TEST.
- * Kor cozucuye siklar PERMUTE gosteriliyor; model EKRAN indeksi donuyor.
+ * Kor cozucuye siklar PERMUTE gosteriliyor; model secenek metni donuyor.
  * Orkestrator bunu kanonige cevirmezse her kalibrasyon sayisi sessizce bozulur —
  * mutabakat orani rastgele gorunur ve dogru sorular WRONG_KEY sanilir.
  */
 describe('permutasyon gidis-donusu', () => {
+  it.each([4, 5])('metin secimi %i sikla orkestrasyondan kayda ve replaye korunur', async (count) => {
+    const input = draft({ examRef: count === 4 ? 'LGS' : 'TYT', options: draft().options.slice(0, count) })
+    const run = await executeAudit(input, providers(), fastConfig)
+    const rows = toValidationRunRows(run, 'option-text-roundtrip')
+    const restored = fromValidationRunRows(rows)
+    expect(restored.blind).toEqual(run.blind)
+    expect(restored.verifier).toEqual(run.verifier)
+    expect(deriveVerdict(restored)).toEqual(deriveVerdict(run))
+    expect(deriveVerdict(restored).verdict).toBe('APPROVED')
+    for (const row of rows.filter((r) => r.agent === 'blind_solver')) {
+      expect(JSON.parse(row.raw_output!)).toEqual({ reasoning: 'cozdum', selectedOptionText: '6', computedValue: '6' })
+      expect(row.parsed_output).toMatchObject({ predictedAnswerIndex: 2, selectionVersion: 'option-text@1' })
+    }
+  })
+
   it('ekran indeksi kanonige cevrilir; dogru metni secen model markedAnswerIndex ile uyusur', async () => {
     const p = providers({ blind: { picksText: '6' } })
     const run = await executeAudit(draft(), p, fastConfig)
@@ -301,8 +318,8 @@ describe('yazar metnine bagli cozum denetimi', () => {
     }), fastConfig)
     expect(verdict.verdict).toBe('APPROVED')
     expect(run.verifier).toMatchObject({ status: 'ok', data: {
-      evidenceVersion: 'solution-evidence@3', questionDemand: 'reasoning', supportingUnitIds: ['author:0'], supportingQuotes: ['12+18-7=23'], supportAssessment: 'not_established',
+      evidenceVersion: 'solution-evidence@4', questionDemand: 'reasoning', supportingUnitIds: ['author:0'], supportingQuotes: ['12+18-7=23'], supportAssessment: 'not_established',
     } })
-    expect(run.execution.promptVersions.verifier).toBe('solution-verifier@6')
+    expect(run.execution.promptVersions.verifier).toBe('solution-verifier@7')
   })
 })

@@ -106,9 +106,9 @@ describe('sik sayisi — 5 sabiti yok', () => {
     const full = `${p.system}\n${p.user}`
     expect(full).not.toContain('undefined')
     expect(full).toContain('"optionCount":4')
-    expect(full).toContain('{"index":3,"text":"8"}')
-    expect(full).not.toContain('{"index":4')
-    expect(full).toContain('0-3')
+    expect(JSON.parse(p.user.split('\n')[1]).options).toEqual(['2', '4', '6', '8'])
+    expect(full).not.toContain('"index"')
+    expect(full).toContain('selectedOptionText')
   })
 })
 

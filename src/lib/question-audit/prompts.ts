@@ -19,7 +19,8 @@ export const PROMPT_VERSION = {
   // spot-light edildi. Soru bankasina yazilmis bir talimat sistem gorevini
   // degistiremez; provider'in arac/URL yetkisi de yoktur.
   // @3: exact-grammar, key-blind code sequence evidence; not a verdict override.
-  blindSolver: 'blind-solver@3',
+  // @4: select exact option text; code resolves index and scalar consistency.
+  blindSolver: 'blind-solver@4',
   adversarial: 'adversarial@3',
   // @2: `terse` tanimi soru turune baglandi. @1'de model UZUNLUGU olcuyordu,
   // YETERLILIGI degil: 200 soruluk kalibrasyonda 64/200 (%32) terse geldi ve
@@ -33,7 +34,8 @@ export const PROMPT_VERSION = {
   // dayanak zorunlu; denetcinin kendi cozum adimlari kanit sayilmaz.
   // @5: alinti yazdirmak yerine yazar metninden kodun verdigi parca ID'leri.
   // @6: model claim and code support assessment are retained separately.
-  solutionVerifier: 'solution-verifier@6',
+  // @7: exact option text instead of a model-generated option index.
+  solutionVerifier: 'solution-verifier@7',
 } as const
 
 /**
@@ -49,7 +51,7 @@ ${JSON.stringify(value)}
 END_UNTRUSTED_ASSESSMENT_DATA_JSON`
 }
 
-function renderContext(v: BlindQuestionView): string {
+function renderContext(v: BlindQuestionView, textOnly = false): string {
   return renderUntrustedData({
     examRef: v.examRef,
     subject: v.subject,
@@ -57,7 +59,7 @@ function renderContext(v: BlindQuestionView): string {
     passage: v.passage,
     questionText: v.questionText,
     optionCount: v.options.length,
-    options: v.options.map((text, index) => ({ index, text })),
+    options: textOnly ? v.options : v.options.map((text, index) => ({ index, text })),
     sequenceEvidence: sequenceEvidence(v),
   })
 }
@@ -93,7 +95,6 @@ ALAN SIRASI ZORUNLU: "reasoning" alanini HER ZAMAN once yaz. Once dusun, sonra k
 // ── 1. Kor Cozucu ──────────────────────────────────────────────────────────
 
 export function buildBlindSolverPrompt(v: BlindQuestionView): { system: string; user: string } {
-  const maxIdx = v.options.length - 1
   return {
     system: `Sen ${v.examRef} seviyesinde ${v.subject} sorularini cozen bir uzmansin.
 Sana bir soru ve secenekleri verilecek. Soruyu bagimsiz olarak coz.
@@ -102,13 +103,17 @@ ${UNTRUSTED_DATA_RULE}
 
 Onemli: cozumun bir secenege denk gelmiyorsa bunu durustce bildir. Zorlama
 eslestirme yapma — en yakin sikki secmek, hatali bir soruyu gizler.
+Buldugun sonucu computedValue alanina yaz. selectedOptionText icin options
+listesindeki metni AYNEN kopyala; indeks, siralama numarasi veya A/B harfi
+uretme. Sonucunla sectigin metnin ayni cevabi verdigini kontrol et.
+Sayi isareti, ondalik ayiraci, birim veya kelimeleri degistirme.
 
 ${jsonOnly([
       '"reasoning": <string — adim adim cozum>',
-      `"predictedAnswerIndex": <integer 0-${maxIdx}, veya hicbir sikla eslesmiyorsa null>`,
       '"computedValue": <string — buldugun ham sonuc (or. "61", "2 mol"), yoksa null>',
+      '"selectedOptionText": <string — options listesinden birebir secenek metni, eslesme yoksa null>',
     ])}`,
-    user: renderContext(v),
+    user: renderContext(v, true),
   }
 }
 
@@ -162,12 +167,11 @@ ${jsonOnly([
  * riski dogar — bu nedenle burada anahtar tamamen gizlidir.
  * Bunun yerine cozumun HANGI SIKKA VARDIGINI cikartiyoruz; karsilastirmayi
  * `deriveVerdict` kodda yapiyor. Indeks karsilastirmasi deterministiktir;
- * metinden cikarilan indeksin dogrulugu ise hala model yargisidir.
+ * secilen metnin yazarin sonucuna uygunlugu ise hala model yargisidir.
  *
  * Bu nedenle prompt isaretli cevabi ne soyler ne ima eder.
  */
 export function buildSolutionVerifierPrompt(draft: QuestionDraft): { system: string; user: string } {
-  const maxIdx = draft.options.length - 1
   const solution = draft.solutionText ?? ''
   if (!solution.trim()) {
     throw new Error('buildSolutionVerifierPrompt: cozum metni bos — ajan atlanmali (skipped)')
@@ -184,7 +188,10 @@ Soruyu kendin cozme, eksik hesabi/cikarimi tamamlama. Kendi bildigin veya
 soru kokunde gordugun islem, yazarın cozumunde YOKSA dayanak sayilmaz.
 
 Cozum bir secenege varmiyorsa (or. sonucu siklarda yok, ya da hic sonuc
-sunmuyorsa) solutionConcludesIndex = null.
+sunmuyorsa) selectedOptionText = null. Aksi halde options listesindeki
+secenek METNINI aynen kopyala. Indeks, sira numarasi veya harf uretme.
+Metinle secilen secenek arasindaki eslestirmeyi kontrol et; sayi isaretini,
+ondalik ayiracini, birimi veya kelimeleri degistirme.
 
 questionDemand: dogrudan tanim/kelime/hatirlama ise "recall"; bir islem bile
 gerektiren hesap, uygulama, karsilastirma veya neden-sonuc cikarimi ise "reasoning".
@@ -224,8 +231,8 @@ kelime-anlami aciklamasidir (recall), cok adimli hesapla karistirma.
 
 ${jsonOnly([
       '"reasoning": <string — metinde bulunan/eksik dayanak icin kisa gerekce; yeni cozum uretme>',
-      `"solutionConcludesIndex": <integer 0-${maxIdx}, veya hicbir secenege varmiyorsa null>`,
-      '"evidenceVersion": "solution-evidence@3"',
+      '"selectedOptionText": <string — options listesinden birebir secenek metni, yoksa null>',
+      '"evidenceVersion": "solution-evidence@4"',
       '"questionDemand": "recall" | "reasoning"',
       '"supportingUnitIds": <string[] — authorEvidenceUnits listesinden benzersiz id degerleri, yoksa []>',
       '"solutionCompleteness": "adequate" | "terse"',
@@ -234,7 +241,7 @@ ${jsonOnly([
       passage: draft.passage,
       questionText: draft.questionText,
       optionCount: draft.options.length,
-      options: draft.options.map((text, index) => ({ index, text })),
+      options: draft.options,
       solutionText: solution,
       authorEvidenceUnits: authorEvidenceUnits(solution),
       sequenceEvidence: sequenceEvidence(draft),

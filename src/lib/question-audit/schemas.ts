@@ -19,6 +19,7 @@
 import { z } from 'zod'
 import { FLAW_SEVERITY, type FlawCode } from './types'
 import { authorEvidenceUnits } from './solution-evidence'
+import { exactOptionIndex, assessOptionSelection } from './option-selection'
 
 const FLAW_CODES = Object.keys(FLAW_SEVERITY) as [FlawCode, ...FlawCode[]]
 
@@ -221,3 +222,86 @@ export const storedSolutionVerifierSchema = (options: readonly string[], solutio
 export type BlindSolverParsed = z.infer<ReturnType<typeof blindSolverSchema>>
 export type AdversarialParsed = z.infer<ReturnType<typeof adversarialSchema>>
 export type SolutionVerifierParsed = z.infer<ReturnType<typeof solutionVerifierSchema>>
+
+const selectedOptionSchema = (options: readonly string[]) => z.string().nullable().superRefine((text, ctx) => {
+  try { exactOptionIndex(options, text) } catch {
+    ctx.addIssue({ code: 'custom', message: 'tekil secenek metni birebir eslesmeli' })
+  }
+})
+
+/** Current blind wire has NO index or code assessment fields. */
+export const optionTextBlindSolverSchema = (options: readonly string[]) => z.object({
+  reasoning: z.string().min(1),
+  computedValue: z.string().max(200).nullable(),
+  selectedOptionText: selectedOptionSchema(options),
+}).strict().transform((wire) => ({
+  ...wire,
+  predictedAnswerIndex: exactOptionIndex(options, wire.selectedOptionText),
+  selectionVersion: 'option-text@1' as const,
+  selectionAssessment: assessOptionSelection(options, wire.selectedOptionText, wire.computedValue),
+}))
+
+export const storedOptionTextBlindSolverSchema = (options: readonly string[]) => z.object({
+  predictedAnswerIndex: z.number().int().nullable(),
+  selectionVersion: z.literal('option-text@1'),
+  selectionAssessment: z.enum(['numeric_match', 'numeric_conflict', 'value_without_selection', 'not_checked']),
+}).passthrough().transform(({ predictedAnswerIndex, selectionAssessment, selectionVersion, ...wire }, ctx) => {
+  const result = optionTextBlindSolverSchema(options).safeParse(wire)
+  if (!result.success) {
+    for (const issue of result.error.issues) ctx.addIssue({ code: 'custom', path: issue.path, message: issue.message })
+    return z.NEVER
+  }
+  if (predictedAnswerIndex !== result.data.predictedAnswerIndex || selectionAssessment !== result.data.selectionAssessment || selectionVersion !== result.data.selectionVersion) {
+    ctx.addIssue({ code: 'custom', message: 'saklanan secenek indeksi veya degerlendirme girdiye uymuyor' })
+    return z.NEVER
+  }
+  return result.data
+})
+
+/** Reuse @6 support rules without changing their historical replay semantics. */
+export const optionTextSolutionVerifierSchema = (options: readonly string[], solution: string) => z.object({
+  reasoning: z.string().min(1),
+  selectedOptionText: selectedOptionSchema(options),
+  solutionCompleteness: z.enum(['adequate', 'terse']),
+  evidenceVersion: z.literal('solution-evidence@4'),
+  questionDemand: z.enum(['recall', 'reasoning']),
+  supportingUnitIds: z.array(z.string().regex(/^author:\d+$/)).max(8),
+}).strict().transform(({ selectedOptionText, ...wire }, ctx) => {
+  const result = solutionVerifierSchema(options, solution).safeParse({
+    ...wire, evidenceVersion: 'solution-evidence@3', solutionConcludesIndex: exactOptionIndex(options, selectedOptionText),
+  })
+  if (!result.success) {
+    for (const issue of result.error.issues) ctx.addIssue({ code: 'custom', path: issue.path, message: issue.message })
+    return z.NEVER
+  }
+  return { ...result.data, evidenceVersion: 'solution-evidence@4' as const, selectedOptionText, selectionVersion: 'option-text@1' as const }
+})
+
+export const storedOptionTextSolutionVerifierSchema = (options: readonly string[], solution: string) => z.object({
+  solutionConcludesIndex: z.number().int().nullable(),
+  selectionVersion: z.literal('option-text@1'),
+  supportingQuotes: z.array(z.string()),
+  supportAssessment: z.enum(['answer_only_for_reported_reasoning', 'missing_cited_support', 'answer_only_citation', 'not_established']),
+}).passthrough().transform(({ solutionConcludesIndex, selectionVersion, supportingQuotes, supportAssessment, ...wire }, ctx) => {
+  const result = optionTextSolutionVerifierSchema(options, solution).safeParse(wire)
+  if (!result.success) {
+    for (const issue of result.error.issues) ctx.addIssue({ code: 'custom', path: issue.path, message: issue.message })
+    return z.NEVER
+  }
+  if (solutionConcludesIndex !== result.data.solutionConcludesIndex || selectionVersion !== result.data.selectionVersion ||
+      supportAssessment !== result.data.supportAssessment || JSON.stringify(supportingQuotes) !== JSON.stringify(result.data.supportingQuotes)) {
+    ctx.addIssue({ code: 'custom', message: 'saklanan secenek veya cozum dayanagi girdiye uymuyor' })
+    return z.NEVER
+  }
+  return result.data
+})
+
+/** New stored records must agree with their untouched model wire, not just derived fields. */
+export function optionTextRawMatches(raw: string, parsed: unknown, options: readonly string[], solution?: string): boolean {
+  try {
+    const result = solution === undefined
+      ? optionTextBlindSolverSchema(options).safeParse(JSON.parse(raw))
+      : optionTextSolutionVerifierSchema(options, solution).safeParse(JSON.parse(raw))
+    return result.success && JSON.stringify(result.data) === JSON.stringify(parsed)
+  } catch { return false }
+}

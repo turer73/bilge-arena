@@ -174,6 +174,13 @@ export interface BlindSolverPayload {
   computedValue: string | null
 }
 
+/** @4: model selects exact text; code alone derives the index and assessment. */
+export interface OptionTextBlindSolverPayload extends BlindSolverPayload {
+  selectionVersion: 'option-text@1'
+  selectedOptionText: string | null
+  selectionAssessment: import('./option-selection').SelectionAssessment
+}
+
 export interface AdversarialPayload {
   reasoning: string
   /** Bos dizi = kusur bulunamadi. Bu basarili bir denetimdir, yenilgi degil. */
@@ -221,7 +228,17 @@ export interface AssessedSolutionVerifierPayload extends Omit<ReferencedSolution
   supportAssessment: 'answer_only_for_reported_reasoning' | 'missing_cited_support' | 'answer_only_citation' | 'not_established'
 }
 
-export type SolutionVerifierWirePayload = Omit<AssessedSolutionVerifierPayload, 'supportingQuotes' | 'supportAssessment'>
+export type AssessedSolutionVerifierWirePayload = Omit<AssessedSolutionVerifierPayload, 'supportingQuotes' | 'supportAssessment'>
+
+/** @7: exact text, not a model-generated index. Semantic correctness is still unproven. */
+export interface OptionTextSolutionVerifierPayload extends Omit<AssessedSolutionVerifierPayload, 'evidenceVersion'> {
+  evidenceVersion: 'solution-evidence@4'
+  selectionVersion: 'option-text@1'
+  selectedOptionText: string | null
+}
+
+export type SolutionVerifierWirePayload = Omit<OptionTextSolutionVerifierPayload,
+  'supportingQuotes' | 'supportAssessment' | 'solutionConcludesIndex' | 'selectionVersion'>
 
 // ── Kosu kaydi ve verdict ──────────────────────────────────────────────────
 

@@ -12,6 +12,7 @@
  */
 
 import { adversarialSchema, blindSolverSchema, legacySolutionVerifierSchema, quotedSolutionVerifierSchema, storedReferencedSolutionVerifierSchema, storedSolutionVerifierSchema } from './schemas'
+import { storedOptionTextBlindSolverSchema, storedOptionTextSolutionVerifierSchema, optionTextRawMatches } from './schemas'
 import type {
   AdversarialPayload,
   AgentErrorKind,
@@ -228,6 +229,11 @@ function outcomeOf<T>(row: ValidationRunRow, parse: (value: unknown) => T): Agen
 }
 
 function parseStoredVerifier(row: ValidationRunRow, draft: QuestionDraft): SolutionVerifierPayload {
+  if (row.prompt_version === 'solution-verifier@7') {
+    const parsed = storedOptionTextSolutionVerifierSchema(draft.options, draft.solutionText ?? '').parse(row.parsed_output)
+    if (!optionTextRawMatches(row.raw_output ?? '', parsed, draft.options, draft.solutionText ?? '')) throw new Error('verifier ham yanit ile saklanan secim uyusmuyor')
+    return parsed
+  }
   if (row.prompt_version === 'solution-verifier@6') {
     return storedSolutionVerifierSchema(draft.options, draft.solutionText ?? '').parse(row.parsed_output)
   }
@@ -243,6 +249,18 @@ function parseStoredVerifier(row: ValidationRunRow, draft: QuestionDraft): Solut
     return legacySolutionVerifierSchema(draft.options.length).parse(row.parsed_output)
   }
   throw new Error(`desteklenmeyen solution verifier prompt surumu: ${row.prompt_version}`)
+}
+
+function parseStoredBlind(row: ValidationRunRow, draft: QuestionDraft): BlindSolverPayload {
+  if (row.prompt_version === 'blind-solver@4') {
+    const parsed = storedOptionTextBlindSolverSchema(draft.options).parse(row.parsed_output)
+    if (!optionTextRawMatches(row.raw_output ?? '', parsed, draft.options)) throw new Error('blind ham yanit ile saklanan secim uyusmuyor')
+    return parsed
+  }
+  if (['blind-solver@1', 'blind-solver@2', 'blind-solver@3'].includes(row.prompt_version)) {
+    return blindSolverSchema(draft.options.length).parse(row.parsed_output)
+  }
+  throw new Error(`desteklenmeyen blind prompt surumu: ${row.prompt_version}`)
 }
 
 /** Saklanmis ham satirlardan para harcamadan yeniden puanlanabilir AuditRun kurar. */
@@ -287,7 +305,7 @@ export function fromValidationRunRows(rows: readonly ValidationRunRow[]): AuditR
     markedAnswerIndex: inputSnapshot.markedAnswerIndex,
     inputSnapshot,
     execution,
-    blind: blindRows.map((row) => outcomeOf<BlindSolverPayload>(row, (v) => blindSolverSchema(optionCount).parse(v))),
+    blind: blindRows.map((row) => outcomeOf<BlindSolverPayload>(row, () => parseStoredBlind(row, inputSnapshot))),
     adversarial: outcomeOf<AdversarialPayload>(advRows[0]!, (v) => adversarialSchema(optionCount).parse(v)),
     verifier: outcomeOf<SolutionVerifierPayload>(verifierRows[0]!, () => parseStoredVerifier(verifierRows[0]!, inputSnapshot)),
     executedAt: assertSame(rows, (r) => r.executed_at, 'executed_at'),

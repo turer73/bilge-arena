@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { solutionVerifierSchema, storedSolutionVerifierSchema, referencedSolutionVerifierSchema } from '../schemas'
 import { fromValidationRunRows, toValidationRunRows } from '../persistence'
 import { deriveVerdict } from '../verdict'
-import type { AuditRun, SolutionVerifierWirePayload } from '../types'
+import type { AuditRun, AssessedSolutionVerifierWirePayload as SolutionVerifierWirePayload } from '../types'
 
 const options = ['23', '25', '27', '29']
 const wire = (patch: Partial<SolutionVerifierWirePayload> = {}): SolutionVerifierWirePayload => ({

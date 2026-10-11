@@ -15,9 +15,9 @@ import {
   PROMPT_VERSION,
 } from './prompts'
 import type { LlmProvider } from './provider'
-import { adversarialShape, blindSolverShape, solutionVerifierShape } from './response-shapes'
+import { adversarialShape, optionTextBlindSolverShape, optionTextSolutionVerifierShape } from './response-shapes'
 import { runAgent } from './run-agent'
-import { adversarialSchema, blindSolverSchema, solutionVerifierSchema } from './schemas'
+import { adversarialSchema, optionTextBlindSolverSchema, optionTextSolutionVerifierSchema } from './schemas'
 import type {
   AdversarialPayload,
   AgentOutcome,
@@ -25,7 +25,7 @@ import type {
   BlindSolverPayload,
   QuestionDraft,
   SolutionVerifierPayload,
-  AssessedSolutionVerifierPayload,
+  OptionTextSolutionVerifierPayload,
   AuditExecutionIdentity,
 } from './types'
 import { deriveVerdict, DEFAULT_DERIVE_OPTIONS, type DeriveOptions } from './verdict'
@@ -90,9 +90,9 @@ export interface AuditProviders {
  * surumu arar ve HICBIR yayin gecmez (fail-closed). Sira: once yeni surumle
  * kosup kararlari yaz, sonra runtime'i cevir.
  */
-// @3 local candidate: code-derived support conflicts require review. Production
-// runtime is NOT changed by this constant; old @2 evidence cannot promote it.
-export const QUESTION_QUALITY_POLICY_VERSION = 'question-quality@3'
+// Local @4 candidate: exact-text selection and negative consistency checks.
+// Old @2/@3 evidence cannot promote it. No production runtime is changed here.
+export const QUESTION_QUALITY_POLICY_VERSION = 'question-quality@4'
 
 /** Yalniz model ciktisini etkileyen ayarlar hash'e girer; retry/rate ayarlari girmez. */
 export function auditExecutionIdentity(
@@ -191,9 +191,9 @@ export async function executeAudit(
         user: prompt.user,
         temperature: config.blindTemperature,
         maxOutputTokens: config.maxOutputTokens.blind,
-        schema: blindSolverShape(n),
+        schema: optionTextBlindSolverShape(view.options),
       },
-      schema: blindSolverSchema(n),
+      schema: optionTextBlindSolverSchema(view.options),
       timeoutMs: config.timeoutMs,
       maxAttempts: config.maxAttempts,
     }).then((outcome): AgentOutcome<BlindSolverPayload> => {
@@ -202,9 +202,8 @@ export async function executeAudit(
       return {
         ...outcome,
         data: {
-          reasoning: outcome.data.reasoning,
+          ...outcome.data,
           predictedAnswerIndex: toCanonicalIndex(view, outcome.data.predictedAnswerIndex),
-          computedValue: outcome.data.computedValue,
         },
       }
     })
@@ -238,7 +237,7 @@ export async function executeAudit(
   const verifierPromise: Promise<AgentOutcome<SolutionVerifierPayload>> = hasSolution
     ? (() => {
         const vPrompt = buildSolutionVerifierPrompt(draft)
-        return runAgent<AssessedSolutionVerifierPayload>({
+        return runAgent<OptionTextSolutionVerifierPayload>({
           provider: providers.verifier,
           promptVersion: PROMPT_VERSION.solutionVerifier,
           request: {
@@ -246,9 +245,9 @@ export async function executeAudit(
             user: vPrompt.user,
             temperature: config.verifierTemperature,
             maxOutputTokens: config.maxOutputTokens.verifier,
-            schema: solutionVerifierShape(n),
+            schema: optionTextSolutionVerifierShape(draft.options),
           },
-          schema: solutionVerifierSchema(draft.options, draft.solutionText!),
+          schema: optionTextSolutionVerifierSchema(draft.options, draft.solutionText!),
           timeoutMs: config.timeoutMs,
           maxAttempts: config.maxAttempts,
         })

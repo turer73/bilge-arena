@@ -22,8 +22,8 @@ function draft(id: string, opts: Partial<QuestionDraft> = {}): QuestionDraft {
 }
 
 function parseShown(userPrompt: string): string[] {
-  const payload = JSON.parse(userPrompt.split('\n')[1]) as { options: Array<{ index: number; text: string }> }
-  return payload.options.sort((a, b) => a.index - b.index).map((option) => option.text)
+  const payload = JSON.parse(userPrompt.split('\n')[1]) as { options: Array<string | { index: number; text: string }> }
+  return payload.options.map((option) => typeof option === 'string' ? option : option.text)
 }
 
 /** Kor cozucu her zaman `pickText` metnini secer; ekran indeksini prompt'tan bulur. */
@@ -43,14 +43,14 @@ function makeProviders(o: {
       let body: unknown
       if (role === 'blind') {
         const idx = shown.indexOf(o.pickText ?? 'A2')
-        body = { reasoning: 'r', predictedAnswerIndex: idx === -1 ? null : idx, computedValue: null }
+        body = { reasoning: 'r', selectedOptionText: idx === -1 ? null : shown[idx], computedValue: null }
       } else if (role === 'adversarial') {
         body = { reasoning: 'r', findings: [] }
       } else {
         const idx = shown.indexOf(o.verifierText ?? 'A2')
         body = {
-          reasoning: 'r', solutionConcludesIndex: idx === -1 ? null : idx, solutionCompleteness: 'adequate',
-          evidenceVersion: 'solution-evidence@3', questionDemand: 'recall',
+          reasoning: 'r', selectedOptionText: idx === -1 ? null : shown[idx], solutionCompleteness: 'adequate',
+          evidenceVersion: 'solution-evidence@4', questionDemand: 'recall',
           supportingUnitIds: [JSON.parse(req.user.split('\n')[1]).authorEvidenceUnits[0].id],
         }
       }
@@ -179,7 +179,7 @@ describe('kosu mekanigi', () => {
     expect(replay.cache).toEqual({ hits: 1, misses: 0 })
     expect(replay.cost).toEqual({ inputTokens: 0, outputTokens: 0, totalLatencyMs: 0 })
     expect(replay.promptVersions).toEqual({
-      blind: 'blind-solver@3', adversarial: 'adversarial@3', verifier: 'solution-verifier@6',
+      blind: 'blind-solver@4', adversarial: 'adversarial@3', verifier: 'solution-verifier@7',
     })
     expect(persistedAgain).toBe(false)
     expect(decisions).toBe(1)
