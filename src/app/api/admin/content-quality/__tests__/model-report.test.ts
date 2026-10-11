@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({ context: vi.fn() }))
 vi.mock('@/lib/content-governance/route-context', () => ({ requireContentGovernanceContext: mocks.context }))
 import { GET } from '../model-report/route'
-import { PROMPT_VERSION } from '@/lib/question-audit/prompts'
-import { QUESTION_QUALITY_POLICY_VERSION } from '@/lib/question-audit/orchestrator'
+const PROMPT_VERSION = { blindSolver: 'blind-solver@1' }
+const QUESTION_QUALITY_POLICY_VERSION = 'question-quality@2'
 
 const QID = '11111111-1111-4111-8111-111111111111'
 const RID = '22222222-2222-4222-8222-222222222222'
@@ -11,8 +11,8 @@ const HASH = 'a'.repeat(64)
 const revision = { id: RID, question_id: QID, content_sha256: HASH, status: 'published', content: { question: '2 + 2?', options: ['1', '2', '3', '4'], answer: 3 } }
 function run(over: Record<string, unknown> = {}) { return { question_id: QID, revision_id: RID, content_sha256: HASH, agent: 'blind_solver', sample_index: 0, provider_id: 'deepseek:deepseek-chat', model_id: 'deepseek-chat', prompt_version: PROMPT_VERSION.blindSolver, policy_version: QUESTION_QUALITY_POLICY_VERSION, generation_config: { blindSamples: 1 }, generation_config_sha256: 'b'.repeat(64), run_id: '33333333-3333-4333-8333-333333333333', status: 'ok', parsed_output: { reasoning: 'Dört.', predictedAnswerIndex: 3, computedValue: null }, input_snapshot: { questionId: QID, revisionId: RID, contentSha256: HASH, questionText: '2 + 2?', options: ['1', '2', '3', '4'], markedAnswerIndex: 3 }, executed_at: '2026-09-06T10:00:00.000Z', ...over } }
 type Result = { data: unknown; error: unknown }
-function fakeAdmin(over: Partial<Record<'questions' | 'question_content_revisions' | 'question_validation_runs', Result>> = {}) {
-  const results = { questions: { data: { id: QID, published_revision_id: RID }, error: null }, question_content_revisions: { data: revision, error: null }, question_validation_runs: { data: [run()], error: null }, ...over }
+function fakeAdmin(over: Partial<Record<'questions' | 'question_content_revisions' | 'question_validation_runs' | 'question_validation_runtime' | 'question_validation_revision_policies', Result>> = {}) {
+  const results = { question_validation_runtime: { data: { required_policy_version: 'question-quality@2' }, error: null }, question_validation_revision_policies: { data: null, error: null }, questions: { data: { id: QID, published_revision_id: RID }, error: null }, question_content_revisions: { data: revision, error: null }, question_validation_runs: { data: [run()], error: null }, ...over }
   const calls: Record<string, unknown[][]> = { select: [], eq: [], limit: [], order: [] }
   const admin = { from(name: keyof typeof results) {
     const builder: Record<string, unknown> = {}
@@ -27,6 +27,37 @@ const req = (query: string) => new Request(`http://localhost/api/admin/content-q
 beforeEach(() => vi.clearAllMocks())
 
 describe('model report route security and read contract', () => {
+  it('uses only the exact revision-bound @4 run', async () => {
+    const binding = { revision_id: RID, question_id: QID, content_sha256: HASH, base_policy_version: 'question-quality@2', policy_version: 'question-quality@4', run_id: '33333333-3333-4333-8333-333333333333' }
+    const f = fakeAdmin({ question_validation_revision_policies: { data: binding, error: null }, question_validation_runs: { data: [], error: null } })
+    mocks.context.mockResolvedValue({ ok: true, admin: f.admin })
+    const response = await GET(req(`revisionId=${RID}`))
+    expect(response.status).toBe(200)
+    expect((await response.json()).report.policyVersion).toBe('question-quality@4')
+    expect(f.calls.eq).toContainEqual(['question_validation_runs', 'run_id', binding.run_id])
+    expect(f.calls.eq).toContainEqual(['question_validation_runs', 'policy_version', 'question-quality@4'])
+  })
+  it('fails closed for stale binding content and unavailable policy reads', async () => {
+    for (const over of [
+      { question_validation_revision_policies: { data: { revision_id: RID, question_id: QID, content_sha256: 'b'.repeat(64), base_policy_version: 'question-quality@2', policy_version: 'question-quality@4', run_id: QID }, error: null } },
+      { question_validation_revision_policies: { data: null, error: { code: '42501' } } },
+      { question_validation_runtime: { data: null, error: { code: 'PGRST205' } } },
+    ]) {
+      const f = fakeAdmin(over); mocks.context.mockResolvedValue({ ok: true, admin: f.admin })
+      expect((await GET(req(`revisionId=${RID}`))).status).toBe(503)
+    }
+  })
+  it('uses @2 before binding migration, and a future global policy after invalidation', async () => {
+    const f = fakeAdmin({ question_validation_revision_policies: { data: null, error: { code: 'PGRST205' } } })
+    mocks.context.mockResolvedValue({ ok: true, admin: f.admin })
+    expect((await GET(req(`revisionId=${RID}`))).status).toBe(200)
+    expect(f.calls.eq).toContainEqual(['question_validation_runs', 'policy_version', 'question-quality@2'])
+    const next = fakeAdmin({ question_validation_runtime: { data: { required_policy_version: 'question-quality@5' }, error: null }, question_validation_revision_policies: { data: { revision_id: RID, question_id: QID, content_sha256: HASH, base_policy_version: 'question-quality@2', policy_version: 'question-quality@4', run_id: QID }, error: null } })
+    mocks.context.mockResolvedValue({ ok: true, admin: next.admin })
+    expect((await GET(req(`revisionId=${RID}`))).status).toBe(200)
+    expect(next.calls.eq).toContainEqual(['question_validation_runs', 'policy_version', 'question-quality@5'])
+    expect(next.calls.eq.some(x => x[1] === 'run_id')).toBe(false)
+  })
   for (const status of [401, 403, 429, 503]) it(`context ${status} yanitinda DB sorgulamaz`, async () => {
     const denied = new Response('denied', { status })
     mocks.context.mockResolvedValue({ ok: false, response: denied })

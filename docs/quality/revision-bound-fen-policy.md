@@ -18,6 +18,14 @@ by PostgreSQL and not proof of independent review. Deployment inserts no binding
 decision, source acceptance or question. Source, outcome/year and actor gates
 remain unchanged; all releases still use the normal governance RPCs.
 
+The admin validation queue defaults to the live global policy (explicit version
+queries still work). Per-revision model reports use the bound policy/run where
+present, and parse historical prompts using their stored contracts. They do not
+silently invalidate old @2 evidence when the local audit default moves to @4.
+Missing binding-table errors alone support deploy-before-migration reads; other
+policy read failures close with 503. A single Gemini cohort remains 1/5 models,
+not five independent reviewers.
+
 ## Release sequence
 
 1. Freeze the exact model/prompt/config, controls and revision hashes before

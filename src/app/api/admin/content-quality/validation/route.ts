@@ -2,7 +2,6 @@ import { z } from 'zod'
 import { requireContentGovernanceContext } from '@/lib/content-governance/route-context'
 import { contentGovernanceReadLimiter } from '@/lib/content-governance/rate-limits'
 import { contentNoStoreJson } from '@/lib/content-governance/server-contract'
-import { QUESTION_QUALITY_POLICY_VERSION } from '@/lib/question-audit/orchestrator'
 
 /**
  * Otomatik dogrulama verdict'ine gore soru listesi.
@@ -15,7 +14,7 @@ import { QUESTION_QUALITY_POLICY_VERSION } from '@/lib/question-audit/orchestrat
  *   farkli: bir soru editoryal olarak `published` iken otomatik denetimde
  *   NEEDS_REVIEW olabilir. Ayri eksen, ayri sorgu.
  *
- * POLICY VERSION: varsayilan olarak KODUN mevcut surumu filtrelenir. Eski
+ * POLICY VERSION: varsayilan olarak CANLI global surum filtrelenir. Eski
  * surumle uretilmis kararlar farkli bir esikle olusmustur ve ayni listede
  * gosterilirse yaniltir.
  */
@@ -54,6 +53,13 @@ export async function GET(request: Request) {
   const parsed = querySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
   if (!parsed.success) return contentNoStoreJson({ error: 'Geçersiz doğrulama sorgusu' }, { status: 400 })
   const { verdict, policyVersion, activeOnly, limit, offset } = parsed.data
+  let effectivePolicy = policyVersion
+  if (!effectivePolicy) {
+    const runtime = await context.admin.from('question_validation_runtime').select('required_policy_version').eq('singleton', true).maybeSingle()
+    const policy = z.string().min(1).max(100).safeParse(runtime.data?.required_policy_version)
+    if (runtime.error || !policy.success) return contentNoStoreJson({ error: 'Doğrulama politikası alınamadı' }, { status: 503 })
+    effectivePolicy = policy.data
+  }
 
   let query = context.admin
     .from('question_validation_decisions')
@@ -61,7 +67,7 @@ export async function GET(request: Request) {
     // yapmak yerine ust seviye karar satirlarini da gercekten elemesini saglar.
     .select('question_id,verdict,policy_version,rationale,findings,blind_agreement_ratio,decided_at,questions!inner(game,category,is_active)', { count: 'exact' })
     .eq('verdict', verdict)
-    .eq('policy_version', policyVersion ?? QUESTION_QUALITY_POLICY_VERSION)
+    .eq('policy_version', effectivePolicy)
     .order('decided_at', { ascending: false })
     .range(offset, offset + limit - 1)
   if (activeOnly === 'true') query = query.eq('questions.is_active', true)
@@ -80,7 +86,7 @@ export async function GET(request: Request) {
   // reviewer'a yalniz tiplenmis bulgu ve gerekce gider.
   return contentNoStoreJson({
     total: count ?? 0,
-    policyVersion: policyVersion ?? QUESTION_QUALITY_POLICY_VERSION,
+    policyVersion: effectivePolicy,
     items: rows.data.map((r) => ({
       questionId: r.question_id,
       verdict: r.verdict,

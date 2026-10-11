@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { PROMPT_VERSION } from './prompts'
+import { storedOptionTextBlindSolverSchema } from './schemas'
 
 export const FIVE_MODEL_SLOTS = ['deepseek', 'gemini', 'terra', 'luna', 'sol'] as const
 export type FiveModelSlot = typeof FIVE_MODEL_SLOTS[number]
@@ -148,11 +148,15 @@ export function buildFiveModelReport(subject: FiveModelSubject, rows: readonly F
     if (!z.string().uuid().safeParse(cohort[0]!.run_id).success || !/^[0-9a-f]{64}$/.test(cohort[0]!.generation_config_sha256 ?? '')) return { ...base, status: 'invalid' as const }
     if (cohort.some((row) => row.status !== 'ok')) return { ...base, status: 'failed' as const }
     if (cohort.some((row) => !isSameSnapshot(row, subject))) return { ...base, status: 'invalid' as const }
-    if (cohort.some((row) => row.prompt_version !== PROMPT_VERSION.blindSolver)) return { ...base, status: 'invalid' as const }
+    // Stored evidence is read using its own contract, never today's prompt default.
+    if (cohort.some((row) => row.prompt_version !== cohort[0]!.prompt_version)) return { ...base, status: 'conflict' as const }
+    const prompt = cohort[0]!.prompt_version
+    if (!['blind-solver@1', 'blind-solver@2', 'blind-solver@3', 'blind-solver@4'].includes(prompt)) return { ...base, status: 'invalid' as const }
     const expected = expectedSamples(cohort[0]!.generation_config)
     if (expected === null || cohort.some((row) => expectedSamples(row.generation_config) !== expected)) return { ...base, status: 'invalid' as const }
     if (cohort.some((row) => JSON.stringify(row.generation_config) !== JSON.stringify(cohort[0]!.generation_config))) return { ...base, status: 'conflict' as const }
-    const outputs = cohort.map((row) => parsedOutputSchema.safeParse(row.parsed_output))
+    const outputSchema = prompt === 'blind-solver@4' ? storedOptionTextBlindSolverSchema(subject.options) : parsedOutputSchema
+    const outputs = cohort.map((row) => outputSchema.safeParse(row.parsed_output))
     if (outputs.some((output) => !output.success)) return { ...base, status: 'invalid' as const }
     const values = outputs.map((output) => output.data!)
     if (values.some((value) => value.predictedAnswerIndex !== null && (value.predictedAnswerIndex < 0 || value.predictedAnswerIndex >= subject.options.length))) return { ...base, status: 'invalid' as const }
