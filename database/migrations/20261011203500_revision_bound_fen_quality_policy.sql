@@ -197,13 +197,13 @@ BEGIN
   PERFORM public.lock_question_revision_outcome_scope(r.id);
   PERFORM 1 FROM public.question_revision_sources WHERE revision_id=r.id FOR SHARE;
   PERFORM public.lock_question_revision_validation_run(r.id);
+  -- Freeze the decision in BOTH single-owner and two-stage publication paths.
+  PERFORM 1 FROM public.question_validation_runtime WHERE singleton FOR SHARE;
+  PERFORM 1 FROM public.question_validation_decisions d
+    JOIN public.question_validation_runtime runtime ON runtime.singleton
+    WHERE d.revision_id=r.id AND d.question_id=r.question_id AND d.content_sha256=r.content_sha256
+      AND d.policy_version=public.question_revision_validation_policy(r.id) FOR SHARE OF d;
   IF single_review THEN
-    -- Freeze policy and its exact authoritative decision through projection write.
-    PERFORM 1 FROM public.question_validation_runtime WHERE singleton FOR SHARE;
-    PERFORM 1 FROM public.question_validation_decisions d
-      JOIN public.question_validation_runtime runtime ON runtime.singleton
-      WHERE d.revision_id=r.id AND d.question_id=r.question_id AND d.content_sha256=r.content_sha256
-        AND d.policy_version=public.question_revision_validation_policy(r.id) FOR SHARE OF d;
     IF NOT public.question_revision_single_review_ready(r.id) THEN
       RAISE EXCEPTION 'accepted source review and current APPROVED quality decision required' USING ERRCODE='22023';
     END IF;

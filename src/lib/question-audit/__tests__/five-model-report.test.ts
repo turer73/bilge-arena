@@ -13,9 +13,9 @@ function row(n: number, over: Partial<FiveModelRunRow> = {}): FiveModelRunRow {
 }
 
 describe('buildFiveModelReport', () => {
-  it('never counts a numeric conflict as positive model agreement', () => {
+  it.each(['numeric_conflict', 'value_without_selection'])('never counts %s as positive model agreement', (assessment) => {
     const v4 = { ...subject, policyVersion: 'question-quality@4' }
-    const output = { reasoning: 'Üç hesaplandı ama dört seçildi', computedValue: '3', selectedOptionText: '4', predictedAnswerIndex: 3, selectionVersion: 'option-text@1', selectionAssessment: 'numeric_conflict' }
+    const output = { reasoning: 'Sonuç ve seçim tutarsız', computedValue: assessment === 'numeric_conflict' ? '3' : '4', selectedOptionText: assessment === 'numeric_conflict' ? '4' : null, predictedAnswerIndex: assessment === 'numeric_conflict' ? 3 : null, selectionVersion: 'option-text@1', selectionAssessment: assessment }
     const rows = identities.map((_, n) => row(n, { policy_version: v4.policyVersion, prompt_version: 'blind-solver@4', parsed_output: output }))
     const report = buildFiveModelReport(v4, rows)
     expect(report).toMatchObject({ completedModels: 0, agreement: 'incomplete', matchesKey: null })

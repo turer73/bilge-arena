@@ -3,6 +3,7 @@
 import {afterAll,afterEach,beforeAll,beforeEach,describe,it,expect} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {randomUUID} from 'node:crypto'
+import pg from 'pg'
 import {startSourceReviewPostgres} from './helpers/isolated-source-review-postgres.mjs'
 const bin=process.env.SOURCE_REVIEW_PG_BIN
 if(process.env.SOURCE_REVIEW_PG_REQUIRED==='1'&&!bin) throw Error('SOURCE_REVIEW_PG_BIN required')
@@ -17,7 +18,7 @@ function func(file,name){
 }
 function table(file,name){const text=read(file),start=text.indexOf(`CREATE TABLE IF NOT EXISTS public.${name} (`);if(start<0)throw Error(name);return text.slice(start,text.indexOf('\n);',start)+3)}
 suite('revision-bound Fen quality policy',()=>{
- let db,q,r,old,owner,outcomes,request
+ let db,q,r,old,owner,outcomes,request,committedFixture=false
  const scalar=async(sql,values=[])=>(await db.query(sql,values)).rows[0].result
  const call=async(sql,values=[])=>{
   await db.exec('SAVEPOINT call')
@@ -73,7 +74,14 @@ suite('revision-bound Fen quality policy',()=>{
   await db.exec(migration);await db.exec(migration)
  },60000)
  afterAll(async()=>{await db?.close()})
- afterEach(async()=>{await db.exec('ROLLBACK')})
+ afterEach(async()=>{
+  await db.exec('ROLLBACK')
+  if(committedFixture){
+   // This runtime is always a fresh, disposable local cluster, never production.
+   await db.exec('TRUNCATE public.profiles,public.questions,public.question_content_revisions,public.question_validation_decisions,public.question_validation_runs,public.question_validation_revision_policies,public.question_revision_sources,public.question_revision_approvals,public.question_revision_source_reviews,public.question_revision_outcomes,public.question_outcomes,public.question_governance_events,public.content_governance_requests,public.content_governance_write_context,public.curriculum_nodes,public.curriculum_outcomes,public.curriculum_outcome_canonical_links CASCADE')
+   committedFixture=false
+  }
+ })
  beforeEach(async()=>{
   await db.exec('BEGIN');q=randomUUID();r=randomUUID();old=randomUUID();owner=randomUUID();outcomes=[];request=randomUUID()
   await db.query('INSERT INTO public.profiles VALUES($1)',[owner])
@@ -206,5 +214,27 @@ suite('revision-bound Fen quality policy',()=>{
   expect(await scalar("SELECT has_table_privilege($1,'public.question_validation_revision_policies','UPDATE') AS result",[role])).toBe(false)
   expect(await scalar("SELECT has_table_privilege($1,'public.question_validation_revision_policies','DELETE') AS result",[role])).toBe(false)
   expect(await scalar("SELECT has_function_privilege($1,'public.question_revision_validation_policy(uuid)','EXECUTE') AS result",[role])).toBe(false)
+ })
+ it.each(['stage1_approved','stage2_approved'])('locks decision and raw agents until %s publication commits',async(status)=>{
+  await v5();await bind()
+  if(status==='stage2_approved'){
+   const a=randomUUID(),b=randomUUID()
+   await db.query('INSERT INTO public.profiles VALUES($1),($2)',[a,b])
+   await db.query('DELETE FROM public.question_revision_approvals WHERE revision_id=$1',[r])
+   await db.query("INSERT INTO public.question_revision_approvals(revision_id,stage,reviewer_id,decision,rationale) VALUES($1,1,$2,'approved','fixture'),($1,2,$3,'approved','fixture')",[r,a,b])
+   await db.query("UPDATE public.question_content_revisions SET status='stage2_approved' WHERE id=$1",[r])
+  }
+  // Commit setup so a second real connection can see these rows. The publisher
+  // itself remains in a fresh transaction; setup locks cannot make this pass.
+  await db.exec('COMMIT');committedFixture=true;await db.exec('BEGIN')
+  expect(await publish()).toMatchObject({status:'published'})
+  const port=Number((await db.query('SHOW port')).rows[0].port)
+  const other=new pg.Client({host:'127.0.0.1',port,user:'postgres',database:'postgres',connectionTimeoutMillis:3000})
+  await other.connect()
+  try{
+   await other.query("SET lock_timeout='200ms'")
+   await expect(other.query("UPDATE public.question_validation_decisions SET verdict='REJECTED' WHERE revision_id=$1",[r])).rejects.toMatchObject({code:'55P03'})
+   await expect(other.query("UPDATE public.question_validation_runs SET raw_output=NULL WHERE revision_id=$1",[r])).rejects.toMatchObject({code:'55P03'})
+  }finally{await other.end()}
  })
 })
