@@ -159,6 +159,9 @@ export function buildFiveModelReport(subject: FiveModelSubject, rows: readonly F
     const outputs = cohort.map((row) => outputSchema.safeParse(row.parsed_output))
     if (outputs.some((output) => !output.success)) return { ...base, status: 'invalid' as const }
     const values = outputs.map((output) => output.data!)
+    // A selected key is not agreement when the same sample computed a different
+    // numeric answer. Keep this read model consistent with deriveVerdict.
+    if (values.some((value) => 'selectionAssessment' in value && value.selectionAssessment === 'numeric_conflict')) return { ...base, status: 'conflict' as const }
     if (values.some((value) => value.predictedAnswerIndex !== null && (value.predictedAnswerIndex < 0 || value.predictedAnswerIndex >= subject.options.length))) return { ...base, status: 'invalid' as const }
     const samples = new Set(cohort.map((row) => row.sample_index))
     if (samples.size !== cohort.length) return { ...base, status: 'conflict' as const }

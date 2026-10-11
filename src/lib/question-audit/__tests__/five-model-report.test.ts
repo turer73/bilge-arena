@@ -13,6 +13,16 @@ function row(n: number, over: Partial<FiveModelRunRow> = {}): FiveModelRunRow {
 }
 
 describe('buildFiveModelReport', () => {
+  it('never counts a numeric conflict as positive model agreement', () => {
+    const v4 = { ...subject, policyVersion: 'question-quality@4' }
+    const output = { reasoning: 'Üç hesaplandı ama dört seçildi', computedValue: '3', selectedOptionText: '4', predictedAnswerIndex: 3, selectionVersion: 'option-text@1', selectionAssessment: 'numeric_conflict' }
+    const rows = identities.map((_, n) => row(n, { policy_version: v4.policyVersion, prompt_version: 'blind-solver@4', parsed_output: output }))
+    const report = buildFiveModelReport(v4, rows)
+    expect(report).toMatchObject({ completedModels: 0, agreement: 'incomplete', matchesKey: null })
+    expect(report.models.every(m => m.status === 'conflict')).toBe(true)
+    const mixed = [rows[0]!, ...identities.slice(1).map((_, n) => row(n + 1, { policy_version: v4.policyVersion }))]
+    expect(buildFiveModelReport(v4, mixed)).toMatchObject({ completedModels: 4, agreement: 'incomplete', matchesKey: null })
+  })
   it('reads an exact option-text contract without claiming five-model agreement', () => {
     const v4 = { ...subject, policyVersion: 'question-quality@4' }
     const output = { reasoning: 'Dört', computedValue: '4', selectedOptionText: '4', predictedAnswerIndex: 3, selectionVersion: 'option-text@1', selectionAssessment: 'numeric_match' }
