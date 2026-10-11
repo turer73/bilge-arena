@@ -213,7 +213,15 @@ export interface ReferencedSolutionVerifierPayload extends SolutionVerifierPaylo
   supportingQuotes: string[]
 }
 
-export type SolutionVerifierWirePayload = Omit<ReferencedSolutionVerifierPayload, 'supportingQuotes'>
+export type ReferencedSolutionVerifierWirePayload = Omit<ReferencedSolutionVerifierPayload, 'supportingQuotes'>
+
+/** @6 keeps the model claim unchanged; assessment below is CODE-derived. */
+export interface AssessedSolutionVerifierPayload extends Omit<ReferencedSolutionVerifierPayload, 'evidenceVersion'> {
+  evidenceVersion: 'solution-evidence@3'
+  supportAssessment: 'answer_only_for_reported_reasoning' | 'missing_cited_support' | 'answer_only_citation' | 'not_established'
+}
+
+export type SolutionVerifierWirePayload = Omit<AssessedSolutionVerifierPayload, 'supportingQuotes' | 'supportAssessment'>
 
 // ── Kosu kaydi ve verdict ──────────────────────────────────────────────────
 

@@ -94,7 +94,7 @@ export function solutionVerifierShape(optionCount: number): GeminiSchema {
         description: `Cozumun vardigi secenek indeksi (0-${maxIdx}). Hicbirine varmiyorsa null.`,
       },
       solutionCompleteness: { type: 'STRING', enum: ['adequate', 'terse'] },
-      evidenceVersion: { type: 'STRING', enum: ['solution-evidence@2'] },
+      evidenceVersion: { type: 'STRING', enum: ['solution-evidence@3'] },
       questionDemand: { type: 'STRING', enum: ['recall', 'reasoning'] },
       supportingUnitIds: {
         type: 'ARRAY',

@@ -24,6 +24,7 @@ import {
   type Finding,
   type VerdictResult,
 } from './types'
+import { storedSolutionVerifierSchema } from './schemas'
 
 /** Gecerli orneklerden cogunluk indeksi. Beraberlik veya cogunluk yoksa null. */
 function consensus(indexes: readonly (number | null)[]): { index: number | null; ratio: number } | null {
@@ -94,6 +95,7 @@ export const DEFAULT_DERIVE_OPTIONS: DeriveOptions = { minBlindAgreement: 2 / 3 
 export function deriveVerdict(run: AuditRun, opts: DeriveOptions = DEFAULT_DERIVE_OPTIONS): VerdictResult {
   const findings: Finding[] = []
   let inconclusive = false
+  let supportConflict = false
   const notes: string[] = []
 
   // ── Kor Cozucu ───────────────────────────────────────────────────────────
@@ -156,17 +158,36 @@ export function deriveVerdict(run: AuditRun, opts: DeriveOptions = DEFAULT_DERIV
   // Karsilastirmayi BURASI yapar, model degil.
   if (run.verifier.status === 'ok') {
     const { solutionConcludesIndex, solutionCompleteness } = run.verifier.data
-    if (solutionConcludesIndex !== null && solutionConcludesIndex !== run.markedAnswerIndex) {
+    // Old versions keep their original meaning. Never trust caller-supplied
+    // derived fields without resolving again from this exact input snapshot.
+    let answerOnly = false
+    let verifierEvidenceValid = true
+    if (run.verifier.telemetry.promptVersion === 'solution-verifier@6') {
+      const assessed = storedSolutionVerifierSchema(run.inputSnapshot.options, run.inputSnapshot.solutionText ?? '')
+        .safeParse(run.verifier.data)
+      if (!assessed.success) {
+        verifierEvidenceValid = false
+        inconclusive = true
+        notes.push('cozum dayanagi saklanan girdiden dogrulanamadi')
+      } else {
+        answerOnly = assessed.data.supportAssessment === 'answer_only_for_reported_reasoning'
+        supportConflict = assessed.data.supportAssessment !== 'not_established'
+        if (supportConflict) notes.push(`kod dayanak degerlendirmesi: ${assessed.data.supportAssessment}; model yeterliligi: ${solutionCompleteness}`)
+      }
+    }
+    if (verifierEvidenceValid && solutionConcludesIndex !== null && solutionConcludesIndex !== run.markedAnswerIndex) {
       findings.push({
         code: 'SOLUTION_CONTRADICTS_ANSWER',
         evidence: `cozum metni idx${solutionConcludesIndex}'e variyor, isaretli cevap idx${run.markedAnswerIndex}`,
         optionIndexes: [solutionConcludesIndex, run.markedAnswerIndex],
       })
     }
-    if (solutionCompleteness === 'terse') {
+    if (verifierEvidenceValid && (solutionCompleteness === 'terse' || answerOnly)) {
       findings.push({
         code: 'INCOMPLETE_SOLUTION',
-        evidence: 'cozum metni sonuca goturen adimlari icermiyor',
+        evidence: answerOnly
+          ? 'kod: yazar metni yalniz secenek tekrari; model soru talebini reasoning bildirdi (soru sinifi bagimsiz dogrulanmadi)'
+          : 'cozum metni sonuca goturen adimlari icermiyor',
       })
     }
   } else if (run.verifier.status === 'failed') {
@@ -230,6 +251,7 @@ export function deriveVerdict(run: AuditRun, opts: DeriveOptions = DEFAULT_DERIV
   else if (inconclusive) verdict = 'INCONCLUSIVE'
   else if (
     advisory ||
+    supportConflict ||
     uncorroboratedWrongKey ||
     uncorroboratedSolution ||
     unverifiableNoOption ||

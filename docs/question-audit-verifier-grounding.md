@@ -1,6 +1,8 @@
 # Çözüm denetçisi: yazar metnine bağlı yeterlilik
 
-`solution-verifier@5` / `solution-evidence@2`.
+Bu belge `solution-verifier@5` / `solution-evidence@2` tarihsel sözleşmesini
+anlatır. Yerel aday @6/@3 ve yeni politika için
+[Fen korumaları](question-audit-fen-offline-guards.md) belgesine bakın.
 
 ## Sorun
 

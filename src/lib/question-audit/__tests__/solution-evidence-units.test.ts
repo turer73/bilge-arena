@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { authorEvidenceUnits } from '../solution-evidence'
-import { solutionVerifierSchema, storedSolutionVerifierSchema } from '../schemas'
+import { referencedSolutionVerifierSchema as solutionVerifierSchema, storedReferencedSolutionVerifierSchema as storedSolutionVerifierSchema } from '../schemas'
 import { buildSolutionVerifierPrompt } from '../prompts'
-import type { QuestionDraft, SolutionVerifierWirePayload } from '../types'
+import type { QuestionDraft, ReferencedSolutionVerifierWirePayload as SolutionVerifierWirePayload } from '../types'
 
 const payload = (overrides: Partial<SolutionVerifierWirePayload> = {}): SolutionVerifierWirePayload => ({
   reasoning: 'Yazarin islemi.', evidenceVersion: 'solution-evidence@2', questionDemand: 'reasoning',

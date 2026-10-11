@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { fromValidationRunRows, toValidationDecisionRow, toValidationRunRows } from '../persistence'
 import { deriveVerdict } from '../verdict'
-import { solutionVerifierSchema } from '../schemas'
+import { referencedSolutionVerifierSchema as solutionVerifierSchema } from '../schemas'
 import type { AgentOutcome, AgentTelemetry, AuditRun, GroundedSolutionVerifierPayload } from '../types'
 
 const telemetry: AgentTelemetry = {

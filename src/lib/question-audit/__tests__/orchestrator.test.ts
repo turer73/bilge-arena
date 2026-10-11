@@ -68,7 +68,7 @@ function fakeProvider(id: string, opts: FakeOptions = {}) {
           reasoning: 'takip ettim',
           solutionConcludesIndex: idx === -1 ? null : idx,
           solutionCompleteness: opts.completeness ?? 'adequate',
-          evidenceVersion: 'solution-evidence@2',
+          evidenceVersion: 'solution-evidence@3',
           questionDemand: 'reasoning',
           supportingUnitIds: opts.completeness === 'terse' ? [] : [JSON.parse(req.user.split('\n')[1]).authorEvidenceUnits[0].id],
           ...opts.verifierPayload,
@@ -246,12 +246,24 @@ describe('4 sikli soru', () => {
 })
 
 describe('yazar metnine bagli cozum denetimi', () => {
+  it('DNA sayim yardimi model uyusmazligini veya arizasini gizlemez', async () => {
+    const dna = draft({ examRef: 'LGS', subject: 'Fen', passage: null,
+      questionText: "DNA'nın aynı zincir bölümüne ait iki dizi aynı yönde yazılmıştır: önce AAAA, sonra AAGA. Yerleri soldan 1 ile numaralandırırsak, farklı harfin bulunduğu yer kaçtır? Ekleme veya silme olmadığı belirtilmiştir.",
+      options: ['1', '2', '3', '4'], markedAnswerIndex: 2, solutionText: 'Soldan üçüncü harf A iken G olmuştur.' })
+    const wrong = providers({ blind: { picksText: '4' }, verifier: { concludesText: '3' } })
+    const conflict = await auditQuestion(dna, wrong, fastConfig)
+    expect(wrong.blindPrompts.every((p) => JSON.parse(p.split('\n')[1]).sequenceEvidence.changedPosition === 3)).toBe(true)
+    expect(conflict.verdict.verdict).toBe('NEEDS_REVIEW')
+    expect(conflict.verdict.blindConsensusIndex).toBe(3) // raw model selected 4, not overwritten to 3
+    const failed = await auditQuestion(dna, providers({ blind: { error: new Error('offline') }, verifier: { concludesText: '3' } }), fastConfig)
+    expect(failed.verdict.verdict).toBe('INCONCLUSIVE')
+  })
   const missing = draft({
     examRef: 'LGS', questionText: '12+18-7 kactir?', options: ['23', '25', '27', '29'],
     markedAnswerIndex: 0, solutionText: 'Yanıt 23.',
   })
 
-  it.each([['question:0'], ['author:0'], []])('sahte veya sonuc-tekrari dayanagi APPROVED yapmaz: %j', async (...ids) => {
+  it.each([['question:0'], ['author:99']])('sahte dayanak ajan hatasi olarak kalir: %j', async (...ids) => {
     const p = providers({ blind: { picksText: '23' }, verifier: {
       concludesText: '23', verifierPayload: { supportingUnitIds: ids },
     } })
@@ -261,6 +273,17 @@ describe('yazar metnine bagli cozum denetimi', () => {
     expect(verdict.findings).toEqual([]) // model arizasi soru kusuru DEGIL
     expect(run.blind.every((out) => out.status === 'ok')).toBe(true)
     expect(run.adversarial.status).toBe('ok')
+  })
+
+  it.each([['author:0'], []])('gercek fakat yalniz cevap olan metin model iddiasini koruyarak incelemeye gider: %j', async (...ids) => {
+    const { run, verdict } = await auditQuestion(missing, providers({
+      blind: { picksText: '23' }, verifier: { concludesText: '23', verifierPayload: { supportingUnitIds: ids } },
+    }), fastConfig)
+    expect(run.verifier).toMatchObject({ status: 'ok', data: {
+      solutionCompleteness: 'adequate', supportAssessment: 'answer_only_for_reported_reasoning',
+    } })
+    expect(verdict.verdict).toBe('NEEDS_REVIEW')
+    expect(verdict.findings.map((f) => f.code)).toEqual(['INCOMPLETE_SOLUTION'])
   })
 
   it('gecerli eksik-dayanak karari INCOMPLETE_SOLUTION ile incelemeye gider', async () => {
@@ -278,8 +301,8 @@ describe('yazar metnine bagli cozum denetimi', () => {
     }), fastConfig)
     expect(verdict.verdict).toBe('APPROVED')
     expect(run.verifier).toMatchObject({ status: 'ok', data: {
-      evidenceVersion: 'solution-evidence@2', questionDemand: 'reasoning', supportingUnitIds: ['author:0'], supportingQuotes: ['12+18-7=23'],
+      evidenceVersion: 'solution-evidence@3', questionDemand: 'reasoning', supportingUnitIds: ['author:0'], supportingQuotes: ['12+18-7=23'], supportAssessment: 'not_established',
     } })
-    expect(run.execution.promptVersions.verifier).toBe('solution-verifier@5')
+    expect(run.execution.promptVersions.verifier).toBe('solution-verifier@6')
   })
 })

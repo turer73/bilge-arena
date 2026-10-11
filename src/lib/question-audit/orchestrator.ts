@@ -25,7 +25,7 @@ import type {
   BlindSolverPayload,
   QuestionDraft,
   SolutionVerifierPayload,
-  ReferencedSolutionVerifierPayload,
+  AssessedSolutionVerifierPayload,
   AuditExecutionIdentity,
 } from './types'
 import { deriveVerdict, DEFAULT_DERIVE_OPTIONS, type DeriveOptions } from './verdict'
@@ -90,7 +90,9 @@ export interface AuditProviders {
  * surumu arar ve HICBIR yayin gecmez (fail-closed). Sira: once yeni surumle
  * kosup kararlari yaz, sonra runtime'i cevir.
  */
-export const QUESTION_QUALITY_POLICY_VERSION = 'question-quality@2'
+// @3 local candidate: code-derived support conflicts require review. Production
+// runtime is NOT changed by this constant; old @2 evidence cannot promote it.
+export const QUESTION_QUALITY_POLICY_VERSION = 'question-quality@3'
 
 /** Yalniz model ciktisini etkileyen ayarlar hash'e girer; retry/rate ayarlari girmez. */
 export function auditExecutionIdentity(
@@ -236,7 +238,7 @@ export async function executeAudit(
   const verifierPromise: Promise<AgentOutcome<SolutionVerifierPayload>> = hasSolution
     ? (() => {
         const vPrompt = buildSolutionVerifierPrompt(draft)
-        return runAgent<ReferencedSolutionVerifierPayload>({
+        return runAgent<AssessedSolutionVerifierPayload>({
           provider: providers.verifier,
           promptVersion: PROMPT_VERSION.solutionVerifier,
           request: {

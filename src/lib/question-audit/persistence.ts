@@ -11,7 +11,7 @@
  *   puanlanabildi, cunku yalniz turetilmis CalibrationItem saklanmisti.
  */
 
-import { adversarialSchema, blindSolverSchema, legacySolutionVerifierSchema, quotedSolutionVerifierSchema, storedSolutionVerifierSchema } from './schemas'
+import { adversarialSchema, blindSolverSchema, legacySolutionVerifierSchema, quotedSolutionVerifierSchema, storedReferencedSolutionVerifierSchema, storedSolutionVerifierSchema } from './schemas'
 import type {
   AdversarialPayload,
   AgentErrorKind,
@@ -228,8 +228,11 @@ function outcomeOf<T>(row: ValidationRunRow, parse: (value: unknown) => T): Agen
 }
 
 function parseStoredVerifier(row: ValidationRunRow, draft: QuestionDraft): SolutionVerifierPayload {
-  if (row.prompt_version === 'solution-verifier@5') {
+  if (row.prompt_version === 'solution-verifier@6') {
     return storedSolutionVerifierSchema(draft.options, draft.solutionText ?? '').parse(row.parsed_output)
+  }
+  if (row.prompt_version === 'solution-verifier@5') {
+    return storedReferencedSolutionVerifierSchema(draft.options, draft.solutionText ?? '').parse(row.parsed_output)
   }
   if (row.prompt_version === 'solution-verifier@4') {
     return quotedSolutionVerifierSchema(draft.options, draft.solutionText ?? '').parse(row.parsed_output)

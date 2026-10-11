@@ -121,7 +121,7 @@ export const quotedSolutionVerifierSchema = (options: readonly string[], solutio
   })
 
 /** @5 wire contract: arbitrary model quotations are not accepted. */
-export const solutionVerifierSchema = (options: readonly string[], solutionText: string) => {
+export const referencedSolutionVerifierSchema = (options: readonly string[], solutionText: string) => {
   const units = new Map(authorEvidenceUnits(solutionText).map((unit) => [unit.id, unit.text]))
   return legacySolutionVerifierSchema(options.length).extend({
     evidenceVersion: z.literal('solution-evidence@2'),
@@ -153,10 +153,10 @@ export const solutionVerifierSchema = (options: readonly string[], solutionText:
 }
 
 /** Stored @5 output includes code-derived quotes: verify, never silently replace. */
-export const storedSolutionVerifierSchema = (options: readonly string[], solutionText: string) =>
+export const storedReferencedSolutionVerifierSchema = (options: readonly string[], solutionText: string) =>
   z.object({ supportingQuotes: z.array(z.string().min(1).max(2000)).max(8) }).passthrough()
     .transform(({ supportingQuotes, ...wire }, ctx) => {
-      const result = solutionVerifierSchema(options, solutionText).safeParse(wire)
+      const result = referencedSolutionVerifierSchema(options, solutionText).safeParse(wire)
       if (!result.success) {
         for (const issue of result.error.issues) ctx.addIssue({ code: 'custom', path: issue.path, message: issue.message })
         return z.NEVER
@@ -167,6 +167,56 @@ export const storedSolutionVerifierSchema = (options: readonly string[], solutio
       }
       return result.data
     })
+
+/** @6: semantic claim/support conflicts are review signals, not broken JSON. */
+export const solutionVerifierSchema = (options: readonly string[], solutionText: string) => {
+  const units = new Map(authorEvidenceUnits(solutionText).map((unit) => [unit.id, unit.text]))
+  return legacySolutionVerifierSchema(options.length).extend({
+    evidenceVersion: z.literal('solution-evidence@3'),
+    questionDemand: z.enum(['recall', 'reasoning']),
+    supportingUnitIds: z.array(z.string().regex(/^author:\d+$/)).max(8),
+  }).strict().transform((value, ctx) => {
+    const seen = new Set<string>()
+    const supportingQuotes: string[] = []
+    for (const [index, id] of value.supportingUnitIds.entries()) {
+      const quote = units.get(id)
+      if (quote === undefined || seen.has(id)) {
+        ctx.addIssue({ code: 'custom', path: ['supportingUnitIds', index], message: 'bilinmeyen veya tekrarlanan yazar parcasi' })
+      } else {
+        seen.add(id)
+        supportingQuotes.push(quote)
+      }
+    }
+    // Do NOT rewrite solutionCompleteness or claim semantic sufficiency.
+    const supportAssessment = value.questionDemand === 'reasoning' && isBareOption(solutionText, options)
+      ? 'answer_only_for_reported_reasoning' as const
+      : value.solutionCompleteness === 'adequate' && supportingQuotes.length === 0
+        ? 'missing_cited_support' as const
+        : value.solutionCompleteness === 'adequate' && value.questionDemand === 'reasoning' &&
+          supportingQuotes.every((quote) => isBareOption(quote, options))
+          ? 'answer_only_citation' as const
+          : 'not_established' as const
+    return { ...value, supportingQuotes, supportAssessment }
+  })
+}
+
+export const storedSolutionVerifierSchema = (options: readonly string[], solutionText: string) =>
+  z.object({
+    supportingQuotes: z.array(z.string().min(1).max(2000)).max(8),
+    supportAssessment: z.enum(['answer_only_for_reported_reasoning', 'missing_cited_support', 'answer_only_citation', 'not_established']),
+  }).passthrough().transform(({ supportingQuotes, supportAssessment, ...wire }, ctx) => {
+    const result = solutionVerifierSchema(options, solutionText).safeParse(wire)
+    if (!result.success) {
+      for (const issue of result.error.issues) ctx.addIssue({ code: 'custom', path: issue.path, message: issue.message })
+      return z.NEVER
+    }
+    if (JSON.stringify(supportingQuotes) !== JSON.stringify(result.data.supportingQuotes) ||
+      supportAssessment !== result.data.supportAssessment) {
+      ctx.addIssue({ code: 'custom', message: 'saklanan dayanak degerlendirmesi veya alintilar girdiyle eslesmiyor' })
+      return z.NEVER
+    }
+    return result.data
+  })
 
 export type BlindSolverParsed = z.infer<ReturnType<typeof blindSolverSchema>>
 export type AdversarialParsed = z.infer<ReturnType<typeof adversarialSchema>>
