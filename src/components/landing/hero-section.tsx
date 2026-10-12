@@ -209,7 +209,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
                   alt={hasMascot ? 'Bilge Chan' : 'Bilge Arena'}
                   width={440}
                   height={440}
-                  priority
+                  fetchPriority="high"
                   className={`
                     ${hasMascot
                       ? `drop-shadow-2xl object-contain${isDarkTheme ? ' mix-blend-screen' : ''}`

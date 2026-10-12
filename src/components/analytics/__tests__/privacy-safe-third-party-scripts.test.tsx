@@ -145,5 +145,27 @@ describe('privacy-safe third-party document boundary', () => {
   it('marks public documents so an unexpected sensitive render can force a reload', () => {
     render(<PrivacySafeThirdPartyScripts />)
     expect(document.documentElement.dataset.telemetryDocumentBoundary).toBe('public')
+    expect(mocks.script).toHaveBeenCalledWith(
+      expect.objectContaining({ src: 'https://analytics.panola.app/js/script.js', strategy: 'lazyOnload' }),
+      undefined,
+    )
+  })
+
+  it('loads the advertising library only during browser idle time', () => {
+    const previous = process.env.NEXT_PUBLIC_ADSENSE_ID
+    process.env.NEXT_PUBLIC_ADSENSE_ID = 'ca-pub-test'
+    try {
+      render(<PrivacySafeThirdPartyScripts />)
+      expect(mocks.script).toHaveBeenCalledWith(
+        expect.objectContaining({
+          src: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-test',
+          strategy: 'lazyOnload',
+        }),
+        undefined,
+      )
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_ADSENSE_ID
+      else process.env.NEXT_PUBLIC_ADSENSE_ID = previous
+    }
   })
 })

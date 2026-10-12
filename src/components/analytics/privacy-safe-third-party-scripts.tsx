@@ -172,14 +172,14 @@ export function PrivacySafeThirdPartyScripts({
         defer
         data-domain="bilgearena.com"
         src="https://analytics.panola.app/js/script.js"
-        strategy="afterInteractive"
+        strategy="lazyOnload"
       />
       <GoogleAnalytics />
       {process.env.NEXT_PUBLIC_ADSENSE_ID && (
         <Script
           {...{
             src: `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`,
-            strategy: 'afterInteractive' as const,
+            strategy: 'lazyOnload' as const,
             crossOrigin: 'anonymous',
           }}
         />
