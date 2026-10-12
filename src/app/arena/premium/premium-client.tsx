@@ -45,7 +45,7 @@ export default function PremiumClient() {
           ⭐ Bilge Arena <span className="text-[var(--reward)]">Premium</span>
         </h1>
         <p className="mt-2 text-sm text-[var(--text-sub)] md:text-base">
-          Sınırsız öğrenme deneyimi ile YKS, LGS ve AYT hedefine ulaş
+          Premium planlarını incele, lansman duyurusu için listeye katıl
         </p>
       </div>
 
@@ -61,6 +61,9 @@ export default function PremiumClient() {
         </div>
       )}
 
+      <h2 className="mb-3 font-display text-base font-bold">
+        {isPremium ? 'Premium özellikleri' : 'Planlanan Premium özellikleri'}
+      </h2>
       {/* Ozellikler */}
       <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {PREMIUM_FEATURES.map((feat, i) => (
@@ -89,13 +92,13 @@ export default function PremiumClient() {
             </div>
           </div>
 
-          <h2 className="mb-4 text-center font-display text-lg font-bold">Planını Seç</h2>
+          <h2 className="mb-4 text-center font-display text-lg font-bold">İlgilendiğin Planı Seç</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Aylik */}
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-6 text-center transition-all hover:shadow-lg">
               <div className="text-xs font-bold tracking-wider text-[var(--text-sub)]">AYLIK</div>
               <div className="mt-2 font-display text-3xl font-black">{PREMIUM_PRICE.label.monthly}</div>
-              <div className="mt-1 text-[11px] text-[var(--text-sub)]">Her ay yenilenir</div>
+              <div className="mt-1 text-[11px] text-[var(--text-sub)]">Lansman için öngörülen aylık ücret</div>
               <button
                 type="button"
                 className="mt-4 w-full rounded-xl bg-[var(--focus)] py-3 text-sm font-bold text-white transition-all hover:bg-[var(--focus-light)] hover:scale-[1.02]"
@@ -108,13 +111,13 @@ export default function PremiumClient() {
             {/* Yillik */}
             <div className="relative rounded-2xl border-2 border-[var(--reward)] bg-[var(--card-bg)] p-6 text-center transition-all hover:shadow-lg">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--reward)] px-4 py-1 text-[10px] font-bold text-white">
-                🔥 EN POPÜLER — {PREMIUM_PRICE.label.yearlySaving}
+                YILLIK PLAN
               </div>
               <div className="text-xs font-bold tracking-wider text-[var(--text-sub)]">YILLIK</div>
               <div className="mt-2 font-display text-3xl font-black text-[var(--reward)]">
                 {PREMIUM_PRICE.label.yearly}
               </div>
-              <div className="mt-1 text-[11px] text-[var(--text-sub)]">Ayda sadece ₺33,3</div>
+              <div className="mt-1 text-[11px] text-[var(--text-sub)]">Öngörülen aylık karşılığı ₺33,3</div>
               <button
                 type="button"
                 className="mt-4 w-full rounded-xl bg-[var(--reward)] py-3 text-sm font-bold text-white transition-all hover:brightness-110 hover:scale-[1.02]"
@@ -153,7 +156,7 @@ export default function PremiumClient() {
                 },
                 {
                   q: 'Hangi ödeme yöntemleri olacak?',
-                  a: 'Lansmanda kredi kartı, banka kartı ve mobil ödeme planlanıyor. Kesin liste lansmana yakın paylaşılacak.',
+                  a: 'Ödeme yöntemleri henüz kesinleşmedi; lansmanda paylaşılacak.',
                 },
               ].map((item, i) => (
                 <div key={i} className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4">
