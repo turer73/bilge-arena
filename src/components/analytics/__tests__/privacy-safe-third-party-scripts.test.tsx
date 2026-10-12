@@ -146,7 +146,7 @@ describe('privacy-safe third-party document boundary', () => {
     render(<PrivacySafeThirdPartyScripts />)
     expect(document.documentElement.dataset.telemetryDocumentBoundary).toBe('public')
     expect(mocks.script).toHaveBeenCalledWith(
-      expect.objectContaining({ src: 'https://analytics.panola.app/js/script.js', strategy: 'lazyOnload' }),
+      expect.objectContaining({ src: 'https://analytics.panola.app/js/script.js', strategy: 'afterInteractive' }),
       undefined,
     )
   })

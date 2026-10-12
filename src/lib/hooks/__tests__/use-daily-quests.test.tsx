@@ -72,4 +72,27 @@ describe('useDailyQuests verified-session refresh', () => {
     })
     expect(fetchMock).not.toHaveBeenCalled()
   })
+
+  it('hesap değişince önceki hesabın görevlerini ve geç gelen yanıtını göstermez', async () => {
+    let resolveFirst!: (value: ReturnType<typeof responseWith>) => void
+    fetchMock.mockReset()
+    fetchMock.mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve }))
+      .mockResolvedValueOnce(responseWith([{ ...incompleteQuest, id: 'second-quest', user_id: 'second-user' }]))
+
+    const { result, rerender } = renderHook(({ userId }) => useDailyQuests(userId), {
+      initialProps: { userId: incompleteQuest.user_id },
+    })
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    rerender({ userId: 'second-user' })
+    expect(result.current.quests).toEqual([])
+    await waitFor(() => expect(result.current.quests.map((quest) => quest.id)).toEqual(['second-quest']))
+
+    await act(async () => resolveFirst(responseWith([incompleteQuest])))
+    expect(result.current.quests.map((quest) => quest.id)).toEqual(['second-quest'])
+
+    rerender({ userId: undefined as unknown as string })
+    expect(result.current.quests).toEqual([])
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
 })

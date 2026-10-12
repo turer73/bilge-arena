@@ -7,14 +7,14 @@ vi.mock('next/script', () => ({ default: script }))
 import { GoogleAnalytics } from '../google-analytics'
 
 describe('GoogleAnalytics loading', () => {
-  it('defers both the library and consent initialization until browser idle time', () => {
+  it('initializes consent and analytics after hydration before early interactions', () => {
     render(<GoogleAnalytics />)
     expect(script).toHaveBeenCalledWith(
-      expect.objectContaining({ src: expect.stringContaining('googletagmanager.com/gtag/js'), strategy: 'lazyOnload' }),
+      expect.objectContaining({ src: expect.stringContaining('googletagmanager.com/gtag/js'), strategy: 'afterInteractive' }),
       undefined,
     )
     expect(script).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'ga-init', strategy: 'lazyOnload' }),
+      expect.objectContaining({ id: 'ga-init', strategy: 'afterInteractive' }),
       undefined,
     )
   })

@@ -20,4 +20,12 @@ describe('trackEvent sensitive workspace policy', () => {
     trackEvent('MarketingCtaClicked')
     expect(plausible).toHaveBeenCalledWith('MarketingCtaClicked', undefined)
   })
+
+  it('betik yüklenmeden gelen kamusal olayı Plausible kuyruğuna alır', () => {
+    window.history.replaceState({}, '', '/hakkinda')
+    delete window.plausible
+    trackEvent('MarketingCtaClicked')
+    expect((Reflect.get(window, 'plausible') as { q?: unknown[][] }).q)
+      .toEqual([['MarketingCtaClicked', undefined]])
+  })
 })

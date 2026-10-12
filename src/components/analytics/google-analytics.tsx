@@ -18,9 +18,9 @@ export function GoogleAnalytics() {
   return (
     <>
       <Script
-        {...{ src: `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`, strategy: 'lazyOnload' as const }}
+        {...{ src: `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`, strategy: 'afterInteractive' as const }}
       />
-      <Script id="ga-init" strategy="lazyOnload">
+      <Script id="ga-init" strategy="afterInteractive">
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}

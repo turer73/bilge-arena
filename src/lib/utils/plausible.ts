@@ -89,10 +89,14 @@ export function trackEvent(name: EventName, options?: PlausibleOptions): void {
   if (isCurrentBrowserPathSensitive()) return
 
   try {
-    if (typeof window.plausible === 'function') {
-      window.plausible(name, options)
+    if (typeof window.plausible !== 'function') {
+      // Plausible's documented pre-load queue preserves fast interactions.
+      const queued: PlausibleQueue = (...args) => {
+        ;(queued.q ??= []).push(args)
+      }
+      window.plausible = queued
     }
-    // plausible yuklenmediyse native kuyruklama var (data-domain script otomatik)
+    window.plausible(name, options)
   } catch {
     // Analytics hatalari sessizce atla — kullanici deneyimini bozma
   }
