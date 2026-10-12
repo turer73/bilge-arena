@@ -126,10 +126,10 @@ describe('getAuthRateLimited', () => {
     expect(userLimiter.check).toHaveBeenCalledWith(VALID_UUID)
   })
 
-  it('IP extracted from cf-connecting-ip (XFF anti-spoof)', async () => {
+  it('IP extracted from Vercel XFF, ignoring spoofable Cloudflare header', async () => {
     const headers = new Headers()
-    headers.set('x-forwarded-for', '99.99.99.99')  // attacker spoof
-    headers.set('cf-connecting-ip', '1.2.3.4')      // CF trusted
+    headers.set('x-forwarded-for', '99.99.99.99')
+    headers.set('cf-connecting-ip', '1.2.3.4') // client-controlled on direct Vercel
     const req = new Request('http://localhost', { headers })
 
     const ipLimiter = makeLimiter(true)
@@ -139,8 +139,7 @@ describe('getAuthRateLimited', () => {
 
     await getAuthRateLimited(req, ipLimiter, userLimiter)
 
-    // IP key cf-connecting-ip olmali, x-forwarded-for spoof'a guvenmemeli
-    expect(ipLimiter.check).toHaveBeenCalledWith('1.2.3.4')
+    expect(ipLimiter.check).toHaveBeenCalledWith('99.99.99.99')
   })
 
   it('Anon flood simulation — 5 IP-rejected request, mockGetUser SIFIR cagri', async () => {
