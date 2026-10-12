@@ -49,7 +49,7 @@ const GAMES = [
     name: 'Sosyal Atölyesi',
     sub: 'TYT · LGS',
     desc: 'Tarih, Coğrafya, Felsefe — TYT ve LGS Sosyal Bilimler sorularıyla pratik yap.',
-    color: { m: 'var(--wisdom)', l: 'var(--wisdom-light)', bg: 'var(--wisdom-bg)', border: 'var(--wisdom-border)' },
+    color: { m: 'var(--wisdom)', l: 'var(--wisdom-text)', bg: 'var(--wisdom-bg)', border: 'var(--wisdom-border)' },
     count: '1.183 soru',
     ready: true,
     colorKey: 'wisdom',

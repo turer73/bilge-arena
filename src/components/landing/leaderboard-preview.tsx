@@ -93,7 +93,7 @@ export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
           {/* Baslik */}
           <div className="flex items-center justify-between border-b border-[var(--border)] px-6 py-4">
             <span className="text-sm font-bold">Tüm Zamanların Liderleri</span>
-            <span className="rounded-full bg-[var(--focus-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--focus-light)]">
+            <span className="rounded-full bg-[var(--focus-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--focus-text)]">
               İsteğe bağlı
             </span>
           </div>
@@ -123,7 +123,7 @@ export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
               {/* Isim */}
               <div className="flex-1">
                 <div className="text-sm font-bold">{u.name}</div>
-                <div className="text-xs text-[var(--text-muted)]">
+                <div className="text-xs text-[var(--text-sub)]">
                   Açık sıralama katılımcısı
                 </div>
               </div>
@@ -133,7 +133,7 @@ export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
                 <div className="text-sm font-extrabold text-[var(--reward-light)]">
                   {u.xp.toLocaleString('tr-TR')}
                 </div>
-                <div className="text-[10px] text-[var(--text-muted)]">XP</div>
+                <div className="text-[10px] text-[var(--text-sub)]">XP</div>
               </div>
             </div>
           ))}
