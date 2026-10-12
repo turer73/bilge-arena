@@ -38,7 +38,7 @@ describe('useDailyQuests verified-session refresh', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('refreshes with GET after a saved session and never PATCHes progress', async () => {
-    const { result } = renderHook(() => useDailyQuests())
+    const { result } = renderHook(() => useDailyQuests(incompleteQuest.user_id))
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     fetchMock.mockResolvedValueOnce(responseWith([
@@ -60,5 +60,16 @@ describe('useDailyQuests verified-session refresh', () => {
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(false)
     expect(completed).toHaveLength(1)
     expect(questToast).toHaveBeenCalledWith('Bir oturum tamamla')
+  })
+
+  it('misafir için korumalı görev API istekleri göndermez', async () => {
+    const { result } = renderHook(() => useDailyQuests())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(fetchMock).not.toHaveBeenCalled()
+    await act(async () => {
+      expect(await result.current.refetch()).toEqual([])
+      expect(await result.current.claimXP(incompleteQuest.id)).toBeNull()
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })

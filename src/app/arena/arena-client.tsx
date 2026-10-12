@@ -25,7 +25,7 @@ export function StudyHomeClient({ renderStudyTools }: { renderStudyTools?: (game
   const setGame = useGameStore((state) => state.setGame)
   const setCategory = useGameStore((state) => state.setCategory)
   const setExamRef = useGameStore((state) => state.setExamRef)
-  const { quests } = useDailyQuests()
+  const { quests } = useDailyQuests(user?.id)
   const [institutionVisible, setInstitutionVisible] = useState(false)
 
   const classroomEnabled = process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED === 'true'
@@ -45,7 +45,7 @@ export function StudyHomeClient({ renderStudyTools }: { renderStudyTools?: (game
   }, [effectiveExamRef, selectedExamRef, setExamRef])
 
   useEffect(() => {
-    if (!institutionEnabled) return
+    if (!institutionEnabled || !user?.id) return
     const controller = new AbortController()
     fetch('/api/institution/workspace', { cache: 'no-store', signal: controller.signal })
       .then((response) => {

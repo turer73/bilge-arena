@@ -179,6 +179,7 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
   })
 
   test('kurum alanını yalnız etkin bayrak ve yetkili çalışma alanı yanıtıyla gösterir', async () => {
+    mockAuth.value = { user: { id: UUID }, profile: { exam_type: 'yks' } }
     const previous = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
     process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = 'true'
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -195,6 +196,19 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
         '/api/institution/workspace',
         expect.objectContaining({ cache: 'no-store' }),
       ))
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
+      else process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = previous
+    }
+  })
+
+  test('misafir kurum çalışma alanı API isteği göndermez', async () => {
+    const previous = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
+    process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = 'true'
+    try {
+      render(<ArenaClient />)
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument())
+      expect(vi.mocked(global.fetch).mock.calls.some(([input]) => String(input).includes('/api/institution/workspace'))).toBe(false)
     } finally {
       if (previous === undefined) delete process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
       else process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = previous

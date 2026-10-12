@@ -4,13 +4,17 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from '@/stores/toast-store'
 import type { UserDailyQuest } from '@/types/database'
 
-export function useDailyQuests() {
+export function useDailyQuests(userId?: string) {
   const [quests, setQuests] = useState<UserDailyQuest[]>([])
   const [loading, setLoading] = useState(true)
 
   // Bugünkü görevleri yükle
   const fetchQuests = useCallback(async () => {
     try {
+      if (!userId) {
+        setQuests([])
+        return []
+      }
       const res = await fetch('/api/quests')
       if (!res.ok) return []
       const data = await res.json()
@@ -23,7 +27,7 @@ export function useDailyQuests() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [userId])
 
   // İlerleme migration 093'te doğrulanmış session ile atomik yazılır. İstemci
   // yalnız sunucudaki yeni durumu tekrar okur ve yeni tamamlananları bildirir.
@@ -50,6 +54,7 @@ export function useDailyQuests() {
 
   // XP ödülü al
   const claimXP = useCallback(async (questId: string) => {
+    if (!userId) return null
     try {
       const res = await fetch('/api/quests/claim', {
         method: 'POST',
@@ -72,7 +77,7 @@ export function useDailyQuests() {
     } catch {
       return null
     }
-  }, [])
+  }, [userId])
 
   useEffect(() => {
     fetchQuests()
