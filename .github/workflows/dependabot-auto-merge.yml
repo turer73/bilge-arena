@@ -15,11 +15,21 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.user.login == 'dependabot[bot]'
     steps:
+      - name: Read verified Dependabot update type
+        id: dependabot-metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3
       # NOT: "gh pr review --approve" adimi bilerek YOK -- GITHUB_TOKEN ile PR
       # onaylamak GitHub tarafinda yasak ("GitHub Actions is not permitted to
       # approve pull requests"). master'da zorunlu-review kurali da yok.
       - name: Wait for CI then merge
         run: |
+          # Bilinmeyen veya major guncellemeler insan incelemesinde kalir.
+          # Yalniz dogrulanmis patch/minor metadata'si otomatik birlesebilir.
+          if [ "$UPDATE_TYPE" != "version-update:semver-patch" ] && [ "$UPDATE_TYPE" != "version-update:semver-minor" ]; then
+            echo "Otomatik birlestirme yok: update-type=$UPDATE_TYPE"
+            exit 0
+          fi
+
           echo "::group::Teshis - baglam"
           echo "repo:      $REPO"
           echo "head sha:  $HEAD_SHA"
@@ -42,6 +52,7 @@ jobs:
               -q '.statuses[].state' 2>/dev/null || true
           }
 
+          CI_CLEAN=false
           for attempt in $(seq 1 60); do
             STATES=$(collect_states | tr '\n' ' ')
             COUNT=$(echo "$STATES" | wc -w)
@@ -66,8 +77,14 @@ jobs:
             fi
 
             echo "Tum CI gecti."
+            CI_CLEAN=true
             break
           done
+
+          if [ "$CI_CLEAN" != "true" ]; then
+            echo "CI 30 dakika icinde temiz olarak tamamlanmadi -> merge EDILMIYOR"
+            exit 1
+          fi
 
           if [ "$PR_ACTOR" != "dependabot[bot]" ]; then
             echo "Bu bir dogrulama kosusu (actor=$PR_ACTOR); merge adimi ATLANIYOR."
@@ -82,6 +99,7 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           PR_ACTOR: ${{ github.event.pull_request.user.login }}
+          UPDATE_TYPE: ${{ steps.dependabot-metadata.outputs.update-type }}
           # secrets.GITHUB_TOKEN yerine github.token: dependabot baglaminda
           # secrets ayri bir kasadan gelir ve davranis farkli olabiliyor.
           GITHUB_TOKEN: ${{ github.token }}

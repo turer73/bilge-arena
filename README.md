@@ -33,8 +33,8 @@ Sınav kaygısını değil, öğrenme heyecanını ön plana çıkaran, gamifica
 
 - **Frontend:** Next.js 14 + TypeScript + Tailwind CSS + Framer Motion
 - **Backend/DB:** Supabase (Auth + Postgres + Realtime)
-- **Hosting:** Vercel + Cloudflare CDN
-- **Domain:** bilgearena.com (hedef)
+- **Hosting:** Vercel (bilgearena.com ve www.bilgearena.com doğrudan Vercel DNS/edge üzerinden; 12.10.2026 kontrolü). Cloudflare CDN birincil alan adının önünde değil; DNS/topoloji değişirse `getClientIp` güven sınırı yeniden incelenmeli.
+- **Domain:** bilgearena.com (canlı)
 
 ## 🎨 Marka
 

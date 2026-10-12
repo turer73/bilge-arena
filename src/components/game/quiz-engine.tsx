@@ -111,7 +111,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
     && questionExamRef === 'TYT'
     && quiz.isDeneme
   const sidebar = useSidebarData({ userId: user?.id, game, gameDef, examRef: questionExamRef })
-  const dailyQuests = useDailyQuests()
+  const dailyQuests = useDailyQuests(user?.id)
   const todayPlan = useTodayPlan(
     game,
     user?.id,

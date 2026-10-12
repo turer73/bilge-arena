@@ -25,8 +25,8 @@ export function StudyHomeClient({ renderStudyTools }: { renderStudyTools?: (game
   const setGame = useGameStore((state) => state.setGame)
   const setCategory = useGameStore((state) => state.setCategory)
   const setExamRef = useGameStore((state) => state.setExamRef)
-  const { quests } = useDailyQuests()
-  const [institutionVisible, setInstitutionVisible] = useState(false)
+  const { quests } = useDailyQuests(user?.id)
+  const [institutionAccess, setInstitutionAccess] = useState<{ userId: string; visible: boolean } | null>(null)
 
   const classroomEnabled = process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED === 'true'
   const institutionEnabled = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED === 'true'
@@ -45,14 +45,15 @@ export function StudyHomeClient({ renderStudyTools }: { renderStudyTools?: (game
   }, [effectiveExamRef, selectedExamRef, setExamRef])
 
   useEffect(() => {
-    if (!institutionEnabled) return
+    if (!institutionEnabled || !user?.id) return
+    const requestedUserId = user.id
     const controller = new AbortController()
     fetch('/api/institution/workspace', { cache: 'no-store', signal: controller.signal })
       .then((response) => {
-        if (!controller.signal.aborted) setInstitutionVisible(response.ok)
+        if (!controller.signal.aborted) setInstitutionAccess({ userId: requestedUserId, visible: response.ok })
       })
       .catch(() => {
-        if (!controller.signal.aborted) setInstitutionVisible(false)
+        if (!controller.signal.aborted) setInstitutionAccess({ userId: requestedUserId, visible: false })
       })
     return () => controller.abort()
   }, [institutionEnabled, user?.id])
@@ -91,7 +92,7 @@ export function StudyHomeClient({ renderStudyTools }: { renderStudyTools?: (game
         target: questionGoal.quest.target_value,
       } : null}
       classroomEnabled={classroomEnabled}
-      institutionEnabled={institutionVisible}
+      institutionEnabled={institutionEnabled && !!user?.id && institutionAccess?.userId === user.id && institutionAccess.visible}
       communityQualityEnabled={communityQualityEnabled}
       showBottomNav={false}
       userId={user?.id ?? null}

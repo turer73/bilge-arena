@@ -179,6 +179,7 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
   })
 
   test('kurum alanını yalnız etkin bayrak ve yetkili çalışma alanı yanıtıyla gösterir', async () => {
+    mockAuth.value = { user: { id: UUID }, profile: { exam_type: 'yks' } }
     const previous = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
     process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = 'true'
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -195,6 +196,40 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
         '/api/institution/workspace',
         expect.objectContaining({ cache: 'no-store' }),
       ))
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
+      else process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = previous
+    }
+  })
+
+  test('misafir kurum çalışma alanı API isteği göndermez', async () => {
+    const previous = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
+    process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = 'true'
+    try {
+      render(<ArenaClient />)
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument())
+      expect(vi.mocked(global.fetch).mock.calls.some(([input]) => String(input).includes('/api/institution/workspace'))).toBe(false)
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
+      else process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = previous
+    }
+  })
+
+  test('oturum kapanınca önceki kullanıcının kurum bağlantısı hemen kaybolur', async () => {
+    mockAuth.value = { user: { id: UUID }, profile: { exam_type: 'yks' } }
+    const previous = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
+    process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = 'true'
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).includes('/api/institution/workspace')) return { ok: true, json: async () => ({}) } as Response
+      return { ok: true, json: async () => ({ topics: [] }) } as Response
+    }) as typeof fetch
+
+    try {
+      const view = render(<ArenaClient />)
+      expect(await screen.findByRole('link', { name: /Kurum paneli/ })).toBeInTheDocument()
+      mockAuth.value = { user: null, profile: null }
+      view.rerender(<ArenaClient />)
+      expect(screen.queryByRole('link', { name: /Kurum paneli/ })).not.toBeInTheDocument()
     } finally {
       if (previous === undefined) delete process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
       else process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = previous
