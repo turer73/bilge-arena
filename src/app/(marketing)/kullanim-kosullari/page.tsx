@@ -126,7 +126,7 @@ export default function KullanimKosullariPage() {
           <h2 className="mb-3 text-lg font-bold text-[var(--text)]">12. İletişim</h2>
           <p>
             Kullanım koşulları hakkında sorularınız için:{' '}
-            <strong>destek@bilgearena.com</strong>
+            <strong>iletisim@bilgearena.com</strong>
           </p>
         </section>
       </div>

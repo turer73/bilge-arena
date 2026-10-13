@@ -16,6 +16,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/arena/siralama`, changeFrequency: 'daily', priority: 0.7 },
     { url: `${BASE}/hakkinda`, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${BASE}/nasil-calisir`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${BASE}/kurumlar`, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${BASE}/iletisim`, changeFrequency: 'yearly', priority: 0.5 },
     { url: `${BASE}/konular`, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${BASE}/rehber`, changeFrequency: 'weekly', priority: 0.6 },

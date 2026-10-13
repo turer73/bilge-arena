@@ -131,7 +131,7 @@ export default function CerezPolitikasiPage() {
           <h2 className="mb-3 text-lg font-bold text-[var(--text)]">6. İletişim</h2>
           <p>
             Çerez politikası hakkında sorularınız için:{' '}
-            <strong>destek@bilgearena.com</strong>
+            <strong>iletisim@bilgearena.com</strong>
           </p>
         </section>
       </div>
