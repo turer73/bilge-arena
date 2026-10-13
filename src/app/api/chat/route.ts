@@ -209,8 +209,7 @@ export async function POST(request: Request) {
 
     if (!res.ok) {
       console.error('[Chat API] DeepSeek error status:', res.status)
-      // Ham upstream-hatasi KULLANICIYA SIZDIRILMAZ (canli ekranda JSON-dump
-      // gorundu — kotu UX + ic-detay sizintisi). Detay console.error'da.
+      // Ham upstream hatası kullanıcıya veya loga yazılmaz; yalnız HTTP durumu kaydedilir.
       return NextResponse.json(
         { error: 'AI servisi şu anda yanıt veremiyor. Lütfen birazdan tekrar deneyin.' },
         { status: 502 }
