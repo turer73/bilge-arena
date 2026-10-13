@@ -7,7 +7,6 @@ import { ToastContainer } from '@/components/ui/toast'
 import { SWRegister } from '@/components/layout/sw-register'
 import { PWAInstallPrompt } from '@/components/layout/pwa-install-prompt'
 import { OfflineIndicator } from '@/components/layout/offline-indicator'
-import { GlobalBackground } from '@/components/layout/global-background'
 import { PrivacySafeThirdPartyScripts } from '@/components/analytics/privacy-safe-third-party-scripts'
 import './globals.css'
 
@@ -87,7 +86,6 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-[var(--bg)] font-body text-[var(--text)] antialiased">
         <OfflineIndicator />
-        <GlobalBackground />
         {children}
         <ToastContainer />
         <CookieBanner />
