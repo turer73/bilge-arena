@@ -19,13 +19,38 @@ const ActivationMicroQuiz = dynamic(
   () => import('./activation-micro-quiz').then((mod) => ({ default: mod.ActivationMicroQuiz })),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex min-h-72 w-full items-center justify-center rounded-3xl border border-[var(--focus-border)] bg-[var(--card-bg)] p-6 text-sm text-[var(--text-sub)]" role="status">
-        Hızlı başlangıç hazırlanıyor…
-      </div>
-    ),
+    loading: ActivationMicroQuizPreview,
   },
 )
+
+function ActivationMicroQuizPreview() {
+  return (
+    <div className="w-full rounded-3xl border border-[var(--focus-border)] bg-[color-mix(in_srgb,var(--card-bg)_94%,transparent)] p-5 shadow-2xl backdrop-blur-xl md:p-7" role="status">
+      <div className="flex items-center gap-2 text-sm font-bold text-[var(--focus-text)]">
+        Üye olmadan hemen dene
+      </div>
+      <h2 className="mt-3 font-display text-2xl font-black leading-tight text-[var(--text)] md:text-3xl">
+        Hedefin hangisi?
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">
+        Tek seçim, ardından 3 kısa Türkçe sorusu. Yaklaşık 2 dakika.
+      </p>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2" aria-hidden="true">
+        <div className="min-h-24 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <span className="block font-display text-xl font-black text-[var(--text)]">LGS</span>
+          <span className="mt-1 block text-sm text-[var(--text-sub)]">Ortaokul hedefim</span>
+        </div>
+        <div className="min-h-24 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <span className="block font-display text-xl font-black text-[var(--text)]">TYT · AYT</span>
+          <span className="mt-1 block text-sm text-[var(--text-sub)]">Üniversite hedefim</span>
+        </div>
+      </div>
+      <p className="mt-5 text-xs leading-5 text-[var(--text-muted)]">
+        Kayıt yok · Kart bilgisi yok · Sonucu görünce karar ver
+      </p>
+    </div>
+  )
+}
 
 function ActivationMicroQuizSlot() {
   const enabled = useSyncExternalStore(
@@ -35,11 +60,7 @@ function ActivationMicroQuizSlot() {
   )
 
   if (!enabled) {
-    return (
-      <div className="flex min-h-72 w-full items-center justify-center rounded-3xl border border-[var(--focus-border)] bg-[var(--card-bg)] p-6 text-sm text-[var(--text-sub)]" role="status">
-        Hızlı başlangıç hazırlanıyor…
-      </div>
-    )
+    return <ActivationMicroQuizPreview />
   }
 
   return <ActivationMicroQuiz />

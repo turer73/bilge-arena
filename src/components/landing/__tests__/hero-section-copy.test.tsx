@@ -43,4 +43,11 @@ describe('mobile home hero', () => {
     expect(screen.getByText(/Sınava hazırlık artık/)).toHaveTextContent('oyun kadar eğlenceli')
     expect(screen.getByRole('link', { name: /Detaylar/ })).toHaveAttribute('href', '/nasil-calisir')
   })
+
+  it('renders the micro goal preview before its interactive code loads', () => {
+    render(<HeroSection />)
+    expect(screen.getByRole('heading', { level: 2, name: 'Hedefin hangisi?' })).toBeInTheDocument()
+    expect(screen.getByText(/Tek seçim, ardından 3 kısa Türkçe sorusu/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'LGS' })).not.toBeInTheDocument()
+  })
 })
