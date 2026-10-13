@@ -16,7 +16,6 @@
 @media(max-width:479px){.logo small{display:none}}
 @media(max-width:359px){.logo>span{display:none}}
 @media(max-width:399px){:global([data-user-session]) .logo>span{display:none}}
-@media(max-width:639px){.guideSettings{flex-direction:column;align-items:flex-start;padding:18px}.guideSettings>img{width:80px;height:80px}}
 .scopeBar{display:flex;justify-content:space-between;align-items:center;min-height:66px;gap:20px;border-bottom:1px solid var(--academy-line)}
 .exam{display:flex;align-items:center;gap:8px;color:var(--app-accent-text)}
 .exam select,.guideSelect select{font:inherit;font-size:.875rem;min-height:42px;border:1px solid var(--academy-line);border-radius:9px;background:var(--app-card);color:var(--app-text);padding:7px 10px;max-width:190px}
@@ -169,3 +168,4 @@
 @media(prefers-reduced-motion:reduce){
   .subjectGameCard::after,.subjectGameArt::after{animation:none!important;transition:none!important}
 }
+@media(max-width:639px){.guideSettings{flex-direction:column;align-items:flex-start;padding:18px}.guideSettings>img{width:80px;height:80px}}
