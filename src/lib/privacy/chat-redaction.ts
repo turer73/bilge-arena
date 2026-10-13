@@ -1,4 +1,4 @@
-const EMAIL = /(?<![\p{L}\p{N}._%+-])[\p{L}\p{N}._%+-]+@(?:[\p{L}\p{N}][\p{L}\p{N}-]*\.)+[\p{L}\p{N}-]{2,}(?![\p{L}\p{N}-])/gu
+const EMAIL = /(?<![\p{L}\p{M}\p{N}._%+-])[\p{L}\p{M}\p{N}._%+-]+@(?:[\p{L}\p{N}][\p{L}\p{M}\p{N}-]*\.)+[\p{L}\p{M}\p{N}-]{2,}(?![\p{L}\p{M}\p{N}-])/gu
 const TURKISH_ID_CANDIDATE = /(?<!\d)[1-9](?:[\s.-]*\d){10}(?!\d)/g
 // A full trunk/country prefix remains recognizable after labels like tel0532…
 const TURKISH_PREFIXED_PHONE = /(?<!\d)(?:\+90|0090|90|0)[\s().-]*(?:5\d{2}|[234]\d{2})(?:[\s().-]*\d){7}(?!\d)/g

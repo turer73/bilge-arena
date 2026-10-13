@@ -38,5 +38,7 @@ describe('redactChatPersonalData', () => {
       .toBe('Veli: [E-POSTA]')
     expect(redactChatPersonalData('Veli: veli@o\u0308rnek.com'))
       .toBe('Veli: [E-POSTA]')
+    expect(redactChatPersonalData('Veli: veli@i\u0307stanbul.com'))
+      .toBe('Veli: [E-POSTA]')
   })
 })
