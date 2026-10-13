@@ -15,6 +15,8 @@ describe('redactChatPersonalData', () => {
       .toBe('Alan kodu [TELEFON].')
     expect(redactChatPersonalData('tel05321234567 veya numaram05321234567'))
       .toBe('tel[TELEFON] veya numaram[TELEFON]')
+    expect(redactChatPersonalData('tel5321234567 veya numaram532 123 45 67'))
+      .toBe('tel[TELEFON] veya numaram[TELEFON]')
   })
 
   it('masks valid Turkish identity numbers without replacing ordinary exercises', () => {

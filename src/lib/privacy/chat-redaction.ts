@@ -2,6 +2,7 @@ const EMAIL = /(?<![\p{L}\p{M}\p{N}._%+-])[\p{L}\p{M}\p{N}._%+-]+@(?:[\p{L}\p{N}
 const TURKISH_ID_CANDIDATE = /(?<!\d)[1-9](?:[\s.-]*\d){10}(?!\d)/g
 // A full trunk/country prefix remains recognizable after labels like tel0532…
 const TURKISH_PREFIXED_PHONE = /(?<!\d)(?:\+90|0090|90|0)[\s().-]*(?:5\d{2}|[234]\d{2})(?:[\s().-]*\d){7}(?!\d)/g
+const LABELLED_BARE_MOBILE = /(?<![\d\p{L}])(tel(?:efon)?|gsm|cep|numaram|numara)(5\d{2}(?:[\s().-]*\d){7})(?!\d)/giu
 const TURKISH_BARE_MOBILE = /(?<![\d\p{L}])5\d{2}(?:[\s().-]*\d){7}(?!\d)/gu
 // A bare unformatted 2/3/4-prefixed number can be an ordinary math value.
 const TURKISH_FORMATTED_LANDLINE = /(?<![\d\p{L}])[234]\d{2}[\s().-]+(?:[\s().-]*\d){7}(?!\d)/gu
@@ -23,6 +24,7 @@ export function redactChatPersonalData(text: string): string {
       isTurkishIdentityNumber(candidate) ? '[TC-KIMLIK]' : candidate
     ))
     .replace(TURKISH_PREFIXED_PHONE, '[TELEFON]')
+    .replace(LABELLED_BARE_MOBILE, (_match, label: string) => `${label}[TELEFON]`)
     .replace(TURKISH_BARE_MOBILE, '[TELEFON]')
     .replace(TURKISH_FORMATTED_LANDLINE, '[TELEFON]')
 }
