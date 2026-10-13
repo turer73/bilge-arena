@@ -102,8 +102,9 @@ interface HeroSectionProps {
 
 export function HeroSection({ config }: HeroSectionProps = {}) {
   const badge = (config?.badge as string) || "Türkiye'nin YKS · LGS · AYT Oyun Platformu"
-  const heading = (config?.heading as string[]) || ['Öğren.', 'Kazan.', 'Yüksel.']
-  const subheading = (config?.subheading as string) || "YKS, LGS ve AYT'ye hazırlanmak artık"
+  const heading = (config?.heading as string[]) || ['Bilginle', 'yeni dünyalar', 'aç.']
+  const managedSubheading = typeof config?.subheading === 'string' && config.subheading.trim()
+    ? config.subheading : null
   const logoUrl = (config?.logo_url as string) || '/logo/icon-512-transparent.png'
   const ctaPrimary = (config?.cta_primary as { text?: string; href?: string }) || {}
   const { theme } = useUIStore()
@@ -209,6 +210,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
                   alt={hasMascot ? 'Bilge Chan' : 'Bilge Arena'}
                   width={440}
                   height={440}
+                  sizes="(max-width: 767px) 130px, (max-width: 1023px) 190px, (max-width: 1279px) 300px, (max-width: 1535px) 380px, 440px"
                   loading="eager"
                   fetchPriority="high"
                   className={`
@@ -292,9 +294,9 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
               lg:text-[58px]
               xl:text-[68px]
               2xl:text-[80px]">
-              <span className="text-[var(--text)]">{heading[0]}</span>
+              <span className="text-[var(--text)]">{heading[0]}</span>{' '}
               <br />
-              <span className="shimmer-text">{heading[1]}</span>
+              <span className="shimmer-text">{heading[1]}</span>{' '}
               <br />
               <span className="text-[var(--focus-light)]">{heading[2]}</span>
             </h1>
@@ -305,9 +307,11 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
               lg:mx-0
               xl:max-w-[520px] xl:text-xl
               2xl:max-w-[600px] 2xl:text-2xl">
-              {subheading}{' '}
-              <strong className="text-[var(--text)]">oyun kadar eğlenceli</strong>. Soruları çöz,
-              XP kazan, zirvede yerini al.
+              {managedSubheading ? <>
+                {managedSubheading}{' '}
+                <strong className="text-[var(--text)]">oyun kadar eğlenceli</strong>. Soruları çöz,
+                XP kazan, zirvede yerini al.
+              </> : 'Bir oyunla kendine meydan oku, bir dersle hedefine yaklaş. Bilge Arena’da ilerlemenin yolu sana ait.'}
             </p>
 
             {/* CTA butonları */}
@@ -317,10 +321,10 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
               lg:justify-start">
               <Link href={ctaPrimary.href || '/arena'} className={buttonStyles('primary', 'lg', 'min-h-12 w-full whitespace-nowrap sm:w-auto')}>
                 <Zap size={18} />
-                {ctaPrimary.text || 'Ücretsiz Başla'}
+                {ctaPrimary.text || 'Oyunları keşfet'}
               </Link>
-              <Link href={ctaSecondary.href || '/nasil-calisir'} className={buttonStyles('ghost', 'lg', 'min-h-12 w-full whitespace-nowrap sm:w-auto')}>
-                {ctaSecondary.text || 'Nasıl Çalışır?'}
+              <Link href={ctaSecondary.href || '/arena/calisma'} className={buttonStyles('ghost', 'lg', 'min-h-12 w-full whitespace-nowrap sm:w-auto')}>
+                {ctaSecondary.text || 'Ders çalış'}
                 <ArrowRight size={16} />
               </Link>
             </div>

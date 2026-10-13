@@ -16,7 +16,7 @@ export function Logo({ size = 36, showText = true }: LogoProps) {
   return (
     <Link
       href="/"
-      aria-label="Bilge Arena ana sayfa"
+      aria-label={showText ? undefined : 'Bilge Arena ana sayfa'}
       className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-text)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
     >
       {/* İki icon yan yana opacity geçişi — tema değişince flicker olmaz */}
@@ -46,7 +46,8 @@ export function Logo({ size = 36, showText = true }: LogoProps) {
             style={{ fontSize: size * 0.42, fontWeight: 900 }}
           >
             <span className="text-[var(--focus-light)]">Bilge</span>
-            <span className="text-[var(--reward-light)]"> Arena</span>
+            {' '}
+            <span className="text-[var(--reward-light)]">Arena</span>
           </div>
           <div
             className="font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]"
