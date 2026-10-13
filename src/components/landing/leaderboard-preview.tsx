@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Trophy } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { buttonStyles } from '@/components/ui/button-styles'
 
 interface LeaderUser {
   rank: number
@@ -76,15 +76,9 @@ export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
           <p className="mt-4 text-[var(--text-sub)] leading-relaxed lg:text-lg">
             {description}
           </p>
-          <Link href="/arena/siralama?period=all">
-            <Button
-              variant="gold"
-              size="md"
-              className="mt-8"
-            >
-              <Trophy size={16} />
-              {buttonText}
-            </Button>
+          <Link href="/arena/siralama?period=all" className={buttonStyles('gold', 'md', 'mt-8')}>
+            <Trophy size={16} />
+            {buttonText}
           </Link>
         </div>
 

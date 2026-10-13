@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Calculator, BookOpen, FlaskConical, Globe, Languages } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { buttonStyles } from '@/components/ui/button-styles'
 import { Badge } from '@/components/ui/badge'
 
 const GAMES = [
@@ -163,10 +163,8 @@ export function GamesSection({ config, gameCounts }: GamesSectionProps = {}) {
                 {/* Alt kisim */}
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[var(--text-muted)]">{g.count}</span>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="text-xs"
+                  <span
+                    className={buttonStyles('primary', 'sm', 'text-xs')}
                     style={
                       g.ready
                         ? {
@@ -177,7 +175,7 @@ export function GamesSection({ config, gameCounts }: GamesSectionProps = {}) {
                     }
                   >
                     {g.ready ? 'Oyna \u2192' : 'Bildir'}
-                  </Button>
+                  </span>
                 </div>
               </div>
             </Link>

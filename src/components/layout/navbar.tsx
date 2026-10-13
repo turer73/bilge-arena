@@ -10,6 +10,7 @@ import { AcademyLogo } from '@/components/academy/academy-logo'
 import { ThemeToggle } from './theme-toggle'
 import { NotificationBell } from './notification-bell'
 import { Button } from '@/components/ui/button'
+import { buttonStyles } from '@/components/ui/button-styles'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { institutionPilotWorkspaceSchema } from '@/lib/institution-pilot/server-contract'
 import { trUpper } from '@/lib/utils/tr-text'
@@ -176,11 +177,9 @@ export function Navbar() {
                   🪙 {(profile.coin_balance ?? 0).toLocaleString('tr-TR')}
                 </Link>
               )}
-              <Link href="/arena" className="hidden sm:inline-flex">
-                <Button variant="primary" size="sm">
-                  <Zap size={14} />
-                  Oyna
-                </Button>
+              <Link href="/arena" className={buttonStyles('primary', 'sm', 'hidden sm:inline-flex')}>
+                <Zap size={14} />
+                Oyna
               </Link>
               <NotificationBell />
               {/* User dropdown */}
@@ -325,16 +324,12 @@ export function Navbar() {
             </>
           ) : (
             <>
-              <Link href="/giris" className="hidden sm:inline-flex">
-                <Button variant="ghost" size="sm">
-                  Giriş Yap
-                </Button>
+              <Link href="/giris" className={buttonStyles('ghost', 'sm', 'hidden sm:inline-flex')}>
+                Giriş Yap
               </Link>
-              <Link href="/arena" className="hidden sm:inline-flex">
-                <Button variant="primary" size="sm">
-                  <Zap size={14} />
-                  Oyna
-                </Button>
+              <Link href="/arena" className={buttonStyles('primary', 'sm', 'hidden sm:inline-flex')}>
+                <Zap size={14} />
+                Oyna
               </Link>
             </>
           )}
@@ -383,19 +378,15 @@ export function Navbar() {
             <div className="mt-2 flex gap-2">
               {user ? (
                 <>
-                  <Link href="/arena/profil" className="flex-1">
-                    <Button variant="ghost" size="sm" className="w-full">
-                      <User size={14} />
-                      Profil
-                    </Button>
+                  <Link href="/arena/profil" className={buttonStyles('ghost', 'sm', 'flex-1')}>
+                    <User size={14} />
+                    Profil
                   </Link>
                   {profile?.role === 'admin' && (
                     /* AAL2 kapili yuzey — tam sayfa gezinme (bkz. masaustu menusu). */
-                    <a href="/admin" className="flex-1">
-                      <Button variant="ghost" size="sm" className="w-full text-[var(--reward)]">
-                        <Shield size={14} />
-                        Admin
-                      </Button>
+                    <a href="/admin" className={buttonStyles('ghost', 'sm', 'flex-1 text-[var(--reward)]')}>
+                      <Shield size={14} />
+                      Admin
                     </a>
                   )}
                   <Button variant="ghost" size="sm" className="flex-1 text-red-400" onClick={signOut}>
@@ -405,16 +396,12 @@ export function Navbar() {
                 </>
               ) : (
                 <>
-                  <Link href="/giris" className="flex-1">
-                    <Button variant="ghost" size="sm" className="w-full">
-                      Giriş Yap
-                    </Button>
+                  <Link href="/giris" className={buttonStyles('ghost', 'sm', 'flex-1')}>
+                    Giriş Yap
                   </Link>
-                  <Link href="/arena" className="flex-1">
-                    <Button variant="primary" size="sm" className="w-full">
-                      <Zap size={14} />
-                      Oyna
-                    </Button>
+                  <Link href="/arena" className={buttonStyles('primary', 'sm', 'flex-1')}>
+                    <Zap size={14} />
+                    Oyna
                   </Link>
                 </>
               )}

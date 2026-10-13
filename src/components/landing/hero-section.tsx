@@ -5,7 +5,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Zap, ArrowRight, Flame } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { buttonStyles } from '@/components/ui/button-styles'
 import { ArenaBackground } from './arena-background'
 import { useUIStore, DARK_THEMES } from '@/stores/ui-store'
 import { trackEvent } from '@/lib/utils/plausible'
@@ -315,17 +315,13 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
               sm:flex-row
               md:mt-9
               lg:justify-start">
-              <Link href={ctaPrimary.href || '/arena'} className="w-full sm:w-auto">
-                <Button variant="primary" size="lg" className="min-h-12 w-full whitespace-nowrap sm:w-auto">
-                  <Zap size={18} />
-                  {ctaPrimary.text || 'Ücretsiz Başla'}
-                </Button>
+              <Link href={ctaPrimary.href || '/arena'} className={buttonStyles('primary', 'lg', 'min-h-12 w-full whitespace-nowrap sm:w-auto')}>
+                <Zap size={18} />
+                {ctaPrimary.text || 'Ücretsiz Başla'}
               </Link>
-              <Link href={ctaSecondary.href || '/nasil-calisir'} className="w-full sm:w-auto">
-                <Button variant="ghost" size="lg" className="min-h-12 w-full whitespace-nowrap sm:w-auto">
-                  {ctaSecondary.text || 'Nasıl Çalışır?'}
-                  <ArrowRight size={16} />
-                </Button>
+              <Link href={ctaSecondary.href || '/nasil-calisir'} className={buttonStyles('ghost', 'lg', 'min-h-12 w-full whitespace-nowrap sm:w-auto')}>
+                {ctaSecondary.text || 'Nasıl Çalışır?'}
+                <ArrowRight size={16} />
               </Link>
             </div>
 
