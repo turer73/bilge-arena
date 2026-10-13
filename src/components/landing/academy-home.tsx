@@ -64,7 +64,7 @@ export function AcademyHome({ sections, elements, gameCounts, featuredResources,
           </div>
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>{customLogo ? <Image src={customLogo} alt="" width={36} height={36} sizes="36px" /> : <Sparkles size={16} aria-hidden="true" />} {text(hero?.badge, 'BİLGİN, EN BÜYÜK GÜCÜN')}</p>
-            <h1 id="home-title" className={customHeading.length ? styles.configuredHeading : undefined}>{customHeading.length ? customHeading.map((part, index) => <span key={index}>{part}</span>) : <>Bilginle<br /><span>yeni dünyalar aç.</span></>}</h1>
+            <h1 id="home-title" className={customHeading.length ? styles.configuredHeading : undefined}>{customHeading.length ? customHeading.map((part, index) => <span key={index}>{index > 0 ? ' ' : null}{part}</span>) : <>Bilginle<br /> <span>yeni dünyalar aç.</span></>}</h1>
             <p className={styles.intro}>{text(hero?.subheading, 'Bir oyunla kendine meydan oku, bir dersle hedefine yaklaş. Bilge Arena’da ilerlemenin yolu sana ait.')}</p>
             <div className={styles.heroActions}>
               <Link href={primary.href} className={styles.primary}><Swords size={19} aria-hidden="true" />{primary.text}<ArrowRight size={18} aria-hidden="true" /></Link>
@@ -75,7 +75,7 @@ export function AcademyHome({ sections, elements, gameCounts, featuredResources,
           </div>
           <aside className={styles.guide} aria-label="Bilge rehberin">
             <div className={styles.portrait}>
-              <Image key={character} src={bilgeImage(character, 'portrait')} alt={`${character === 'male' ? 'Erkek' : 'Kadın'} Bilge, öğrenme yolculuğundaki rehberin`} fill sizes="(min-width: 1200px) 410px, 36vw" loading="eager" />
+              <Image key={character} src={bilgeImage(character, 'portrait')} alt={`${character === 'male' ? 'Erkek' : 'Kadın'} Bilge, öğrenme yolculuğundaki rehberin`} fill sizes="(max-width: 767px) calc(100vw - 64px), (min-width: 1200px) 410px, 36vw" loading="eager" fetchPriority="high" />
             </div>
             <div className={styles.guideNote}><span>BİLGE YANINDA</span><p>“Küçük adımlar da ilerlemedir.<br />Hadi, birlikte başlayalım.”</p></div>
             <div className={styles.guideChoice} role="group" aria-label="Bilge karakteri">
@@ -99,11 +99,11 @@ export function AcademyHome({ sections, elements, gameCounts, featuredResources,
         <header className={styles.sectionHeading}><div><p className={styles.eyebrow}>İKİ FARKLI YOL, AYNI HEDEF</p><h2 id="paths-title">Bugün nasıl ilerlemek istersin?</h2></div><p>Oynamak da çalışmak da bir başlangıç.</p></header>
         <div className={styles.paths}>
           <article className={styles.path} data-path="games">
-            <div className={styles.pathArt} aria-hidden="true"><Image src="/academy/lobby-modes/classic-v1.webp" alt="" fill sizes="(min-width: 1440px) 660px, 50vw" /></div>
+            <div className={styles.pathArt} aria-hidden="true"><Image src="/academy/lobby-modes/classic-v1.webp" alt="" fill sizes="(max-width: 767px) calc(100vw - 32px), (min-width: 1440px) 660px, 50vw" /></div>
             <div className={styles.pathCopy}><span className={styles.pathLabel}><Swords size={18} aria-hidden="true" /> OYUNLAR</span><h3>Meydan okumaya hazır mısın?</h3><p>Bir ders veya oyun modu seç. Turunu kur, soruları çöz ve kendi rekorunu zorla.</p><ul><li>Kısa soru turları</li><li>Kule ve fetih</li><li>Oda modu</li></ul><Link href="/arena">Oyunlara git <ArrowRight size={18} aria-hidden="true" /></Link></div>
           </article>
           <article className={styles.path} data-path="study">
-            <div className={styles.pathArt} aria-hidden="true"><Image src="/academy/academy-landscape.png" alt="" fill sizes="(min-width: 1440px) 660px, 50vw" /></div>
+            <div className={styles.pathArt} aria-hidden="true"><Image src="/academy/academy-landscape.png" alt="" fill sizes="(max-width: 767px) calc(100vw - 32px), (min-width: 1440px) 660px, 50vw" /></div>
             <div className={styles.pathCopy}><span className={styles.pathLabel}><BookOpenText size={18} aria-hidden="true" /> DERS ÇALIŞ</span><h3>Hedefine adım adım yaklaş.</h3><p>Konunu seç, öğrenme yolunu takip et. Günlük planınla çalış, yanlışlarına yeniden dön.</p><ul><li>Öğrenme yolu</li><li>Günlük plan</li><li>Konu tekrarı</li></ul><Link href="/arena/calisma">Çalışma alanına git <ArrowRight size={18} aria-hidden="true" /></Link></div>
           </article>
         </div>
@@ -113,7 +113,7 @@ export function AcademyHome({ sections, elements, gameCounts, featuredResources,
         {sections.games ? <div className={styles.managed}><GamesSection config={sections.games} gameCounts={gameCounts} /></div> : <section className={styles.modesSection} aria-labelledby="home-modes-title">
           <header className={styles.sectionHeading}><div><p className={styles.eyebrow}>ARENA’DAN BİR KEŞİF</p><h2 id="home-modes-title">Her maceranın anahtarı bilgi.</h2></div><Link href="/arena">Tüm oyunlar <ArrowRight size={17} aria-hidden="true" /></Link></header>
           <div className={styles.modes}>{modes.map(mode => <Link href={mode.href === '/arena/wordquest' || user ? mode.href : loading ? '/arena' : `/giris?next=${encodeURIComponent(mode.href)}`} key={mode.href} className={styles.mode}>
-            <div className={styles.modeArt}><Image src={mode.image} alt="" fill sizes="(min-width: 1440px) 440px, 33vw" /><span style={{ color: mode.color }}>{mode.eyebrow}</span></div>
+            <div className={styles.modeArt}><Image src={mode.image} alt="" fill sizes="(max-width: 767px) calc(100vw - 32px), (min-width: 1440px) 440px, 33vw" /><span style={{ color: mode.color }}>{mode.eyebrow}</span></div>
             <div className={styles.modeCopy}><h3>{mode.name}<ArrowRight size={18} aria-hidden="true" /></h3><p>{mode.description}</p></div>
           </Link>)}</div>
         </section>}

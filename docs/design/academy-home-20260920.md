@@ -1,5 +1,22 @@
 # Academy ana sayfa — 20 Eylül 2026
 
+## 13 Ekim 2026 mobil güncellemesi
+
+Academy ana sayfa artık `/` rotasında mobil, tablet ve masaüstünde aynı
+sunucu-render edilmiş içeriktir. `<768px` için eski vitrin ve oturum açmış
+kullanıcının eski "Çalışmana devam et" kartı kaldırıldı; Academy düzeni
+dar ekranda tek sütuna, tam genişlikte eylemlere ve içerikten sonra gelen
+Bilge rehberine uyarlanır. Öğrenme ve pratik bağlantıları Academy yüzeyinde
+kalır. Eski aktivasyon A/B deneyi ana sayfada gösterilmez ve önceki oturum
+maruziyeti temizlenir; deneyin kodu/verisi silinmez.
+
+Bu bölüm 20 Eylül'deki aşağıdaki tasarım ve doğrulama kaydının güncel
+durumunu değiştirir. Yerel üretim derlemesi ve 320/375/390/768/1280px
+tarayıcı kontrollerinde tek H1, yatay taşma olmaması ve eski kartın
+görünmemesi doğrulandı. Mobil Lighthouse yerel ölçümünde performans 78,
+erişilebilirlik 100 (tek laboratuvar ölçümü; gerçek cihaz sonucu değil).
+Gerçek cihaz ve canlı yayın kabulü ayrıca yapılmalıdır.
+
 ## Kapsam
 
 `/` masaüstü ve tablet giriş sayfası yeniden tasarlandı. `/arena` oyun merkezi,
@@ -14,7 +31,7 @@ kuralı eklenmedi. Oda modu/test ortamına ait önceden kirli dosyalar korunmuş
 - Kule/Fethet için misafir giriş yönlendirmesi korunur.
 - Tema değişkenleri; altı temada okunabilen ana buton; azaltılmış hareket desteği.
 
-## Korunan sınırlar
+## 20 Eylül'deki korunan sınırlar (13 Ekim'de değişenler yukarıda)
 
 `HomeSurface` aynı anda tek ağaç mount eder. `<768px` ve SSR mevcut ana sayfayı
 korur; geniş ekranda hydration sonrasında AcademyHome görünür. Dolayısıyla

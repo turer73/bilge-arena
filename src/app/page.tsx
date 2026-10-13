@@ -1,12 +1,8 @@
 import type { Metadata } from 'next'
-import dynamic from 'next/dynamic'
 import { Navbar } from '@/components/layout/navbar'
 import { Footer } from '@/components/layout/footer'
-import { HeroSection } from '@/components/landing/hero-section'
-import { StatsBar } from '@/components/landing/stats-bar'
-import { GamesSection } from '@/components/landing/games-section'
 import { SectionWrapper } from '@/components/landing/section-wrapper'
-import { HomeSurface } from '@/components/landing/home-surface'
+import { AcademyHome } from '@/components/landing/academy-home'
 import { FeaturedLearningResources } from '@/components/landing/featured-learning-resources'
 import { InstitutionPartnership } from '@/components/landing/institution-partnership'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
@@ -22,7 +18,7 @@ import type { Database, Json } from '@/types/database.generated'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 import { createSiteJsonLd } from '@/lib/seo/site-json-ld'
 import { serializeJsonLd } from '@/lib/seo/serialize-json-ld'
-import { ACTIVATION_EXPERIMENT_BOOTSTRAP_SCRIPT } from '@/lib/experiments/activation'
+import { ACTIVATION_EXPERIMENT_RETIRE_SCRIPT } from '@/lib/experiments/activation'
 
 // ISR: Her 5 dakikada bir yeniden oluştur (Supabase sorgularını cache'le)
 export const revalidate = 300
@@ -61,11 +57,6 @@ export const metadata: Metadata = {
     images: [`${siteUrl}/og-image.png`],
   },
 }
-
-// Fold altindaki bilesenleri lazy-load (LCP iyilestirmesi)
-const HowItWorks = dynamic(() => import('@/components/landing/how-it-works').then(m => ({ default: m.HowItWorks })))
-const LeaderboardPreview = dynamic(() => import('@/components/landing/leaderboard-preview').then(m => ({ default: m.LeaderboardPreview })))
-const CTASection = dynamic(() => import('@/components/landing/cta-section').then(m => ({ default: m.CTASection })))
 
 type HomepageElementRow = Database['public']['Tables']['homepage_elements']['Row']
 
@@ -192,10 +183,9 @@ export default async function Home() {
 
   return (
     <>
-      {/* Homepage-only scripts stay on the public, AdSense-compatible document. */}
       <script
-        id="activation-experiment-bootstrap"
-        dangerouslySetInnerHTML={{ __html: ACTIVATION_EXPERIMENT_BOOTSTRAP_SCRIPT }}
+        id="activation-experiment-retired"
+        dangerouslySetInnerHTML={{ __html: ACTIVATION_EXPERIMENT_RETIRE_SCRIPT }}
       />
       <script
         type="application/ld+json"
@@ -203,35 +193,7 @@ export default async function Home() {
       />
       <Navbar />
       <main>
-        <HomeSurface sections={sections} elements={elements} gameCounts={gameCounts} featuredResources={featuredResources} institutionPartnership={institutionPartnership}>
-        <SectionWrapper section="hero" elements={elements}>
-          <HeroSection config={sections.hero} />
-        </SectionWrapper>
-        <SectionWrapper section="stats" elements={elements}>
-          <StatsBar config={sections.stats} />
-        </SectionWrapper>
-        <SectionWrapper section="games" elements={elements}>
-          <GamesSection config={sections.games} gameCounts={gameCounts} />
-        </SectionWrapper>
-        {/* Fold-alti bolumleri content-visibility ile ertele */}
-        <div className="cv-auto">
-          <SectionWrapper section="how_it_works" elements={elements}>
-            <HowItWorks config={sections.how_it_works} />
-          </SectionWrapper>
-        </div>
-        <div className="cv-auto">
-          <SectionWrapper section="leaderboard" elements={elements}>
-            <LeaderboardPreview config={sections.leaderboard} />
-          </SectionWrapper>
-        </div>
-        {featuredResources}
-        {institutionPartnership}
-        <div className="cv-auto">
-          <SectionWrapper section="cta" elements={elements}>
-            <CTASection config={sections.cta} />
-          </SectionWrapper>
-        </div>
-        </HomeSurface>
+        <AcademyHome sections={sections} elements={elements} gameCounts={gameCounts} featuredResources={featuredResources} institutionPartnership={institutionPartnership} />
       </main>
       <SectionWrapper section="footer" elements={elements}>
         <Footer config={sections.footer} academyDesktop />
