@@ -36,6 +36,7 @@ describe('(player) layout', () => {
     const { container } = render(<PlayerLayout><div>x</div></PlayerLayout>)
     expect(container.querySelector('[data-room-shell]')).toHaveClass('md:bg-transparent')
     expect(container.querySelector('[data-player-main]')).toHaveClass('md:max-w-[1180px]', 'lg:pt-[calc(var(--navbar-h)+2rem)]')
+    expect(container.querySelector('[data-player-main]')).toHaveClass('md:pb-0', 'md:scroll-pb-0')
     expect(screen.getByTestId('desktop-navbar')).toBeInTheDocument()
     expect(screen.getByTestId('tablet-navbar')).toHaveAttribute('data-active', 'rooms')
   })
