@@ -8,6 +8,7 @@ import { GamesSection } from '@/components/landing/games-section'
 import { SectionWrapper } from '@/components/landing/section-wrapper'
 import { HomeSurface } from '@/components/landing/home-surface'
 import { FeaturedLearningResources } from '@/components/landing/featured-learning-resources'
+import { InstitutionPartnership } from '@/components/landing/institution-partnership'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import type {
   HomepageAlignment,
@@ -187,6 +188,7 @@ export default async function Home() {
     getGameCounts(),
   ])
   const featuredResources = <FeaturedLearningResources />
+  const institutionPartnership = <InstitutionPartnership />
 
   return (
     <>
@@ -201,7 +203,7 @@ export default async function Home() {
       />
       <Navbar />
       <main>
-        <HomeSurface sections={sections} elements={elements} gameCounts={gameCounts} featuredResources={featuredResources}>
+        <HomeSurface sections={sections} elements={elements} gameCounts={gameCounts} featuredResources={featuredResources} institutionPartnership={institutionPartnership}>
         <SectionWrapper section="hero" elements={elements}>
           <HeroSection config={sections.hero} />
         </SectionWrapper>
@@ -223,6 +225,7 @@ export default async function Home() {
           </SectionWrapper>
         </div>
         {featuredResources}
+        {institutionPartnership}
         <div className="cv-auto">
           <SectionWrapper section="cta" elements={elements}>
             <CTASection config={sections.cta} />
