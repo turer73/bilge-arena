@@ -1,8 +1,10 @@
 const EMAIL = /(?<![\p{L}\p{N}._%+-])[\p{L}\p{N}._%+-]+@(?:[\p{L}\p{N}][\p{L}\p{N}-]*\.)+[\p{L}\p{N}-]{2,}(?![\p{L}\p{N}-])/gu
 const TURKISH_ID_CANDIDATE = /(?<!\d)[1-9](?:[\s.-]*\d){10}(?!\d)/g
-const TURKISH_MOBILE = /(?<![\d\p{L}])(?:(?:\+90|0090|90|0)[\s().-]*)?5\d{2}(?:[\s().-]*\d){7}(?!\d)/gu
+// A full trunk/country prefix remains recognizable after labels like tel0532…
+const TURKISH_PREFIXED_PHONE = /(?<!\d)(?:\+90|0090|90|0)[\s().-]*(?:5\d{2}|[234]\d{2})(?:[\s().-]*\d){7}(?!\d)/g
+const TURKISH_BARE_MOBILE = /(?<![\d\p{L}])5\d{2}(?:[\s().-]*\d){7}(?!\d)/gu
 // A bare unformatted 2/3/4-prefixed number can be an ordinary math value.
-const TURKISH_LANDLINE = /(?<![\d\p{L}])(?:(?:\+90|0090|90|0)[\s().-]*|(?=[234]\d{2}[\s().-]+))[234]\d{2}(?:[\s().-]*\d){7}(?!\d)/gu
+const TURKISH_FORMATTED_LANDLINE = /(?<![\d\p{L}])[234]\d{2}[\s().-]+(?:[\s().-]*\d){7}(?!\d)/gu
 
 function isTurkishIdentityNumber(candidate: string): boolean {
   const digits = candidate.replace(/\D/g, '').split('').map(Number)
@@ -15,11 +17,12 @@ function isTurkishIdentityNumber(candidate: string): boolean {
 
 /** Best-effort redaction of common identifiers before sending chat text to a provider. */
 export function redactChatPersonalData(text: string): string {
-  return text
+  return text.normalize('NFC')
     .replace(EMAIL, '[E-POSTA]')
     .replace(TURKISH_ID_CANDIDATE, (candidate) => (
       isTurkishIdentityNumber(candidate) ? '[TC-KIMLIK]' : candidate
     ))
-    .replace(TURKISH_MOBILE, '[TELEFON]')
-    .replace(TURKISH_LANDLINE, '[TELEFON]')
+    .replace(TURKISH_PREFIXED_PHONE, '[TELEFON]')
+    .replace(TURKISH_BARE_MOBILE, '[TELEFON]')
+    .replace(TURKISH_FORMATTED_LANDLINE, '[TELEFON]')
 }
