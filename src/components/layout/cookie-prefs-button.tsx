@@ -6,7 +6,7 @@ export function CookiePrefsButton() {
   return (
     <button
       onClick={openConsentBanner}
-      className="transition-colors hover:text-[var(--text)]"
+      className="font-medium text-[var(--focus-text)] underline underline-offset-2 transition-colors hover:text-[var(--text)]"
     >
       Çerez Tercihleri
     </button>

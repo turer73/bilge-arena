@@ -6,7 +6,7 @@
  *   trackEvent('QuizComplete', { props: { game: 'matematik', score: 7, mode: 'classic' } })
  *
  * SSR-safe: server'da cagrilirsa sessizce atlar.
- * Fail-safe: plausible yuklenmemisse kuyruklar ve yuklenince gonderir (Plausible native davranis).
+ * Analytics izni yoksa olay kaydetmez. Izin varsa betik yuklenene dek kuyruklar.
  *
  * Analytics URL: https://analytics.panola.app (VPS self-hosted Plausible CE)
  */
@@ -87,6 +87,7 @@ export function trackEvent(name: EventName, options?: PlausibleOptions): void {
   // SSR guard
   if (typeof window === 'undefined') return
   if (isCurrentBrowserPathSensitive()) return
+  if (getCookieConsent()?.analytics !== true) return
 
   try {
     if (typeof window.plausible !== 'function') {
@@ -107,3 +108,4 @@ export function trackEvent(name: EventName, options?: PlausibleOptions): void {
  */
 export const track = trackEvent
 import { isCurrentBrowserPathSensitive } from '@/lib/privacy/telemetry-policy'
+import { getCookieConsent } from '@/lib/consent'

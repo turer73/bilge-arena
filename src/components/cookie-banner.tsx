@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Shield, BarChart3, ChevronDown, ChevronUp } from 'lucide-react'
+import { Shield, BarChart3, ChevronDown, ChevronUp, Megaphone } from 'lucide-react'
 import { getCookieConsent, setCookieConsent } from '@/lib/consent'
 import { useBottomNavOffset } from '@/components/layout/overlay-bottom-offset'
 
@@ -11,7 +11,8 @@ type View = 'hidden' | 'banner' | 'settings'
 
 export function CookieBanner() {
   const [view, setView] = useState<View>('hidden')
-  const [analyticsOn, setAnalyticsOn] = useState(true)
+  const [analyticsOn, setAnalyticsOn] = useState(false)
+  const [adsOn, setAdsOn] = useState(false)
   const bottomNavOffset = useBottomNavOffset()
 
   // PWA yükleme önerisi çerez tercihinden önce görünmemeli.
@@ -34,7 +35,8 @@ export function CookieBanner() {
   useEffect(() => {
     const handler = () => {
       const existing = getCookieConsent()
-      setAnalyticsOn(existing?.analytics ?? true)
+      setAnalyticsOn(existing?.analytics ?? false)
+      setAdsOn(existing?.ads ?? false)
       setView('banner')
     }
     window.addEventListener('open-consent-banner', handler)
@@ -42,19 +44,19 @@ export function CookieBanner() {
   }, [])
 
   const handleAcceptAll = useCallback(() => {
-    setCookieConsent(true)
+    setCookieConsent({ analytics: true, ads: true })
     setView('hidden')
   }, [])
 
   const handleRejectAll = useCallback(() => {
-    setCookieConsent(false)
+    setCookieConsent({ analytics: false, ads: false })
     setView('hidden')
   }, [])
 
   const handleSavePrefs = useCallback(() => {
-    setCookieConsent(analyticsOn)
+    setCookieConsent({ analytics: analyticsOn, ads: adsOn })
     setView('hidden')
-  }, [analyticsOn])
+  }, [analyticsOn, adsOn])
 
   return (
     <AnimatePresence>
@@ -72,7 +74,7 @@ export function CookieBanner() {
             {/* ── Ana banner ── */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs leading-relaxed text-[var(--text-muted)] sm:text-sm">
-                Bu site, deneyiminizi iyileştirmek için çerezler kullanır.
+                Zorunlu çerezler dışında analitik ve reklam tercihlerinizi ayrı ayrı seçebilirsiniz.
                 Detaylar için{' '}
                 <Link
                   href="/cerez-politikasi"
@@ -145,10 +147,10 @@ export function CookieBanner() {
                         <BarChart3 size={18} className="text-blue-400" />
                         <div>
                           <p className="text-sm font-semibold text-[var(--text)]">
-                            Analitik ve Reklam Çerezleri
+                            Analitik
                           </p>
                           <p className="text-xs text-[var(--text-muted)]">
-                            Google Analytics, Plausible Analytics — kullanım istatistikleri ve kişiselleştirilmiş reklamlar
+                            Google Analytics ve Plausible ile kullanım istatistikleri
                           </p>
                         </div>
                       </div>
@@ -156,6 +158,7 @@ export function CookieBanner() {
                         onClick={() => setAnalyticsOn(!analyticsOn)}
                         role="switch"
                         aria-checked={analyticsOn}
+                        aria-label="Analitik izni"
                         className={`h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors ${
                           analyticsOn ? 'bg-[var(--focus)]' : 'bg-[var(--border)]'
                         }`}
@@ -165,6 +168,31 @@ export function CookieBanner() {
                             analyticsOn ? 'translate-x-5' : 'translate-x-0'
                           }`}
                         />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-lg bg-[var(--surface)] px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <Megaphone size={18} className="text-amber-400" />
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--text)]">Reklam</p>
+                          <p className="text-xs text-[var(--text-muted)]">
+                            Google AdSense reklamlarının yüklenmesi ve reklam verisi işleme izni
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setAdsOn(!adsOn)}
+                        role="switch"
+                        aria-checked={adsOn}
+                        aria-label="Reklam izni"
+                        className={`h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors ${
+                          adsOn ? 'bg-[var(--focus)]' : 'bg-[var(--border)]'
+                        }`}
+                      >
+                        <div className={`h-5 w-5 rounded-full bg-white transition-transform ${
+                          adsOn ? 'translate-x-5' : 'translate-x-0'
+                        }`} />
                       </button>
                     </div>
 

@@ -52,7 +52,8 @@ beforeEach(() => {
   localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({
     essential: true,
     analytics: false,
-    version: 1,
+    ads: false,
+    version: 2,
     date: new Date().toISOString(),
   }))
   setStandalone(false)
@@ -232,7 +233,7 @@ describe('PWAInstallPrompt', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
 
     localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({
-      essential: true, analytics: false, version: 1, date: new Date().toISOString(),
+      essential: true, analytics: false, ads: false, version: 2, date: new Date().toISOString(),
     }))
     act(() => {
       window.dispatchEvent(new CustomEvent('cookie-banner-state', { detail: { open: false } }))

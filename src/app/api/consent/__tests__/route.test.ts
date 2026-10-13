@@ -45,7 +45,7 @@ describe('POST /api/consent', () => {
   it('writes anonymous consent through the service boundary with server evidence', async () => {
     const response = await POST(request({
       type: 'cookie',
-      value: { essential: true, analytics: false },
+      value: { essential: true, analytics: false, ads: false },
     }))
 
     expect(response.status).toBe(200)
@@ -56,7 +56,8 @@ describe('POST /api/consent', () => {
       consent_value: {
         essential: true,
         analytics: false,
-        policyVersion: 'cookie-policy@2026-05-17-v1',
+        ads: false,
+        policyVersion: 'cookie-policy@2026-10-13-v2',
         source: 'cookie_banner',
       },
       ip_address: '203.0.113.10',
@@ -68,7 +69,7 @@ describe('POST /api/consent', () => {
     mocks.getUser.mockResolvedValue({ data: { user: { id: 'server-user' } } })
     const response = await POST(request({
       type: 'cookie',
-      value: { essential: true, analytics: true },
+      value: { essential: true, analytics: true, ads: false },
     }))
 
     expect(response.status).toBe(200)
@@ -78,10 +79,29 @@ describe('POST /api/consent', () => {
       consent_value: {
         essential: true,
         analytics: true,
-        policyVersion: 'cookie-policy@2026-05-17-v1',
+        ads: false,
+        policyVersion: 'cookie-policy@2026-10-13-v2',
         source: 'cookie_banner',
       },
     }))
+  })
+
+  it('records a separate advertising grant and rejects the old bundled payload', async () => {
+    const response = await POST(request({
+      type: 'cookie',
+      value: { essential: true, analytics: false, ads: true },
+    }))
+    expect(response.status).toBe(200)
+    expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({
+      consent_value: expect.objectContaining({ analytics: false, ads: true }),
+    }))
+
+    const oldResponse = await POST(request({
+      type: 'cookie',
+      value: { essential: true, analytics: true },
+    }))
+    expect(oldResponse.status).toBe(400)
+    expect(mocks.insert).toHaveBeenCalledTimes(1)
   })
 
   it('never accepts legal evidence through the generic cookie endpoint', async () => {
@@ -95,7 +115,7 @@ describe('POST /api/consent', () => {
   it('rejects client-supplied policy versions and extra evidence fields', async () => {
     const response = await POST(request({
       type: 'cookie',
-      value: { essential: true, analytics: false, policyVersion: 'forged' },
+      value: { essential: true, analytics: false, ads: false, policyVersion: 'forged' },
     }))
 
     expect(response.status).toBe(400)
@@ -119,7 +139,7 @@ describe('POST /api/consent', () => {
     mocks.limit.mockResolvedValue({ success: false, reason: 'backend_unavailable', retryAfter: 60 })
     const response = await POST(request({
       type: 'cookie',
-      value: { essential: true, analytics: false },
+      value: { essential: true, analytics: false, ads: false },
     }))
 
     expect(response.status).toBe(503)
@@ -134,7 +154,7 @@ describe('POST /api/consent', () => {
     mocks.insert.mockResolvedValueOnce({ error: { message: 'unavailable' } })
     const failed = await POST(request({
       type: 'cookie',
-      value: { essential: true, analytics: true },
+      value: { essential: true, analytics: true, ads: true },
     }))
     expect(failed.status).toBe(500)
   })

@@ -7,19 +7,12 @@ const GA_ID = 'G-HDCR9YRQJ3'
 /**
  * Google Analytics 4 — Consent Mode v2 entegrasyonu.
  *
- * Varsayilan olarak analytics_storage 'denied' baslar.
- * Kullanici cerez banner'ini kabul edince consent.ts
- * icinden gtag('consent', 'update', ...) cagirilir ve tam
- * veri toplama baslar.
- *
- * Onay olmadan da cookieless ping gonderir (anonim veri).
+ * Consent defaults are initialized without an external request. The GA library
+ * is loaded only after a separate analytics grant; ads remain independent.
  */
-export function GoogleAnalytics() {
+export function GoogleAnalytics({ enabled }: { enabled: boolean }) {
   return (
     <>
-      <Script
-        {...{ src: `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`, strategy: 'afterInteractive' as const }}
-      />
       <Script id="ga-init" strategy="afterInteractive">
         {`
           window.dataLayer = window.dataLayer || [];
@@ -34,26 +27,26 @@ export function GoogleAnalytics() {
             wait_for_update: 500
           });
 
-          gtag('js', new Date());
-          gtag('config', '${GA_ID}', {
-            page_path: window.location.pathname,
-            anonymize_ip: true
-          });
-
-          // Daha once onay verildiyse hemen grant et (granular format)
+          // v1 analytics choice also included ads; it is not a separate ad grant.
+          // Only a fresh v2 choice can enable either purpose.
           try {
             var raw = localStorage.getItem('bilge-arena-cookie-consent');
             if (raw) {
               var consent = JSON.parse(raw);
-              var granted = (typeof consent === 'string' && consent === 'accepted')
-                || (consent && consent.analytics === true);
-              if (granted) {
+              if (consent && consent.version === 2 && consent.essential === true) {
                 gtag('consent', 'update', {
-                  analytics_storage: 'granted',
-                  ad_storage: 'granted',
-                  ad_user_data: 'granted',
-                  ad_personalization: 'granted'
+                  analytics_storage: consent.analytics === true ? 'granted' : 'denied',
+                  ad_storage: consent.ads === true ? 'granted' : 'denied',
+                  ad_user_data: 'denied',
+                  ad_personalization: 'denied'
                 });
+                if (consent.analytics === true) {
+                  gtag('js', new Date());
+                  gtag('config', '${GA_ID}', {
+                    page_path: window.location.pathname,
+                    anonymize_ip: true
+                  });
+                }
               }
             }
           } catch(e) {
@@ -62,6 +55,12 @@ export function GoogleAnalytics() {
           }
         `}
       </Script>
+      {enabled && (
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+          strategy="lazyOnload"
+        />
+      )}
     </>
   )
 }

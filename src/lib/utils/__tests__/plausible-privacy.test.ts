@@ -7,6 +7,10 @@ describe('trackEvent sensitive workspace policy', () => {
   beforeEach(() => {
     plausible.mockClear()
     window.plausible = (...args: unknown[]) => plausible(...args)
+    localStorage.clear()
+    localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({
+      essential: true, analytics: true, ads: false, version: 2, date: new Date().toISOString(),
+    }))
   })
 
   it('kurum calisma alaninda event gondermez', () => {
@@ -27,5 +31,21 @@ describe('trackEvent sensitive workspace policy', () => {
     trackEvent('MarketingCtaClicked')
     expect((Reflect.get(window, 'plausible') as { q?: unknown[][] }).q)
       .toEqual([['MarketingCtaClicked', undefined]])
+  })
+
+  it('izinsiz olaylari sonradan gonderilecek bir kuyruga koymaz', () => {
+    window.history.replaceState({}, '', '/hakkinda')
+    localStorage.removeItem('bilge-arena-cookie-consent')
+    delete window.plausible
+
+    trackEvent('MarketingCtaClicked')
+    expect(window.plausible).toBeUndefined()
+
+    localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({
+      essential: true, analytics: true, ads: false, version: 2, date: new Date().toISOString(),
+    }))
+    trackEvent('GuestQuizComplete')
+    expect((Reflect.get(window, 'plausible') as { q?: unknown[][] }).q)
+      .toEqual([['GuestQuizComplete', undefined]])
   })
 })

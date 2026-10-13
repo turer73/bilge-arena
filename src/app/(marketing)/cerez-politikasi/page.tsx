@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { CookiePrefsButton } from '@/components/layout/cookie-prefs-button'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
@@ -12,7 +13,7 @@ export default function CerezPolitikasiPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
       <h1 className="mb-2 text-3xl font-bold">Çerez Politikası</h1>
-      <p className="mb-10 text-sm text-[var(--text-sub)]">Son güncelleme: 17 Mayıs 2026</p>
+      <p className="mb-10 text-sm text-[var(--text-sub)]">Son güncelleme: 13 Ekim 2026</p>
 
       <div className="space-y-8 text-sm leading-relaxed text-[var(--text-muted)]">
         <section>
@@ -49,8 +50,13 @@ export default function CerezPolitikasiPage() {
                 </tr>
                 <tr className="border-b border-[var(--border)]">
                   <td className="py-2 pr-4 font-medium text-[var(--text)]">Analitik Çerezler</td>
-                  <td className="py-2 pr-4">Plausible Analytics — anonim sayfa görüntüleme istatistikleri</td>
-                  <td className="py-2">Oturum süresi</td>
+                  <td className="py-2 pr-4">Google Analytics ve Plausible — kullanım istatistikleri</td>
+                  <td className="py-2">Sağlayıcı ayarlarına göre</td>
+                </tr>
+                <tr className="border-b border-[var(--border)]">
+                  <td className="py-2 pr-4 font-medium text-[var(--text)]">Reklam</td>
+                  <td className="py-2 pr-4">Google AdSense — reklam sunumu ve ilgili veri işleme</td>
+                  <td className="py-2">Sağlayıcı ayarlarına göre</td>
                 </tr>
                 <tr>
                   <td className="py-2 pr-4 font-medium text-[var(--text)]">Supabase Auth</td>
@@ -68,7 +74,17 @@ export default function CerezPolitikasiPage() {
           <ul className="ml-4 mt-2 list-disc space-y-1">
             <li>
               <strong>Plausible Analytics:</strong> Anonim kullanım istatistikleri toplar.
-              Çerez kullanmaz, GDPR uyumludur.
+              Çerez kullanmadan sayfa görüntüleme istatistikleri sağlar.
+            </li>
+            <li>
+              <strong>Google Analytics:</strong> Kullanım istatistikleri için kullanılır;
+              analitik depolama izni varsayılan olarak kapalıdır.
+            </li>
+            <li>
+              <strong>Google AdSense:</strong> Reklam betiği yalnız ayrı reklam izni
+              verildiğinde yüklenir. Ayrı kişiselleştirme izni alınmadığından
+              kişiselleştirme ve reklam kullanıcı verisi sinyalleri kapalı tutulur.
+              Sağlayıcı reklamla ilgili çerez veya benzer teknolojiler kullanabilir.
             </li>
             <li>
               <strong>Supabase Auth:</strong> Kimlik doğrulama için oturum çerezleri
@@ -80,17 +96,16 @@ export default function CerezPolitikasiPage() {
               bot koruma ve oturum çerezleri oluşturulabilir; bu durumda bu sayfa güncellenir.
             </li>
           </ul>
-          <p className="mt-2">
-            Platform reklam çerezleri kullanmaz ve kullanıcıları izleme amaçlı
-            üçüncü taraf çerezleri bulunmaz.
-          </p>
         </section>
 
         <section>
           <h2 className="mb-3 text-lg font-bold text-[var(--text)]">4. Çerez Tercihleri</h2>
           <p>
             Zorunlu çerezler platformun çalışması için gereklidir ve devre dışı
-            bırakılamaz. Diğer çerezleri tarayıcı ayarlarınızdan yönetebilirsiniz:
+            bırakılamaz. Analitik ve reklam izinlerini ayrı ayrı seçebilir,
+            tercihinizi istediğiniz zaman değiştirebilirsiniz: {' '}
+            <CookiePrefsButton />
+            . Tarayıcı ayarlarınızdan da çerezleri yönetebilirsiniz:
           </p>
           <ul className="ml-4 mt-2 list-disc space-y-1">
             <li><strong>Chrome:</strong> Ayarlar → Gizlilik ve Güvenlik → Çerezler</li>
