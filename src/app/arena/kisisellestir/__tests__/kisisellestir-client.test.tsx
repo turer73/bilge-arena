@@ -87,10 +87,11 @@ beforeEach(() => {
 })
 
 describe('KisisellestirClient', () => {
-  test('renk teması bölümü masaüstü/tablet için eklenir; mobil stüdyo düzeni korunur', () => {
+  test('renk teması bölümü mobilde de görünür; stüdyo düzeni korunur', () => {
     render(<KisisellestirClient />)
     const themes = screen.getByRole('group', {name:'Renk teması'})
-    expect(themes.parentElement).toHaveClass('hidden', 'md:grid', 'md:grid-cols-2')
+    expect(themes.parentElement).toHaveClass('grid', 'md:grid-cols-2')
+    expect(themes.parentElement).not.toHaveClass('hidden')
     expect(within(themes).getAllByRole('radio')).toHaveLength(6)
     expect(screen.getByRole('button', {name:'Avatar'})).toHaveAttribute('aria-pressed', 'true')
   })
@@ -102,6 +103,7 @@ describe('KisisellestirClient', () => {
     localStorage.setItem('bilge-arena-profile-background-v1', 'gece-mavisi')
     render(<KisisellestirClient />)
     const themes = screen.getByRole('group', {name:'Renk teması'})
+    expect(themes.closest('.hidden')).toBeNull()
     fireEvent.click(within(themes).getByRole('radio', {name:'Renk teması: Kadim Orman'}))
     expect(document.documentElement).toHaveAttribute('data-theme', 'orman')
     expect(localStorage.getItem('bilge-theme')).toBe('orman')

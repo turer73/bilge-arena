@@ -12,6 +12,11 @@
 .demoHeader nav{display:flex;gap:20px;flex:1;font-size:.875rem}.demoHeader [aria-current]{color:var(--app-accent-text)}
 .logo{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;line-height:1;font-family:Georgia,serif;font-weight:800;font-size:1.375rem;color:var(--app-text)}
 .logo img{width:52px;height:52px;object-fit:contain}.logo b{color:#0eafdd}.logo small{display:block;font:500 .6875rem/1.7 var(--font-dm-sans),sans-serif;letter-spacing:.12em;color:var(--app-text-sub)}
+@media(max-width:767px){.logo img{width:40px;height:40px}.logo{font-size:1rem}.logo small{font-size:.55rem;letter-spacing:.05em}}
+@media(max-width:479px){.logo small{display:none}}
+@media(max-width:359px){.logo>span{display:none}}
+@media(max-width:399px){:global([data-user-session]) .logo>span{display:none}}
+@media(max-width:639px){.guideSettings{flex-direction:column;align-items:flex-start;padding:18px}.guideSettings>img{width:80px;height:80px}}
 .scopeBar{display:flex;justify-content:space-between;align-items:center;min-height:66px;gap:20px;border-bottom:1px solid var(--academy-line)}
 .exam{display:flex;align-items:center;gap:8px;color:var(--app-accent-text)}
 .exam select,.guideSelect select{font:inherit;font-size:.875rem;min-height:42px;border:1px solid var(--academy-line);border-radius:9px;background:var(--app-card);color:var(--app-text);padding:7px 10px;max-width:190px}

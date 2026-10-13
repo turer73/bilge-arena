@@ -48,6 +48,7 @@ describe('AcademyHome', () => {
     expect(screen.getByRole('link', { name: /çalışma alanına git/i })).toHaveAttribute('href', '/arena/calisma')
     expect(screen.getByRole('link', { name: /oda moduna git/i })).toHaveAttribute('href', '/oda')
     expect(screen.getByRole('link', { name: /kişiselleştir/i })).toHaveAttribute('href', '/arena/kisisellestir')
+    expect(screen.getByRole('link', { name: /renklerini ve rehberini seç/i })).toHaveAttribute('href', '/arena/kisisellestir')
   })
 
   it('Bilge karakter seçimlerini callback ile değiştirir', () => {

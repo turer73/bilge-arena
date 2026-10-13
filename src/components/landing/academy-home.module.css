@@ -30,6 +30,7 @@
 .primary:hover, .secondary:hover { transform: translateY(-2px); }
 .examNote { margin-top: 25px; color: #cad7ee; font-size: 11px; font-weight: 750; letter-spacing: .08em; }
 .examNote span { display: block; margin-top: 7px; color: #acbdd9; font-weight: 400; letter-spacing: 0; }
+.mobileThemeLink { display: none; }
 .guide { position: relative; min-width: 0; display: flex; flex-direction: column; justify-content: end; align-items: center; padding: 320px 18px 24px; }
 .portrait { position: absolute; top: 8px; bottom: 52px; left: 0; right: 0; z-index: -1; mask-image: linear-gradient(0deg, transparent, black 35%, black 83%, transparent 100%), linear-gradient(90deg, transparent, black 22%, black 88%, transparent); mask-composite: intersect; }
 .portrait img { object-fit: cover; object-position: center 23%; }
@@ -150,6 +151,7 @@
   .intro { margin-top: 17px; font-size: 14px; line-height: 1.65; }
   .heroActions { align-items: stretch; margin-top: 22px; }
   .heroActions a { width: 100%; min-width: 0; min-height: 48px; font-size: 14px; }
+  .mobileThemeLink { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 10px; color: #b9d6ff; font-size: 13px; font-weight: 700; }
   .examNote { margin-top: 20px; }
   .configuredStats { gap: 16px; }
   .guide { min-height: 280px; padding: 175px 16px 18px; }
