@@ -55,8 +55,8 @@ export function InstitutionPartnership() {
             Öğrenciler kendi hesaplarıyla katılır, yetkili koç ve öğretmenler paylaşılan çalışma verilerini görür.
           </p>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <Link href="/iletisim#kurumsal-pilot" className="btn-primary inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold">
-              Pilot için bize ulaş <ArrowRight size={17} aria-hidden="true" />
+            <Link href="/kurumlar" className="btn-primary inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold">
+              Koçlar ve kurumlar için keşfet <ArrowRight size={17} aria-hidden="true" />
             </Link>
             <a href="/documents/bilge-arena-kurum-paketleri-v1.pdf" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--text)] hover:border-[var(--focus)]">
               <FileText size={17} aria-hidden="true" /> Pilot paketlerini incele

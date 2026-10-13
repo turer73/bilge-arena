@@ -12,6 +12,7 @@ const FOOTER_LINKS = [
       { label: 'Profil', href: '/arena/profil' },
       { label: 'Arkadaşlar', href: '/arena/arkadaslar' },
       { label: 'Nasıl Çalışır', href: '/nasil-calisir' },
+      { label: 'Koçlar ve Kurumlar', href: '/kurumlar' },
     ],
   },
   {

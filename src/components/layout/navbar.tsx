@@ -38,6 +38,7 @@ const NAV_LINKS = [
   { href: '/oda', label: 'Oda Modu' },
   { href: '/arena/siralama', label: 'Sıralama' },
   { href: '/nasil-calisir', label: 'Nasıl Çalışır' },
+  { href: '/kurumlar', label: 'Kurumlar' },
   { href: '/hakkinda', label: 'Hakkında' },
 ]
 
@@ -50,7 +51,7 @@ export function Navbar() {
   const pathname = usePathname()
   const wide = useWideStudy()
   const academyArea = pathname === '/arena' || pathname === '/arena/calisma' || pathname === '/arena/kisisellestir' || pathname === '/oda' || pathname.startsWith('/oda/') || (wide && WIDE_ACADEMY_ROUTES.has(pathname))
-  const academyMarketingRoute = pathname === '/nasil-calisir' || pathname === '/hakkinda'
+  const academyMarketingRoute = pathname === '/nasil-calisir' || pathname === '/hakkinda' || pathname === '/kurumlar'
   const academyMarketingArea = wide && academyMarketingRoute
   const academyVisualArea = academyArea || academyMarketingArea
   const activeNavHref = pathname === '/arena/calisma'
@@ -138,7 +139,7 @@ export function Navbar() {
         {academyVisualArea ? <AcademyLogo /> : <Logo size={36} />}
 
         {/* Desktop nav links */}
-        <div className={`hidden items-center gap-0.5 ${academyMarketingRoute ? 'min-[1180px]:flex' : academyArea ? 'xl:flex' : 'md:flex'}`}>
+        <div className="hidden items-center gap-0.5 xl:flex">
           {NAV_LINKS.map(({ href, label }) => (
             <Link
               key={href}
@@ -337,7 +338,7 @@ export function Navbar() {
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className={`flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] ${academyMarketingRoute ? 'min-[1180px]:hidden' : academyArea ? 'xl:hidden' : 'md:hidden'}`}
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] xl:hidden"
             aria-label={mobileOpen ? 'Menüyü kapat' : 'Menüyü aç'}
             aria-expanded={mobileOpen}
             aria-controls="mobile-navigation"
@@ -349,7 +350,7 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div id="mobile-navigation" key="mobile-menu" className={`animate-slideDown border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl ${academyMarketingRoute ? 'min-[1180px]:hidden' : academyArea ? 'xl:hidden' : 'md:hidden'}`}>
+        <div id="mobile-navigation" key="mobile-menu" className="animate-slideDown border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl xl:hidden">
           <div className="flex flex-col gap-1 px-6 py-4">
             {NAV_LINKS.map(({ href, label }) => (
               <Link
