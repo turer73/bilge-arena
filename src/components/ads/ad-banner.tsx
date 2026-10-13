@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { FEATURES } from '@/lib/constants/premium'
 import { isSensitiveWorkspacePath } from '@/lib/privacy/telemetry-policy'
 import { useAuthStore } from '@/stores/auth-store'
+import { useAdsConsent } from '@/lib/hooks/use-ads-consent'
 
 type AdSlot = 'lobby' | 'result' | 'sidebar'
 
@@ -44,9 +45,12 @@ export function AdBanner({ slot, className = '' }: AdBannerProps) {
   const pushed = useRef(false)
   const pathname = usePathname()
   const isSensitiveWorkspace = isSensitiveWorkspacePath(pathname)
+  const adsAllowed = useAdsConsent()
+  const slotId = SLOT_IDS[slot]
 
   useEffect(() => {
-    if (isSensitiveWorkspace || !ADSENSE_ID || pushed.current) return
+    if (isSensitiveWorkspace || !adsAllowed || !FEATURES.ADS || profile?.is_premium
+      || !ADSENSE_ID || !slotId || pushed.current) return
 
     try {
       const w = window as Window & { adsbygoogle?: Record<string, unknown>[] }
@@ -56,17 +60,17 @@ export function AdBanner({ slot, className = '' }: AdBannerProps) {
     } catch {
       // AdSense not loaded yet
     }
-  }, [isSensitiveWorkspace])
+  }, [adsAllowed, isSensitiveWorkspace, profile?.is_premium, slotId])
 
   // Feature kapali veya premium kullanici — reklam gosterme
   if (isSensitiveWorkspace) return null
   if (!FEATURES.ADS) return null
   if (profile?.is_premium) return null
+  if (!adsAllowed) return null
 
   const size = SLOT_SIZES[slot]
 
   // AdSense ID veya slot ID yoksa placeholder
-  const slotId = SLOT_IDS[slot]
   if (!ADSENSE_ID || !slotId) {
     return (
       <div

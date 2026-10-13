@@ -43,7 +43,8 @@ describe('getCookieConsent', () => {
     const consent = {
       essential: true,
       analytics: true,
-      version: 1,
+      ads: false,
+      version: 2,
       date: '2024-01-01T00:00:00.000Z',
     }
     store['bilge-arena-cookie-consent'] = JSON.stringify(consent)
@@ -52,6 +53,14 @@ describe('getCookieConsent', () => {
     expect(result).toEqual(consent)
     expect(result!.essential).toBe(true)
     expect(result!.analytics).toBe(true)
+    expect(result!.ads).toBe(false)
+  })
+
+  it('eski birlesik analitik/reklam iznini yeni reklam izni saymamali', () => {
+    store['bilge-arena-cookie-consent'] = JSON.stringify({
+      essential: true, analytics: true, version: 1, date: '2026-05-17T00:00:00.000Z',
+    })
+    expect(getCookieConsent()).toBeNull()
   })
 
   it('eski string format icin null dondurmeli', () => {
@@ -69,11 +78,12 @@ describe('getCookieConsent', () => {
 
 describe('setCookieConsent', () => {
   it('analytics kabul edilince dogru kaydetmeli', () => {
-    const result = setCookieConsent(true)
+    const result = setCookieConsent({ analytics: true, ads: false })
 
     expect(result.essential).toBe(true)
     expect(result.analytics).toBe(true)
-    expect(result.version).toBe(1)
+    expect(result.ads).toBe(false)
+    expect(result.version).toBe(2)
     expect(result.date).toBeTruthy()
 
     // localStorage'a yazildi mi?
@@ -82,7 +92,7 @@ describe('setCookieConsent', () => {
   })
 
   it('analytics reddedilince denied olmali', () => {
-    const result = setCookieConsent(false)
+    const result = setCookieConsent({ analytics: false, ads: false })
     expect(result.analytics).toBe(false)
 
     const saved = JSON.parse(store['bilge-arena-cookie-consent'])
@@ -90,20 +100,20 @@ describe('setCookieConsent', () => {
   })
 
   it('GA consent mode guncellemeli (granted)', () => {
-    setCookieConsent(true)
+    setCookieConsent({ analytics: true, ads: false })
     expect(window.gtag).toHaveBeenCalledWith('consent', 'update', {
       analytics_storage: 'granted',
-      ad_storage: 'granted',
-      ad_user_data: 'granted',
-      ad_personalization: 'granted',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
     })
   })
 
-  it('GA consent mode guncellemeli (denied)', () => {
-    setCookieConsent(false)
+  it('reklam iznini analitikten bagimsiz guncellemeli', () => {
+    setCookieConsent({ analytics: false, ads: true })
     expect(window.gtag).toHaveBeenCalledWith('consent', 'update', {
       analytics_storage: 'denied',
-      ad_storage: 'denied',
+      ad_storage: 'granted',
       ad_user_data: 'denied',
       ad_personalization: 'denied',
     })
@@ -136,7 +146,7 @@ describe('openConsentBanner', () => {
 
 describe('logConsent', () => {
   it('gecerli cerez tercihini server consent sinirina gondermeli', async () => {
-    await logConsent('cookie', { essential: true, analytics: false })
+    await logConsent('cookie', { essential: true, analytics: false, ads: false })
 
     expect(fetchMock).toHaveBeenCalledWith('/api/consent', {
       method: 'POST',
@@ -145,7 +155,7 @@ describe('logConsent', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'cookie',
-        value: { essential: true, analytics: false },
+        value: { essential: true, analytics: false, ads: false },
       }),
     })
   })

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render } from '@testing-library/react'
+import { act, cleanup, render } from '@testing-library/react'
+import { COOKIE_CONSENT_CHANGED_EVENT } from '@/lib/consent'
 
 const mocks = vi.hoisted(() => ({
   pathname: '/hakkinda',
@@ -23,6 +24,7 @@ describe('privacy-safe third-party document boundary', () => {
     mocks.pathname = '/hakkinda'
     mocks.script.mockClear()
     mocks.googleAnalytics.mockClear()
+    localStorage.removeItem('bilge-arena-cookie-consent')
     delete document.documentElement.dataset.telemetryDocumentBoundary
     vi.restoreAllMocks()
   })
@@ -145,24 +147,75 @@ describe('privacy-safe third-party document boundary', () => {
   it('marks public documents so an unexpected sensitive render can force a reload', () => {
     render(<PrivacySafeThirdPartyScripts />)
     expect(document.documentElement.dataset.telemetryDocumentBoundary).toBe('public')
-    expect(mocks.script).toHaveBeenCalledWith(
+    expect(mocks.script).not.toHaveBeenCalledWith(
       expect.objectContaining({ src: 'https://analytics.panola.app/js/script.js', strategy: 'afterInteractive' }),
       undefined,
     )
+    expect(mocks.googleAnalytics).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }), undefined)
   })
 
-  it('loads the advertising library only during browser idle time', () => {
+  it('loads analytics only after its own grant and reloads on revocation', () => {
+    const reloadDocument = vi.fn()
+    render(<PrivacySafeThirdPartyScripts reloadDocument={reloadDocument} />)
+    localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({
+      essential: true, analytics: true, ads: false, version: 2, date: new Date().toISOString(),
+    }))
+    act(() => window.dispatchEvent(new Event(COOKIE_CONSENT_CHANGED_EVENT)))
+    expect(mocks.script).toHaveBeenCalledWith(
+      expect.objectContaining({ src: 'https://analytics.panola.app/js/script.js' }), undefined,
+    )
+    expect(mocks.googleAnalytics).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }), undefined)
+
+    localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({
+      essential: true, analytics: false, ads: false, version: 2, date: new Date().toISOString(),
+    }))
+    act(() => window.dispatchEvent(new Event(COOKIE_CONSENT_CHANGED_EVENT)))
+    expect(reloadDocument).toHaveBeenCalledOnce()
+  })
+
+  it('does not load advertising for missing or old bundled consent', () => {
     const previous = process.env.NEXT_PUBLIC_ADSENSE_ID
     process.env.NEXT_PUBLIC_ADSENSE_ID = 'ca-pub-test'
     try {
       render(<PrivacySafeThirdPartyScripts />)
-      expect(mocks.script).toHaveBeenCalledWith(
+      expect(mocks.script).not.toHaveBeenCalledWith(
         expect.objectContaining({
           src: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-test',
-          strategy: 'lazyOnload',
         }),
         undefined,
       )
+      localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({
+        essential: true, analytics: true, version: 1, date: new Date().toISOString(),
+      }))
+      act(() => window.dispatchEvent(new Event(COOKIE_CONSENT_CHANGED_EVENT)))
+      expect(mocks.script).not.toHaveBeenCalledWith(
+        expect.objectContaining({ src: expect.stringContaining('adsbygoogle.js') }), undefined,
+      )
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_ADSENSE_ID
+      else process.env.NEXT_PUBLIC_ADSENSE_ID = previous
+    }
+  })
+
+  it('loads ads after separate consent and reloads on revocation', () => {
+    const previous = process.env.NEXT_PUBLIC_ADSENSE_ID
+    process.env.NEXT_PUBLIC_ADSENSE_ID = 'ca-pub-test'
+    const reloadDocument = vi.fn()
+    try {
+      render(<PrivacySafeThirdPartyScripts reloadDocument={reloadDocument} />)
+      localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({
+        essential: true, analytics: false, ads: true, version: 2, date: new Date().toISOString(),
+      }))
+      act(() => window.dispatchEvent(new Event(COOKIE_CONSENT_CHANGED_EVENT)))
+      expect(mocks.script).toHaveBeenCalledWith(
+        expect.objectContaining({ src: expect.stringContaining('adsbygoogle.js'), strategy: 'lazyOnload' }),
+        undefined,
+      )
+      localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({
+        essential: true, analytics: false, ads: false, version: 2, date: new Date().toISOString(),
+      }))
+      act(() => window.dispatchEvent(new Event(COOKIE_CONSENT_CHANGED_EVENT)))
+      expect(reloadDocument).toHaveBeenCalledOnce()
     } finally {
       if (previous === undefined) delete process.env.NEXT_PUBLIC_ADSENSE_ID
       else process.env.NEXT_PUBLIC_ADSENSE_ID = previous
