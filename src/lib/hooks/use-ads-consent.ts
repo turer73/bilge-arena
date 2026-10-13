@@ -1,14 +1,32 @@
 'use client'
 
 import { useSyncExternalStore } from 'react'
-import { COOKIE_CONSENT_CHANGED_EVENT, getCookieConsent } from '@/lib/consent'
+import { COOKIE_CONSENT_CHANGED_EVENT, getCookieConsent, syncCookieConsentFromStorageEvent } from '@/lib/consent'
+
+const subscribers = new Set<() => void>()
+
+function notifySubscribers(): void {
+  subscribers.forEach((onChange) => onChange())
+}
+
+function onStorage(event: StorageEvent): void {
+  // Apply the new grant in this document before React can mount GA/AdSense.
+  syncCookieConsentFromStorageEvent(event)
+  notifySubscribers()
+}
 
 function subscribe(onChange: () => void): () => void {
-  window.addEventListener(COOKIE_CONSENT_CHANGED_EVENT, onChange)
-  window.addEventListener('storage', onChange)
+  if (subscribers.size === 0) {
+    window.addEventListener(COOKIE_CONSENT_CHANGED_EVENT, notifySubscribers)
+    window.addEventListener('storage', onStorage)
+  }
+  subscribers.add(onChange)
   return () => {
-    window.removeEventListener(COOKIE_CONSENT_CHANGED_EVENT, onChange)
-    window.removeEventListener('storage', onChange)
+    subscribers.delete(onChange)
+    if (subscribers.size === 0) {
+      window.removeEventListener(COOKIE_CONSENT_CHANGED_EVENT, notifySubscribers)
+      window.removeEventListener('storage', onStorage)
+    }
   }
 }
 

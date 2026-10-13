@@ -39,10 +39,8 @@ function isJson(value: unknown): value is Json {
 
 // ─── localStorage helpers ────────────────────────────────
 
-export function getCookieConsent(): CookieConsent | null {
-  if (typeof window === 'undefined') return null
+function parseCookieConsent(raw: string | null): CookieConsent | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw)
     // v1 bundled advertising with analytics. Never infer advertising consent
@@ -58,6 +56,41 @@ export function getCookieConsent(): CookieConsent | null {
   }
 }
 
+export function getCookieConsent(): CookieConsent | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return parseCookieConsent(localStorage.getItem(STORAGE_KEY))
+  } catch {
+    return null
+  }
+}
+
+function updateConsentMode(consent: CookieConsent | null, previous: CookieConsent | null): void {
+  if (isCurrentBrowserPathSensitive() || typeof window.gtag !== 'function') return
+
+  window.gtag('consent', 'update', {
+    analytics_storage: consent?.analytics === true ? 'granted' : 'denied',
+    ad_storage: consent?.ads === true ? 'granted' : 'denied',
+    // No separate personalization choice exists, so never infer it.
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+  })
+  // Queue the destination before the external analytics tag is mounted.
+  if (consent?.analytics === true && previous?.analytics !== true) {
+    window.gtag('js', new Date())
+    window.gtag('config', 'G-HDCR9YRQJ3', {
+      page_path: window.location.pathname,
+      anonymize_ip: true,
+    })
+  }
+}
+
+/** Synchronize this document before a cross-tab grant mounts external scripts. */
+export function syncCookieConsentFromStorageEvent(event: StorageEvent): void {
+  if (event.key !== STORAGE_KEY) return
+  updateConsentMode(parseCookieConsent(event.newValue), parseCookieConsent(event.oldValue))
+}
+
 export function setCookieConsent({ analytics, ads }: Pick<CookieConsent, 'analytics' | 'ads'>): CookieConsent {
   const previous = getCookieConsent()
   const consent: CookieConsent = {
@@ -70,24 +103,7 @@ export function setCookieConsent({ analytics, ads }: Pick<CookieConsent, 'analyt
   localStorage.setItem(STORAGE_KEY, JSON.stringify(consent))
 
   // Analytics and advertising are independent Consent Mode v2 purposes.
-  if (!isCurrentBrowserPathSensitive() && typeof window.gtag === 'function') {
-    window.gtag('consent', 'update', {
-      analytics_storage: analytics ? 'granted' : 'denied',
-      ad_storage: ads ? 'granted' : 'denied',
-      // No separate personalization choice exists, so never infer it.
-      ad_user_data: 'denied',
-      ad_personalization: 'denied',
-    })
-    // Queue the destination before the analytics tag is mounted, so early
-    // consented events do not precede its config command in dataLayer.
-    if (analytics && previous?.analytics !== true) {
-      window.gtag('js', new Date())
-      window.gtag('config', 'G-HDCR9YRQJ3', {
-        page_path: window.location.pathname,
-        anonymize_ip: true,
-      })
-    }
-  }
+  updateConsentMode(consent, previous)
 
   window.dispatchEvent(new Event(COOKIE_CONSENT_CHANGED_EVENT))
   // Supabase'e logla (fire-and-forget)
