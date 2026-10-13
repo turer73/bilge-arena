@@ -88,7 +88,7 @@ const FAQ = [
   },
   {
     q: 'Platform tamamen ücretsiz mi?',
-    a: 'Bireysel öğrenci başlangıcı ücretsizdir. Koçluk ve dershane işbirlikleri için küçük bir grupla ücretsiz pilot planlayabiliriz. Süre, öğrenci sayısı ve kullanım kapsamını görüşmede birlikte belirliyoruz.',
+    a: 'Bireysel öğrenci başlangıcı ücretsizdir. Koçluk ve dershane işbirlikleri için küçük bir grupla ücretsiz pilot planlayabiliriz. Süre, öğrenci sayısı ve kullanım kapsamını görüşmede birlikte belirliyoruz. Erişim otomatik açılmaz; görüşme sonrası ekibimiz tarafından tanımlanır.',
   },
   {
     q: 'Hesabımı nasıl silebilirim?',

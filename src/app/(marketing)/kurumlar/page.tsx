@@ -11,8 +11,19 @@ export const metadata: Metadata = {
   title: 'Sınav Koçları ve Dershaneler İçin',
   description,
   alternates: { canonical: `${siteUrl}/kurumlar` },
-  openGraph: { ...OG_DEFAULTS, title: 'Bilge Arena ile öğrenci takibi ve kurum işbirliği', description, url: `${siteUrl}/kurumlar` },
-  twitter: { card: 'summary_large_image', title: 'Bilge Arena ile öğrenci takibi ve kurum işbirliği', description },
+  openGraph: {
+    ...OG_DEFAULTS,
+    title: 'Bilge Arena ile öğrenci takibi ve kurum işbirliği',
+    description,
+    url: `${siteUrl}/kurumlar`,
+    images: [{ url: `${siteUrl}/og-image.png`, width: 1200, height: 630, alt: 'Bilge Arena — Koçlar ve Kurumlar' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Bilge Arena ile öğrenci takibi ve kurum işbirliği',
+    description,
+    images: [`${siteUrl}/og-image.png`],
+  },
 }
 
 const sections = [
