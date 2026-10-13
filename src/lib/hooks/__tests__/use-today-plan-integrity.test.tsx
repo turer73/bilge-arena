@@ -14,6 +14,24 @@ describe('daily-plan acknowledgement identity', () => {
   beforeEach(() => vi.stubGlobal('fetch', vi.fn()))
   afterEach(() => vi.unstubAllGlobals())
 
+  it.each([
+    { completedIds: ['q1', 'outside', 'q1'], expected: ['q1'] },
+    { completedIds: ['outside'], expected: [] },
+  ])('projects GET completion onto unique current-plan IDs: %j', async ({ completedIds, expected }) => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({ ...PLAN, completedIds }))
+    const { result } = renderHook(() => useTodayPlan('matematik', 'u1', 'TYT'))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.plan?.completedIds).toEqual(expected)
+    expect(result.current.completedCount).toBe(expected.length)
+  })
+
+  it.each([null, 'q1', ['q1', 42]])('rejects malformed GET completion IDs: %j', async (completedIds) => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({ ...PLAN, completedIds }))
+    const { result } = renderHook(() => useTodayPlan('matematik', 'u1', 'TYT'))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.plan).toBeNull()
+  })
+
   it.each([null, {}, { completedIds: 'q1' }, { completedIds: ['q1', 'outside'] }])(
     'does not accept malformed or out-of-plan completion: %j', async (body) => {
       vi.mocked(fetch).mockResolvedValueOnce(response(PLAN)).mockResolvedValueOnce(response(body))

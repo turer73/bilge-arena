@@ -163,7 +163,7 @@ export function useTodayPlan(
           && typeof item.completed === 'boolean'
         ))
       const validCompletedIds = Array.isArray(data.completedIds)
-        && data.completedIds.every((questionId) => typeof questionId === 'string' && questionIds.has(questionId))
+        && data.completedIds.every((questionId) => typeof questionId === 'string')
       // Explicit exam selection is part of the plan identity. Only an omitted
       // selection may be resolved from the profile; Wordquest is always NULL.
       const validExamRef = game === 'wordquest'
@@ -190,7 +190,13 @@ export function useTodayPlan(
       if (!controller.signal.aborted) {
         setUnavailableReason(null)
         setUnavailableExamRef(null)
-        setPlan(validResponse ? data : null)
+        // Historical GET snapshots may include completion IDs outside this
+        // plan. Keep the current plan visible, but never count those IDs (or
+        // duplicates). Mutation acknowledgements remain strict below.
+        setPlan(validResponse ? {
+          ...data,
+          completedIds: [...new Set(data.completedIds.filter((id) => questionIds.has(id)))],
+        } : null)
       }
     } catch (error) {
       // Sessiz hata -- gunluk plan opsiyonel bir yuzey, quiz akisini bloklamaz.
