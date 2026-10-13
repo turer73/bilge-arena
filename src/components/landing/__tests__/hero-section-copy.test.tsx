@@ -5,7 +5,7 @@ vi.mock('next/link', () => ({
   default: ({ children, ...props }: React.ComponentProps<'a'>) => <a {...props}>{children}</a>,
 }))
 vi.mock('next/image', () => ({
-  default: ({ priority: _priority, fill: _fill, ...props }: React.ComponentProps<'img'> & { priority?: boolean; fill?: boolean }) => <img {...props} />,
+  default: ({ priority: _priority, fill: _fill, alt, ...props }: React.ComponentProps<'img'> & { priority?: boolean; fill?: boolean }) => <img alt={alt ?? ''} {...props} />,
 }))
 vi.mock('next/dynamic', () => ({ default: () => () => null }))
 vi.mock('../arena-background', () => ({ ArenaBackground: () => null }))

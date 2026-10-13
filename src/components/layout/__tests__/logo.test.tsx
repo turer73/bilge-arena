@@ -5,7 +5,7 @@ vi.mock('@/components/privacy/document-boundary-link', () => ({
   DocumentBoundaryLink: ({ children, ...props }: React.ComponentProps<'a'>) => <a {...props}>{children}</a>,
 }))
 vi.mock('next/image', () => ({
-  default: ({ priority: _priority, ...props }: React.ComponentProps<'img'> & { priority?: boolean }) => <img {...props} />,
+  default: ({ priority: _priority, alt, ...props }: React.ComponentProps<'img'> & { priority?: boolean }) => <img alt={alt ?? ''} {...props} />,
 }))
 vi.mock('@/stores/ui-store', () => ({
   useUIStore: (select: (state: { theme: string }) => unknown) => select({ theme: 'night' }),
