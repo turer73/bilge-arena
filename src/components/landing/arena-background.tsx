@@ -6,16 +6,18 @@ export function ArenaBackground() {
       {[500, 400, 300, 200].map((r, i) => (
         <div
           key={r}
-          className="absolute left-1/2 top-1/2 rounded-full"
-          style={{
-            width: r,
-            height: r,
-            transform: 'translate(-50%, -50%)',
-            border: `1px solid ${['#2563EB10', '#2563EB18', '#2563EB22', '#2563EB30'][i]}`,
-            animation: `pulse-ring ${3 + i}s ease-in-out infinite`,
-            animationDelay: `${i * 0.5}s`,
-          }}
-        />
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          style={{ width: r, height: r }}
+        >
+          <div
+            className="h-full w-full rounded-full"
+            style={{
+              border: `1px solid ${['#2563EB10', '#2563EB18', '#2563EB22', '#2563EB30'][i]}`,
+              animation: `pulse-ring ${3 + i}s ease-in-out infinite`,
+              animationDelay: `${i * 0.5}s`,
+            }}
+          />
+        </div>
       ))}
 
       {/* Merkez parlama — Template: #2563EB18 */}
@@ -27,12 +29,12 @@ export function ArenaBackground() {
       />
 
       {/* Donen dis halka — Template: spin-slow 30s */}
-      <div
-        className="absolute left-1/2 top-1/2 h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full animate-spin-slow"
-        style={{
-          border: '1px dashed #2563EB20',
-        }}
-      />
+      <div className="absolute left-1/2 top-1/2 h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2">
+        <div
+          className="h-full w-full rounded-full animate-spin-slow"
+          style={{ border: '1px dashed #2563EB20' }}
+        />
+      </div>
 
       {/* Grid pattern — Template: #2563EB08 */}
       <div
