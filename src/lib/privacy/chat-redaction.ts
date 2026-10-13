@@ -1,0 +1,22 @@
+const EMAIL = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi
+const TURKISH_ID_CANDIDATE = /(?<!\d)[1-9](?:[\s.-]*\d){10}(?!\d)/g
+const TURKISH_PHONE = /(?<![\dA-Za-z])(?:\+90|0090|0)?[\s().-]*(?:5\d{2}|[234]\d{2})(?:[\s().-]*\d){7}(?!\d)/g
+
+function isTurkishIdentityNumber(candidate: string): boolean {
+  const digits = candidate.replace(/\D/g, '').split('').map(Number)
+  if (digits.length !== 11 || digits[0] === 0) return false
+  const odd = digits[0]! + digits[2]! + digits[4]! + digits[6]! + digits[8]!
+  const even = digits[1]! + digits[3]! + digits[5]! + digits[7]!
+  return ((odd * 7 - even) % 10 + 10) % 10 === digits[9]
+    && digits.slice(0, 10).reduce((sum, digit) => sum + digit, 0) % 10 === digits[10]
+}
+
+/** Best-effort redaction of common identifiers before sending chat text to a provider. */
+export function redactChatPersonalData(text: string): string {
+  return text
+    .replace(EMAIL, '[E-POSTA]')
+    .replace(TURKISH_ID_CANDIDATE, (candidate) => (
+      isTurkishIdentityNumber(candidate) ? '[TC-KIMLIK]' : candidate
+    ))
+    .replace(TURKISH_PHONE, '[TELEFON]')
+}
