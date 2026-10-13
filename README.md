@@ -1,137 +1,53 @@
-# 🏛️ Bilge Arena
+# Bilge Arena
 
-> YKS'ye hazırlanan öğrenciler için oyun tabanlı alıştırma platformu.
+Bilge Arena, YKS ve LGS hazırlığı için oyun ve çalışma akışları sunan bir öğrenme platformudur. Canlı site: [bilgearena.com](https://bilgearena.com).
 
-## 🎯 Vizyon
+Bu depo uygulama kodunu, veritabanı migration'larını, testleri ve operasyon belgelerini içerir. Bir oyunun arayüzde görünmesi, ilgili soru havuzunun kalite incelemesinin veya yayın onayının tamamlandığı anlamına gelmez; içerik kabulü ayrı bir süreçtir.
 
-Sınav kaygısını değil, öğrenme heyecanını ön plana çıkaran, gamification ile desteklenmiş Türkiye'ye özgü bir YKS hazırlık platformu.
+## Teknoloji
 
-## 🎮 Oyunlar
+- Node.js 22, Next.js 16 App Router, React 19, TypeScript ve Tailwind CSS 4
+- Supabase Auth/Postgres; sunucu tarafında ayrılmış service-role erişimi
+- Vercel dağıtımı, Vitest ve Playwright doğrulaması
 
-| Oyun | Ders | Durum |
-|------|------|-------|
-| Kelime Atölyesi (WordQuest) | İngilizce | ✅ Soru bankası hazır |
-| Matematik Atölyesi | TYT Matematik | 🔜 Yapılacak |
-| Türkçe Atölyesi | TYT Türkçe | 🔜 Yapılacak |
-| Fen Atölyesi | TYT Fen | 🔜 Yapılacak |
+Sürüm ve komutların güncel kaynağı [package.json](package.json) dosyasıdır.
 
-## 📊 Soru Bankası Durumu
-
-### WordQuest (İngilizce) — 635 soru ✅ Tamamlandı
-
-| Kategori | Soru | Kaynak |
-|----------|------|--------|
-| vocabulary | 295 | Özgün |
-| phrasal_verbs | 69 | Özgün |
-| restatement | 35 | Yeni yazıldı |
-| grammar | 90 | Yeni yazıldı |
-| sentence_completion | 76 | Yeni yazıldı |
-| cloze_test | 35 | Yeni yazıldı |
-| dialogue | 35 | Yeni yazıldı |
-
-## 🛠️ Teknik Stack
-
-- **Frontend:** Next.js 14 + TypeScript + Tailwind CSS + Framer Motion
-- **Backend/DB:** Supabase (Auth + Postgres + Realtime)
-- **Hosting:** Vercel (bilgearena.com ve www.bilgearena.com doğrudan Vercel DNS/edge üzerinden; 12.10.2026 kontrolü). Cloudflare CDN birincil alan adının önünde değil; DNS/topoloji değişirse `getClientIp` güven sınırı yeniden incelenmeli.
-- **Domain:** bilgearena.com (canlı)
-
-## 🎨 Marka
-
-### Renk Paleti
-
-| Renk | Hex | Kullanım |
-|------|-----|----------|
-| Bilişsel Mavi | `#2563EB` | Ana buton, odak, soru arayüzü |
-| Ödül Altını | `#D97706` | XP, rozet, liderboard |
-| İlerleme Yeşili | `#059669` | Doğru cevap, streak, progress |
-| Bilgelik Moru | `#7C3AED` | Legend seviye, premium |
-| Acil Kırmızı | `#DC2626` | Yanlış cevap, son 10 sn |
-
-**Tema:** Çift (karanlık + açık), CSS değişken sistemi.
-
-## 🗺️ Yol Haritası
-
-### Aşama 1 — Temel (Hafta 1–2)
-- [ ] Next.js + Supabase kurulum
-- [ ] WordQuest entegrasyonu
-- [ ] Kullanıcı auth sistemi
-
-### Aşama 2 — Genişleme (Hafta 3–4)
-- [ ] Matematik Atölyesi
-- [ ] Liderboard sistemi
-- [ ] Kullanıcı profili
-
-### Aşama 3 — Tamamlama (Hafta 5–6)
-- [ ] Türkçe + Fen Atölyesi
-- [ ] XP & rozet sistemi
-- [ ] Sosyal özellikler
-
-### Aşama 4 — Lansman (Hafta 7–8)
-- [ ] Beta (50–100 kişi)
-- [ ] Sosyal medya duyurusu
-- [ ] 🚀 Lansman + AdSense başvurusu
-
-## 💰 Gelir Modeli
-
-1. **Aşama 1 (0–6 ay):** Reklamsız, kullanıcı büyümesi
-2. **Aşama 2:** Google AdSense
-3. **Aşama 3:** Freemium (~₺29/ay reklamsız)
-4. **Uzun vade:** B2B dershane/okul lisansı
-
-## 📁 Repo Yapısı
-
-```
-bilge-arena/
-├── docs/                    # Strateji ve tasarım dokümanları
-│   ├── brand.md             # Marka kimliği
-│   ├── strategy.md          # Platform stratejisi
-│   └── tyt-analysis.md      # TYT konu frekans analizi
-├── wordquest/
-│   ├── data/
-│   │   ├── questions-sample.json  # ~20 soru (public, dev testi için)
-│   │   └── questions.json         # 489 soru (git-ignored, private)
-│   └── docs/
-│       └── license-audit.md       # Lisans denetim raporu
-├── database/
-│   └── seed.js                    # Supabase seed (sample/full modu)
-└── README.md
-```
-
-## 🧪 Geliştirme Kurulumu
-
-1. **Bağımlılıklar:** `npm install`
-2. **Env dosyası:** `.env.example` → `.env.local` kopyala, Supabase değerlerini doldur
-3. **Dev sunucu:** `npm run dev` (http://localhost:3000)
-
-### Soru Bankası Seed
+## Yerel geliştirme
 
 ```bash
-# Varsayılan: sample dosyası (~20 soru, dev testleri için)
-node database/seed.js
-
-# Full dataset (maintainer'dan al, private/questions.json veya custom path)
-node database/seed.js --full
-QUESTIONS_JSON_PATH=/yol/questions.json node database/seed.js --full
+npm ci
+npm run dev
 ```
 
-Full dataset git'te takip edilmez (`.gitignore` ile `wordquest/data/` ve `/private/` hariç). Yeni gelistiriciler maintainer ile iletisime geçer.
+`npm run dev` varsayılan olarak `http://localhost:3000` adresini açar. Ortam değişkenleri için [.env.example](.env.example) dosyasını temel alıp kişisel `.env.local` dosyanızı oluşturun; gerçek anahtarları Git'e eklemeyin. Supabase service-role anahtarı veya Redis ayarı bulunmayan yerel ortamda bazı arka plan, sıralama ve yönetim API'leri güvenli biçimde hata dönebilir. Bu, tam uçtan uca kabul testi yerine geçmez.
 
----
+```bash
+npm run lint
+npm run type-check
+npm test
+npm run build
+npm run test:e2e
+```
 
-**Başlangıç tarihi:** Mart 2026  
-**Hedef lansman:** Mayıs 2026
+Veritabanı migration ve soru havuzu işlemlerini üretim verisine karşı rutin kurulum adımı olarak çalıştırmayın. Bunlar ayrı erişim, inceleme ve yayın prosedürleri gerektirir.
+
+## Depo haritası
+
+| Yol | İçerik |
+| --- | --- |
+| `src/app/` | Sayfalar, layout'lar ve API route'ları |
+| `src/components/` | Arayüz bileşenleri |
+| `src/lib/` | Uygulama kuralları ve servis yardımcıları |
+| `database/` | Migration'lar, testler ve bakım araçları |
+| `docs/` | Tasarım, güvenlik ve operasyon belgeleri |
+| `e2e/` | Tarayıcı senaryoları |
+
+Kodun, CI'ın, önizleme dağıtımının, üretim dağıtımının ve gerçek kullanıcı/cihaz kabulünün ayrı doğrulama aşamaları olduğunu gözetin. Yayın durumunu eski yol haritalarından veya sabit soru sayılarından çıkarmayın.
 
 ## Lisans
 
-Bu depodaki kod **GNU Affero General Public License v3.0** (`AGPL-3.0-only`) ile
-lisanslanmıştır. Tam metin: [LICENSE](LICENSE).
+Bu depodaki kod **GNU Affero General Public License v3.0** (`AGPL-3.0-only`) ile lisanslanmıştır. Tam metin: [LICENSE](LICENSE).
 
-Kısaca: kodu kullanabilir, değiştirebilir ve dağıtabilirsiniz. Ancak değiştirilmiş
-bir sürümü dağıtırsanız **veya bir ağ üzerinden hizmet olarak sunarsanız**, kaynak
-kodunu aynı lisansla açmanız gerekir.
-
-Üçüncü taraf bağımlılıklar ve `vendor/` benzeri dizinlerdeki bileşenler kendi
-lisanslarıyla gelir; bu lisans onları kapsamaz.
+Kodu kullanabilir, değiştirebilir ve dağıtabilirsiniz. Değiştirilmiş bir sürümü dağıtırsanız veya ağ üzerinden hizmet olarak sunarsanız, kaynak kodunu aynı lisansla açmanız gerekir. Üçüncü taraf bağımlılıklar ve `vendor/` benzeri dizinlerdeki bileşenler kendi lisanslarıyla gelir.
 
 Telif hakkı (c) 2026 turer73.
