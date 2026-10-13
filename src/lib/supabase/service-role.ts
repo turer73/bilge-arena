@@ -1,3 +1,4 @@
+import 'server-only'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.client'
 import { resolveAcademyServerSupabaseOrigin } from '@/lib/auth/isolated-test'
