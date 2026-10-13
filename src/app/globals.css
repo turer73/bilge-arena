@@ -851,6 +851,15 @@ html[data-activation-variant='micro'] .activation-micro {
   display: flex;
 }
 
+/* Mobilde ilk ekran metnini giris animasyonunda gizleme: yavas cihazlarda
+   metin LCP'sini boyama sonrasina tasiyor. Genis ekranda hareket korunur. */
+@media (max-width: 767px) {
+  .landing-hero-copy .animate-fadeUp {
+    animation: none;
+    will-change: auto;
+  }
+}
+
 /* ============================================================
    Reduced Motion — Erisebilirlik
    Animasyonlari tamamen kapat (vestibular rahatsizliklar icin)

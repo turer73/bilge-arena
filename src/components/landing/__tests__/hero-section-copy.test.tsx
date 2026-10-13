@@ -25,7 +25,9 @@ import { HeroSection } from '../hero-section'
 describe('mobile home hero', () => {
   it('matches the desktop promise and game/study routes by default', () => {
     render(<HeroSection />)
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Bilginle yeni dünyalar aç.')
+    const heading = screen.getByRole('heading', { level: 1 })
+    expect(heading).toHaveTextContent('Bilginle yeni dünyalar aç.')
+    expect(heading.closest('.landing-hero-copy')).toBeInTheDocument()
     expect(screen.getByText(/Bir oyunla kendine meydan oku/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Oyunları keşfet/ })).toHaveAttribute('href', '/arena')
     expect(screen.getByRole('link', { name: /Ders çalış/ })).toHaveAttribute('href', '/arena/calisma')

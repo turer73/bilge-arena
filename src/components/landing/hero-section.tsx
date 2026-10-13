@@ -298,7 +298,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
           </div>
 
           {/* ── Sol — Metin ── */}
-          <div className="text-center lg:text-left">
+          <div className="landing-hero-copy text-center lg:text-left">
             {/* Status badge */}
             <div className="animate-fadeUp will-change-[transform,opacity] mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--focus-border)] bg-[var(--focus-bg)] px-3 py-1
               md:mb-6 md:px-4 md:py-1.5
