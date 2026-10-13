@@ -24,7 +24,7 @@ import { HeroSection } from '../hero-section'
 
 describe('mobile home hero', () => {
   it('matches the desktop promise and game/study routes by default', () => {
-    render(<HeroSection />)
+    const { container } = render(<HeroSection />)
     const heading = screen.getByRole('heading', { level: 1 })
     expect(heading).toHaveTextContent('Bilginle yeni dünyalar aç.')
     expect(heading.closest('.landing-hero-copy')).toBeInTheDocument()
@@ -32,6 +32,7 @@ describe('mobile home hero', () => {
     expect(screen.getByRole('link', { name: /Oyunları keşfet/ })).toHaveAttribute('href', '/arena')
     expect(screen.getByRole('link', { name: /Ders çalış/ })).toHaveAttribute('href', '/arena/calisma')
     expect(screen.getByRole('img', { name: 'Bilge Arena' })).toHaveAttribute('sizes', expect.stringContaining('130px'))
+    expect(container.querySelector('.activation-control')).toHaveClass('order-last', 'md:order-first', 'lg:order-last')
   })
 
   it('preserves published CMS copy and CTA destinations', () => {
