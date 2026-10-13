@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { REHBER_ARTICLES } from '@/lib/content/rehber'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
+import { serializeJsonLd } from '@/lib/seo/serialize-json-ld'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
@@ -39,7 +40,7 @@ export default function RehberPage() {
     <div className="mx-auto max-w-[900px] px-6 py-12 lg:px-8">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(blogJsonLd) }}
       />
 
       <section className="mb-12 text-center">
