@@ -32,8 +32,8 @@ const CONTACT_ITEMS = [
     icon: '🛠️',
     title: 'Teknik Destek',
     desc: 'Hesap sorunları, hata bildirimleri ve teknik konular için.',
-    value: 'destek@bilgearena.com',
-    href: 'mailto:destek@bilgearena.com',
+    value: 'iletisim@bilgearena.com',
+    href: 'mailto:iletisim@bilgearena.com',
   },
   {
     icon: '🤝',
@@ -84,7 +84,7 @@ const FAQ = [
   },
   {
     q: 'Soru önermek mümkün mü?',
-    a: 'Evet! Doğru kaynaklara dayalı, özgün sorularınızı destek@bilgearena.com adresine gönderebilirsiniz. Soru bankasına katkı sağlayan kullanıcılara özel rozet veriyoruz.',
+    a: 'Evet! Doğru kaynaklara dayalı, özgün sorularınızı iletisim@bilgearena.com adresine gönderebilirsiniz. Soru bankasına katkı sağlayan kullanıcılara özel rozet veriyoruz.',
   },
   {
     q: 'Platform tamamen ücretsiz mi?',
@@ -92,7 +92,7 @@ const FAQ = [
   },
   {
     q: 'Hesabımı nasıl silebilirim?',
-    a: 'Hesabınızı silmek için destek@bilgearena.com adresine kayıtlı e-posta adresinizden yazmanız yeterlidir. Talebiniz 5 iş günü içinde işleme alınır.',
+    a: 'Hesabınızı silmek için iletisim@bilgearena.com adresine kayıtlı e-posta adresinizden yazmanız yeterlidir. Talebiniz 5 iş günü içinde işleme alınır.',
   },
 ]
 

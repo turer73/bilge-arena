@@ -74,7 +74,7 @@ export default function ClassroomSharingConsentPage() {
             Sınıflarım ekranından sınıftan ayrılarak rızanızı istediğiniz zaman geri çekebilirsiniz. Kurumun yeni
             ilerleme verilerinize erişimi ve yeni ödev erişiminiz bu işlemle kesilir. Geri çekme ileriye yönelik
             sonuç doğurur; daha önce hukuka uygun gerçekleştirilen işlemleri geçersiz kılmaz. Ayrıca{' '}
-            <strong>destek@bilgearena.com</strong> adresine başvurabilirsiniz.
+            <strong>iletisim@bilgearena.com</strong> adresine başvurabilirsiniz.
           </p>
         </section>
 
