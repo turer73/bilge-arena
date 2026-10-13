@@ -209,6 +209,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
                   alt={hasMascot ? 'Bilge Chan' : 'Bilge Arena'}
                   width={440}
                   height={440}
+                  loading="eager"
                   fetchPriority="high"
                   className={`
                     ${hasMascot
