@@ -70,6 +70,7 @@ export function AcademyHome({ sections, elements, gameCounts, featuredResources,
               <Link href={primary.href} className={styles.primary}><Swords size={19} aria-hidden="true" />{primary.text}<ArrowRight size={18} aria-hidden="true" /></Link>
               <Link href={secondary.href} className={styles.secondary}><BookOpenText size={19} aria-hidden="true" />{secondary.text}</Link>
             </div>
+            <Link href="/arena/kisisellestir" className={styles.mobileThemeLink}><Palette size={17} aria-hidden="true" /> Renklerini ve rehberini seç <ArrowRight size={16} aria-hidden="true" /></Link>
             <p className={styles.examNote}>LGS · TYT · AYT · YDT <span>Hedefin farklı, yolculuk senin.</span></p>
             {miniStats.length > 0 && <dl className={styles.configuredStats}>{miniStats.map((value, index) => <div key={index}><dt>{['Soru', 'Oyun', 'Sonsuza dek'][index]}</dt><dd>{value}</dd></div>)}</dl>}
           </div>

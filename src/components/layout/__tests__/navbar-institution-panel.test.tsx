@@ -49,7 +49,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Navbar institution panel entry', () => {
-  it.each(['/', '/arena', '/arena/calisma', '/arena/kisisellestir', '/arena/magaza', '/oda', '/oda/ABC123', '/arena/matematik', '/arena/turkce', '/arena/fen', '/arena/sosyal', '/arena/wordquest', '/arena/kule', '/arena/fethet', '/arena/profil', '/arena/siralama', '/arena/arkadaslar', '/arena/yanlislarim', '/nasil-calisir', '/hakkinda'])('keeps the academy header on %s without unmounting theme synchronization', (route) => {
+  it.each(['/arena', '/arena/calisma', '/arena/kisisellestir', '/arena/magaza', '/oda', '/oda/ABC123', '/arena/matematik', '/arena/turkce', '/arena/fen', '/arena/sosyal', '/arena/wordquest', '/arena/kule', '/arena/fethet', '/arena/profil', '/arena/siralama', '/arena/arkadaslar', '/arena/yanlislarim', '/nasil-calisir', '/hakkinda'])('keeps the academy header on %s without unmounting theme synchronization', (route) => {
     mockUsePathname.mockReturnValue(route)
     vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
     render(<Navbar />)
@@ -65,7 +65,16 @@ describe('Navbar institution panel entry', () => {
     expect(screen.getByText('Bilge Arena')).toBeInTheDocument()
   })
 
-  it.each(['/', '/arena/matematik', '/arena/profil', '/arena/siralama', '/arena/arkadaslar', '/arena/yanlislarim', '/arena/magaza', '/nasil-calisir', '/hakkinda'])('preserves the mobile header on %s', (route) => {
+  it('shows the Academy brand on the mobile home page', () => {
+    mockUsePathname.mockReturnValue('/')
+    mockUseWideStudy.mockReturnValue(false)
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
+    render(<Navbar />)
+    expect(screen.getByRole('link', { name: 'Bilge Arena ana sayfa' }).querySelector('img')).toHaveAttribute('src', '/academy/brand-crest-orbit.png')
+    expect(screen.getByRole('button', { name: 'Tema seç' }).closest('[data-navbar-theme]')).toHaveClass('hidden')
+  })
+
+  it.each(['/arena/matematik', '/arena/profil', '/arena/siralama', '/arena/arkadaslar', '/arena/yanlislarim', '/arena/magaza', '/nasil-calisir', '/hakkinda'])('preserves the mobile header on %s', (route) => {
     mockUsePathname.mockReturnValue(route)
     mockUseWideStudy.mockReturnValue(false)
     vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))

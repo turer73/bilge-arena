@@ -17,8 +17,8 @@ import { trUpper } from '@/lib/utils/tr-text'
 import { GAME_SLUGS } from '@/lib/constants/games'
 import { useWideStudy } from '@/lib/hooks/use-wide-study'
 
-// These routes already render the wide academy UI. Keep the existing mobile
-// header and the separate institution/classroom surfaces unchanged.
+// These routes render the wide academy UI. The home page also uses Academy
+// branding on mobile; other game routes keep their existing mobile header.
 const WIDE_ACADEMY_ROUTES = new Set([
   '/',
   ...GAME_SLUGS.map(game => `/arena/${game}`),
@@ -53,7 +53,7 @@ export function Navbar() {
   const academyArea = pathname === '/arena' || pathname === '/arena/calisma' || pathname === '/arena/kisisellestir' || pathname === '/oda' || pathname.startsWith('/oda/') || (wide && WIDE_ACADEMY_ROUTES.has(pathname))
   const academyMarketingRoute = pathname === '/nasil-calisir' || pathname === '/hakkinda' || pathname === '/kurumlar'
   const academyMarketingArea = wide && academyMarketingRoute
-  const academyVisualArea = academyArea || academyMarketingArea
+  const academyVisualArea = pathname === '/' || academyArea || academyMarketingArea
   const activeNavHref = pathname === '/arena/calisma'
     ? '/arena/calisma'
     : pathname === '/arena/siralama'
@@ -124,6 +124,7 @@ export function Navbar() {
   return (
     <nav
       data-app-navbar
+      data-user-session={user ? '' : undefined}
       data-academy-marketing-navbar={academyMarketingArea ? '' : undefined}
       style={academyMarketingStyle}
       className={`fixed inset-x-0 top-0 z-50 transition-[background-color,backdrop-filter,border-color,box-shadow] duration-500 ${pathname === '/arena' ? 'max-lg:hidden' : ''} ${
@@ -162,7 +163,7 @@ export function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          <div data-navbar-theme className={academyVisualArea ? 'md:hidden' : undefined}>
+          <div data-navbar-theme className={pathname === '/' ? 'hidden' : academyVisualArea ? 'md:hidden' : undefined}>
             <ThemeToggle />
           </div>
 

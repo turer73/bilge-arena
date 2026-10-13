@@ -376,7 +376,7 @@ export function KisisellestirClient() {
       <div data-studio-screen className="mx-auto min-h-dvh max-w-md bg-[var(--app-bg)] px-4 py-16 text-center md:max-w-[1180px] md:pt-0">
         <StudioShellStyle />
         <AcademyTabletNav active="personalize" />
-        <div className="mb-8 hidden md:block">
+        <div className="mb-8">
           <h1 className="mb-5 pt-6 text-left text-2xl font-extrabold">Kişiselleştir</h1>
           <div className="mx-auto grid max-w-[900px] gap-5 text-left">
           <ThemeToggle variant="panel" />
@@ -386,8 +386,7 @@ export function KisisellestirClient() {
           <Link href="/arena/calisma" className="mt-3 inline-block text-sm font-semibold text-[var(--app-accent-text)]">← Ders Çalış’a dön</Link>
         </div>
         <div className="mb-4 text-5xl">🎨</div>
-        <h1 className="mb-2 text-xl font-bold md:hidden">Giriş Yapmanız Gerekiyor</h1>
-        <h2 className="mb-2 hidden text-xl font-bold md:block">Profilini de kişiselleştir</h2>
+        <h2 className="mb-2 text-xl font-bold">Profilini de kişiselleştir</h2>
         <p className="mb-6 text-sm text-[var(--text-sub)]">
           Profilini kişiselleştirmek için giriş yap.
         </p>
@@ -429,7 +428,7 @@ export function KisisellestirClient() {
         </div>
       </section>
 
-      <div data-studio-settings className="mb-5 hidden gap-5 md:grid md:grid-cols-2"><ThemeToggle variant="panel" /><BilgePersonalization /></div>
+      <div data-studio-settings className="mb-5 grid gap-5 md:grid-cols-2"><ThemeToggle variant="panel" /><BilgePersonalization /></div>
       <div data-studio-layout className="grid min-w-0 gap-5 md:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
         {/* Canlı önizleme — masaüstünde yapışkan */}
         <div className="min-w-0 md:sticky md:top-4 md:self-start lg:top-[calc(var(--navbar-h)+1.5rem)]">
