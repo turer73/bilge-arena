@@ -270,7 +270,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
           </div>
 
           {/* A/B varyanti: logo alani yerine ilk degeri uyelikten once yasatir. */}
-          <div className="activation-micro relative order-first w-full items-center justify-center lg:order-last lg:min-h-[620px] 2xl:min-h-[720px]">
+          <div className="activation-micro relative order-first min-h-[28rem] w-full items-center justify-center lg:order-last lg:min-h-[620px] 2xl:min-h-[720px]">
             <ActivationMicroQuizSlot />
           </div>
 
