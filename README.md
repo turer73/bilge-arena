@@ -23,13 +23,21 @@ npm run dev
 
 ```bash
 npm run lint
+npm run lint:migrations
+npm run lint:migration-grants
 npm run type-check
-npm test
+npm test                    # src/ uygulama testleri
+npm run test:db             # ayrı veritabanı sözleşme testleri
 npm run build
-npm run test:e2e
 ```
 
-Veritabanı migration ve soru havuzu işlemlerini üretim verisine karşı rutin kurulum adımı olarak çalıştırmayın. Bunlar ayrı erişim, inceleme ve yayın prosedürleri gerektirir.
+Tarayıcı smoke testleri için önce `npx playwright install chromium` çalıştırın ve `.env.local` içinde geçerli Supabase public değerlerini sağlayın. CI, service-role gerektirmeyen senaryolarla sınırlı şu komutu çalıştırır:
+
+```bash
+npm run test:e2e -- --project=chromium e2e/oda-routes.spec.ts e2e/proxy-admin-guard.spec.ts e2e/tyt-social-preparation.spec.ts e2e/controlled-measurement.spec.ts
+```
+
+`npm run test:e2e` tam paketi, yukarıdaki smoke testinden farklı olarak çalışan arka uç ve ilgili `SUPABASE_SERVICE_KEY` gibi sunucu sırları gerektirir. Sırları Git'e veya PR'a koymayın. Veritabanı migration ve soru havuzu işlemlerini üretim verisine karşı rutin kurulum adımı olarak çalıştırmayın; bunlar ayrı erişim, inceleme ve yayın prosedürleri gerektirir.
 
 ## Depo haritası
 
