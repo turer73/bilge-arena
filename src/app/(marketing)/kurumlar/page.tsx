@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 }
 
 const sections = [
-  ['#nasil-isler', 'Nasıl işler?'],
+  ['#workflow', 'Nasıl işler?'],
   ['#kimler-icin', 'Kimler kullanır?'],
   ['#ogrenci-deneyimi', 'Öğrenci nasıl çalışır?'],
   ['#neler-takip-edilir', 'Neleri takip edersiniz?'],
@@ -116,7 +116,7 @@ export default function InstitutionsPage() {
 
       <nav className={styles.contents} aria-label="Kurum tanıtımı bölümleri">{sections.map(([href, label]) => <a key={href} href={href}>{label}</a>)}</nav>
 
-      <section id="nasil-isler" className={styles.section} aria-labelledby="workflow-title">
+      <section id="workflow" className={styles.section} aria-labelledby="workflow-title">
         <header className={styles.heading}><p className={styles.eyebrow}>Gör · Planla · Uygula · Değerlendir</p><h2 id="workflow-title">Çalışma ile takip aynı döngüde.</h2><p>Paneldeki bilgi, sonraki ders veya görüşme için bir başlangıçtır. Planı öğrencinizin koşullarına göre siz şekillendirirsiniz.</p></header>
         <ol className={styles.workflow}>{workflow.map((step, index) => <li key={step.title}><span className={styles.stepNumber}>{index + 1}</span><div><h3>{step.title}</h3><p>{step.body}</p></div></li>)}</ol>
       </section>
