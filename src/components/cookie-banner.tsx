@@ -76,7 +76,7 @@ export function CookieBanner() {
                 Detaylar için{' '}
                 <Link
                   href="/cerez-politikasi"
-                  className="font-medium text-[var(--focus)] underline underline-offset-2"
+                  className="font-medium text-[var(--focus-text)] underline underline-offset-2"
                 >
                   Çerez Politikamızı
                 </Link>{' '}
@@ -98,7 +98,7 @@ export function CookieBanner() {
                 </button>
                 <button
                   onClick={() => setView(view === 'settings' ? 'banner' : 'settings')}
-                  className="flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-medium text-[var(--focus)] transition-colors hover:bg-[var(--focus)]/10"
+                  className="flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-medium text-[var(--focus-text)] transition-colors hover:bg-[var(--focus)]/10"
                 >
                   Özelleştir
                   {view === 'settings' ? <ChevronUp size={14} /> : <ChevronDown size={14} />}

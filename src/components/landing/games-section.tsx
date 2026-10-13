@@ -49,7 +49,7 @@ const GAMES = [
     name: 'Sosyal Atölyesi',
     sub: 'TYT · LGS',
     desc: 'Tarih, Coğrafya, Felsefe — TYT ve LGS Sosyal Bilimler sorularıyla pratik yap.',
-    color: { m: 'var(--wisdom)', l: 'var(--wisdom-light)', bg: 'var(--wisdom-bg)', border: 'var(--wisdom-border)' },
+    color: { m: 'var(--wisdom)', l: 'var(--wisdom-light)', text: 'var(--wisdom-text)', bg: 'var(--wisdom-bg)', border: 'var(--wisdom-border)' },
     count: '1.183 soru',
     ready: true,
     colorKey: 'wisdom',
@@ -149,7 +149,7 @@ export function GamesSection({ config, gameCounts }: GamesSectionProps = {}) {
                 {/* Icerik */}
                 <div
                   className="mb-1.5 text-xs font-bold uppercase tracking-widest"
-                  style={{ color: g.color.l }}
+                  style={{ color: 'text' in g.color ? g.color.text : g.color.l }}
                 >
                   {g.sub}
                 </div>
