@@ -7,7 +7,8 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 import { render, waitFor } from '@testing-library/react'
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/arena/siralama' }))
+const route = vi.hoisted(() => ({ pathname: '/arena/siralama' }))
+vi.mock('next/navigation', () => ({ usePathname: () => route.pathname }))
 
 const auth = vi.hoisted(() => ({
   value: { profile: { owned_backgrounds: ['none'], role: 'user' } as Record<string, unknown> | null },
@@ -27,6 +28,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   auth.value.profile = { owned_backgrounds: ['none'], role: 'user' }
+  route.pathname = '/arena/siralama'
 })
 
 describe('GlobalBackground (zemin)', () => {
@@ -46,5 +48,16 @@ describe('GlobalBackground (zemin)', () => {
     localStorage.setItem('bilge-arena-zemin-v1', 'gece-mavisi')
     const { container } = render(<GlobalBackground />)
     await waitFor(() => expect(container.querySelector('.fixed')).toBeTruthy())
+  })
+
+  test('arena dışında arka plan servisini çağırmaz, arena rotasına geçince yükler', async () => {
+    route.pathname = '/'
+    const { container, rerender } = render(<GlobalBackground />)
+    expect(container.firstChild).toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    route.pathname = '/arena'
+    rerender(<GlobalBackground />)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/backgrounds'))
   })
 })

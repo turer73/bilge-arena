@@ -34,6 +34,7 @@ import {
  */
 export function GlobalBackground() {
   const pathname = usePathname()
+  const isArenaRoute = pathname?.startsWith('/arena') ?? false
   const profile = useAuthStore((s) => s.profile)
   const [backgroundId, setBackgroundId] = useState('none')
   const [resolution, setResolution] = useState<VideoResolution>('k2')
@@ -42,6 +43,7 @@ export function GlobalBackground() {
 
   // localStorage zemin seçimi — stüdyoda değişince anında yansısın
   useEffect(() => {
+    if (!isArenaRoute) return
     const read = () => {
       try {
         const saved = localStorage.getItem(ZEMIN_STORAGE_KEY)
@@ -57,20 +59,22 @@ export function GlobalBackground() {
       window.removeEventListener('storage', read)
       window.removeEventListener('zemin-changed', read)
     }
-  }, [])
+  }, [isArenaRoute])
 
   // prefers-reduced-motion → video yerine poster
   useEffect(() => {
+    if (!isArenaRoute) return
     if (typeof window === 'undefined' || !window.matchMedia) return
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
     setReducedMotion(mq.matches)
     const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
-  }, [])
+  }, [isArenaRoute])
 
   // yayındaki video temalar (mağaza/profil ile aynı kaynak)
   useEffect(() => {
+    if (!isArenaRoute) return
     let active = true
     fetch(PUBLISHED_BACKGROUNDS_ENDPOINT)
       .then((r) => (r.ok ? r.json() : { backgrounds: [] }))
@@ -81,10 +85,10 @@ export function GlobalBackground() {
     return () => {
       active = false
     }
-  }, [])
+  }, [isArenaRoute])
 
   // Yalnız giriş sonrası arena alanında
-  if (!pathname?.startsWith('/arena')) return null
+  if (!isArenaRoute) return null
 
   const catalog: StoreBackgroundItem[] = [...CSS_STORE_ITEMS, ...videoItems]
   // Personel (RBAC rolü) tüm temalara sahip → zemin guard'ı staff için bypass.
