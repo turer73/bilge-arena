@@ -16,9 +16,11 @@ import { parseQuestionRows, toPublicQuestion } from '@/lib/utils/question-public
 import { fetchDueQuestions } from '@/lib/review/due-questions'
 import { getFsrsReviewRollout } from '@/lib/review/fsrs-rollout'
 import {
-  filterTytSocialQuestionIds,
+  isTytSocialSelectionEpochChanged,
   issueVerifiedAttempt,
+  readTytSocialLearningSnapshot,
   toPublicVerifiedQuestions,
+  type TytSocialLearningEpoch,
 } from '@/lib/verified-attempts'
 import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 
@@ -253,20 +255,34 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  let tytSocialEpoch: TytSocialLearningEpoch | undefined
   if (tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT') {
     try {
       const candidateIds = [...new Set([
         ...questions.map(question => question.id),
         ...reviewQuestions.map(question => question.id),
       ])]
-      const allowedIds = new Set(await filterTytSocialQuestionIds(admin, user.id, candidateIds))
+      const selection = await readTytSocialLearningSnapshot(admin, user.id, candidateIds)
+      if (selection.status !== 'active') {
+        return NextResponse.json(
+          { error: selection.status === 'setup_required'
+            ? 'TYT Sosyal cevaplama düzeni seçilmelidir'
+            : 'TYT Sosyal çalışma kapsamı kullanılamıyor' },
+          { status: selection.status === 'setup_required' ? 409 : 503, headers: { 'Cache-Control': 'no-store' } },
+        )
+      }
+      const allowedIds = new Set(selection.allowedQuestionIds)
       questions.splice(0, questions.length, ...questions.filter(question => allowedIds.has(question.id)))
       reviewQuestions = reviewQuestions.filter(question => allowedIds.has(question.id))
+      tytSocialEpoch = {
+        policyVersion: selection.context.policyVersion,
+        selectionEventId: selection.context.selectionEventId,
+      }
     } catch {
-      return NextResponse.json(
-        { error: 'TYT Sosyal cevaplama düzeni seçilmelidir' },
-        { status: 409, headers: { 'Cache-Control': 'no-store' } },
-      )
+      return NextResponse.json({ error: 'TYT Sosyal çalışma kapsamı okunamadı' }, {
+        status: 500,
+        headers: { 'Cache-Control': 'no-store' },
+      })
     }
   }
 
@@ -287,6 +303,7 @@ export async function GET(request: NextRequest) {
         mode,
         questionIds: issuedQuestionIds,
         examRef,
+        tytSocialEpoch,
         requestId: (() => {
           const value = request.headers.get('x-idempotency-key')
           return value && isValidUuid(value) ? value : crypto.randomUUID()
@@ -307,7 +324,13 @@ export async function GET(request: NextRequest) {
       }
       publicQuestions = nextQuestions.filter((question): question is NonNullable<typeof question> => !!question)
       publicReviewQuestions = nextReviewQuestions.filter((question): question is NonNullable<typeof question> => !!question)
-    } catch {
+    } catch (error) {
+      if (isTytSocialSelectionEpochChanged(error)) {
+        return NextResponse.json(
+          { error: 'TYT Sosyal cevaplama düzeni değişti. Yeniden deneyin.' },
+          { status: 409, headers: { 'Cache-Control': 'no-store' } },
+        )
+      }
       console.error('[/api/questions/random] verified attempt issuance failed')
       return NextResponse.json({ error: 'Deneme baslatilamadi' }, { status: 500 })
     }
