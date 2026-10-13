@@ -160,10 +160,10 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
 
         <div className="grid items-center gap-8 md:gap-12 lg:grid-cols-2 lg:gap-16">
 
-          {/* ── Maskot / Arena görseli ── */}
-          <div className="activation-control relative order-first flex h-[220px] items-center justify-center
+          {/* Telefonda başlık ve CTA önce; tablette mevcut görsel sırası korunur. */}
+          <div className="activation-control relative order-last flex h-[220px] items-center justify-center
             md:h-[320px]
-            lg:order-last lg:h-[520px]
+            md:order-first lg:order-last lg:h-[520px]
             xl:h-[620px]
             2xl:h-[720px]">
 
