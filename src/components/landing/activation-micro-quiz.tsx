@@ -366,11 +366,10 @@ export function ActivationMicroQuiz() {
               <button
                 key={item.value}
                 type="button"
-                aria-label={`${item.title}: ${item.description}`}
                 onClick={() => selectGoal(item.value)}
                 className="min-h-24 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-left transition hover:-translate-y-0.5 hover:border-[var(--focus)] hover:bg-[var(--focus-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
               >
-                <span className="block font-display text-xl font-black text-[var(--text)]">{item.title}</span>
+                <span className="block font-display text-xl font-black text-[var(--text)]">{item.title}</span>{' '}
                 <span className="mt-1 block text-sm text-[var(--text-sub)]">{item.description}</span>
               </button>
             ))}

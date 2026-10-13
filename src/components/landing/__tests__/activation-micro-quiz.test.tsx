@@ -106,7 +106,7 @@ describe('ActivationMicroQuiz', () => {
 
   it('misafir denemesi başladıktan sonra oturum açılması mevcut soruyu kaybettirmez', async () => {
     const view = render(<ActivationMicroQuiz />)
-    fireEvent.click(screen.getByRole('button', { name: /LGS: Ortaokul hedefim/i }))
+    fireEvent.click(screen.getByRole('button', { name: /LGS Ortaokul hedefim/i }))
     await screen.findByText('Deneme sorusu 1')
 
     mocks.auth.user = { id: 'signed-in-during-preview' }
@@ -119,7 +119,7 @@ describe('ActivationMicroQuiz', () => {
   it('sinav hedefini ve ilk soru gorunumunu olcer', async () => {
     render(<ActivationMicroQuiz />)
 
-    fireEvent.click(screen.getByRole('button', { name: /LGS: Ortaokul hedefim/i }))
+    fireEvent.click(screen.getByRole('button', { name: /LGS Ortaokul hedefim/i }))
 
     await screen.findByText('Deneme sorusu 1')
     expect(mocks.fetchPreviewQuestions).toHaveBeenCalledWith('turkce', {
@@ -133,7 +133,7 @@ describe('ActivationMicroQuiz', () => {
 
   it('uc soruyu notlandirir ve durust deneme XP sonucunu gosterir', async () => {
     render(<ActivationMicroQuiz />)
-    fireEvent.click(screen.getByRole('button', { name: /TYT · AYT: Üniversite hedefim/i }))
+    fireEvent.click(screen.getByRole('button', { name: /TYT · AYT Üniversite hedefim/i }))
 
     for (let position = 1; position <= 3; position++) {
       await screen.findByText(`Deneme sorusu ${position}`)
@@ -156,7 +156,7 @@ describe('ActivationMicroQuiz', () => {
 
   it('misafir devam CTA’sinda onaydan sonra Google girisini intent token ile baslatir', async () => {
     render(<ActivationMicroQuiz />)
-    fireEvent.click(screen.getByRole('button', { name: /LGS: Ortaokul hedefim/i }))
+    fireEvent.click(screen.getByRole('button', { name: /LGS Ortaokul hedefim/i }))
 
     for (let position = 1; position <= 3; position++) {
       await screen.findByText(`Deneme sorusu ${position}`)
@@ -184,7 +184,7 @@ describe('ActivationMicroQuiz', () => {
   it('onay niyeti basarisizsa Google girisini baslatmaz', async () => {
     mocks.beginLegalConsentIntent.mockRejectedValueOnce(new Error('unavailable'))
     render(<ActivationMicroQuiz />)
-    fireEvent.click(screen.getByRole('button', { name: /LGS: Ortaokul hedefim/i }))
+    fireEvent.click(screen.getByRole('button', { name: /LGS Ortaokul hedefim/i }))
 
     for (let position = 1; position <= 3; position++) {
       await screen.findByText(`Deneme sorusu ${position}`)
