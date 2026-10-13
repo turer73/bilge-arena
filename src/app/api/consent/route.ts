@@ -14,10 +14,11 @@ const consentSchema = z.object({
   value: z.object({
     essential: z.literal(true),
     analytics: z.boolean(),
+    ads: z.boolean(),
   }).strict(),
 }).strict()
 
-const COOKIE_POLICY_VERSION = 'cookie-policy@2026-05-17-v1'
+const COOKIE_POLICY_VERSION = 'cookie-policy@2026-10-13-v2'
 
 function isJson(value: unknown): value is Json {
   if (

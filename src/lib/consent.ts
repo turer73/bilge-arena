@@ -5,6 +5,7 @@ import { isCurrentBrowserPathSensitive } from '@/lib/privacy/telemetry-policy'
 export interface CookieConsent {
   essential: true // her zaman true
   analytics: boolean
+  ads: boolean
   version: number
   date: string
 }
@@ -12,7 +13,8 @@ export interface CookieConsent {
 export type ConsentType = 'cookie'
 
 const STORAGE_KEY = 'bilge-arena-cookie-consent'
-const CONSENT_VERSION = 1
+const CONSENT_VERSION = 2
+export const COOKIE_CONSENT_CHANGED_EVENT = 'cookie-consent-changed'
 
 function isJson(value: unknown): value is Json {
   if (
@@ -37,47 +39,82 @@ function isJson(value: unknown): value is Json {
 
 // ─── localStorage helpers ────────────────────────────────
 
-export function getCookieConsent(): CookieConsent | null {
-  if (typeof window === 'undefined') return null
+function parseCookieConsent(raw: string | null): CookieConsent | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw)
-    // Eski format uyumlulugu ('accepted' string)
-    if (typeof parsed === 'string') return null
+    // v1 bundled advertising with analytics. Never infer advertising consent
+    // from an old preference; require a fresh, granular choice.
+    if (
+      !parsed || typeof parsed !== 'object' || parsed.version !== CONSENT_VERSION
+      || parsed.essential !== true || typeof parsed.analytics !== 'boolean'
+      || typeof parsed.ads !== 'boolean' || typeof parsed.date !== 'string'
+    ) return null
     return parsed as CookieConsent
   } catch {
     return null
   }
 }
 
-export function setCookieConsent(analytics: boolean): CookieConsent {
+export function getCookieConsent(): CookieConsent | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return parseCookieConsent(localStorage.getItem(STORAGE_KEY))
+  } catch {
+    return null
+  }
+}
+
+function updateConsentMode(consent: CookieConsent | null, previous: CookieConsent | null): void {
+  if (isCurrentBrowserPathSensitive() || typeof window.gtag !== 'function') return
+
+  window.gtag('consent', 'update', {
+    analytics_storage: consent?.analytics === true ? 'granted' : 'denied',
+    ad_storage: consent?.ads === true ? 'granted' : 'denied',
+    // No separate personalization choice exists, so never infer it.
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+  })
+  // Queue the destination before the external analytics tag is mounted.
+  if (consent?.analytics === true && previous?.analytics !== true) {
+    window.gtag('js', new Date())
+    window.gtag('config', 'G-HDCR9YRQJ3', {
+      page_path: window.location.pathname,
+      anonymize_ip: true,
+    })
+  }
+}
+
+/** Synchronize this document before a cross-tab grant mounts external scripts. */
+export function syncCookieConsentFromStorageEvent(event: StorageEvent): void {
+  if (event.key !== STORAGE_KEY) return
+  updateConsentMode(parseCookieConsent(event.newValue), parseCookieConsent(event.oldValue))
+}
+
+export function setCookieConsent({ analytics, ads }: Pick<CookieConsent, 'analytics' | 'ads'>): CookieConsent {
+  const previous = getCookieConsent()
   const consent: CookieConsent = {
     essential: true,
     analytics,
+    ads,
     version: CONSENT_VERSION,
     date: new Date().toISOString(),
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(consent))
 
-  // GA Consent Mode v2 guncelle — analytics + reklam depolama birlikte
-  if (!isCurrentBrowserPathSensitive() && typeof window.gtag === 'function') {
-    window.gtag('consent', 'update', {
-      analytics_storage: analytics ? 'granted' : 'denied',
-      ad_storage: analytics ? 'granted' : 'denied',
-      ad_user_data: analytics ? 'granted' : 'denied',
-      ad_personalization: analytics ? 'granted' : 'denied',
-    })
-  }
+  // Analytics and advertising are independent Consent Mode v2 purposes.
+  updateConsentMode(consent, previous)
 
+  window.dispatchEvent(new Event(COOKIE_CONSENT_CHANGED_EVENT))
   // Supabase'e logla (fire-and-forget)
-  logConsent('cookie', { essential: true, analytics })
+  logConsent('cookie', { essential: true, analytics, ads })
 
   return consent
 }
 
 export function clearCookieConsent() {
   localStorage.removeItem(STORAGE_KEY)
+  window.dispatchEvent(new Event(COOKIE_CONSENT_CHANGED_EVENT))
 }
 
 // ─── Banner acma event'i ─────────────────────────────────
