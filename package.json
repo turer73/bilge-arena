@@ -73,7 +73,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@sentry/nextjs": "^10.75.0",
     "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.117.2",
+    "@supabase/supabase-js": "^2.117.3",
     "@upstash/ratelimit": "^2.2.0",
     "@upstash/redis": "^1.39.0",
     "clsx": "^2.1.1",
