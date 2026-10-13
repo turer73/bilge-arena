@@ -138,13 +138,15 @@ describe('POST /api/chat — INJECTION_PATTERNS positive (9/9)', () => {
       const insertArg = (mockAdminLogsInsert.mock.calls[0] as unknown[])[0] as {
         admin_id: string
         action: string
-        details: { pattern: string; excerpt: string }
+        details: { pattern: string; messageLength: number }
       }
       expect(insertArg.action).toBe('chat_injection_blocked')
       expect(insertArg.admin_id).toBe(VALID_USER.id)
       // Pattern source loglanmis (forensics icin sart)
       expect(insertArg.details.pattern).toBeTruthy()
-      expect(insertArg.details.excerpt).toContain(input.slice(0, 50))
+      expect(insertArg.details.messageLength).toBe(input.length + 1) // boş questionContext ayracı
+      expect(insertArg.details).not.toHaveProperty('excerpt')
+      expect(insertArg.details).not.toHaveProperty('ip')
       // DeepSeek cagrilmamali (early reject)
       expect(mockFetch).not.toHaveBeenCalled()
     },
