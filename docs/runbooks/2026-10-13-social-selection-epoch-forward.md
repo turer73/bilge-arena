@@ -31,6 +31,11 @@ Client hooks invalidate on the selection epoch and hide unsettled state.
 An uncertain selection PUT does not leave the old selection usable. A late
 completion acknowledgement cannot mark a different plan/context complete.
 Completion is shown only after a valid server acknowledgement.
+The current desktop home shares its one policy state with the tools slot through
+an actor/game/exam-scoped context. Mastery hides during an unsettled selection,
+without a duplicate policy fetch. Closed-flag preparation/pilot behavior remains.
+GET completion IDs are projected onto unique current-plan IDs; stale or foreign
+PATCH acknowledgements are rejected rather than applying optimistic progress.
 
 ## Verification and limits
 
