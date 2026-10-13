@@ -2,13 +2,15 @@
 
 import Link from 'next/link'
 import { BrainCircuit, CalendarDays, ChevronRight, Sparkles, Target } from 'lucide-react'
-import { useState, type CSSProperties } from 'react'
+import { useContext, useState, type CSSProperties } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { MasteryActionCard } from '@/components/study/mastery-action-card'
 import { InstitutionWeeklyProgramCard } from '@/components/study/institution-weekly-program-card'
 import { StudyAssistantLauncher } from '@/components/study/study-assistant-launcher'
 import { DiagnosticExplainerDialog } from '@/components/study/diagnostic-explainer-dialog'
+import { StudyTytSocialPolicyContext } from '@/components/study/tyt-social-policy-context'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 import styles from './academy.module.css'
 
 export function DesktopStudyTools({
@@ -24,6 +26,12 @@ export function DesktopStudyTools({
   const [guestDiagnosticOpen, setGuestDiagnosticOpen] = useState(false)
   const gameDef = GAMES[game]
   const diagnosticScope = diagnosticExamRef === undefined ? examRef : diagnosticExamRef
+  const sharedPolicy = useContext(StudyTytSocialPolicyContext)
+  const scopedSocial = game === 'sosyal' && diagnosticScope === 'TYT' && isTytSocialV2ClientEnabled()
+  const policy = sharedPolicy?.game === game && sharedPolicy.examRef === diagnosticScope
+    && sharedPolicy.userId === user?.id ? sharedPolicy.policy : null
+  const socialBlocked = scopedSocial && (!policy?.eligible || policy.status !== 'active'
+    || policy.loading || policy.saving || !policy.selectionEpoch)
 
   return <section
     id="calisma-araclari"
@@ -69,7 +77,8 @@ export function DesktopStudyTools({
         </div>
       : <div className={styles.studyToolsGrid}>
         <div className={styles.mainColumn}>
-          <MasteryActionCard game={game} userId={user.id} examRef={diagnosticScope} diagnosticPresentation="explained" />
+          <MasteryActionCard game={game} userId={socialBlocked ? undefined : user.id} examRef={diagnosticScope}
+            diagnosticPresentation="explained" {...(scopedSocial ? { policyEpoch: policy?.selectionEpoch ?? null } : {})} />
           <InstitutionWeeklyProgramCard />
         </div>
         <StudyAssistantLauncher key={`${game}:${examRef}`} game={game} examRef={examRef} />

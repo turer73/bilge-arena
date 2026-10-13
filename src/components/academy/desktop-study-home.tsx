@@ -16,6 +16,7 @@ import { AcademyTabletNav } from './academy-tablet-nav'
 import { DesktopDailyPlan } from './desktop-daily-plan'
 import { useTytSocialExamPolicy } from '@/lib/hooks/use-tyt-social-exam-policy'
 import { TytSocialExamPolicyCardView } from '@/components/study/tyt-social-exam-policy-card'
+import { StudyTytSocialPolicyContext } from '@/components/study/tyt-social-policy-context'
 import { studyHref } from '@/lib/utils/study-href'
 import { getPreparationLabel } from '@/lib/utils/lobby-presentation'
 import styles from './academy.module.css'
@@ -147,7 +148,9 @@ export function DesktopStudyHome(props: DesktopStudyHomeProps) {
           </nav>
         </aside>
       </div>
-      {props.studyTools}
+      <StudyTytSocialPolicyContext.Provider value={{ game: props.game, examRef: props.examRef, userId: props.userId, policy }}>
+        {props.studyTools}
+      </StudyTytSocialPolicyContext.Provider>
 {dialog === 'support' && <AcademyDialog title="Bilge’den küçük bir not" onClose={() => setDialog(null)}><div className={styles.support}><Image src={bilgeImage(character, ready && props.pathComplete ? 'kutlayan' : 'destekleyici')} alt={(character === 'male' ? 'Erkek' : 'Kadın') + ' Bilge destek veriyor'} width={220} height={220} sizes="220px" /><div><Sparkles size={24} aria-hidden="true" /><blockquote>{ready && props.pathComplete ? 'Bu yolu tamamladın. Emeğini bir anlığına kutlayalım.' : 'Her şeyi ilk seferde bilmek zorunda değilsin. Küçük bir adımla başlayalım.'}</blockquote><p className={styles.secondary}>Bu bir destek mesajıdır. Konu anlatımı veya soru yardımı için çalışma araçlarını açabilirsin.</p><Link href="/arena/calisma#calisma-araclari" className={styles.textLink} onClick={() => setDialog(null)}>Çalışma araçlarına git <ChevronRight size={17} /></Link></div></div></AcademyDialog>}
     </div>
   )

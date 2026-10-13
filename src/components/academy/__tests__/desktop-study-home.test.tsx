@@ -5,6 +5,9 @@ import { DesktopStudyHome, type DesktopStudyHomeProps } from '../desktop-study-h
 import { BilgePersonalization } from '../bilge-personalization'
 import { BILGE_CHARACTER_KEY, setBilgeCharacter } from '@/lib/bilge/use-bilge-character'
 import type { TodayPlanFocusView } from '@/components/study/today-plan-focus'
+import { useContext } from 'react'
+import * as policyHooks from '@/lib/hooks/use-tyt-social-exam-policy'
+import { StudyTytSocialPolicyContext } from '@/components/study/tyt-social-policy-context'
 
 vi.mock('@/components/study/today-plan-focus', () => ({ TodayPlanFocus: ({render: renderView}: {render: (view: TodayPlanFocusView) => React.ReactNode}) => renderView({
   plan: {
@@ -155,6 +158,26 @@ describe('Desktop academy integration', () => {
   it('keeps the existing study tools available below the overview', () => {
     render(<DesktopStudyHome {...props} studyTools={<div data-testid="retained-tools">Kazanım ve çalışma araçları</div>} />)
     expect(screen.getByTestId('retained-tools')).toBeInTheDocument()
+  })
+
+  it('provides the same live policy and owner scope to the tool slot', () => {
+    const policy: policyHooks.TytSocialExamPolicyState = {
+      eligible:true,status:'active',loading:false,saving:false,error:null,
+      policyVersion:'v1',selectionEffectiveAt:'2026-10-13T00:00:00Z',
+      variantCode:'questions_16_20',selectionEpoch:'epoch-A',saveSelection:vi.fn(),retry:vi.fn(),
+    }
+    const policyHook=vi.spyOn(policyHooks,'useTytSocialExamPolicy').mockReturnValue(policy)
+    const observed=vi.fn()
+    function Probe() {
+      observed(useContext(StudyTytSocialPolicyContext))
+      return <div>Shared tool probe</div>
+    }
+    const {rerender}=render(<DesktopStudyHome {...props} game="sosyal" studyTools={<Probe />} />)
+    expect(observed).toHaveBeenLastCalledWith({game:'sosyal',examRef:'TYT',userId:'student',policy})
+    const saving={...policy,saving:true,selectionEpoch:null}
+    policyHook.mockReturnValue(saving)
+    rerender(<DesktopStudyHome {...props} game="sosyal" studyTools={<Probe />} />)
+    expect(observed).toHaveBeenLastCalledWith({game:'sosyal',examRef:'TYT',userId:'student',policy:saving})
   })
 
   it('does not fetch a real daily plan in demo or expose unavailable institution tools', () => {
