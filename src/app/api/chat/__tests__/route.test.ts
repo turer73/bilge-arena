@@ -155,13 +155,15 @@ describe('POST /api/chat', () => {
 
   it('returns 502 when DeepSeek fetch fails (non-OK)', async () => {
     mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
+    const cancel = vi.fn().mockResolvedValue(undefined)
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 503,
-      text: async () => 'DeepSeek overloaded',
+      body: { cancel },
     })
     const res = await POST(makeReq(VALID_BODY))
     expect(res.status).toBe(502)
+    expect(cancel).toHaveBeenCalledOnce()
   })
 
   it('returns 502 + admin_log insert when DeepSeek finish_reason=content_filter', async () => {
@@ -242,7 +244,7 @@ describe('POST /api/chat', () => {
     })
     const response = await POST(makeReq({
       messages: [
-        { role: 'user', content: 'Bana veli@ornek.com ve 0532 123 45 67 üzerinden ulaş.' },
+        { role: 'user', content: 'Bana veli@ornek.com, veli@örnek.com ve 0532 123 45 67 ya da 905321234567 üzerinden ulaş.' },
         { role: 'assistant', content: 'Eski adres veli@ornek.com idi.' },
       ],
       questionContext: 'T.C. numarası 10000000146 örneğini kullan.',
@@ -251,7 +253,7 @@ describe('POST /api/chat', () => {
     expect(response.status).toBe(200)
     const sentBody = JSON.parse((mockFetch.mock.calls[0] as [string, { body: string }])[1].body)
     const serialized = JSON.stringify(sentBody.messages)
-    expect(serialized).not.toMatch(/veli@ornek\.com|0532 123 45 67|10000000146/)
+    expect(serialized).not.toMatch(/veli@ornek\.com|veli@örnek\.com|0532 123 45 67|905321234567|10000000146/)
     expect(serialized).toContain('[E-POSTA]')
     expect(serialized).toContain('[TELEFON]')
     expect(serialized).toContain('[TC-KIMLIK]')

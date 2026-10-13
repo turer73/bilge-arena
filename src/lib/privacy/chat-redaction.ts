@@ -1,6 +1,8 @@
-const EMAIL = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi
+const EMAIL = /(?<![\p{L}\p{N}._%+-])[\p{L}\p{N}._%+-]+@(?:[\p{L}\p{N}][\p{L}\p{N}-]*\.)+[\p{L}\p{N}-]{2,}(?![\p{L}\p{N}-])/gu
 const TURKISH_ID_CANDIDATE = /(?<!\d)[1-9](?:[\s.-]*\d){10}(?!\d)/g
-const TURKISH_PHONE = /(?<![\dA-Za-z])(?:\+90|0090|0)?[\s().-]*(?:5\d{2}|[234]\d{2})(?:[\s().-]*\d){7}(?!\d)/g
+const TURKISH_MOBILE = /(?<![\d\p{L}])(?:(?:\+90|0090|90|0)[\s().-]*)?5\d{2}(?:[\s().-]*\d){7}(?!\d)/gu
+// A bare unformatted 2/3/4-prefixed number can be an ordinary math value.
+const TURKISH_LANDLINE = /(?<![\d\p{L}])(?:(?:\+90|0090|90|0)[\s().-]*|(?=[234]\d{2}[\s().-]+))[234]\d{2}(?:[\s().-]*\d){7}(?!\d)/gu
 
 function isTurkishIdentityNumber(candidate: string): boolean {
   const digits = candidate.replace(/\D/g, '').split('').map(Number)
@@ -18,5 +20,6 @@ export function redactChatPersonalData(text: string): string {
     .replace(TURKISH_ID_CANDIDATE, (candidate) => (
       isTurkishIdentityNumber(candidate) ? '[TC-KIMLIK]' : candidate
     ))
-    .replace(TURKISH_PHONE, '[TELEFON]')
+    .replace(TURKISH_MOBILE, '[TELEFON]')
+    .replace(TURKISH_LANDLINE, '[TELEFON]')
 }

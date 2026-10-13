@@ -208,6 +208,7 @@ export async function POST(request: Request) {
     })
 
     if (!res.ok) {
+      await res.body?.cancel().catch(() => {})
       console.error('[Chat API] DeepSeek error status:', res.status)
       // Ham upstream hatası kullanıcıya veya loga yazılmaz; yalnız HTTP durumu kaydedilir.
       return NextResponse.json(
