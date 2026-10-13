@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  wide: false,
   setCharacter: vi.fn(),
   character: 'female' as 'female' | 'male',
   auth: { user: null as unknown, loading: false },
@@ -11,8 +10,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('next/image', () => ({
   default: (props: Record<string, unknown>) => {
-    const { fill: _fill, priority: _priority, loading: _loading, sizes: _sizes, ...rest } = props
-    return <img {...rest} />
+    const { fill: _fill, priority: _priority, loading: _loading, sizes: _sizes, alt, ...rest } = props
+    return <img alt={typeof alt === 'string' ? alt : ''} {...rest} />
   },
 }))
 vi.mock('@/components/privacy/document-boundary-link', () => ({
@@ -20,7 +19,6 @@ vi.mock('@/components/privacy/document-boundary-link', () => ({
     <a href={href} {...props}>{children}</a>
   ),
 }))
-vi.mock('@/lib/hooks/use-wide-study', () => ({ useWideStudy: () => mocks.wide }))
 vi.mock('@/lib/bilge/use-bilge-character', () => ({
   useBilgeCharacter: () => ({ character: mocks.character, setCharacter: mocks.setCharacter, persisted: true }),
 }))
@@ -34,11 +32,9 @@ vi.mock('../section-wrapper', () => ({
 }))
 
 import { AcademyHome } from '../academy-home'
-import { HomeSurface } from '../home-surface'
 
 const baseProps = { sections: {}, elements: [], gameCounts: {} }
 beforeEach(() => {
-  mocks.wide = false
   mocks.character = 'female'
   mocks.auth = { user: null, loading: false }
   mocks.setCharacter.mockReset()
@@ -88,6 +84,21 @@ describe('AcademyHome', () => {
     expect(screen.queryByText(/soru sayısı/i)).not.toBeInTheDocument()
   })
 
+  it('giriş yapmış kullanıcıya da yeni ana sayfayı ve ana hedefleri gösterir', () => {
+    mocks.auth.user = { id: 'returning-user' }
+    render(<AcademyHome {...baseProps} />)
+    expect(screen.getByRole('heading', { level: 1, name: /Bilginle yeni dünyalar aç/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Oyunları keşfet/i })).toHaveAttribute('href', '/arena')
+    expect(screen.getByRole('link', { name: /Ders çalış/i })).toHaveAttribute('href', '/arena/calisma')
+    expect(screen.queryByRole('heading', { name: 'Çalışmana devam et' })).not.toBeInTheDocument()
+  })
+
+  it('ana sayfa kaynaklarını ve kurumlar tanıtımını korur', () => {
+    render(<AcademyHome {...baseProps} featuredResources={<Link href="/rehber">Rehber</Link>} institutionPartnership={<Link href="/kurumlar">Kurumlar</Link>} />)
+    expect(screen.getByRole('link', { name: 'Rehber' })).toHaveAttribute('href', '/rehber')
+    expect(screen.getByRole('link', { name: 'Kurumlar' })).toHaveAttribute('href', '/kurumlar')
+  })
+
   it('CMS hero configini ve SectionWrapper bölümlerini korur', () => {
     render(<AcademyHome {...baseProps} sections={{
       hero: {
@@ -107,34 +118,5 @@ describe('AcademyHome', () => {
     for (const section of ['hero', 'stats', 'games', 'how_it_works', 'leaderboard', 'cta']) {
       expect(screen.getByTestId('section-wrapper-' + section)).toBeInTheDocument()
     }
-  })
-})
-
-describe('HomeSurface', () => {
-  it('mobilde eski children ağacını korur', () => {
-    mocks.wide = false
-    render(<HomeSurface {...baseProps}><div data-testid="legacy-home">mobil eski ağaç</div></HomeSurface>)
-    expect(screen.getByTestId('legacy-home')).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument()
-  })
-
-  it('wide ekranda AcademyHome ağacını mount eder', () => {
-    mocks.wide = true
-    render(<HomeSurface {...baseProps}><div data-testid="legacy-home">mobil eski ağaç</div></HomeSurface>)
-    expect(screen.queryByTestId('legacy-home')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
-  })
-
-  it('wide ekranda yeni anasayfayı gösterir', () => {
-    mocks.wide = true
-    render(<HomeSurface {...baseProps}><div data-testid="legacy-home">deney eski ağaç</div></HomeSurface>)
-    expect(screen.queryByTestId('legacy-home')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
-  })
-
-  it('wide ekranda sunucu kaynaklarını görünür tutar', () => {
-    mocks.wide = true
-    render(<HomeSurface {...baseProps} featuredResources={<Link href="/rehber">Rehbere git</Link>}><div>mobil içerik</div></HomeSurface>)
-    expect(screen.getByRole('link', { name: 'Rehbere git' })).toHaveAttribute('href', '/rehber')
   })
 })

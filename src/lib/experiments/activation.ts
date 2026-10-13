@@ -5,6 +5,14 @@ export const ACTIVATION_EXPERIMENT_ENABLED =
   process.env.NEXT_PUBLIC_ACTIVATION_EXPERIMENT_ENABLED === 'true'
 const ACTIVATION_EXPOSURE_SESSION_KEY = 'ba-activation-exposure-v1'
 
+// The Academy homepage no longer runs the first-value experiment. A stale
+// exposure from an earlier visit must not attribute new quiz outcomes to it.
+export const ACTIVATION_EXPERIMENT_RETIRE_SCRIPT = `
+try {
+  window.sessionStorage.removeItem('${ACTIVATION_EXPOSURE_SESSION_KEY}');
+  delete document.documentElement.dataset.activationVariant;
+} catch (_) {}`
+
 export type ActivationVariant = 'control' | 'micro'
 
 /**
