@@ -17,6 +17,10 @@ describe('GoogleAnalytics loading', () => {
       expect.objectContaining({ id: 'ga-init', strategy: 'afterInteractive' }),
       undefined,
     )
+    const calls = script.mock.calls as unknown as Array<[{ id?: string; children?: string }]>
+    const init = calls.find(([props]) => props.id === 'ga-init')?.[0]
+    expect(init?.children).toContain("if (consent.analytics === true)")
+    expect(init?.children).toContain("gtag('config', 'G-HDCR9YRQJ3'")
   })
 
   it('loads the analytics library only after an analytics grant', () => {

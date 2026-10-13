@@ -21,6 +21,7 @@ const SLOT_SIZES: Record<AdSlot, { width: number; height: number; label: string 
 }
 
 const ADSENSE_ID = process.env.NEXT_PUBLIC_ADSENSE_ID || ''
+type AdQueue = Record<string, unknown>[] & { requestNonPersonalizedAds?: number }
 
 // Gerçek AdSense slot ID'leri — AdSense konsolundan alınmalı
 // (Reklam birimi oluştur → "Reklam birimi kodu" altındaki sayısal değer)
@@ -53,8 +54,9 @@ export function AdBanner({ slot, className = '' }: AdBannerProps) {
       || !ADSENSE_ID || !slotId || pushed.current) return
 
     try {
-      const w = window as Window & { adsbygoogle?: Record<string, unknown>[] }
+      const w = window as Window & { adsbygoogle?: AdQueue }
       w.adsbygoogle = w.adsbygoogle || []
+      w.adsbygoogle.requestNonPersonalizedAds = 1
       w.adsbygoogle.push({})
       pushed.current = true
     } catch {

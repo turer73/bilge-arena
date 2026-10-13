@@ -40,5 +40,7 @@ describe('AdBanner consent boundary', () => {
 
     expect(container.querySelector('ins.adsbygoogle')).not.toBeNull()
     expect((window as Window & { adsbygoogle?: unknown[] }).adsbygoogle).toHaveLength(1)
+    expect((window as Window & { adsbygoogle?: unknown[] & { requestNonPersonalizedAds?: number } })
+      .adsbygoogle?.requestNonPersonalizedAds).toBe(1)
   })
 })

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
+  COOKIE_CONSENT_CHANGED_EVENT,
   getCookieConsent,
   setCookieConsent,
   clearCookieConsent,
@@ -107,6 +108,22 @@ describe('setCookieConsent', () => {
       ad_user_data: 'denied',
       ad_personalization: 'denied',
     })
+    expect(window.gtag).toHaveBeenCalledWith('config', 'G-HDCR9YRQJ3', expect.objectContaining({
+      anonymize_ip: true,
+    }))
+  })
+
+  it('analitik hedefini izin olayindan once siraya koymali', () => {
+    const onChange = () => window.gtag('event', 'MarketingCtaClicked')
+    window.addEventListener(COOKIE_CONSENT_CHANGED_EVENT, onChange)
+    try {
+      setCookieConsent({ analytics: true, ads: false })
+      const calls = vi.mocked(window.gtag).mock.calls
+      expect(calls.findIndex((call) => call[0] === 'config'))
+        .toBeLessThan(calls.findIndex((call) => call[0] === 'event'))
+    } finally {
+      window.removeEventListener(COOKIE_CONSENT_CHANGED_EVENT, onChange)
+    }
   })
 
   it('reklam iznini analitikten bagimsiz guncellemeli', () => {

@@ -208,7 +208,11 @@ describe('privacy-safe third-party document boundary', () => {
       }))
       act(() => window.dispatchEvent(new Event(COOKIE_CONSENT_CHANGED_EVENT)))
       expect(mocks.script).toHaveBeenCalledWith(
-        expect.objectContaining({ src: expect.stringContaining('adsbygoogle.js'), strategy: 'lazyOnload' }),
+        expect.objectContaining({
+          src: expect.stringContaining('adsbygoogle.js'),
+          strategy: 'lazyOnload',
+          'data-privacy-treatments': 'disablePersonalization',
+        }),
         undefined,
       )
       localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({

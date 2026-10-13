@@ -40,6 +40,13 @@ export function GoogleAnalytics({ enabled }: { enabled: boolean }) {
                   ad_user_data: 'denied',
                   ad_personalization: 'denied'
                 });
+                if (consent.analytics === true) {
+                  gtag('js', new Date());
+                  gtag('config', '${GA_ID}', {
+                    page_path: window.location.pathname,
+                    anonymize_ip: true
+                  });
+                }
               }
             }
           } catch(e) {
@@ -52,13 +59,6 @@ export function GoogleAnalytics({ enabled }: { enabled: boolean }) {
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
           strategy="lazyOnload"
-          onLoad={() => {
-            window.gtag?.('js', new Date())
-            window.gtag?.('config', GA_ID, {
-              page_path: window.location.pathname,
-              anonymize_ip: true,
-            })
-          }}
         />
       )}
     </>

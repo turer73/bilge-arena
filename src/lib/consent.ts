@@ -59,6 +59,7 @@ export function getCookieConsent(): CookieConsent | null {
 }
 
 export function setCookieConsent({ analytics, ads }: Pick<CookieConsent, 'analytics' | 'ads'>): CookieConsent {
+  const previous = getCookieConsent()
   const consent: CookieConsent = {
     essential: true,
     analytics,
@@ -77,6 +78,15 @@ export function setCookieConsent({ analytics, ads }: Pick<CookieConsent, 'analyt
       ad_user_data: 'denied',
       ad_personalization: 'denied',
     })
+    // Queue the destination before the analytics tag is mounted, so early
+    // consented events do not precede its config command in dataLayer.
+    if (analytics && previous?.analytics !== true) {
+      window.gtag('js', new Date())
+      window.gtag('config', 'G-HDCR9YRQJ3', {
+        page_path: window.location.pathname,
+        anonymize_ip: true,
+      })
+    }
   }
 
   window.dispatchEvent(new Event(COOKIE_CONSENT_CHANGED_EVENT))
