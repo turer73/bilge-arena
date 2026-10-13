@@ -23,7 +23,7 @@ const fetchPlanMock = vi.fn()
 const activePolicy: TytSocialExamPolicyState = {
   eligible: true, status: 'active', loading: false, saving: false, error: null,
   policyVersion: 'tyt-social-2026-v1', selectionEffectiveAt: '2026-09-06T10:00:00Z',
-  variantCode: 'questions_16_20', saveSelection: vi.fn(), retry: vi.fn(),
+  variantCode: 'questions_16_20', selectionEpoch: 'tyt-social-2026-v1:2026-09-06T10:00:00Z:questions_16_20', saveSelection: vi.fn(), retry: vi.fn(),
 }
 
 function mkPlan(questionCount: number, completedIds: string[] = []) {

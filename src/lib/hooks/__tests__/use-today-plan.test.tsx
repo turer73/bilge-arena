@@ -35,6 +35,7 @@ interface TodayPlanHookProps {
   userId: string
   examRef: string | null
   selectedCategory: string | null
+  policyEpoch?: string | null
 }
 
 const CONTEXT_CHANGES: Array<{
@@ -202,6 +203,86 @@ describe('useTodayPlan', () => {
     resolveOld(response(PLAN))
     await Promise.resolve()
     expect(result.current.plan?.game).toBe('turkce')
+  })
+
+  it('policy epoch değişince planı yeniden bağlar ve eski completion PATCH sonucunu uygulamaz', async () => {
+    let resolvePatch!: (value: Response) => void
+    const patch = new Promise<Response>((resolve) => { resolvePatch = resolve })
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response(PLAN))
+      .mockReturnValueOnce(patch)
+      .mockResolvedValueOnce(response(PLAN))
+
+    const { result, rerender } = renderHook(
+      ({ policyEpoch }) => useTodayPlan('matematik', 'u1', 'TYT', null, policyEpoch),
+      { initialProps: { policyEpoch: 'policy-v1:epoch-a:questions_16_20' } },
+    )
+    await waitFor(() => expect(result.current.plan).not.toBeNull())
+    act(() => { void result.current.markCompleted(['q1']) })
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
+    expect(result.current.plan?.completedIds).toEqual([])
+
+    rerender({ policyEpoch: 'policy-v1:epoch-b:questions_21_25' })
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(result.current.plan?.completedIds).toEqual([]))
+    resolvePatch(response({ completedIds: ['q1'], items: [{ ...PLAN.items[0], completed: true }] }))
+    await act(async () => { await Promise.resolve() })
+    expect(result.current.plan?.completedIds).toEqual([])
+  })
+
+  it('aynı bağlamdaki out-of-order PATCH cevapları tamamlanmış soruları geri alamaz', async () => {
+    const twoQuestionPlan = {
+      ...PLAN,
+      questions: [{ id: 'q1' }, { id: 'q2' }],
+      items: [PLAN.items[0], { ...PLAN.items[0], questionId: 'q2', position: 2 }],
+    }
+    let resolveFirst!: (value: Response) => void
+    let resolveSecond!: (value: Response) => void
+    const first = new Promise<Response>((resolve) => { resolveFirst = resolve })
+    const second = new Promise<Response>((resolve) => { resolveSecond = resolve })
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response(twoQuestionPlan))
+      .mockReturnValueOnce(first)
+      .mockReturnValueOnce(second)
+    const { result } = renderHook(() => useTodayPlan('matematik', 'u1', 'TYT'))
+    await waitFor(() => expect(result.current.plan).not.toBeNull())
+    act(() => {
+      void result.current.markCompleted(['q1'])
+      void result.current.markCompleted(['q2'])
+    })
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3))
+    resolveSecond(response({ completedIds: ['q1', 'q2'], items: twoQuestionPlan.items.map(item => ({ ...item, completed: true })) }))
+    await waitFor(() => expect(result.current.plan?.completedIds).toEqual(['q1', 'q2']))
+    resolveFirst(response({ completedIds: ['q1'], items: [{ ...twoQuestionPlan.items[0], completed: true }] }))
+    await Promise.resolve()
+    expect(result.current.plan?.completedIds).toEqual(['q1', 'q2'])
+  })
+
+  it('PATCH hatasında optimistic completion iddiası üretmez', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response(PLAN))
+      .mockResolvedValueOnce(response({ error: 'failed' }, false, 500))
+    const { result } = renderHook(() => useTodayPlan('matematik', 'u1', 'TYT'))
+    await waitFor(() => expect(result.current.plan).not.toBeNull())
+    await act(async () => { await result.current.markCompleted(['q1']) })
+    expect(result.current.plan?.completedIds).toEqual([])
+    expect(result.current.plan?.items[0].completed).toBe(false)
+  })
+
+  it('unmount sonrası geciken PATCH cevabı state yazmaz', async () => {
+    let resolvePatch!: (value: Response) => void
+    const patch = new Promise<Response>((resolve) => { resolvePatch = resolve })
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response(PLAN))
+      .mockReturnValueOnce(patch)
+    const { result, unmount } = renderHook(() => useTodayPlan('matematik', 'u1', 'TYT'))
+    await waitFor(() => expect(result.current.plan).not.toBeNull())
+    act(() => { void result.current.markCompleted(['q1']) })
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
+    unmount()
+    resolvePatch(response({ completedIds: ['q1'], items: [{ ...PLAN.items[0], completed: true }] }))
+    await Promise.resolve()
+    await Promise.resolve()
   })
 
   it('response game istek baglamiyla uyusmazsa plani reddeder', async () => {

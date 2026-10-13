@@ -43,6 +43,15 @@ interface TodayPlanUnavailableResponse {
   recovery: 'manual_practice'
 }
 
+function todayPlanIdentity(plan: Pick<TodayPlan, 'planDate' | 'game' | 'examRef' | 'questions'>) {
+  return JSON.stringify([
+    plan.planDate,
+    plan.game,
+    plan.examRef,
+    plan.questions.map((question) => question.id),
+  ])
+}
+
 function isTodayPlanUnavailableResponse(
   value: unknown,
   game: GameSlug,
@@ -72,6 +81,7 @@ export function useTodayPlan(
   userId?: string | null,
   examRef?: string | null,
   selectedCategory?: string | null,
+  policyEpoch?: string | null,
 ) {
   const [plan, setPlan] = useState<TodayPlan | null>(null)
   const [unavailableReason, setUnavailableReason] = useState<typeof TODAY_PLAN_CONTENT_UNAVAILABLE | null>(null)
@@ -79,7 +89,20 @@ export function useTodayPlan(
   const [loading, setLoading] = useState(true)
   const [settledContextKey, setSettledContextKey] = useState<string | null>(null)
   const requestRef = useRef<AbortController | null>(null)
-  const contextKey = `${userId ?? ''}\u0000${game}\u0000${examRef ?? ''}\u0000${selectedCategory ?? ''}`
+  const mountedRef = useRef(false)
+  const contextKey = `${userId ?? ''}\u0000${game}\u0000${examRef ?? ''}\u0000${selectedCategory ?? ''}\u0000${policyEpoch ?? ''}`
+  const currentContextRef = useRef(contextKey)
+  const contextGenerationRef = useRef(0)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+
+  useEffect(() => {
+    currentContextRef.current = contextKey
+    contextGenerationRef.current += 1
+  }, [contextKey])
 
   const fetchPlan = useCallback(async () => {
     requestRef.current?.abort()
@@ -139,6 +162,8 @@ export function useTodayPlan(
           && typeof item.sourceLabel === 'string'
           && typeof item.completed === 'boolean'
         ))
+      const validCompletedIds = Array.isArray(data.completedIds)
+        && data.completedIds.every((questionId) => typeof questionId === 'string' && questionIds.has(questionId))
       // Explicit exam selection is part of the plan identity. Only an omitted
       // selection may be resolved from the profile; Wordquest is always NULL.
       const validExamRef = game === 'wordquest'
@@ -149,7 +174,7 @@ export function useTodayPlan(
       const validResponse = data.game === game
         && validExamRef
         && Array.isArray(data.questions)
-        && Array.isArray(data.completedIds)
+        && validCompletedIds
         && validItems
         && (
           (data.questions.length === 0 && data.attemptId === null && data.expiresAt === null)
@@ -188,20 +213,17 @@ export function useTodayPlan(
   const visibleLoading = settledContextKey === contextKey ? loading : true
   const resolvedExamRef = visiblePlan?.examRef ?? null
 
-  // Tamamlanan soru-id'lerini isaretle (optimistic update + server union).
+  // Tamamlanan soru-id'lerini server union ile isaretle. Acknowledgement
+  // gelene kadar state'i optimistic olarak tamamlanmis gostermeyiz.
   const markCompleted = useCallback(async (questionIds: string[]) => {
-    if (!userId || questionIds.length === 0) return
-    setPlan((prev) =>
-      prev
-        ? {
-            ...prev,
-            completedIds: Array.from(new Set([...prev.completedIds, ...questionIds])),
-            items: prev.items.map((item) => (
-              questionIds.includes(item.questionId) ? { ...item, completed: true } : item
-            )),
-          }
-        : prev,
-    )
+    if (!mountedRef.current || !userId || !visiblePlan || questionIds.length === 0) return
+    const completionContextKey = contextKey
+    const completionGeneration = contextGenerationRef.current
+    if (currentContextRef.current !== completionContextKey) return
+    const completionPlanIdentity = todayPlanIdentity(visiblePlan)
+    const planQuestionIds = new Set(visiblePlan.questions.map((question) => question.id))
+    const validQuestionIds = [...new Set(questionIds)].filter((questionId) => planQuestionIds.has(questionId))
+    if (validQuestionIds.length === 0) return
     try {
       const res = await fetch('/api/study/today', {
         method: 'PATCH',
@@ -209,21 +231,45 @@ export function useTodayPlan(
         // examRef: server'in COZDUGU deger (plan.examRef) -- client'in gonderdigi
         // ham exam_ref DEGIL. Aksi halde (client null, server TYT'ye cozmusse)
         // PATCH lookup yanlis/hic satir bulur (Codex P2 identity).
-        body: JSON.stringify({ game, questionIds, examRef: resolvedExamRef }),
+        body: JSON.stringify({ game, questionIds: validQuestionIds, examRef: resolvedExamRef }),
       })
-      if (!res.ok) return
+      if (!res.ok || !mountedRef.current) return
       const data = (await res.json()) as { completedIds: string[]; items?: TodayPlanItem[] }
-      setPlan((prev) => (prev
-        ? {
-            ...prev,
-            completedIds: data.completedIds ?? prev.completedIds,
-            items: Array.isArray(data.items) ? data.items : prev.items,
-          }
-        : prev))
+      if (
+        !mountedRef.current
+        || currentContextRef.current !== completionContextKey
+        || contextGenerationRef.current !== completionGeneration
+      ) return
+      if (
+        !data
+        || !Array.isArray(data.completedIds)
+        || data.completedIds.some((questionId) => (
+          typeof questionId !== 'string' || !planQuestionIds.has(questionId)
+        ))
+      ) return
+      setPlan((prev) => {
+        if (!prev || todayPlanIdentity(prev) !== completionPlanIdentity) return prev
+        const acknowledgedIds = new Set(
+          (data.completedIds ?? []).filter((questionId) => planQuestionIds.has(questionId)),
+        )
+        const completedIds = Array.from(new Set([
+          ...prev.completedIds,
+          ...acknowledgedIds,
+        ]))
+        return {
+          ...prev,
+          completedIds,
+          items: prev.items.map((item) => {
+            return acknowledgedIds.has(item.questionId)
+              ? { ...item, completed: true }
+              : item
+          }),
+        }
+      })
     } catch {
-      // Sessiz hata -- optimistic state kalir, sonraki fetchPlan ile senkronize olur.
+      // Sessiz hata -- tamamlanma iddiasi yok; sonraki fetchPlan ile senkronize olur.
     }
-  }, [game, userId, resolvedExamRef])
+  }, [contextKey, game, userId, resolvedExamRef, visiblePlan])
 
   useEffect(() => {
     let active = true
