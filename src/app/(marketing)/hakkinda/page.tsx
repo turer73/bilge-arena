@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { TrackedCtaLink } from '@/components/marketing/tracked-cta-link'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
+import { serializeJsonLd } from '@/lib/seo/serialize-json-ld'
 import styles from '../academy-marketing.module.css'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
@@ -213,7 +214,7 @@ export default function HakkindaPage() {
     <div className={`${styles.page} overflow-hidden`} data-academy-marketing="about">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
 
       <section className={`${styles.hero} relative border-b border-[var(--border)] px-6 py-16 sm:py-20 lg:px-8 lg:py-24`}>

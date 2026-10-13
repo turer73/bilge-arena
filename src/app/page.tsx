@@ -20,6 +20,7 @@ import type {
 import type { Database, Json } from '@/types/database.generated'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 import { createSiteJsonLd } from '@/lib/seo/site-json-ld'
+import { serializeJsonLd } from '@/lib/seo/serialize-json-ld'
 import { ACTIVATION_EXPERIMENT_BOOTSTRAP_SCRIPT } from '@/lib/experiments/activation'
 
 // ISR: Her 5 dakikada bir yeniden oluştur (Supabase sorgularını cache'le)
@@ -196,7 +197,7 @@ export default async function Home() {
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(siteJsonLd) }}
       />
       <Navbar />
       <main>
