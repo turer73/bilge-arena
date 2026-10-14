@@ -1,8 +1,10 @@
 import * as Sentry from '@sentry/nextjs'
+import { SENTRY_PRIVACY_OPTIONS } from './src/lib/privacy/sentry-options'
 import { isSensitiveTelemetryUrl } from './src/lib/privacy/telemetry-policy'
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  ...SENTRY_PRIVACY_OPTIONS,
 
   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
 
