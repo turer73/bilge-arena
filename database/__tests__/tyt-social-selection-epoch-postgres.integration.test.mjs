@@ -19,7 +19,10 @@ if (url) {
   ) throw new Error('non-disposable TYT Social epoch database refused')
 }
 
-const describePg = enabled ? describe.sequential : describe.skip
+// Vitest 5 describe.sequential'i kaldirdi; sirali calisma acikca istenir.
+const describePg = enabled
+  ? (name, fn) => describe(name, { concurrent: false }, fn)
+  : describe.skip
 const testRoot = dirname(fileURLToPath(import.meta.url))
 const migrationRoot = join(testRoot, '..', 'migrations')
 const fixturePath = join(
