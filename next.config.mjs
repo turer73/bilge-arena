@@ -1,5 +1,5 @@
 import bundleAnalyzer from '@next/bundle-analyzer'
-import { withSentryConfig } from '@sentry/nextjs'
+import { withSentryConfig } from '@sentry/nextjs/config'
 import { assertTytSocialRolloutEnv } from './scripts/security/validate-tyt-social-rollout-env.mjs'
 // next-pwa kaldirildi: Next 16 ile sw.js dispatcher'i uretmiyordu (workbox/
 // swe-worker uretti ama master sw.js yok) → /sw.js HTML fallback → workbox
@@ -220,8 +220,9 @@ const nextConfig = {
 // register eder. Offline fallback /offline route uzerinden.
 
 export default withSentryConfig(withBundleAnalyzer(nextConfig), {
-  // Source map'leri Sentry'ye yukle ama client bundle'dan sil (guvenlik)
-  hideSourceMaps: true,
+  // Source map'leri Sentry'ye yukle ama client bundle'dan sil (guvenlik).
+  // Sentry 11 hideSourceMaps'i okumuyor; varsayilana birakmadan acikca iste.
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
 
   // Webpack plugin sessiz kalsin
   silent: true,

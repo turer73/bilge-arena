@@ -32,6 +32,10 @@ vi.mock('@/lib/rooms/client', () => ({
 
 import { POST, GET } from '../route'
 
+// Limiter'lar modul yuklenirken kurulur; Vitest 5 varsayilani clearMocks:true
+// her testten once cagri gecmisini sildigi icin import aninda yakala.
+const moduleLoadLimiterCalls = [...mockCreateRateLimiter.mock.calls]
+
 // ─── Helpers ────────────────────────────────────────
 
 function makePost(body: unknown) {
@@ -131,8 +135,11 @@ describe('POST /api/rooms', () => {
       expect.any(Object),
       expect.any(Object),
     )
-    expect(mockCreateRateLimiter).toHaveBeenCalledWith('rooms-create-ip', 20, 60_000)
-    expect(mockCreateRateLimiter).toHaveBeenCalledWith('rooms-create-user', 5, 60_000)
+  })
+
+  it('creates IP and user rate limiters at module load', () => {
+    expect(moduleLoadLimiterCalls).toContainEqual(['rooms-create-ip', 20, 60_000])
+    expect(moduleLoadLimiterCalls).toContainEqual(['rooms-create-user', 5, 60_000])
   })
 
   it('propagates RPC error status code', async () => {

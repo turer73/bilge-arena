@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs'
+import { SENTRY_PRIVACY_OPTIONS } from './src/lib/privacy/sentry-options'
 import {
   isCurrentBrowserPathSensitive,
   isSensitiveTelemetryUrl,
@@ -6,6 +7,7 @@ import {
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  ...SENTRY_PRIVACY_OPTIONS,
 
   // Production'da %20 transaction ornekleme (maliyet kontrolu)
   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
