@@ -7,9 +7,12 @@
  * Kullanım:
  *   npm run audit:benchmark -- --labels labels.json --report report.json
  *   npm run audit:benchmark -- --labels labels.json --report report.json --out benchmark.json
+ *   npm run audit:benchmark -- --labels frozen-labels.json --report report.json --scope preregistered-scope.json --out new-benchmark.json
+ * No --scope means diagnostic metrics only, not decision-writing evidence.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
 import { createServer } from 'vite'
 
@@ -23,7 +26,10 @@ const labelsPath = resolve(valueOf('--labels'))
 const reportPath = resolve(valueOf('--report'))
 const outIndex = process.argv.indexOf('--out')
 const outPath = outIndex === -1 ? null : resolve(process.argv[outIndex + 1])
-const labels = JSON.parse(readFileSync(labelsPath, 'utf8'))
+const labelBytes = readFileSync(labelsPath)
+const labels = JSON.parse(labelBytes.toString('utf8'))
+const scopeIndex = process.argv.indexOf('--scope')
+const scope = scopeIndex === -1 ? undefined : JSON.parse(readFileSync(resolve(valueOf('--scope')), 'utf8'))
 const calibration = JSON.parse(readFileSync(reportPath, 'utf8'))
 
 if (!Array.isArray(calibration.items)) {
@@ -36,8 +42,17 @@ if (typeof calibration.reliability?.failureRate !== 'number') {
 const server = await createServer({ root: resolve('.'), server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' })
 try {
   const mod = await server.ssrLoadModule('/src/lib/question-audit/benchmark.ts')
+  if (scope !== undefined) {
+    const scopeModule = await server.ssrLoadModule('/src/lib/question-audit/promotion-scope.ts')
+    const parsed = scopeModule.promotionScopeSchema.parse(scope)
+    scopeModule.assertPromotionScope(parsed, {
+      controlSetSha256: createHash('sha256').update(labelBytes).digest('hex'),
+      targets: parsed.targets.map(target => ({ ...target, game: parsed.game, examRef: parsed.examRef })),
+    })
+  }
   const benchmark = mod.evaluateBenchmark(labels, calibration.items, calibration.reliability.failureRate)
   const output = {
+    ...(scope === undefined ? {} : { scope }),
     subject: {
       policyVersion: calibration.policyVersion,
       providerIds: calibration.providerIds,
@@ -48,7 +63,8 @@ try {
     benchmark,
   }
   const json = JSON.stringify(output, null, 2)
-  if (outPath) writeFileSync(outPath, json)
+  // Evidence is append-only: do not relabel an already sealed report in place.
+  if (outPath) writeFileSync(outPath, json, { flag: 'wx' })
   console.log(json)
   if (!benchmark.promotion.passed) process.exitCode = 2
 } finally {

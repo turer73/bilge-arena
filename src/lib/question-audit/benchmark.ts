@@ -9,6 +9,7 @@
 
 import { FLAW_SEVERITY, type AuditExecutionIdentity, type FlawCode, type Verdict } from './types'
 import type { CalibrationItem } from './calibration'
+import { assertPromotionScope, type PromotionContext, type PromotionScope } from './promotion-scope'
 
 const FLAW_CODES = Object.keys(FLAW_SEVERITY) as FlawCode[]
 
@@ -88,6 +89,7 @@ export interface BenchmarkReport {
 }
 
 export interface PromotionEvidence {
+  scope: PromotionScope
   subject: {
     policyVersion: string
     providerIds: AuditExecutionIdentity['providerIds']
@@ -195,6 +197,7 @@ function record(value: unknown): Record<string, unknown> {
 export function assertPromotionEvidence(
   evidence: unknown,
   identity: AuditExecutionIdentity,
+  context: PromotionContext,
 ): asserts evidence is PromotionEvidence {
   const root = record(evidence)
   const subject = record(root.subject)
@@ -248,6 +251,7 @@ export function assertPromotionEvidence(
       throw new Error(`terfi kaniti kosu kimligiyle uyusmuyor: ${label}`)
     }
   }
+  assertPromotionScope(root.scope, context)
 }
 
 export function validateGoldLabels(labels: readonly GoldLabel[]): void {

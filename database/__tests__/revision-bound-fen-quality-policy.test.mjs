@@ -10,6 +10,7 @@ if(process.env.SOURCE_REVIEW_PG_REQUIRED==='1'&&!bin) throw Error('SOURCE_REVIEW
 const suite=bin?describe:describe.skip
 const read=n=>readFileSync(new URL(`../migrations/${n}`,import.meta.url),'utf8')
 const migration=read('20261011203500_revision_bound_fen_quality_policy.sql')
+const nativeTurkishMigration=read('20261014183929_revision_bound_turkce_quality_policy.sql')
 function func(file,name){
  const text=read(file),start=text.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`)
  if(start<0) throw Error(name)
@@ -17,7 +18,8 @@ function func(file,name){
  return tail.slice(0,tail.indexOf(tag,tail.indexOf(tag)+tag.length)+tag.length)+';'
 }
 function table(file,name){const text=read(file),start=text.indexOf(`CREATE TABLE IF NOT EXISTS public.${name} (`);if(start<0)throw Error(name);return text.slice(start,text.indexOf('\n);',start)+3)}
-suite('revision-bound Fen quality policy',()=>{
+suite.each(['fen','turkce'])('revision-bound %s quality policy',game=>{
+ const auditPolicy=game==='fen'?'question-quality@4':'question-quality@5'
  let db,q,r,old,owner,outcomes,request,committedFixture=false
  const scalar=async(sql,values=[])=>(await db.query(sql,values)).rows[0].result
  const call=async(sql,values=[])=>{
@@ -72,6 +74,8 @@ suite('revision-bound Fen quality policy',()=>{
   await db.exec(func('136_question_validation_pipeline.sql','tg_require_question_validation_decision'))
   await db.exec('CREATE TRIGGER validation BEFORE UPDATE OF published_revision_id ON public.questions FOR EACH ROW EXECUTE FUNCTION public.tg_require_question_validation_decision()')
   await db.exec(migration);await db.exec(migration)
+  await db.exec(nativeTurkishMigration);await db.exec(nativeTurkishMigration)
+  await db.query('UPDATE public.curriculum_scope_releases SET game=$1',[game])
  },60000)
  afterAll(async()=>{await db?.close()})
  afterEach(async()=>{
@@ -88,23 +92,23 @@ suite('revision-bound Fen quality policy',()=>{
   for(let n=0;n<2;n++){
    let parent=null
    for(const kind of ['course','unit','topic','outcome']){
-    const id=randomUUID();await db.query("INSERT INTO public.curriculum_nodes(id,parent_id,node_type,game,category,exam_ref,taxonomy_version) VALUES($1,$2,$3,'fen','denklemler','LGS','test-v1')",[id,parent,kind]);parent=id
+    const id=randomUUID();await db.query("INSERT INTO public.curriculum_nodes(id,parent_id,node_type,game,category,exam_ref,taxonomy_version) VALUES($1,$2,$3,$4,'denklemler','LGS','test-v1')",[id,parent,kind,game]);parent=id
    }
-   const id=randomUUID();outcomes.push(id);await db.query("INSERT INTO public.curriculum_outcomes(id,node_id,game,category,exam_ref,taxonomy_version) VALUES($1,$2,'fen','denklemler','LGS','test-v1')",[id,parent])
+   const id=randomUUID();outcomes.push(id);await db.query("INSERT INTO public.curriculum_outcomes(id,node_id,game,category,exam_ref,taxonomy_version) VALUES($1,$2,$3,'denklemler','LGS','test-v1')",[id,parent,game])
   }
   await db.query("INSERT INTO public.curriculum_outcome_canonical_links VALUES($1,'fixture@2018:grade9:TYT:9.3.3.4')",[outcomes[1]])
-  const content={question:'Synthetic fixture',options:['a','b','c','d','e'],answer:1,solution:'b'}
-  await db.query("INSERT INTO public.questions VALUES($1,$2,'fen','denklemler',NULL,NULL,2,NULL,'LGS',false,false,$3)",[q,content,old])
+  const content={question:'Synthetic fixture',options:['a','b','c','d'],answer:1,solution:'b'}
+  await db.query("INSERT INTO public.questions VALUES($1,$2,$4,'denklemler',NULL,NULL,2,NULL,'LGS',false,false,$3)",[q,content,old,game])
   for(const [id,status,base] of [[old,'published',null],[r,'stage1_approved',old]])await db.query(`INSERT INTO public.question_content_revisions(id,question_id,revision_no,base_revision_id,game,category,difficulty,exam_ref,content,content_sha256,change_kind,change_summary,status,prepared_by)
-   VALUES($1,$2,$3,$4,'fen','denklemler',2,'LGS',$5,encode(extensions.digest($5::jsonb::text,'sha256'),'hex'),'edit','Synthetic fixture',$6,$7)`,[id,q,id===old?1:2,base,content,status,owner])
+   VALUES($1,$2,$3,$4,$8,'denklemler',2,'LGS',$5,encode(extensions.digest($5::jsonb::text,'sha256'),'hex'),'edit','Synthetic fixture',$6,$7)`,[id,q,id===old?1:2,base,content,status,owner,game])
   await db.query('INSERT INTO public.question_revision_outcomes VALUES($1,$2,0.7,true),($1,$3,0.3,false)',[r,...outcomes])
   await db.query("INSERT INTO public.question_revision_sources(revision_id,source_kind,source_title,license_code,provenance_ref) VALUES($1,'original','Synthetic','INTERNAL','original:fixture')",[r])
   await db.query("INSERT INTO public.question_validation_decisions(revision_id,question_id,content_sha256,policy_version,verdict) SELECT id,question_id,content_sha256,'question-quality@2','APPROVED' FROM public.question_content_revisions WHERE id=$1",[r])
   await db.query(`INSERT INTO public.question_validation_runs
-    SELECT d.run_id,d.question_id,d.revision_id,d.content_sha256,v.agent,v.sample,'fixture','fixture',v.prompt,'question-quality@4',
+    SELECT d.run_id,d.question_id,d.revision_id,d.content_sha256,v.agent,v.sample,'fixture','fixture',v.prompt,$2,
     '{"blindSamples":3}',repeat('a',64),jsonb_build_object('questionId',d.question_id,'revisionId',d.revision_id,'contentSha256',d.content_sha256),
     'ok',NULL,NULL,'{}','{}'::jsonb FROM public.question_validation_decisions d CROSS JOIN
-    (VALUES ('blind_solver',0,'blind-solver@4'),('blind_solver',1,'blind-solver@4'),('blind_solver',2,'blind-solver@4'),('adversarial',0,'adversarial@3'),('solution_verifier',0,'solution-verifier@7')) v(agent,sample,prompt) WHERE d.revision_id=$1`,[r])
+    (VALUES ('blind_solver',0,'blind-solver@4'),('blind_solver',1,'blind-solver@4'),('blind_solver',2,'blind-solver@4'),('adversarial',0,'adversarial@3'),('solution_verifier',0,'solution-verifier@7')) v(agent,sample,prompt) WHERE d.revision_id=$1`,[r,auditPolicy])
   await db.query("INSERT INTO public.question_revision_approvals(revision_id,stage,reviewer_id,decision,rationale,decided_at) VALUES($1,1,$2,'approved','fixture',now())",[r,owner])
   await db.query("INSERT INTO public.question_revision_source_reviews(revision_id,reviewer_id,reviewed_at,content_sha256,evidence_fingerprint,report,report_sha256) SELECT id,$2,now(),content_sha256,repeat('a',64),'{}'::jsonb,public.content_governance_hash('{}'::jsonb) FROM public.question_content_revisions WHERE id=$1",[r,owner])
  })
@@ -112,15 +116,18 @@ suite('revision-bound Fen quality policy',()=>{
  const policy=()=>scalar('SELECT public.question_revision_validation_policy($1) AS result',[r])
  const ready=()=>scalar('SELECT public.question_revision_single_review_ready($1) AS result',[r])
  const v5=()=>db.query("UPDATE public.question_validation_decisions SET policy_version='question-quality@5' WHERE revision_id=$1",[r])
- const bind=()=>call(`INSERT INTO public.question_validation_revision_policies
+ const bind=(bindingAuditPolicy=auditPolicy)=>call(`INSERT INTO public.question_validation_revision_policies
  (revision_id,question_id,content_sha256,base_policy_version,policy_version,audit_policy_version,audit_execution,audit_code_commit,run_id,benchmark_ref,benchmark_sha256,evidence_ref,evidence_sha256,code_commit)
- SELECT r.id,r.question_id,r.content_sha256,'question-quality@2','question-quality@5','question-quality@4',
- '{"policyVersion":"question-quality@4","generationConfig":{"blindSamples":3},"generationConfigSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","providerIds":{"blind":"fixture","adversarial":"fixture","verifier":"fixture"},"modelIds":{"blind":"fixture","adversarial":"fixture","verifier":"fixture"},"promptVersions":{"blind":"blind-solver@4","adversarial":"adversarial@3","verifier":"solution-verifier@7"}}',repeat('e',40),
+ SELECT r.id,r.question_id,r.content_sha256,'question-quality@2','question-quality@5',$2,
+ '{"generationConfig":{"blindSamples":3},"generationConfigSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","providerIds":{"blind":"fixture","adversarial":"fixture","verifier":"fixture"},"modelIds":{"blind":"fixture","adversarial":"fixture","verifier":"fixture"},"promptVersions":{"blind":"blind-solver@4","adversarial":"adversarial@3","verifier":"solution-verifier@7"}}'::jsonb || jsonb_build_object('policyVersion',$2::text),repeat('e',40),
  d.run_id,'private/benchmark',repeat('b',64),'private/evidence',repeat('c',64),repeat('d',40)
- FROM public.question_content_revisions r JOIN public.question_validation_decisions d ON d.revision_id=r.id WHERE r.id=$1 RETURNING policy_version AS result`,[r])
+ FROM public.question_content_revisions r JOIN public.question_validation_decisions d ON d.revision_id=r.id WHERE r.id=$1 RETURNING policy_version AS result`,[r,bindingAuditPolicy])
  it('does not seed bindings or change the global policy',async()=>{
   expect(await scalar('SELECT count(*)::int AS result FROM public.question_validation_revision_policies')).toBe(0)
   expect(await policy()).toBe('question-quality@2');expect(await ready()).toBe(true)
+  expect(await scalar("SELECT relrowsecurity AS result FROM pg_class WHERE oid='public.question_validation_revision_policies'::regclass")).toBe(true)
+  expect(await scalar("SELECT count(*)::int AS result FROM pg_constraint WHERE conrelid='public.question_validation_revision_policies'::regclass AND conname IN ('qvrp_audit_policy_check','qvrp_audit_execution_check')")).toBe(2)
+  expect(await scalar("SELECT count(*)::int AS result FROM pg_constraint WHERE conrelid='public.question_validation_revision_policies'::regclass AND conname='question_validation_revision_policie_audit_policy_version_check'")).toBe(0)
  })
  const damage=[
   "DELETE FROM public.question_validation_runs WHERE agent='solution_verifier'",
@@ -135,7 +142,7 @@ suite('revision-bound Fen quality policy',()=>{
   "UPDATE public.question_validation_runs SET provider_id='other' WHERE agent='adversarial'",
   "UPDATE public.question_validation_runs SET model_id='other' WHERE agent='adversarial'",
   "UPDATE public.question_validation_runs SET prompt_version='other' WHERE agent='adversarial'",
-  "UPDATE public.question_validation_runs SET policy_version='question-quality@5' WHERE agent='adversarial'",
+  `UPDATE public.question_validation_runs SET policy_version='${game==='fen'?'question-quality@5':'question-quality@4'}' WHERE agent='adversarial'`,
   "UPDATE public.question_validation_runs SET generation_config='{}' WHERE agent='adversarial'",
   "UPDATE public.question_validation_runs SET generation_config_sha256=repeat('f',64) WHERE agent='adversarial'",
   "UPDATE public.question_validation_runs SET input_snapshot='{}' WHERE agent='adversarial'",
@@ -152,6 +159,31 @@ suite('revision-bound Fen quality policy',()=>{
  })
  it('does not permit unbound @5 to replace @2',async()=>{
   await v5();expect(await ready()).toBe(false);await expect(publish()).rejects.toMatchObject({code:'22023'})
+ })
+ it.each(['APPROVED','REJECTED','NEEDS_REVIEW','INCONCLUSIVE'])('missing binding does not fall back to a prior @2 approval with @5 %s',async(verdict)=>{
+  await db.query("INSERT INTO public.question_validation_decisions(revision_id,question_id,content_sha256,policy_version,verdict) SELECT revision_id,question_id,content_sha256,'question-quality@5',$1 FROM public.question_validation_decisions",[verdict])
+  expect(await policy()).toBe(null);expect(await ready()).toBe(false)
+  await expect(publish()).rejects.toMatchObject({code:'22023'})
+  await context();await expect(update()).rejects.toMatchObject({code:'22023'})
+ })
+ it('rejects cross-pair even when all raw agents agree with the wrong version',async()=>{
+  await v5()
+  const other=game==='fen'?'question-quality@5':'question-quality@4'
+  await db.query('UPDATE public.question_validation_runs SET policy_version=$1',[other])
+  await expect(bind(other)).rejects.toMatchObject({code:'22023'})
+ })
+ it('does not broaden the pair predicate to arbitrary games or versions',async()=>{
+  for(const values of [['turkce','LGS','question-quality@4','question-quality@5'],['fen','LGS','question-quality@5','question-quality@5'],['matematik','LGS','question-quality@5','question-quality@5'],['turkce','TYT','question-quality@5','question-quality@5'],['turkce','LGS','question-quality@5','question-quality@6'],[null,'LGS','question-quality@5','question-quality@5']]){
+   expect(await scalar('SELECT public.question_revision_validation_pair_valid($1,$2,$3,$4) AS result',values)).toBe(false)
+  }
+ })
+ it('replays migration with an existing bound row without changing its receipt',async()=>{
+  await v5();await bind()
+  const before=await scalar('SELECT row_to_json(b) AS result FROM public.question_validation_revision_policies b')
+  await db.exec('COMMIT');committedFixture=true
+  await db.exec(nativeTurkishMigration);await db.exec('BEGIN')
+  expect(await scalar('SELECT row_to_json(b) AS result FROM public.question_validation_revision_policies b')).toEqual(before)
+  expect(await policy()).toBe('question-quality@5');expect(await ready()).toBe(true)
  })
  it('publishes the exact bound @5 run and retains previous revision',async()=>{
   await v5();await bind();expect(await ready()).toBe(true)
@@ -202,6 +234,12 @@ suite('revision-bound Fen quality policy',()=>{
   await v5();await bind();await db.query("UPDATE public.question_content_revisions SET content_sha256=repeat('f',64) WHERE id=$1",[r])
   expect(await policy()).toBe(null);expect(await ready()).toBe(false)
  })
+ it('does not let a later revision game change reuse the original pair',async()=>{
+  await v5();await bind()
+  await db.query('UPDATE public.question_content_revisions SET game=$2 WHERE id=$1',[r,game==='fen'?'turkce':'fen'])
+  expect(await policy()).toBe(null);expect(await ready()).toBe(false)
+  await expect(publish()).rejects.toMatchObject({code:'22023'})
+ })
  it('enforces the quality trigger even when invoked outside the publisher',async()=>{
   await v5();await bind();await db.exec("UPDATE public.question_validation_decisions SET verdict='REJECTED'")
   await context();await expect(update()).rejects.toMatchObject({code:'22023'})
@@ -214,6 +252,9 @@ suite('revision-bound Fen quality policy',()=>{
   expect(await scalar("SELECT has_table_privilege($1,'public.question_validation_revision_policies','UPDATE') AS result",[role])).toBe(false)
   expect(await scalar("SELECT has_table_privilege($1,'public.question_validation_revision_policies','DELETE') AS result",[role])).toBe(false)
   expect(await scalar("SELECT has_function_privilege($1,'public.question_revision_validation_policy(uuid)','EXECUTE') AS result",[role])).toBe(false)
+  expect(await scalar("SELECT has_function_privilege($1,'public.question_revision_validation_pair_valid(text,text,text,text)','EXECUTE') AS result",[role])).toBe(false)
+  expect(await scalar("SELECT has_table_privilege($1,'public.question_validation_revision_policies','TRUNCATE') AS result",[role])).toBe(false)
+  expect(await scalar("SELECT has_table_privilege($1,'public.question_validation_revision_policies','SELECT') AS result",[role])).toBe(role==='service_role')
  })
  it.each(['stage1_approved','stage2_approved'])('locks decision and raw agents until %s publication commits',async(status)=>{
   await v5();await bind()

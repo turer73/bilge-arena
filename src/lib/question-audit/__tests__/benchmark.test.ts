@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  assertPromotionEvidence,
+  assertPromotionEvidence as assertPromotionWithScope,
   DEFAULT_PROMOTION_POLICY,
   evaluateBenchmark,
   type GoldLabel,
@@ -9,6 +9,19 @@ import {
 } from '../benchmark'
 import type { CalibrationItem } from '../calibration'
 import type { AuditExecutionIdentity, Finding, Verdict } from '../types'
+import type { PromotionContext, PromotionScope } from '../promotion-scope'
+
+const scope: PromotionScope = {
+  schemaVersion: 'promotion-scope@1', kind: 'bounded_cohort', game: 'turkce', examRef: 'LGS',
+  controlSetSha256: 'c'.repeat(64),
+  targets: [{ questionId: '11111111-1111-4111-8111-111111111111', revisionId: '22222222-2222-4222-8222-222222222222', contentSha256: 'd'.repeat(64) }],
+}
+const context: PromotionContext = {
+  controlSetSha256: scope.controlSetSha256,
+  targets: scope.targets.map(t => ({ ...t, game: scope.game, examRef: scope.examRef })),
+}
+const assertPromotionEvidence = (evidence: unknown, runIdentity: AuditExecutionIdentity) =>
+  assertPromotionWithScope(evidence, runIdentity, context)
 
 const permissive: PromotionPolicy = {
   minLabels: 2,
@@ -72,6 +85,7 @@ const identity: AuditExecutionIdentity = {
 
 function promotionEvidence(): PromotionEvidence {
   return {
+    scope,
     subject: {
       policyVersion: identity.policyVersion,
       providerIds: identity.providerIds,
