@@ -220,8 +220,9 @@ const nextConfig = {
 // register eder. Offline fallback /offline route uzerinden.
 
 export default withSentryConfig(withBundleAnalyzer(nextConfig), {
-  // Source map'leri Sentry'ye yukle ama client bundle'dan sil (guvenlik)
-  hideSourceMaps: true,
+  // Source map'leri Sentry'ye yukle ama client bundle'dan sil (guvenlik).
+  // Sentry 11 hideSourceMaps'i okumuyor; varsayilana birakmadan acikca iste.
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
 
   // Webpack plugin sessiz kalsin
   silent: true,
