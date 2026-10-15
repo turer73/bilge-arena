@@ -92,7 +92,7 @@ const FAQ = [
   },
   {
     q: 'Hesabımı nasıl silebilirim?',
-    a: 'Hesabınızı silmek için iletisim@bilgearena.com adresine kayıtlı e-posta adresinizden yazmanız yeterlidir. Talebiniz 5 iş günü içinde işleme alınır.',
+    a: 'Profil sayfanızdaki Hesap ve veri yönetimi bölümünden “Hesabımı kalıcı sil” seçeneğini açabilirsiniz. Açıklamayı onaylayıp HESABIMI SIL yazmanız gerekir. Hesap erişimi ve giriş kimliği temizlenir; ilişkili kayıtlar ve yedeklerin temizliği ayrıca değerlendirilir. Hesabınıza erişemiyorsanız kayıtlı e-posta adresinizden iletisim@bilgearena.com adresine yazabilirsiniz.',
   },
 ]
 
