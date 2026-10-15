@@ -56,7 +56,7 @@ export const GAMES: Record<GameSlug, GameDefinition> = {
   wordquest: {
     slug: 'wordquest',
     name: 'İngilizce',
-    description: 'Vocabulary, grammar ve reading — YDT İngilizce hazırlık',
+    description: 'Vocabulary, grammar ve reading ile İngilizce pratiği',
     color: 'focus',
     colorHex: '#3B82F6',
     icon: 'languages',

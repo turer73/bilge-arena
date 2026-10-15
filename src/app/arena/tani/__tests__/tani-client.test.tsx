@@ -216,7 +216,7 @@ describe('TaniClient', () => {
     expect(screen.getByText(/aynı oturumdaki birden fazla cevap tek gün kanıtı sayılır/i)).toBeInTheDocument()
     expect(screen.getByText('Kazanım özeti')).toBeInTheDocument()
     expect(screen.getAllByRole('article')).toHaveLength(6)
-    await user.click(screen.getByRole('button', { name: /Önce Sayılar çalış/i }))
+    await user.click(screen.getByRole('button', { name: /Sana özel ilk adım: Sayılar/i }))
     expect(mockSetGame).toHaveBeenCalledWith('matematik')
     expect(mockSetCategory).toHaveBeenCalledWith('sayilar')
     expect(mockSetExamRef).toHaveBeenCalledWith('TYT')
@@ -259,7 +259,7 @@ describe('TaniClient', () => {
       'href',
       '/arena/hakimiyet?game=fen&exam_ref=TYT',
     )
-    await user.click(screen.getByRole('button', { name: /Önce Fizik çalış/i }))
+    await user.click(screen.getByRole('button', { name: /Sana özel ilk adım: Fizik/i }))
     expect(mockSetGame).toHaveBeenCalledWith('fen')
     expect(mockSetCategory).toHaveBeenCalledWith('fizik')
     expect(mockSetExamRef).toHaveBeenCalledWith('TYT')

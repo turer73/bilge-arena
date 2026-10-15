@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import TaniClient from './tani-client'
 
 export const metadata: Metadata = {
-  title: 'Kısa Başlangıç Taraması',
-  description: 'Yayınlanmış ders kapsamlarında kısa ve adaptif bir başlangıç tahmini oluştur.',
+  title: 'Seviyeni Ölç',
+  description: 'Uyarlanabilir kısa taramayla ilk çalışma yönünü ve sana özel sonraki adımı belirle.',
   robots: { index: false, follow: true },
 }
 

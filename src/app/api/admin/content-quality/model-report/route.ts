@@ -2,7 +2,6 @@ import { z } from 'zod'
 import { requireContentGovernanceContext } from '@/lib/content-governance/route-context'
 import { contentGovernanceReadLimiter } from '@/lib/content-governance/rate-limits'
 import { contentNoStoreJson } from '@/lib/content-governance/server-contract'
-import { QUESTION_QUALITY_POLICY_VERSION } from '@/lib/question-audit/orchestrator'
 import { buildFiveModelReport, type FiveModelRunRow } from '@/lib/question-audit/five-model-report'
 
 const uuid = z.string().uuid()
@@ -40,12 +39,33 @@ export async function GET(request: Request) {
   const questionText = (content.question ?? content.sentence ?? '').trim()
   const markedAnswerIndex = content.answer ?? content.correct
   if (!questionText || markedAnswerIndex === undefined || markedAnswerIndex < 0 || markedAnswerIndex >= content.options.length) return contentNoStoreJson({ error: 'Soru revizyonu güvenli rapor için geçersiz' }, { status: 500 })
-  const { data: rawRuns, error: runsError } = await context.admin.from('question_validation_runs')
+  const runtime = await context.admin.from('question_validation_runtime').select('required_policy_version').eq('singleton', true).maybeSingle()
+  const policy = z.string().min(1).max(100).safeParse(runtime.data?.required_policy_version)
+  if (runtime.error || !policy.success) return contentNoStoreJson({ error: 'Doğrulama politikası alınamadı' }, { status: 503 })
+  const binding = await context.admin.from('question_validation_revision_policies')
+    .select('revision_id,question_id,content_sha256,base_policy_version,policy_version,audit_policy_version,run_id').eq('revision_id', revision.data.id).maybeSingle()
+  // Deploy-before-migration compatibility only; any other error stays closed.
+  if (binding.error && !['42P01', 'PGRST205'].includes(binding.error.code)) return contentNoStoreJson({ error: 'Revizyon politikası alınamadı' }, { status: 503 })
+  let effectivePolicy = policy.data
+  let decisionPolicy = policy.data
+  let boundRunId: string | undefined
+  if (binding.data) {
+    const pin = z.object({ revision_id: uuid, question_id: uuid, content_sha256: z.string(), base_policy_version: z.string(), policy_version: z.string().min(1), audit_policy_version: z.string().min(1), run_id: uuid }).safeParse(binding.data)
+    if (!pin.success || pin.data.revision_id !== revision.data.id || pin.data.question_id !== revision.data.question_id || pin.data.content_sha256 !== revision.data.content_sha256) return contentNoStoreJson({ error: 'Revizyon politikası doğrulanamadı' }, { status: 503 })
+    if (pin.data.base_policy_version === effectivePolicy) {
+      effectivePolicy = pin.data.audit_policy_version
+      decisionPolicy = pin.data.policy_version
+      boundRunId = pin.data.run_id
+    }
+  }
+  let runsQuery = context.admin.from('question_validation_runs')
     .select('question_id,revision_id,content_sha256,agent,sample_index,provider_id,model_id,prompt_version,policy_version,generation_config,generation_config_sha256,run_id,status,parsed_output,input_snapshot,executed_at')
-    .eq('question_id', revision.data.question_id).eq('revision_id', revision.data.id).eq('content_sha256', revision.data.content_sha256).eq('policy_version', QUESTION_QUALITY_POLICY_VERSION).eq('agent', 'blind_solver').order('executed_at', { ascending: false }).limit(201)
+    .eq('question_id', revision.data.question_id).eq('revision_id', revision.data.id).eq('content_sha256', revision.data.content_sha256).eq('policy_version', effectivePolicy).eq('agent', 'blind_solver').order('executed_at', { ascending: false }).limit(201)
+  if (boundRunId) runsQuery = runsQuery.eq('run_id', boundRunId)
+  const { data: rawRuns, error: runsError } = await runsQuery
   if (runsError) return contentNoStoreJson({ error: 'Model raporu alınamadı' }, { status: 500 })
   const capped = (rawRuns?.length ?? 0) > 200
   const rows = z.array(runSchema).safeParse((rawRuns ?? []).slice(0, 200))
   if (!rows.success) return contentNoStoreJson({ error: 'Model raporu güvenli olarak okunamadı' }, { status: 500 })
-  return contentNoStoreJson({ report: buildFiveModelReport({ questionId: revision.data.question_id, revisionId: revision.data.id, contentSha256: revision.data.content_sha256, policyVersion: QUESTION_QUALITY_POLICY_VERSION, revisionStatus: revision.data.status, questionText, options: content.options, markedAnswerIndex }, rows.data as FiveModelRunRow[], capped) })
+  return contentNoStoreJson({ decisionPolicy, report: buildFiveModelReport({ questionId: revision.data.question_id, revisionId: revision.data.id, contentSha256: revision.data.content_sha256, policyVersion: effectivePolicy, revisionStatus: revision.data.status, questionText, options: content.options, markedAnswerIndex }, rows.data as FiveModelRunRow[], capped) })
 }

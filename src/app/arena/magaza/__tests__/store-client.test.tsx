@@ -3,6 +3,8 @@
  * Kategori filtresi, sahiplik durumları (Al/Uygula/Uygulandı),
  * satın alma akışı (bakiye+sahiplik güncellenir, otomatik uygula),
  * misafir CTA, yetersiz bakiyede buton disabled.
+ * Satın alma sonucu yalnız dönen alanlarla yamalanır (patchProfile): render
+ * anındaki profil kopyası yayılırsa istek sürerken gelen taze XP/coin ezilir.
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
@@ -15,8 +17,12 @@ const auth = vi.hoisted(() => ({
     profile: {
       coin_balance: 2431,
       owned_backgrounds: ['none', 'gece-mavisi'],
+      total_xp: 1500,
     } as Record<string, unknown> | null,
-    setProfile: vi.fn(),
+    // Gerçek store gibi: setProfile profilin tamamını değiştirir, patchProfile
+    // verilen alanları GÜNCEL profile birleştirir (beforeEach'te bağlanır).
+    setProfile: vi.fn<(profile: Record<string, unknown> | null) => void>(),
+    patchProfile: vi.fn<(patch: Record<string, unknown>) => void>(),
   },
 }))
 vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => auth.value }))
@@ -33,7 +39,14 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   auth.value.user = { id: 'u1' }
-  auth.value.profile = { coin_balance: 2431, owned_backgrounds: ['none', 'gece-mavisi'] }
+  // total_xp: yamanin dokunmadigi alan; render kopyasini yayan bir yazim onu eski degerle tasir.
+  auth.value.profile = { coin_balance: 2431, owned_backgrounds: ['none', 'gece-mavisi'], total_xp: 1500 }
+  auth.value.setProfile.mockImplementation((profile) => {
+    auth.value.profile = profile
+  })
+  auth.value.patchProfile.mockImplementation((patch) => {
+    if (auth.value.profile) auth.value.profile = { ...auth.value.profile, ...patch }
+  })
   // Mount'ta /api/backgrounds (video temalar) çekilir → boş; purchase POST → başarı
   fetchMock.mockImplementation((url: string) => {
     if (typeof url === 'string' && url.includes('/api/backgrounds')) {
@@ -79,14 +92,28 @@ describe('StoreClient', () => {
     render(<StoreClient />)
     fireEvent.click(screen.getByLabelText('Nebula önizleme'))
     fireEvent.click(screen.getByRole('button', { name: 'Şimdi Al' })) // modal açar
+    // Bileşen son render'ı gördükten sonra store'a taze XP gelir (örn. günlük
+    // giriş ödülü); satın alma bunu render anındaki kopyayla ezmemeli.
+    auth.value.profile = { ...auth.value.profile, total_xp: 1600 }
     fireEvent.click(screen.getByRole('button', { name: 'Onayla' })) // satın alır
 
-    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(auth.value.patchProfile).toHaveBeenCalled())
     const purchaseCall = fetchMock.mock.calls.find(
       (c) => c[0] === '/api/profile/backgrounds/purchase',
     )!
     expect(JSON.parse(purchaseCall[1].body)).toEqual({ backgroundId: 'nebula' })
-    expect(auth.value.setProfile.mock.calls[0][0]).toMatchObject({ coin_balance: 2031 })
+    // Yama yalnız sunucunun döndürdüğü alanları taşır; profilin tamamı değişmez.
+    expect(auth.value.patchProfile).toHaveBeenCalledTimes(1)
+    expect(auth.value.patchProfile.mock.calls[0][0]).toStrictEqual({
+      coin_balance: 2031,
+      owned_backgrounds: ['none', 'gece-mavisi', 'nebula'],
+    })
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+    expect(auth.value.profile).toEqual({
+      coin_balance: 2031,
+      owned_backgrounds: ['none', 'gece-mavisi', 'nebula'],
+      total_xp: 1600,
+    })
     expect(localStorage.getItem('bilge-arena-profile-background-v1')).toBe('nebula')
   })
 
@@ -113,7 +140,13 @@ describe('StoreClient', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Onayla' })) // satın alır → hata
 
     await waitFor(() => expect(toastMock.error).toHaveBeenCalled())
+    expect(auth.value.patchProfile).not.toHaveBeenCalled()
     expect(auth.value.setProfile).not.toHaveBeenCalled()
+    expect(auth.value.profile).toEqual({
+      coin_balance: 2431,
+      owned_backgrounds: ['none', 'gece-mavisi'],
+      total_xp: 1500,
+    })
   })
 
   test('misafir: satın alma yerine giriş linki', () => {

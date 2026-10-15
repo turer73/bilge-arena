@@ -6,12 +6,13 @@
 import { describe, test, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 
-const { mockRouterPush } = vi.hoisted(() => ({
+const { mockRouterPush, mockRouterRefresh } = vi.hoisted(() => ({
   mockRouterPush: vi.fn(),
+  mockRouterRefresh: vi.fn(),
 }))
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockRouterPush }),
+  useRouter: () => ({ push: mockRouterPush, refresh: mockRouterRefresh }),
 }))
 
 import { PublicRoomList } from '../PublicRoomList'
@@ -44,7 +45,9 @@ const sampleRooms: PublicRoomCard[] = [
 
 describe('PublicRoomList', () => {
   test('1) rooms render: title + kategori + uye sayisi', () => {
-    render(<PublicRoomList rooms={sampleRooms} />)
+    render(
+      <PublicRoomList result={{ status: 'success', rooms: sampleRooms }} />,
+    )
     expect(screen.getByText('Genel Kültür Düellosu')).toBeInTheDocument()
     expect(screen.getByText('Matematik Yarışması')).toBeInTheDocument()
     // Uye sayisi: 2/6
@@ -53,7 +56,7 @@ describe('PublicRoomList', () => {
   })
 
   test('2) empty rooms -> açık oda yok + Oda Kur CTA', () => {
-    render(<PublicRoomList rooms={[]} />)
+    render(<PublicRoomList result={{ status: 'success', rooms: [] }} />)
     expect(
       screen.getByText(/Şu anda katılabileceğin açık oda yok/i),
     ).toBeInTheDocument()
@@ -64,7 +67,9 @@ describe('PublicRoomList', () => {
   })
 
   test('3) kategori filter degistirildiginde router.push tetiklenir', () => {
-    render(<PublicRoomList rooms={sampleRooms} />)
+    render(
+      <PublicRoomList result={{ status: 'success', rooms: sampleRooms }} />,
+    )
     const select = screen.getByLabelText(/Kategori/i) as HTMLSelectElement
     fireEvent.change(select, { target: { value: 'matematik' } })
     expect(mockRouterPush).toHaveBeenCalledWith(
@@ -74,7 +79,10 @@ describe('PublicRoomList', () => {
 
   test('4) selectedCategory prop ile select.value sync', () => {
     render(
-      <PublicRoomList rooms={sampleRooms} selectedCategory="cografya" />,
+      <PublicRoomList
+        result={{ status: 'success', rooms: sampleRooms }}
+        selectedCategory="cografya"
+      />,
     )
     const select = screen.getByLabelText(/Kategori/i) as HTMLSelectElement
     expect(select.value).toBe('cografya')
@@ -82,7 +90,10 @@ describe('PublicRoomList', () => {
 
   test('5) Bos kategori secimi -> tab=public (cat YOK)', () => {
     render(
-      <PublicRoomList rooms={sampleRooms} selectedCategory="matematik" />,
+      <PublicRoomList
+        result={{ status: 'success', rooms: sampleRooms }}
+        selectedCategory="matematik"
+      />,
     )
     const select = screen.getByLabelText(/Kategori/i) as HTMLSelectElement
     fireEvent.change(select, { target: { value: '' } })
@@ -90,13 +101,17 @@ describe('PublicRoomList', () => {
   })
 
   test('6) oda kartina tiklanabilir Link /oda/[code]', () => {
-    render(<PublicRoomList rooms={sampleRooms} />)
+    render(
+      <PublicRoomList result={{ status: 'success', rooms: sampleRooms }} />,
+    )
     const link = screen.getByLabelText('Genel Kültür Düellosu odasına katıl')
     expect(link.getAttribute('href')).toBe('/oda/PUBA12')
   })
 
   test('7) Codex P3 #1: kategori slug→label gosterimi (raw slug DEGIL)', () => {
-    render(<PublicRoomList rooms={sampleRooms} />)
+    render(
+      <PublicRoomList result={{ status: 'success', rooms: sampleRooms }} />,
+    )
     // 'genel-kultur' yerine 'Genel Kültür' gorunmeli
     expect(screen.queryByText(/genel-kultur · Zorluk/i)).not.toBeInTheDocument()
     expect(screen.getByText(/Genel Kültür · Zorluk 3\/5 · 10 soru/i)).toBeInTheDocument()
@@ -104,7 +119,9 @@ describe('PublicRoomList', () => {
   })
 
   test('8) Codex P3 #2: kategori secenekleri ROOM_CATEGORIES helper ile uyumlu', () => {
-    const { container } = render(<PublicRoomList rooms={sampleRooms} />)
+    const { container } = render(
+      <PublicRoomList result={{ status: 'success', rooms: sampleRooms }} />,
+    )
     const options = container.querySelectorAll<HTMLOptionElement>(
       'select[name="category"] option',
     )
@@ -118,5 +135,17 @@ describe('PublicRoomList', () => {
     expect(options[1].textContent).toBe('Genel Kültür')
     expect(options[5].value).toBe('matematik')
     expect(options[5].textContent).toBe('Matematik')
+  })
+
+  test('9) load error -> retry action, not empty-state copy', () => {
+    render(
+      <PublicRoomList result={{ status: 'error' }} selectedCategory="matematik" />,
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent(/yüklenemedi/i)
+    expect(
+      screen.queryByText(/Şu anda katılabileceğin açık oda yok/i),
+    ).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Tekrar dene/i }))
+    expect(mockRouterRefresh).toHaveBeenCalledOnce()
   })
 })

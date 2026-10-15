@@ -36,6 +36,32 @@ describe('GirisClient institution flow', () => {
     ))
   })
 
+  it('ignores a student-surface next for the institution button', async () => {
+    // /giris?next=/arena/matematik ile acilan sayfada kurum dugmesi
+    // kullaniciyi oyuna degil kurum paneline goturmeli.
+    window.history.replaceState({}, '', '/giris?next=%2Farena%2Fmatematik')
+    render(<GirisClient />)
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(screen.getByRole('button', { name: 'Kurum Hesabıyla Giriş' }))
+
+    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith(
+      '/arena/kurum',
+      { forceAccountSelection: true, legalConsentToken: 'legal-intent-token' },
+    ))
+  })
+
+  it('keeps a nested institution next for the institution button', async () => {
+    window.history.replaceState({}, '', '/giris?next=%2Farena%2Fkurum%2Froller')
+    render(<GirisClient />)
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(screen.getByRole('button', { name: 'Kurum Hesabıyla Giriş' }))
+
+    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith(
+      '/arena/kurum/roller',
+      { forceAccountSelection: true, legalConsentToken: 'legal-intent-token' },
+    ))
+  })
+
   it('preserves a safe next path for the regular Google button', async () => {
     window.history.replaceState({}, '', '/giris?next=%2Farena%2Fkurum%2Froller')
     render(<GirisClient />)

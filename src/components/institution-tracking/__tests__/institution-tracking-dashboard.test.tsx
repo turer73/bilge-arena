@@ -199,6 +199,43 @@ describe('InstitutionTrackingDashboard', () => {
     expect(mocks.directory).not.toHaveBeenCalled()
   })
 
+  it('explains how access is granted and offers a way back when the account has no institution permission', async () => {
+    const { InstitutionTrackingClientError } = await import('@/lib/institution-tracking/client')
+    mocks.directory.mockRejectedValue(new InstitutionTrackingClientError(403))
+    render(<InstitutionTrackingDashboard />)
+    expect(await screen.findByRole('heading', { name: 'Bu hesabın kurum paneli erişimi yok' })).toBeInTheDocument()
+    expect(screen.getByText(/normal kayıt tek başına kurum yetkisi vermez/i)).toBeInTheDocument()
+    expect(screen.getByText('Erişim nasıl açılır?')).toBeInTheDocument()
+    expect(screen.getByText(/Kurum yöneticisiyseniz/)).toBeInTheDocument()
+    expect(screen.getByText(/Öğretmenseniz/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'iletisim@bilgearena.com' })).toHaveAttribute('href', 'mailto:iletisim@bilgearena.com')
+    // Kurum paneli hassas dokumandir; /arena'ya donus tam dokuman navigasyonu
+    // ister (App Router prefetch yok). DocumentBoundaryLink duz <a> uretir.
+    const back = screen.getByRole('link', { name: /Arenaya dön/ })
+    expect(back).toHaveAttribute('href', '/arena')
+    expect(screen.getByRole('button', { name: /Yeniden dene/ })).toBeInTheDocument()
+  })
+
+  it('tells a removed or expired member that the membership is inactive', async () => {
+    const { InstitutionTrackingClientError } = await import('@/lib/institution-tracking/client')
+    mocks.directory.mockRejectedValue(new InstitutionTrackingClientError(404))
+    render(<InstitutionTrackingDashboard />)
+    expect(await screen.findByRole('heading', { name: 'Bu hesabın kurum paneli erişimi yok' })).toBeInTheDocument()
+    expect(screen.getByText(/aktif bir kurum üyeliği yok/i)).toBeInTheDocument()
+    expect(screen.getByText('Erişim nasıl açılır?')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Arenaya dön/ })).toHaveAttribute('href', '/arena')
+  })
+
+  it('keeps the generic retry copy for transport or pilot-switch failures', async () => {
+    const { InstitutionTrackingClientError } = await import('@/lib/institution-tracking/client')
+    mocks.directory.mockRejectedValue(new InstitutionTrackingClientError(503))
+    render(<InstitutionTrackingDashboard />)
+    expect(await screen.findByRole('heading', { name: 'Kurum çalışma alanı alınamadı' })).toBeInTheDocument()
+    expect(screen.getByText(/pilot ayarlarını kontrol edip yeniden deneyin/i)).toBeInTheDocument()
+    expect(screen.queryByText('Erişim nasıl açılır?')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Arenaya dön/ })).toHaveAttribute('href', '/arena')
+  })
+
   it.each([320, 375, 390])('renders long names and sparse evidence at %ipx', async (width) => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
     render(<InstitutionTrackingDashboard />)

@@ -8,7 +8,7 @@ import { Logo } from '@/components/layout/logo'
 import { Button } from '@/components/ui/button'
 import { Building2, Zap } from 'lucide-react'
 import { beginLegalConsentIntent } from '@/lib/consent'
-import { safeAuthNext } from '@/lib/auth/safe-next'
+import { resolveInstitutionLoginNext, safeAuthNext } from '@/lib/auth/safe-next'
 
 export default function GirisClient({
   initialConsentError = null,
@@ -26,10 +26,7 @@ export default function GirisClient({
   const [consentError, setConsentError] = useState<string | null>(initialConsentError)
   const [creatingConsentIntent, setCreatingConsentIntent] = useState(false)
 
-  const handleGoogleLogin = async (
-    fallbackNext = '/arena',
-    forceAccountSelection = false,
-  ) => {
+  const handleGoogleLogin = async ({ institution = false }: { institution?: boolean } = {}) => {
     const searchParams = typeof window === 'undefined'
       ? null
       : new URLSearchParams(window.location.search)
@@ -37,7 +34,14 @@ export default function GirisClient({
     // paylasilmis baglantilardan gelen `redirect` de guvenli relative-path
     // denetiminden gecirilerek geriye donuk uyumluluk icin kabul edilir.
     const rawNext = searchParams?.get('next') ?? searchParams?.get('redirect')
-    const requestedNext = safeAuthNext(rawNext ?? fallbackNext)
+    // Kurum dugmesi: ogrenci yuzeyine isaret eden bir ?next= kurum panelini
+    // ezmemeli; yalniz personel yuzeyine giden (MFA ic ice hedefi dahil) next
+    // korunur. Aksi halde /giris?next=/arena/matematik ile acilan sayfada
+    // kurum dugmesi kullaniciyi oyuna goturuyordu.
+    const requestedNext = institution
+      ? resolveInstitutionLoginNext(rawNext)
+      : safeAuthNext(rawNext ?? '/arena')
+    const forceAccountSelection = institution
     setConsentError(null)
     setCreatingConsentIntent(true)
     let legalConsentToken: string
@@ -109,7 +113,7 @@ export default function GirisClient({
           size="lg"
           className="w-full"
           disabled={!accepted || creatingConsentIntent || initialAccountNotice?.kind === 'unavailable'}
-          onClick={() => void handleGoogleLogin('/arena')}
+          onClick={() => void handleGoogleLogin()}
         >
           <svg viewBox="0 0 24 24" width={18} height={18} className="mr-1">
             <path
@@ -137,7 +141,7 @@ export default function GirisClient({
           size="md"
           className="mt-3 w-full border border-[var(--border)]"
           disabled={!accepted || creatingConsentIntent || initialAccountNotice?.kind === 'unavailable'}
-          onClick={() => void handleGoogleLogin('/arena/kurum', true)}
+          onClick={() => void handleGoogleLogin({ institution: true })}
         >
           <Building2 size={16} />
           Kurum Hesabıyla Giriş

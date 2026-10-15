@@ -20,7 +20,7 @@ import { isStaff } from '@/lib/utils/is-staff'
  * başkalarına görünür). Satın-alma /purchase, sonra otomatik uygula.
  */
 export function NameplateStoreClient() {
-  const { user, profile, setProfile } = useAuthStore()
+  const { user, profile, patchProfile } = useAuthStore()
   const [category, setCategory] = useState<NameplateRarity | 'all'>('all')
   const [selectedId, setSelectedId] = useState(PROFILE_NAMEPLATES[1].id)
   const [busy, setBusy] = useState(false)
@@ -57,7 +57,9 @@ export function NameplateStoreClient() {
         toast.error('Uygulanamadı', data.error ?? 'Bir şeyler ters gitti')
         return
       }
-      if (profile) setProfile({ ...profile, selected_nameplate: id })
+      // Yalnız değişen alanı yamala: render anındaki profili yaymak, istek
+      // sürerken gelen taze XP/coin değerlerini eski kopyayla ezerdi.
+      patchProfile({ selected_nameplate: id })
       toast.success('İsim paneli uygulandı', 'Sıralama ve profilinde görünecek ✨')
     } catch {
       toast.error('Bağlantı hatası', 'Tekrar dene')
@@ -81,23 +83,24 @@ export function NameplateStoreClient() {
         return
       }
       // Satın alındı → otomatik uygula (select)
-      let applied = profile?.selected_nameplate ?? 'none'
+      let applied = false
       try {
         const selRes = await fetch('/api/profile/nameplates/select', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nameplateId: selected.id }),
         })
-        if (selRes.ok) applied = selected.id
+        if (selRes.ok) applied = true
       } catch {}
-      if (profile) {
-        setProfile({
-          ...profile,
-          coin_balance: data.coin_balance,
-          owned_nameplates: data.owned_nameplates,
-          selected_nameplate: applied,
-        })
-      }
+      // Yalnız sunucunun değiştirdiği alanları yamala: render anındaki profili
+      // yaymak, istek sürerken gelen taze XP/coin değerlerini eski kopyayla
+      // ezerdi. Uygulama (select) başarısızsa seçili panele dokunma — eski
+      // değeri yeniden yazmak araya giren bir seçimi geri alırdı.
+      patchProfile({
+        coin_balance: data.coin_balance,
+        owned_nameplates: data.owned_nameplates,
+        ...(applied ? { selected_nameplate: selected.id } : {}),
+      })
       toast.success('Satın alındı! 🪙', `Yeni bakiye: ${data.coin_balance}`)
     } catch {
       toast.error('Bağlantı hatası', 'Tekrar dene')

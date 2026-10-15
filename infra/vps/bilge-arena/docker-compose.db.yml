@@ -1,0 +1,22 @@
+name: bilge-arena
+networks:
+  rooms: {name: bilge-arena-rooms}
+volumes:
+  dbdata: {name: bilge-arena-dbdata}
+services:
+  db:
+    image: bilge-arena-db:16.15-wal2json
+    container_name: bilge-arena-db
+    restart: unless-stopped
+    networks: [rooms]
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: ba_admin
+      POSTGRES_PASSWORD: ${POSTGRES_SUPER_PASSWORD}
+    volumes: [dbdata:/var/lib/postgresql/data]
+    command: ["postgres", "-c", "wal_level=logical", "-c", "output_plugin_libraries=pgoutput,test_decoding,wal2json"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ba_admin -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10

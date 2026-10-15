@@ -26,11 +26,13 @@
  *   npm run audit:calibrate -- --revision-id <uuid> --persist --confirm
  *   npm run audit:calibrate -- --governance-ready --persist --confirm
  *   npm run audit:calibrate -- --provider deepseek --persist --no-decisions --confirm
- *   npm run audit:calibrate -- --persist --promotion-report benchmark.json --confirm
+ *   npm run audit:calibrate -- --persist --promotion-report benchmark.json --control-set frozen-labels.json --confirm
  *   npm run audit:calibrate -- --gold-labels secure/gold-labels.json --confirm
+ *   npm run audit:calibrate -- --target-scope preregistered-scope.json  # read-only plan
  */
 
 import { existsSync, readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
@@ -97,6 +99,20 @@ async function attachPublishedRevisionHashes(rows) {
  * Sayfalamasiz "tam banka kosusu" sessizce ilk 1000 soruyu olcup tam sanilirdi.
  */
 async function fetchRows(args) {
+  if (args.targetScopePath) {
+    if (args.goldLabelsPath || args.revisionId || args.governanceReady || args.game || args.category) {
+      throw new Error('--target-scope baska secim filtreleriyle birlestirilemez')
+    }
+    const scope = JSON.parse(readFileSync(resolve(args.targetScopePath), 'utf8'))
+    const scopeModule = await server.ssrLoadModule('/src/lib/question-audit/promotion-scope.ts')
+    return scopeModule.loadPromotionTargetRows(scope, async revisionIds => {
+      const { data, error } = await sb.from('question_content_revisions')
+        .select('id, question_id, game, category, subcategory, topic, exam_ref, difficulty, content, content_sha256')
+        .in('id', revisionIds)
+      if (error) throw new Error(`supabase pinned revisions: ${error.message}`)
+      return (data ?? []).map(r => ({ ...r, id: r.question_id, published_revision_id: r.id }))
+    })
+  }
   if (args.goldLabelsPath) {
     const labels = JSON.parse(readFileSync(resolve(args.goldLabelsPath), 'utf8'))
     if (!Array.isArray(labels) || labels.length === 0) throw new Error('gold label listesi bos veya gecersiz')
@@ -251,6 +267,14 @@ try {
         throw new Error('yetkili karar yazimi --promotion-report <benchmark.json> ister; benchmark oncesi --no-decisions kullanin')
       }
       deps.promotionEvidence = JSON.parse(readFileSync(resolve(promotionPath), 'utf8'))
+      const controlIndex = process.argv.indexOf('--control-set')
+      const controlPath = controlIndex === -1 ? null : process.argv[controlIndex + 1]
+      if (!controlPath || controlPath.startsWith('--')) {
+        throw new Error('yetkili karar yazimi --control-set <frozen-controls.json> ister')
+      }
+      const controlBytes = readFileSync(resolve(controlPath))
+      benchmark.validateGoldLabels(JSON.parse(controlBytes.toString('utf8')))
+      deps.controlSetSha256 = createHash('sha256').update(controlBytes).digest('hex')
       deps.persistDecision = persistDecision
     }
     deps.loadCachedRun = async (draft, identity) => {

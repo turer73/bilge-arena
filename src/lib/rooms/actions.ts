@@ -145,7 +145,17 @@ export async function createRoomAction(
   const result = await callRpc<{ id: string; code: string }>(
     auth.jwt,
     'create_room',
-    parsed.data,
+    {
+      p_title: parsed.data.title,
+      p_category: parsed.data.category,
+      p_difficulty: parsed.data.difficulty,
+      p_question_count: parsed.data.question_count,
+      p_max_players: parsed.data.max_players,
+      p_per_question_seconds: parsed.data.per_question_seconds,
+      p_mode: parsed.data.mode,
+      p_auto_advance_seconds: parsed.data.auto_advance_seconds,
+      p_is_public: parsed.data.is_public,
+    },
   )
   if (!result.ok) return { error: result.error.message }
 

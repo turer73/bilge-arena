@@ -58,3 +58,80 @@ INSERT/UPDATE/DELETE yetkisi yoktur; bu betikler servis anahtariyla fail-closed
 olur. Yeni otomasyonlar yonetimli taslak RPC'sini kullanmalidir. Acil bakim
 gerekiyorsa API anahtari bir "break glass" yolu degildir: owner yetkili,
 incelemeli ve kayitli bir SQL migration'i gerekir.
+
+## Pilot bulgularindan taslak revizyon
+
+Antigravity pilotlari ve `npm run scan:question-text` yalniz ADAY uretir. Aday,
+migration ile ya da `questions` tablosuna dogrudan yazilarak canliya alinamaz:
+`trg_question_content_direct_mutation_guard` (106/142) icerik ve `is_active`
+degisikligini 42501 ile reddeder ve migration dosyalari icerik tasimaz.
+Hicbir LLM ciktisi (kor cozucu, oneri metni) tek basina yayin, ret veya
+karantina otoritesi degildir. `npm run lint:migrations` (pre-commit ve CI) bunu
+depoda da zorlar: soru icerigini veya `is_active`'i degistiren, korumayi kapatan
+(`DISABLE TRIGGER`, `session_replication_role`, `enforce_direct_mutation`) ya da
+taslak/onay/yayin RPC'sini kendisi cagiran migration reddedilir. Prod'da zaten
+calismis owner onayli veri migration'lari `APPROVED_QUESTION_CONTENT_MIGRATIONS`
+listesinde kaynakta sabittir; `--write-baseline` bu kurali susturmaz.
+
+Yol:
+
+1. Oneri dosyasi (`question-revision-proposals@1`; ornek ve 16 soruluk iskelet
+   `database/__fixtures__/question-revision-proposals/` altinda). Her oge:
+   soru kimligi, bulgu (kod/onem/ozet), kanit, `changeKind`
+   (`edit` | `correct_answer` | `retire`), yalniz icerik alanlarini tasiyan
+   `patch` ve gerekce. Zorluk, kategori ve kazanim `patch` ile degismez.
+2. `npm run revision:drafts -- --proposals <dosya> --user-id <hazirlayan>`: kuru
+   calisma. Her soru icin yayimli revizyon, kaynak kaydi ve kazanim eslemesi
+   `get_question_content_revision` RPC'si ile hazirlayan kimligiyle okunur
+   (`question_revision_sources` service_role'a kapalidir, 136 yalniz revizyon
+   tablosuna sutun bazli SELECT verir); 106 + 110 (`coach`)
+   `content_governance_validate_payload` sozlesmesine uyan payload kurulur;
+   `coach` nesnesi aynen tasinir ve patch ile degistirilemez; coach'lu soruda
+   cevap indeksi veya secenek metni (yazim duzeltmesi disinda) degisemez,
+   once insan coach revizyonu yapar; onerilen icerik
+   deterministik taramadan ERROR alirsa oge bloklanir. Cikti:
+   `payloads.json`, `review-sheet.md` (once/sonra tablosu) ve `report.json`,
+   varsayilan olarak `secure/revision-drafts/<paket>/`. DB'ye yazilmaz.
+   DB yoksa `--rows <dis aktarim>` ile cevrimdisi onizleme alinir.
+3. `--apply`: yalniz "ready" ogeler icin
+   `create_question_content_revision` cagrilir; sonuc TASLAKTIR. Istek kimligi
+   soru + payload'dan turetilir, yeniden calistirma taslak cogaltmaz; taban
+   revizyon bayatsa RPC reddeder (`22023`).
+4. Iki insan onayi: stage 1 ve stage 2, hazirlayandan ve birbirinden farkli
+   kisiler (`review_question_content_revision`); ardindan
+   `publish_question_content_revision`. Pasife alma yalniz `retire`
+   taslaginin yayimidir.
+
+### Istisna: Turkce harf duzeltmesi (migration 215)
+
+Owner karari: basit Turkce karakter kaybi (`asagidaki` -> `aşağıdaki`, `sinif`
+-> `sınıf`) iki insan onayi beklemez. Otorite LLM degil veritabanidir:
+`publish_question_turkish_restoration` degisikligi harf harf kanitlamadan
+yayimlamaz.
+
+- Yapi aynen korunur: ayni anahtarlar, ayni sik sayisi ve sirasi; cevap ve
+  string disi her deger esit. Her string ayni uzunlukta ve farkli her karakter
+  c->ç g->ğ i->ı o->ö s->ş u->ü (buyukleri, I->İ) ciftlerinden biri.
+- Degisen her sozcugun eski hali `question_turkish_restoration_stems`
+  listesindeki bir ASCII govdeyle, yeni hali o govdenin Turkce yazimiyla
+  baslar. Liste `scan-question-text-defects.mjs` `TURKISH_RESTORATION_STEMS`
+  ile birebir aynidir; `ol`->`öl` gibi anlam degistiren ceviriler ve onek
+  tuzagi olan `kisi` (`kisim` = kısım) listede yoktur.
+- Kapsam disi: pasif soru, `wordquest`, `turkce/yazim_kurallari` ve kokunde
+  yazim/noktalama/buyuk harf/kesme isareti/ses olayi gecen sorular (oradaki
+  hatali yazimlar bilincli celdiricidir).
+- Tabani onayli TYT sosyal sorusu da kapsam disidir (218): 191/210 kapilari ve
+  kaynak politikasi soruyu yalniz onayli yayimli revizyonla hazir sayar;
+  onaysiz bir harf duzeltmesi soruyu havuzdan dusururdu. Bu sorularda duzeltme
+  onayli yoldan gider.
+- Yayin kapisi atlanmaz: taban revizyonun gecerli politikada APPROVED karari
+  yoksa (ya da baska bir verdict'i varsa) yol kapanir; varsa yeni revizyona
+  devredilir ve gerekcesi devri yazar.
+- Kaynak kaydi ve kazanim eslemesi taban revizyondan aynen tasinir;
+  `question_outcomes`'a dokunulmaz. Her yayin `question_governance_events` ve
+  `question_turkish_restorations`'a yazilir. RPC `content.prepare` ve
+  `content.publish` yetkisinin ikisini birden ister.
+
+`npm run revision:drafts` kuru calismada bu ogeleri "Turkce harf duzeltmesi
+(215)" hatti olarak ayirir; `--apply` onlari bu RPC ile yayimlar, digerlerini
+taslak acar. Kanitlanamayan her degisiklik yukaridaki iki onayli yoldan gider.

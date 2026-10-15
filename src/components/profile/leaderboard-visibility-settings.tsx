@@ -15,7 +15,7 @@ interface LeaderboardVisibilitySettingsProps {
  */
 export function LeaderboardVisibilitySettings({ compact = false }: LeaderboardVisibilitySettingsProps) {
   const profile = useAuthStore((state) => state.profile)
-  const setProfile = useAuthStore((state) => state.setProfile)
+  const patchProfile = useAuthStore((state) => state.patchProfile)
   const [saving, setSaving] = useState(false)
 
   // App-first rollout: migration 177 uygulanana kadar alan profile cevabinda
@@ -42,7 +42,9 @@ export function LeaderboardVisibilitySettings({ compact = false }: LeaderboardVi
         return
       }
 
-      setProfile({ ...profile, leaderboard_opt_in: next })
+      // Yalnız değişen alanı yamala: render anındaki profili yaymak, istek
+      // sürerken gelen taze XP/coin değerlerini eski kopyayla ezerdi.
+      patchProfile({ leaderboard_opt_in: next })
       toast.success(next ? 'Açık sıralamaya isteğinle katıldın' : 'Açık sıralamadan ayrıldın')
     } catch {
       toast.error('Sıralama tercihi güncellenemedi')

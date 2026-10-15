@@ -1,8 +1,5 @@
 /**
- * ArenaClient tek duyarlı öğrenme yolu kabuğu sözleşmesi.
- *
- * Aynı içerik mobil, tablet ve masaüstünde render edilir; ekran genişliği
- * yalnız yerleşimi değiştirir, veri ve eylem modelini değiştirmez.
+ * Mobil öğrenme kabuğu ile Pratik ekranı arasındaki ortak ders seçimi.
  */
 
 import { beforeEach, describe, expect, test, vi } from 'vitest'
@@ -24,6 +21,7 @@ vi.mock('next/link', () => ({
 }))
 
 import ArenaClient from '../arena-client'
+import CalismaClient from '../calisma/calisma-client'
 import { useGameStore } from '@/stores/game-store'
 
 const UUID = '11111111-1111-4111-8111-111111111111'
@@ -32,7 +30,9 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockAuth.value = { user: null, profile: null }
   mockQuestState.value = []
-  useGameStore.setState({ selectedExamRef: null })
+  Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: function(this: HTMLDialogElement) { this.setAttribute('open', '') } })
+  Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: function(this: HTMLDialogElement) { this.removeAttribute('open') } })
+  useGameStore.setState({ selectedGame: null, selectedCategory: null, selectedExamRef: null })
   localStorage.clear()
   global.fetch = vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input)
@@ -43,20 +43,54 @@ beforeEach(() => {
 })
 
 describe('ArenaClient duyarlı öğrenme ekranı', () => {
+  test('mobilde Fen seçimi Pratik ekranına ve Öğren ekranına dönüşe taşınır', async () => {
+    mockAuth.value = { user: { id: UUID }, profile: { exam_type: 'yks' } }
+    useGameStore.setState({ selectedCategory: 'sayilar', selectedExamRef: 'TYT' })
+    const learn = render(<ArenaClient />)
+
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Fen' })) })
+    expect(screen.getByRole('heading', { name: 'Fen Bilimleri Yolu' })).toBeInTheDocument()
+    expect(useGameStore.getState().selectedCategory).toBeNull()
+    learn.unmount()
+
+    const practice = render(<CalismaClient />)
+    expect(screen.getByRole('heading', { name: 'Fen Bilimleri · TYT' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Değiştir' }))
+    expect(screen.getByRole('button', { name: 'Fen Bilimleri' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('link', { name: 'Fen Bilimleri turunu hazırla' })).toHaveAttribute('href', '/arena/fen?exam_ref=TYT')
+    practice.unmount()
+
+    await act(async () => { render(<ArenaClient />) })
+    expect(screen.getByRole('button', { name: 'Fen' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('heading', { name: 'Fen Bilimleri Yolu' })).toBeInTheDocument()
+  })
+
+  test('Pratik ekranında seçilen İngilizce mobil Öğren ekranında korunur', async () => {
+    mockAuth.value = { user: { id: UUID }, profile: { exam_type: 'yks' } }
+    const practice = render(<CalismaClient />)
+    fireEvent.click(screen.getByRole('button', { name: 'Değiştir' }))
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'İngilizce' })) })
+    practice.unmount()
+
+    await act(async () => { render(<ArenaClient />) })
+    expect(screen.getByRole('button', { name: 'İng.' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('heading', { name: 'İngilizce Yolu' })).toBeInTheDocument()
+  })
+
   test('ekran genişliğinden bağımsız olarak öğrenme yolu ve konu derin bağlantılarını render eder', () => {
     const { container } = render(<ArenaClient />)
 
     expect(screen.getByRole('heading', { name: 'Matematik Yolu' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Öğrenme yolu' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Sayılar dersini aç' }))
-      .toHaveAttribute('href', '/arena/matematik?category=sayilar')
+      .toHaveAttribute('href', '/arena/matematik?exam_ref=TYT&category=sayilar')
     expect(screen.getByRole('link', { name: /Mağaza/ })).toHaveAttribute('href', '/arena/magaza')
 
     const responsiveGrid = container.querySelector('[data-responsive-arena-grid]')
     expect(responsiveGrid).toHaveClass('md:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)]')
   })
 
-  test('profil kaynaklarını ve günlük soru hedefini aynı kabuğa aktarır', async () => {
+  test('profil kaynaklarını ve günlük doğru cevap hedefini aynı kabuğa aktarır', async () => {
     mockAuth.value = {
       user: { id: UUID },
       profile: {
@@ -76,10 +110,11 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
 
     expect(screen.getByLabelText('Günlük seri: 12')).toBeInTheDocument()
     expect(screen.getByLabelText('Altın: 480')).toBeInTheDocument()
-    expect(screen.getByText('3 / 5 soru')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Günlük doğru cevap hedefi' })).toHaveTextContent('3 / 5')
+    expect(screen.queryByText('3 / 5 soru')).not.toBeInTheDocument()
   })
 
-  test('LGS profilinde yalnız uygun dersleri gösterir', async () => {
+  test('LGS profilinde uygun derslerle birlikte sınavdan bağımsız WordQuest girişini gösterir', async () => {
     mockAuth.value = {
       user: { id: UUID },
       profile: { total_xp: 100, current_streak: 0, username: 'lgsci', exam_type: 'lgs' },
@@ -89,17 +124,20 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
 
     expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Türkçe' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'YDT' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'İng.' }))
+    expect(screen.getByRole('heading', { name: 'İngilizce Yolu' })).toBeInTheDocument()
+    expect(screen.queryByText(/YDT İngilizce/)).not.toBeInTheDocument()
   })
 
-  test('YKS profilinde İngilizce dahil tüm dersleri gösterir', async () => {
+  test('YKS profilinde TYT kapsamı seçiliyken de sınavdan bağımsız İngilizceyi gösterir', async () => {
+    useGameStore.setState({ selectedExamRef: 'TYT' })
     mockAuth.value = {
       user: { id: UUID },
       profile: { total_xp: 100, current_streak: 0, username: 'yksci', exam_type: 'yks' },
     }
 
     await act(async () => { render(<ArenaClient />) })
-    expect(screen.getByRole('button', { name: 'YDT' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'İng.' })).toBeInTheDocument()
   })
 
   test('profil turu degisince onceki sinavin gecersiz kapsamını varsayilana dondurur', async () => {
@@ -137,9 +175,11 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
 
     await act(async () => { render(<ArenaClient />) })
     expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'İng.' })).toBeInTheDocument()
   })
 
   test('kurum alanını yalnız etkin bayrak ve yetkili çalışma alanı yanıtıyla gösterir', async () => {
+    mockAuth.value = { user: { id: UUID }, profile: { exam_type: 'yks' } }
     const previous = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
     process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = 'true'
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -156,6 +196,40 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
         '/api/institution/workspace',
         expect.objectContaining({ cache: 'no-store' }),
       ))
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
+      else process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = previous
+    }
+  })
+
+  test('misafir kurum çalışma alanı API isteği göndermez', async () => {
+    const previous = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
+    process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = 'true'
+    try {
+      render(<ArenaClient />)
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument())
+      expect(vi.mocked(global.fetch).mock.calls.some(([input]) => String(input).includes('/api/institution/workspace'))).toBe(false)
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
+      else process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = previous
+    }
+  })
+
+  test('oturum kapanınca önceki kullanıcının kurum bağlantısı hemen kaybolur', async () => {
+    mockAuth.value = { user: { id: UUID }, profile: { exam_type: 'yks' } }
+    const previous = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
+    process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = 'true'
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).includes('/api/institution/workspace')) return { ok: true, json: async () => ({}) } as Response
+      return { ok: true, json: async () => ({ topics: [] }) } as Response
+    }) as typeof fetch
+
+    try {
+      const view = render(<ArenaClient />)
+      expect(await screen.findByRole('link', { name: /Kurum paneli/ })).toBeInTheDocument()
+      mockAuth.value = { user: null, profile: null }
+      view.rerender(<ArenaClient />)
+      expect(screen.queryByRole('link', { name: /Kurum paneli/ })).not.toBeInTheDocument()
     } finally {
       if (previous === undefined) delete process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
       else process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = previous
@@ -183,17 +257,27 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
       }) } as Response
     }) as typeof fetch
     render(<ArenaClient />)
-    expect(await screen.findByRole('button', { name: 'Planı Başlat · 15 Soru' })).toBeInTheDocument()
+    expect(await screen.findByRole('progressbar', { name: 'Günlük plan ilerlemesi' })).toHaveAttribute('aria-valuemax', '15')
+    expect(screen.queryByRole('button', { name: 'Planı Başlat · 15 Soru' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Planı incele' }))
+    expect(screen.getByRole('button', { name: 'Planı Başlat · 15 Soru' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Pencereyi kapat' }))
     const primaryEntry = document.querySelector('[data-today-plan-primary]')!
     const secondaryGrid = document.querySelector('[data-responsive-arena-grid]')!
     expect(primaryEntry.compareDocumentPosition(secondaryGrid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Türkçe' }))
+    expect(screen.queryByText('0 / 15')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Planı Başlat · 15 Soru' })).not.toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: 'Planı Başlat · 12 Soru' })).toBeInTheDocument()
+    expect(await screen.findByRole('progressbar', { name: 'Günlük plan ilerlemesi' })).toHaveAttribute('aria-valuemax', '12')
+    fireEvent.click(screen.getByRole('button', { name: 'Planı incele' }))
+    expect(screen.getByRole('button', { name: 'Planı Başlat · 12 Soru' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Pencereyi kapat' }))
     fireEvent.click(screen.getByRole('button', { name: 'Sınav kapsamını değiştir' }))
     fireEvent.click(screen.getByRole('button', { name: 'AYT Eşit Ağırlık' }))
     expect(screen.queryByRole('button', { name: 'Planı Başlat · 12 Soru' })).not.toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: 'Planı Başlat · 8 Soru' })).toBeInTheDocument()
+    expect(await screen.findByRole('progressbar', { name: 'Günlük plan ilerlemesi' })).toHaveAttribute('aria-valuemax', '8')
+    fireEvent.click(screen.getByRole('button', { name: 'Planı incele' }))
+    expect(screen.getByRole('button', { name: 'Planı Başlat · 8 Soru' })).toBeInTheDocument()
     expect(requests).toEqual([
       '/api/study/today?game=matematik&exam_ref=TYT',
       '/api/study/today?game=turkce&exam_ref=TYT',

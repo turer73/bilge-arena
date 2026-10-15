@@ -15,7 +15,6 @@ interface NavItem {
 
 const ADMIN_NAV: NavItem[] = [
   { href: '/admin', label: 'Dashboard', icon: '📊', permission: 'admin.dashboard.view' },
-  { href: '/admin/anasayfa-editor', label: 'Anasayfa', icon: '🏠', permission: 'admin.homepage.view' },
   { href: '/admin/sorular', label: 'Sorular', icon: '📝', permission: ['admin.questions.view', 'content.prepare'] },
   { href: '/admin/gonderiler', label: 'Gönderiler', icon: '📥', permission: ['admin.questions.view', 'content.prepare'] },
   { href: '/admin/soru-kalite', label: 'Soru Kalitesi', icon: '📉', permission: ['admin.questions.view', 'content.prepare', 'content.review.stage1', 'content.review.stage2', 'content.publish', 'content.appeals.manage', 'content.corrections.apply', 'content.psychometrics.refresh'] },

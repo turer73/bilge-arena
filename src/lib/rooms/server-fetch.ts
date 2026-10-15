@@ -3,19 +3,18 @@
  * Sprint 1 PR4a Task 2
  *
  * Server component'lardan dogrudan PostgREST'e gidip RLS-filtered data alir.
- * Hata pathlerinde sessiz bos return ([] veya null) — UI'a "Failed to fetch"
- * yansimaz, kullanici sadece bos liste/404 gorur.
+ * Hata pathlerinde cogu helper sessiz bos return ([] veya null) yapar; public
+ * oda listesi ise bos sonuctan ayri, gorunur bir yukleme hatasi doner.
  *
  * Why server-only: BILGE_ARENA_RPC_URL env var ve JWT yalnizca server-side
  * okunabilir; client'a leak etmez (server-only import paketi).
  *
  * Hata stratejisi:
- *   - !res.ok (4xx/5xx) → [] | null (RLS empty veya server hata, ayirt etmiyoruz)
- *   - JSON parse fail → [] | null
- *   - Network reject → [] | null
+ *   - fetchPublicRooms: !res.ok, JSON parse fail, network reject → error sonucu
+ *   - Diger helper'lar: !res.ok, JSON parse fail, network reject → [] | null
  *
- * Trade-off: gercek 5xx hatasi bos liste gibi gorunur, observability
- * (Sentry vs.) ile ayri yakalanir. Server component'lar Sentry'ye log atar.
+ * Trade-off: diger helper'larda gercek 5xx hatasi bos liste gibi gorunur;
+ * observability (Sentry vs.) ile ayri yakalanir.
  */
 
 import 'server-only'
@@ -94,6 +93,11 @@ export type PublicRoomCard = {
   created_at: string
 }
 
+/** Public liste isteginin sonucu; basarili bos liste ile yukleme hatasini ayirir. */
+export type FetchPublicRoomsResult =
+  | { status: 'success'; rooms: PublicRoomCard[] }
+  | { status: 'error' }
+
 /**
  * Public lobby odalarini listeler. Anonim user (JWT yok) ve authenticated
  * her ikisi de cagiribilir — RLS policy + GRANT SELECT TO anon ile.
@@ -103,7 +107,7 @@ export type PublicRoomCard = {
 export async function fetchPublicRooms(
   jwt: string | null,
   opts?: { category?: string; limit?: number },
-): Promise<PublicRoomCard[]> {
+): Promise<FetchPublicRoomsResult> {
   const url = new URL(`${RPC_URL}/rooms`)
   url.searchParams.set('is_public', 'eq.true')
   url.searchParams.set('state', 'eq.lobby')
@@ -135,13 +139,18 @@ export async function fetchPublicRooms(
         res.status,
         res.statusText,
       )
-      return []
+      return { status: 'error' }
     }
-    return (await res.json()) as PublicRoomCard[]
+    const data: unknown = await res.json()
+    if (!Array.isArray(data)) {
+      console.error('[fetchPublicRooms] invalid response body')
+      return { status: 'error' }
+    }
+    return { status: 'success', rooms: data as PublicRoomCard[] }
   } catch (err) {
     // Codex P3 #3 fix: network reject observability
     console.error('[fetchPublicRooms] fetch failed', err)
-    return []
+    return { status: 'error' }
   }
 }
 

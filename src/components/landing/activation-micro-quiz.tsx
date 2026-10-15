@@ -75,7 +75,7 @@ function prepareQuestions(questions: PublicQuestion[]): PreparedQuestion[] {
 }
 
 export function ActivationMicroQuiz() {
-  const { user, signInWithGoogle } = useAuth()
+  const { user, loading: authLoading, signInWithGoogle } = useAuth()
   const [goal, setGoal] = useState<ExamGoal | null>(null)
   const [questions, setQuestions] = useState<PreparedQuestion[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -309,6 +309,40 @@ export function ActivationMicroQuiz() {
     )
   }
 
+  // A returning learner needs their study entry. Preserve a guest preview
+  // already in progress if the auth state changes while it is being solved.
+  if (!goal && authLoading) {
+    return (
+      <div className="flex min-h-40 w-full items-center justify-center gap-2 rounded-3xl border border-[var(--focus-border)] bg-[var(--card-bg)] p-5 text-sm text-[var(--text-sub)]" role="status">
+        <LoaderCircle className="animate-spin" size={20} aria-hidden="true" /> Oturumun kontrol ediliyor…
+      </div>
+    )
+  }
+
+  if (!goal && user) {
+    return (
+      <section aria-labelledby="returning-learner-title" className="w-full rounded-3xl border border-[var(--focus-border)] bg-[color-mix(in_srgb,var(--card-bg)_94%,transparent)] p-5 shadow-2xl backdrop-blur-xl md:p-7">
+        <p className="flex items-center gap-2 text-sm font-bold text-[var(--focus-text)]">
+          <Sparkles size={18} aria-hidden="true" /> Yeniden hoş geldin
+        </p>
+        <h2 id="returning-learner-title" className="mt-3 font-display text-2xl font-black leading-tight text-[var(--text)] md:text-3xl">
+          Çalışmana devam et
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">
+          Günlük planını açabilir veya istediğin dersten pratik yapabilirsin.
+        </p>
+        <div className="mt-5 grid gap-3">
+          <Link href="/arena" className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[var(--focus)] px-4 py-3 text-center text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] focus-visible:ring-offset-2">
+            Öğrenmeye devam et <ArrowRight size={18} aria-hidden="true" />
+          </Link>
+          <Link href="/arena/calisma" className="flex min-h-12 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-bold text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]">
+            Pratik yap
+          </Link>
+        </div>
+      </section>
+    )
+  }
+
   if (!goal || loading || error && questions.length === 0) {
     return (
       <div className="w-full rounded-3xl border border-[var(--focus-border)] bg-[color-mix(in_srgb,var(--card-bg)_94%,transparent)] p-5 shadow-2xl backdrop-blur-xl md:p-7">
@@ -332,11 +366,10 @@ export function ActivationMicroQuiz() {
               <button
                 key={item.value}
                 type="button"
-                aria-label={`${item.title}: ${item.description}`}
                 onClick={() => selectGoal(item.value)}
                 className="min-h-24 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-left transition hover:-translate-y-0.5 hover:border-[var(--focus)] hover:bg-[var(--focus-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
               >
-                <span className="block font-display text-xl font-black text-[var(--text)]">{item.title}</span>
+                <span className="block font-display text-xl font-black text-[var(--text)]">{item.title}</span>{' '}
                 <span className="mt-1 block text-sm text-[var(--text-sub)]">{item.description}</span>
               </button>
             ))}

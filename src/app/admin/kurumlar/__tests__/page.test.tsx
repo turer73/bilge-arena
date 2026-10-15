@@ -26,7 +26,7 @@ describe('admin institution free-pilot page', () => {
       if (url === '/api/admin/institutions') {
         return Response.json({
           institutions: [],
-          provisioning: { invitationFreePilotEnabled: true },
+          provisioning: { invitationFreePilotEnabled: true, demoEnabled: true },
         })
       }
       throw new Error(`Unexpected request: ${url}`)
@@ -38,7 +38,8 @@ describe('admin institution free-pilot page', () => {
 
     render(<AdminInstitutionsPage />)
     expect(await screen.findByText('Henüz kurum oluşturulmadı.')).toBeInTheDocument()
-    expect(screen.getByText(/genel kurum kaydı veya ücretli onboarding değildir/i)).toBeInTheDocument()
+    expect(screen.getByText(/kurum adı, yönetici, paket ve kısa pilot onayı yeterlidir/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Demo akışını aç' })).toHaveAttribute('href', '/arena/kurum/demo')
 
     fireEvent.change(screen.getByLabelText(/Kurum adı/i), {
       target: { value: 'Bilge Küçük Dershane' },
@@ -48,9 +49,16 @@ describe('admin institution free-pilot page', () => {
     })
     const candidate = await screen.findByRole('option', { name: /Kurum Yöneticisi/i })
     fireEvent.click(candidate)
-    fireEvent.change(screen.getByLabelText(/Onay \/ pilot dosyası referansı/i), {
-      target: { value: 'pilot-2026-001' },
+    const acceptance = screen.getByLabelText(/pilot kapsamı görüşüldü/i)
+    fireEvent.click(acceptance)
+    fireEvent.change(screen.getByLabelText(/Kurum adı/i), {
+      target: { value: 'Değişen Kurum' },
     })
+    expect(acceptance).not.toBeChecked()
+    fireEvent.change(screen.getByLabelText(/Kurum adı/i), {
+      target: { value: 'Bilge Küçük Dershane' },
+    })
+    fireEvent.click(acceptance)
     fireEvent.click(screen.getByRole('button', { name: 'Ücretsiz pilotu oluştur' }))
 
     await waitFor(() => {
@@ -65,7 +73,7 @@ describe('admin institution free-pilot page', () => {
     expect(JSON.parse(String(provisionCall?.[1]?.body))).toEqual({
       name: 'Bilge Küçük Dershane',
       managerUserId: manager.id,
-      approvalReference: 'PILOT-2026-001',
+      packageAccepted: true,
       studentLimit: 30,
       staffLimit: 2,
       trialDays: 30,
@@ -115,9 +123,7 @@ describe('admin institution free-pilot page', () => {
       target: { value: 'Kurum' },
     })
     fireEvent.click(await screen.findByRole('option', { name: /Kurum Yöneticisi/i }))
-    fireEvent.change(screen.getByLabelText(/Onay \/ pilot dosyası referansı/i), {
-      target: { value: 'PILOT-2026-RETRY' },
-    })
+    fireEvent.click(screen.getByLabelText(/pilot kapsamı görüşüldü/i))
 
     const submit = screen.getByRole('button', { name: 'Ücretsiz pilotu oluştur' })
     fireEvent.click(submit)
@@ -130,6 +136,7 @@ describe('admin institution free-pilot page', () => {
     fireEvent.change(screen.getByLabelText(/Kurum adı/i), {
       target: { value: 'Değişen Dershane' },
     })
+    fireEvent.click(screen.getByLabelText(/pilot kapsamı görüşüldü/i))
     fireEvent.click(submit)
     expect(await screen.findByRole('status')).toHaveTextContent(/Değişen Dershane ücretsiz pilotu/i)
 
@@ -155,6 +162,7 @@ describe('admin institution free-pilot page', () => {
     expect(screen.getByRole('button', { name: 'Kurum oluşturma kapalı' })).toBeDisabled()
     expect(screen.getByLabelText(/Kurum adı/i)).toBeDisabled()
     expect(screen.getByLabelText(/İlk kurum yöneticisi/i)).toBeDisabled()
+    expect(screen.queryByRole('link', { name: 'Demo akışını aç' })).not.toBeInTheDocument()
   })
 
   it('shows expired free pilots as access-closed and prevents reactivation', async () => {
@@ -214,7 +222,7 @@ describe('admin institution free-pilot page', () => {
 
     render(<AdminInstitutionsPage />)
     expect(await screen.findByText('Ücretli kurum onboarding')).toBeInTheDocument()
-    expect(screen.queryByLabelText(/Onay \/ pilot dosyası referansı/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/pilot kapsamı görüşüldü/i)).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText(/Kurum adı/i), { target: { value: 'Ticari Dershane' } })
     fireEvent.change(screen.getByLabelText(/İlk kurum yöneticisi/i), { target: { value: 'Kurum' } })
     fireEvent.click(await screen.findByRole('option', { name: /Kurum Yöneticisi/i }))
@@ -267,7 +275,7 @@ describe('admin institution free-pilot page', () => {
     await waitFor(() => expect(fetchMock.mock.calls.filter(([url, init]) => String(url) === '/api/admin/institutions' && init?.method === 'POST')).toHaveLength(1))
 
     fireEvent.click(screen.getByRole('radio', { name: 'Ücretsiz pilot' }))
-    fireEvent.change(screen.getByLabelText(/Onay \/ pilot dosyası referansı/i), { target: { value: 'PILOT-2026-NS-01' } })
+    fireEvent.click(screen.getByLabelText(/pilot kapsamı görüşüldü/i))
     fireEvent.click(screen.getByRole('button', { name: 'Ücretsiz pilotu oluştur' }))
     await waitFor(() => expect(fetchMock.mock.calls.filter(([url, init]) => String(url) === '/api/admin/institutions/free-pilots' && init?.method === 'POST')).toHaveLength(1))
 

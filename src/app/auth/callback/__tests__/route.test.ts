@@ -68,6 +68,11 @@ vi.mock('@/lib/legal-consent/server', () => ({
 
 vi.mock('@/lib/utils/client-ip', () => ({ getClientIp: vi.fn(() => '203.0.113.5') }))
 
+const mockHasPermission = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/supabase/platform-access', () => ({
+  userHasAnyPlatformPermission: mockHasPermission,
+}))
+
 import { GET } from '../route'
 
 describe('GET /auth/callback activation reward', () => {
@@ -220,6 +225,51 @@ describe('GET /auth/callback activation reward', () => {
     expect(response.headers.get('set-cookie')).toContain('Path=/auth/callback')
     expect(response.headers.get('set-cookie')).not.toContain('ba_activation_reward=')
     consoleSpy.mockRestore()
+  })
+
+  it('sends an institution login without institution permission to the explanation page before TOTP', async () => {
+    mockCookieGet.mockReturnValue(undefined)
+    mockHasPermission.mockResolvedValue(false)
+
+    const response = await GET(new Request(
+      'http://localhost/auth/callback?code=oauth-code&next=%2Farena%2Fkurum',
+    ))
+
+    expect(response.headers.get('location')).toBe('http://localhost/hesap/kurum-erisim')
+    expect(mockHasPermission).toHaveBeenCalledWith(mockServiceClient, 'user-1', ['institution.pilot.access'])
+  })
+
+  it('keeps the nested institution target for an account that holds institution permission', async () => {
+    mockCookieGet.mockReturnValue(undefined)
+    mockHasPermission.mockResolvedValue(true)
+
+    const response = await GET(new Request(
+      'http://localhost/auth/callback?code=oauth-code&next=%2Farena%2Fkurum%2Froller',
+    ))
+
+    expect(response.headers.get('location')).toBe('http://localhost/arena/kurum/roller')
+  })
+
+  it('fails closed to the explanation page when the permission lookup throws', async () => {
+    mockCookieGet.mockReturnValue(undefined)
+    mockHasPermission.mockRejectedValue(new Error('rest down'))
+
+    const response = await GET(new Request(
+      'http://localhost/auth/callback?code=oauth-code&next=%2Farena%2Fkurum',
+    ))
+
+    expect(response.headers.get('location')).toBe('http://localhost/hesap/kurum-erisim')
+  })
+
+  it('does not look up institution permission for a student target', async () => {
+    mockCookieGet.mockReturnValue(undefined)
+
+    const response = await GET(new Request(
+      'http://localhost/auth/callback?code=oauth-code&next=%2Farena%2Fmatematik',
+    ))
+
+    expect(response.headers.get('location')).toBe('http://localhost/arena/matematik')
+    expect(mockHasPermission).not.toHaveBeenCalled()
   })
 
   it('keeps the open-redirect guard while processing normal OAuth callbacks', async () => {

@@ -98,7 +98,7 @@ export default function GizlilikPolitikasiPage() {
           </ul>
           <p className="mt-2">
             Haklarınızı kullanmak için{' '}
-            <strong>destek@bilgearena.com</strong> adresine e-posta gönderebilirsiniz.
+            <strong>iletisim@bilgearena.com</strong> adresine e-posta gönderebilirsiniz.
           </p>
         </section>
 
@@ -121,7 +121,7 @@ export default function GizlilikPolitikasiPage() {
         <section>
           <h2 className="mb-3 text-lg font-bold text-[var(--text)]">10. İletişim</h2>
           <p>
-            Gizlilik ile ilgili sorularınız için: <strong>destek@bilgearena.com</strong>
+            Gizlilik ile ilgili sorularınız için: <strong>iletisim@bilgearena.com</strong>
           </p>
         </section>
       </div>

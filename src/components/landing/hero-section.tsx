@@ -5,7 +5,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Zap, ArrowRight, Flame } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { buttonStyles } from '@/components/ui/button-styles'
 import { ArenaBackground } from './arena-background'
 import { useUIStore, DARK_THEMES } from '@/stores/ui-store'
 import { trackEvent } from '@/lib/utils/plausible'
@@ -19,13 +19,38 @@ const ActivationMicroQuiz = dynamic(
   () => import('./activation-micro-quiz').then((mod) => ({ default: mod.ActivationMicroQuiz })),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex min-h-72 w-full items-center justify-center rounded-3xl border border-[var(--focus-border)] bg-[var(--card-bg)] p-6 text-sm text-[var(--text-sub)]" role="status">
-        Hızlı başlangıç hazırlanıyor…
-      </div>
-    ),
+    loading: ActivationMicroQuizPreview,
   },
 )
+
+function ActivationMicroQuizPreview() {
+  return (
+    <div className="w-full rounded-3xl border border-[var(--focus-border)] bg-[color-mix(in_srgb,var(--card-bg)_94%,transparent)] p-5 shadow-2xl backdrop-blur-xl md:p-7" role="status">
+      <div className="flex items-center gap-2 text-sm font-bold text-[var(--focus-text)]">
+        Üye olmadan hemen dene
+      </div>
+      <h2 className="mt-3 font-display text-2xl font-black leading-tight text-[var(--text)] md:text-3xl">
+        Hedefin hangisi?
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">
+        Tek seçim, ardından 3 kısa Türkçe sorusu. Yaklaşık 2 dakika.
+      </p>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2" aria-hidden="true">
+        <div className="min-h-24 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <span className="block font-display text-xl font-black text-[var(--text)]">LGS</span>
+          <span className="mt-1 block text-sm text-[var(--text-sub)]">Ortaokul hedefim</span>
+        </div>
+        <div className="min-h-24 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <span className="block font-display text-xl font-black text-[var(--text)]">TYT · AYT</span>
+          <span className="mt-1 block text-sm text-[var(--text-sub)]">Üniversite hedefim</span>
+        </div>
+      </div>
+      <p className="mt-5 text-xs leading-5 text-[var(--text-muted)]">
+        Kayıt yok · Kart bilgisi yok · Sonucu görünce karar ver
+      </p>
+    </div>
+  )
+}
 
 function ActivationMicroQuizSlot() {
   const enabled = useSyncExternalStore(
@@ -35,11 +60,7 @@ function ActivationMicroQuizSlot() {
   )
 
   if (!enabled) {
-    return (
-      <div className="flex min-h-72 w-full items-center justify-center rounded-3xl border border-[var(--focus-border)] bg-[var(--card-bg)] p-6 text-sm text-[var(--text-sub)]" role="status">
-        Hızlı başlangıç hazırlanıyor…
-      </div>
-    )
+    return <ActivationMicroQuizPreview />
   }
 
   return <ActivationMicroQuiz />
@@ -102,8 +123,9 @@ interface HeroSectionProps {
 
 export function HeroSection({ config }: HeroSectionProps = {}) {
   const badge = (config?.badge as string) || "Türkiye'nin YKS · LGS · AYT Oyun Platformu"
-  const heading = (config?.heading as string[]) || ['Öğren.', 'Kazan.', 'Yüksel.']
-  const subheading = (config?.subheading as string) || "YKS, LGS ve AYT'ye hazırlanmak artık"
+  const heading = (config?.heading as string[]) || ['Bilginle', 'yeni dünyalar', 'aç.']
+  const managedSubheading = typeof config?.subheading === 'string' && config.subheading.trim()
+    ? config.subheading : null
   const logoUrl = (config?.logo_url as string) || '/logo/icon-512-transparent.png'
   const ctaPrimary = (config?.cta_primary as { text?: string; href?: string }) || {}
   const { theme } = useUIStore()
@@ -138,10 +160,10 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
 
         <div className="grid items-center gap-8 md:gap-12 lg:grid-cols-2 lg:gap-16">
 
-          {/* ── Maskot / Arena görseli ── */}
-          <div className="activation-control relative order-first flex h-[220px] items-center justify-center
+          {/* Telefonda başlık ve CTA önce; tablette mevcut görsel sırası korunur. */}
+          <div className="activation-control relative order-last flex h-[220px] items-center justify-center
             md:h-[320px]
-            lg:order-last lg:h-[520px]
+            md:order-first lg:order-last lg:h-[520px]
             xl:h-[620px]
             2xl:h-[720px]">
 
@@ -209,7 +231,9 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
                   alt={hasMascot ? 'Bilge Chan' : 'Bilge Arena'}
                   width={440}
                   height={440}
-                  priority
+                  sizes="(max-width: 767px) 130px, (max-width: 1023px) 190px, (max-width: 1279px) 300px, (max-width: 1535px) 380px, 440px"
+                  loading="eager"
+                  fetchPriority="high"
                   className={`
                     ${hasMascot
                       ? `drop-shadow-2xl object-contain${isDarkTheme ? ' mix-blend-screen' : ''}`
@@ -269,12 +293,12 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
           </div>
 
           {/* A/B varyanti: logo alani yerine ilk degeri uyelikten once yasatir. */}
-          <div className="activation-micro relative order-first w-full items-center justify-center lg:order-last lg:min-h-[620px] 2xl:min-h-[720px]">
+          <div className="activation-micro relative order-first min-h-[28rem] w-full items-center justify-center lg:order-last lg:min-h-[620px] 2xl:min-h-[720px]">
             <ActivationMicroQuizSlot />
           </div>
 
           {/* ── Sol — Metin ── */}
-          <div className="text-center lg:text-left">
+          <div className="landing-hero-copy text-center lg:text-left">
             {/* Status badge */}
             <div className="animate-fadeUp will-change-[transform,opacity] mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--focus-border)] bg-[var(--focus-bg)] px-3 py-1
               md:mb-6 md:px-4 md:py-1.5
@@ -291,9 +315,9 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
               lg:text-[58px]
               xl:text-[68px]
               2xl:text-[80px]">
-              <span className="text-[var(--text)]">{heading[0]}</span>
+              <span className="text-[var(--text)]">{heading[0]}</span>{' '}
               <br />
-              <span className="shimmer-text">{heading[1]}</span>
+              <span className="shimmer-text">{heading[1]}</span>{' '}
               <br />
               <span className="text-[var(--focus-light)]">{heading[2]}</span>
             </h1>
@@ -304,9 +328,11 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
               lg:mx-0
               xl:max-w-[520px] xl:text-xl
               2xl:max-w-[600px] 2xl:text-2xl">
-              {subheading}{' '}
-              <strong className="text-[var(--text)]">oyun kadar eğlenceli</strong>. Soruları çöz,
-              XP kazan, zirvede yerini al.
+              {managedSubheading ? <>
+                {managedSubheading}{' '}
+                <strong className="text-[var(--text)]">oyun kadar eğlenceli</strong>. Soruları çöz,
+                XP kazan, zirvede yerini al.
+              </> : 'Bir oyunla kendine meydan oku, bir dersle hedefine yaklaş. Bilge Arena’da ilerlemenin yolu sana ait.'}
             </p>
 
             {/* CTA butonları */}
@@ -314,17 +340,13 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
               sm:flex-row
               md:mt-9
               lg:justify-start">
-              <Link href={ctaPrimary.href || '/arena'} className="w-full sm:w-auto">
-                <Button variant="primary" size="lg" className="min-h-12 w-full whitespace-nowrap sm:w-auto">
-                  <Zap size={18} />
-                  {ctaPrimary.text || 'Ücretsiz Başla'}
-                </Button>
+              <Link href={ctaPrimary.href || '/arena'} className={buttonStyles('primary', 'lg', 'min-h-12 w-full whitespace-nowrap sm:w-auto')}>
+                <Zap size={18} />
+                {ctaPrimary.text || 'Oyunları keşfet'}
               </Link>
-              <Link href={ctaSecondary.href || '/nasil-calisir'} className="w-full sm:w-auto">
-                <Button variant="ghost" size="lg" className="min-h-12 w-full whitespace-nowrap sm:w-auto">
-                  {ctaSecondary.text || 'Nasıl Çalışır?'}
-                  <ArrowRight size={16} />
-                </Button>
+              <Link href={ctaSecondary.href || '/arena/calisma'} className={buttonStyles('ghost', 'lg', 'min-h-12 w-full whitespace-nowrap sm:w-auto')}>
+                {ctaSecondary.text || 'Ders çalış'}
+                <ArrowRight size={16} />
               </Link>
             </div>
 

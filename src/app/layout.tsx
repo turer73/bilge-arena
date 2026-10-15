@@ -7,21 +7,20 @@ import { ToastContainer } from '@/components/ui/toast'
 import { SWRegister } from '@/components/layout/sw-register'
 import { PWAInstallPrompt } from '@/components/layout/pwa-install-prompt'
 import { OfflineIndicator } from '@/components/layout/offline-indicator'
-import { GlobalBackground } from '@/components/layout/global-background'
 import { PrivacySafeThirdPartyScripts } from '@/components/analytics/privacy-safe-third-party-scripts'
 import './globals.css'
 
-/* ─── Lokal fontlar (next/font/local) — build artik Google Fonts agina BAGIMLI DEGIL.
-   Variable TTF'ler src/app/fonts/ altinda; tum latin-ext glyph'leri (Turkce dahil) icerir. */
+/* ─── Lokal variable fontlar (next/font/local) — Google Fonts agina bagimli degil.
+   WOFF2 dosyalari TTF kaynaklarindan turetilir ve Turkce karakterleri korur. */
 const cinzel = localFont({
-  src: './fonts/Cinzel.ttf',
+  src: './fonts/Cinzel.woff2',
   weight: '400 900',
   variable: '--font-cinzel',
   display: 'swap',
 })
 
 const dmSans = localFont({
-  src: './fonts/DMSans.ttf',
+  src: './fonts/DMSans.woff2',
   weight: '100 1000',
   variable: '--font-dm-sans',
   display: 'swap',
@@ -87,7 +86,6 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-[var(--bg)] font-body text-[var(--text)] antialiased">
         <OfflineIndicator />
-        <GlobalBackground />
         {children}
         <ToastContainer />
         <CookieBanner />

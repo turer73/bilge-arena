@@ -28,4 +28,10 @@ describe('cozumlu soru kontrati', () => {
     expect(getCozumluSoru(COZUMLU_SORU_SLUGS[0])?.slug).toBe(COZUMLU_SORU_SLUGS[0])
     expect(getCozumluSoru('boyle-bir-soru-yok')).toBeUndefined()
   })
+
+  it('yüzde kâr-zarar çözümünde indirim sonrası kârı doğru hesaplar', () => {
+    const question = getCozumluSoru('tyt-matematik-yuzde-kar-zarar')
+    expect(question?.correctAnswer).toBe('A) 36 TL')
+    expect(question?.steps.at(-1)).toContain('336 − 300 = 36 TL')
+  })
 })

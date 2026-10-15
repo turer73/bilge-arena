@@ -6,6 +6,7 @@ import { chatRequestSchema } from '@/lib/validations/schemas'
 import { getClientIp } from '@/lib/utils/client-ip'
 import type { Json } from '@/types/database.generated'
 import { TOPIC_EXPLANATION_SYSTEM_INSTRUCTION } from '@/lib/bilge-tahta/topic-explanation'
+import { redactChatPersonalData } from '@/lib/privacy/chat-redaction'
 
 // Rate limit dusuruldu (konu#7 ders-hub plani, Faz 3): Gemini free-tier'a gore
 // daha maliyetli/dar DeepSeek kotasi + hub'da chat artik tek merkezi surface
@@ -149,8 +150,7 @@ export async function POST(request: Request) {
       target_id: user.id,
       details: {
         pattern: matchedPattern.source,
-        excerpt: userText.slice(0, 200),
-        ip,
+        messageLength: userText.length,
       },
     })
 
@@ -164,7 +164,7 @@ export async function POST(request: Request) {
     ? `\n\n${TOPIC_EXPLANATION_SYSTEM_INSTRUCTION}`
     : ''
   const questionInstruction = questionContext
-    ? `\n\nÖğrencinin şu anda çalıştığı soru:\n${questionContext}`
+    ? `\n\nÖğrencinin şu anda çalıştığı soru:\n${redactChatPersonalData(questionContext)}`
     : ''
   const systemInstruction = `${SYSTEM_PROMPT}${modeInstruction}${questionInstruction}`
 
@@ -172,7 +172,7 @@ export async function POST(request: Request) {
   // ayni ('user'/'assistant'), Gemini'deki 'model' remap'i gerekmiyor.
   const deepseekMessages = [
     { role: 'system' as const, content: systemInstruction },
-    ...messages.map((m) => ({ role: m.role, content: m.content })),
+    ...messages.map((m) => ({ role: m.role, content: redactChatPersonalData(m.content) })),
   ]
 
   const apiKey = process.env.DEEPSEEK_API_KEY
@@ -208,10 +208,9 @@ export async function POST(request: Request) {
     })
 
     if (!res.ok) {
-      const errBody = await res.text().catch(() => '')
-      console.error('[Chat API] DeepSeek error:', res.status, errBody.substring(0, 500))
-      // Ham upstream-hatasi KULLANICIYA SIZDIRILMAZ (canli ekranda JSON-dump
-      // gorundu — kotu UX + ic-detay sizintisi). Detay console.error'da.
+      await res.body?.cancel().catch(() => {})
+      console.error('[Chat API] DeepSeek error status:', res.status)
+      // Ham upstream hatası kullanıcıya veya loga yazılmaz; yalnız HTTP durumu kaydedilir.
       return NextResponse.json(
         { error: 'AI servisi şu anda yanıt veremiyor. Lütfen birazdan tekrar deneyin.' },
         { status: 502 }
@@ -237,8 +236,7 @@ export async function POST(request: Request) {
         target_id: user.id,
         details: {
           finishReason: choice.finish_reason,
-          excerpt: userText.slice(0, 200),
-          ip,
+          messageLength: userText.length,
         },
       })
       return NextResponse.json(
@@ -249,7 +247,7 @@ export async function POST(request: Request) {
 
     const text = typeof choice?.message?.content === 'string' ? choice.message.content.trim() : ''
     if (!text) {
-      console.error('[Chat API] DeepSeek returned an empty assistant message:', choice?.finish_reason ?? null, json.model ?? DEEPSEEK_MODEL, mode)
+      console.error('[Chat API] DeepSeek returned an empty assistant message:', choice?.finish_reason ?? null, mode)
       return NextResponse.json({ error: 'AI servisi bos bir yanit dondurdu. Lutfen tekrar deneyin.' }, { status: 502 })
     }
 
@@ -268,9 +266,9 @@ export async function POST(request: Request) {
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     })
   } catch (err) {
-    console.error('[Chat API] Fetch error:', err)
+    console.error('[Chat API] Fetch error type:', err instanceof Error ? err.name : 'unknown')
     return NextResponse.json(
-      { error: `Baglanti hatasi: ${err instanceof Error ? err.message : 'Bilinmeyen hata'}` },
+      { error: 'AI servisine baglanilamadi. Lutfen birazdan tekrar deneyin.' },
       { status: 502 }
     )
   }

@@ -4,6 +4,7 @@ import { memo } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { getOptionLetter } from '@/lib/utils/question'
 import { renderRichText, stripRichText } from '@/lib/utils/rich-text'
+import { Check, X } from 'lucide-react'
 
 export type OptionState = 'idle' | 'correct' | 'wrong' | 'dim' | 'selected'
 
@@ -83,6 +84,7 @@ export const OptionButton = memo(function OptionButton({ index, text, state, onC
 
   return (
     <button
+      data-quiz-option={state}
       type="button"
       onClick={onClick}
       disabled={state !== 'idle'}
@@ -116,10 +118,10 @@ export const OptionButton = memo(function OptionButton({ index, text, state, onC
 
       {/* Dogru/yanlis ikonu */}
       {state === 'correct' && (
-        <span className="ml-auto shrink-0 text-lg text-[var(--app-success-ink)]" aria-hidden="true">✓</span>
+        <Check className="ml-auto h-5 w-5 shrink-0 text-[var(--app-success-ink)]" aria-hidden="true" />
       )}
       {state === 'wrong' && (
-        <span className="ml-auto shrink-0 text-lg text-[var(--app-danger-ink)]" aria-hidden="true">✗</span>
+        <X className="ml-auto h-5 w-5 shrink-0 text-[var(--app-danger-ink)]" aria-hidden="true" />
       )}
     </button>
   )

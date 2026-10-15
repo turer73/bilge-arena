@@ -12,15 +12,25 @@ export const provisionInstitutionInputSchema = z.object({
 export const provisionFreePilotInputSchema = z.object({
   name: z.string().trim().min(2).max(120),
   managerUserId: uuidSchema,
-  approvalReference: z.string()
-    .trim()
-    .regex(/^[A-Za-z0-9][A-Za-z0-9._/-]{5,63}$/)
-    .transform((value) => value.toUpperCase()),
+  // Kept temporarily for requests submitted by tabs opened before the
+  // simplified form shipped. New requests derive this server-side.
+  approvalReference: z.string().regex(/^[A-Z0-9][A-Z0-9._/-]{5,63}$/).optional(),
+  packageAccepted: z.literal(true),
   studentLimit: z.number().int().min(1).max(40),
   staffLimit: z.number().int().min(1).max(2),
   trialDays: z.number().int().min(14).max(60),
   requestId: uuidSchema,
-}).strict()
+}).strict().superRefine((value, context) => {
+  const packageOne = value.trialDays === 30 && value.studentLimit <= 30 && value.staffLimit === 2
+  const packageTwo = value.trialDays === 60 && value.studentLimit <= 40 && value.staffLimit === 2
+  if (!packageOne && !packageTwo) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['trialDays'],
+      message: 'Pilot yalnızca 30 gün/30 öğrenci veya 60 gün/40 öğrenci paketlerinden biri olabilir',
+    })
+  }
+})
 
 export const provisionInstitutionResultSchema = z.object({
   institution: z.object({
@@ -104,6 +114,7 @@ export const institutionAdminDirectorySchema = z.object({
   provisioning: z.object({
     invitationFreePilotEnabled: z.boolean(),
     commercialOnboardingEnabled: z.boolean(),
+    demoEnabled: z.boolean(),
   }).strict().optional(),
 }).strict()
 

@@ -82,17 +82,17 @@ export const COZUMLU_SORU_LIST: CozumluSoru[] = [
     description:
       'Etiket fiyatı üzerinden indirim yapılan bir ürünün maliyet fiyatı ve kâr oranının adım adım hesaplanması.',
     readingMinutes: 4,
-    updated: '2026-08-16',
+    updated: '2026-09-22',
     question:
       'Maliyeti 300 TL olan bir gömlek %40 kârla satışa çıkarılıyor. Satış fiyatı üzerinden %20 indirim yapıldığında bu satıştan kaç TL kâr elde edilir?',
     options: ['A) 36 TL', 'B) 48 TL', 'C) 60 TL', 'D) 72 TL', 'E) 84 TL'],
-    correctAnswer: 'E) 84 TL',
+    correctAnswer: 'A) 36 TL',
     steps: [
       'Öncelikle gömleğin etiket (satış) fiyatını bulalım. Maliyet 300 TL ve %40 kâr ekleniyor.',
       'Etiket Fiyatı = 300 + (300 × 40 / 100) = 300 + 120 = 420 TL.',
       'Etiket fiyatı üzerinden %20 indirim uygulanıyor. İndirim Miktarı = 420 × 20 / 100 = 84 TL.',
       'İndirimli Satış Fiyatı = 420 − 84 = 336 TL.',
-      'Elde edilen kâr = İndirimli Satış Fiyatı − Maliyet = 336 − 300 = 36 TL... Bekleyin, hesaplayalım: 300 TL maliyet, %40 kârla 420 TL etiket. %20 indirim = 420 * 0.8 = 336 TL. 336 - 300 = 36 TL. Şıklar arasında D) 72 yerine C) 60, A) 36. Doğru cevap A) 36 TL olmalı.',
+      'Elde edilen kâr = İndirimli Satış Fiyatı − Maliyet = 336 − 300 = 36 TL. Doğru cevap A seçeneğidir.',
     ],
     commonMistake:
       'İndirimin maliyet üzerinden değil, etiket fiyatı üzerinden yapıldığına dikkat edilmelidir. Önce etiket fiyatı bulunur, indirim bu fiyat üzerinden düşülür.',

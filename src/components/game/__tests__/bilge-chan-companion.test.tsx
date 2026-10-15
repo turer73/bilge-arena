@@ -11,6 +11,8 @@ vi.mock('@/components/ui/bilge-chan', () => ({
 }))
 
 const tts = vi.hoisted(() => ({ supported: true, speak: vi.fn(), stop: vi.fn() }))
+const viewport = vi.hoisted(() => ({ wide: false }))
+vi.mock('@/lib/hooks/use-wide-study', () => ({ useWideStudy: () => viewport.wide }))
 vi.mock('@/lib/utils/chan-tts', () => ({
   isTtsSupported: () => tts.supported,
   speakChanLine: tts.speak,
@@ -129,6 +131,8 @@ async function flushPromises() {
 }
 
 beforeEach(() => {
+  viewport.wide = false
+  localStorage.removeItem('bilge-guide-character-v1')
   process.env.NEXT_PUBLIC_COACH_ENABLED = 'true'
   process.env.NEXT_PUBLIC_BILGE_TAHTA_ENABLED = 'true'
   vi.useFakeTimers()
@@ -164,6 +168,28 @@ afterEach(() => {
 })
 
 describe('BilgeChanCompanion R2.2', () => {
+  test('academy görünümü mobilde mevcut kompakt karakteri korur', () => {
+    render(<BilgeChanCompanion appearance="academy" compact quizState="playing" lastIsCorrect={null} question={makeQuestion()} />)
+    expect(screen.getByTestId('chan-waist-crop')).toBeInTheDocument()
+    expect(screen.getByTestId('chan-pose')).toBeInTheDocument()
+    expect(screen.queryByAltText('Kadın Bilge')).not.toBeInTheDocument()
+  })
+
+  test('geniş ekranda seçilen rehberi ve cevap durumuna uygun ifadeyi gösterir', () => {
+    viewport.wide = true
+    localStorage.setItem('bilge-guide-character-v1', 'male')
+    const { rerender } = render(<BilgeChanCompanion appearance="academy" compact quizState="playing" lastIsCorrect={null} question={makeQuestion()} />)
+    expect(screen.getByAltText('Erkek Bilge').getAttribute('src')).toContain('odaklanmis')
+    expect(screen.queryByTestId('chan-pose')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('chan-waist-crop')).not.toBeInTheDocument()
+    expect(screen.getAllByText('BİLGE YANINDA')).toHaveLength(1)
+    rerender(<BilgeChanCompanion appearance="academy" compact quizState="answered" lastIsCorrect={true} question={makeQuestion()} />)
+    expect(screen.getByAltText('Erkek Bilge').getAttribute('src')).toContain('neseli')
+    rerender(<BilgeChanCompanion appearance="academy" compact quizState="answered" lastIsCorrect={false} question={makeQuestion()} />)
+    expect(screen.getByAltText('Erkek Bilge').getAttribute('src')).toContain('destekleyici')
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/api/coach/hint'))).toHaveLength(0)
+  })
+
   test('question=null iken render edilmez', () => {
     const { container } = render(
       <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={null} />,

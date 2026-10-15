@@ -9,4 +9,10 @@ describe('ArenaModeCards', () => {
     expect(screen.getByRole('link', { name: /Kule Modu/ })).toHaveAttribute('href', '/arena/kule')
     expect(screen.getByRole('link', { name: /Bil ve Fethet/ })).toHaveAttribute('href', '/arena/fethet')
   })
+
+  it('dar yan sutunda tek kolonlu kompakt yerlesim kullanir', () => {
+    const { container } = render(<ArenaModeCards compact />)
+    expect(container.querySelector('[data-room-mode-grid]')).toHaveClass('grid', 'gap-3')
+    expect(container.querySelector('[data-room-mode-grid]')).not.toHaveClass('sm:grid-cols-2')
+  })
 })

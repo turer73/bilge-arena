@@ -7,7 +7,13 @@ import {
   ACTIVATION_REWARD_COOKIE,
   claimActivationReward,
 } from '@/lib/activation/server-reward'
-import { safeAuthNext } from '@/lib/auth/safe-next'
+import {
+  INSTITUTION_NO_ACCESS_PATH,
+  isInstitutionSurfacePath,
+  safeAuthNext,
+} from '@/lib/auth/safe-next'
+import { INSTITUTION_PILOT_ENTRY_PERMISSION } from '@/lib/admin/platform-permissions'
+import { userHasAnyPlatformPermission } from '@/lib/supabase/platform-access'
 import {
   hasCurrentLegalConsent,
   legalConsentIntentMatchesCookie,
@@ -15,9 +21,14 @@ import {
   recordLegalConsentIntent,
 } from '@/lib/legal-consent/server'
 import { getClientIp } from '@/lib/utils/client-ip'
+import { resolveAcademyServerSupabaseOrigin } from '@/lib/auth/isolated-test'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
+const SUPABASE_SERVER_URL = resolveAcademyServerSupabaseOrigin(SUPABASE_URL)
+const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  || 'placeholder-anon-key'
 
 function clearLegalConsentIntentCookie(response: NextResponse) {
   // Cookie path must match the path used by /api/consent/intent. A bare
@@ -42,7 +53,7 @@ export async function GET(request: Request) {
   if (code) {
     const cookieStore = await cookies()
     const supabase = createServerClient<Database>(
-      SUPABASE_URL,
+      SUPABASE_SERVER_URL,
       SUPABASE_ANON_KEY,
       {
         cookies: {
@@ -135,7 +146,28 @@ export async function GET(request: Request) {
       }
 
       const candidateUrl = new URL(next, origin)
-      const redirectUrl = candidateUrl.origin === origin ? candidateUrl : new URL('/arena', origin)
+      let redirectUrl = candidateUrl.origin === origin ? candidateUrl : new URL('/arena', origin)
+
+      // Kurum girisi: hedef /arena/kurum ise ve hesapta kurum yetkisi yoksa
+      // kullaniciyi once TOTP kurulumuna (proxy AAL2 kapisi) zorlamak yerine
+      // aciklama sayfasina gonder. Bu yetki bakisi yalniz OAuth degisimini AZ
+      // ONCE tamamlamis kisi icin yapilir; proxy'deki "AAL2'den once yetki
+      // sorgusu yok" kurali calinan cookie senaryosunu korur ve degismez.
+      // Sorgu basarisiz olursa fail-closed: aciklama sayfasi. Oradaki "Kurum
+      // paneline git" baglantisi gercek yetkili icin normal TOTP'li yolu acar.
+      if (isInstitutionSurfacePath(redirectUrl.pathname)) {
+        let hasInstitutionAccess = false
+        try {
+          hasInstitutionAccess = await userHasAnyPlatformPermission(
+            admin,
+            data.session.user.id,
+            [INSTITUTION_PILOT_ENTRY_PERMISSION],
+          )
+        } catch (permissionError) {
+          console.error('[AuthCallback] kurum yetkisi sorgulanamadı:', (permissionError as Error).message)
+        }
+        if (!hasInstitutionAccess) redirectUrl = new URL(INSTITUTION_NO_ACCESS_PATH, origin)
+      }
       const rewardToken = cookieStore.get(ACTIVATION_REWARD_COOKIE)?.value
       let rewardResolved = false
       if (rewardToken) {

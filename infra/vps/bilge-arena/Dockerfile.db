@@ -1,0 +1,10 @@
+# bilge-arena-db: postgres:16-alpine + wal2json (Realtime postgres_changes icin, 2026-10-04 disc #2135)
+FROM postgres:16-alpine
+ARG WAL2JSON_REF=wal2json_2_6
+RUN apk add --no-cache --virtual .build-deps build-base git \
+ && git clone --depth 1 --branch "${WAL2JSON_REF}" https://github.com/eulerto/wal2json.git /tmp/wal2json \
+ && make -C /tmp/wal2json with_llvm=no \
+ && make -C /tmp/wal2json with_llvm=no install \
+ && rm -rf /tmp/wal2json \
+ && apk del .build-deps \
+ && ls -la "$(pg_config --pkglibdir)/wal2json.so"

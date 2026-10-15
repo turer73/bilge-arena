@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { ArrowRight, Coins, ShoppingBag, Sparkles } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { PROFILE_FRAMES } from '@/lib/constants/profile-frames'
 import { PROFILE_NAMEPLATES } from '@/lib/constants/profile-nameplates'
@@ -110,42 +111,39 @@ export function StoreBudgetStrip({ onJump }: { onJump: (tab: TabId) => void }) {
   const missing = cheapest ? cheapest.cost - balance : 0
 
   return (
-    <div className="mt-4 rounded-2xl border border-[var(--reward-border)] bg-[var(--reward-bg)] p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="font-display text-sm font-black text-[var(--text)]">
-          {affordable.length > 0
-            ? `🪙 ${balance.toLocaleString('tr-TR')} altınınla ${affordable.length} ürün alabilirsin`
-            : `🪙 ${balance.toLocaleString('tr-TR')} altının var`}
-        </span>
-        {affordable.length === 0 && cheapest && (
-          <span className="text-xs font-bold text-[var(--text-sub)]">
-            En ucuz ürün <strong className="text-[var(--reward)]">{cheapest.name}</strong> —{' '}
-            <strong className="text-[var(--reward)]">{missing} altın daha</strong>
-          </span>
-        )}
+    <section className="mt-4 overflow-hidden rounded-[22px] border-2 border-[var(--app-warn-border)] bg-[var(--app-card)] shadow-[0_5px_0_var(--app-warn-border)]">
+      <div className="flex items-center gap-3 border-b border-[var(--app-warn-border)] bg-[var(--app-warn-tint)] px-4 py-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--app-card)] text-[var(--app-warn-ink)]"><ShoppingBag size={20} strokeWidth={2.6} /></span>
+        <div><p className="text-[9px] font-black uppercase tracking-[0.15em] text-[var(--app-warn-ink)]">Bütçene uygun seçimler</p><h2 className="text-sm font-black text-[var(--app-text)]">Bugün neleri alabilirsin?</h2></div>
       </div>
-
-      {affordable.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {affordable.slice(0, 6).map((item) => (
-            <button
-              key={`${item.tab}-${item.id}`}
-              onClick={() => onJump(item.tab)}
-              className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--focus)]"
-            >
-              <span className="block text-[11px] font-bold text-[var(--text)]">{item.name}</span>
-              <span className="block text-[9px] text-[var(--text-muted)]">
-                {item.tabLabel} · 🪙{item.cost}
-              </span>
-            </button>
-          ))}
-          {affordable.length > 6 && (
-            <span className="self-center text-[10px] font-bold text-[var(--text-muted)]">
-              +{affordable.length - 6} tane daha
+      <div className="p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <span className="inline-flex items-center gap-1.5 font-display text-sm font-black text-[var(--app-text)]">
+            <Coins size={16} className="text-[var(--app-warn-ink)]" />
+            {affordable.length > 0
+              ? `${balance.toLocaleString('tr-TR')} altınınla ${affordable.length} ürün alabilirsin`
+              : `${balance.toLocaleString('tr-TR')} altının var`}
+          </span>
+          {affordable.length === 0 && cheapest && (
+            <span className="text-xs font-bold text-[var(--app-text-sub)]">
+              En ucuz ürün <strong className="text-[var(--app-warn-ink)]">{cheapest.name}</strong> —{' '}
+              <strong className="text-[var(--app-warn-ink)]">{missing} altın daha</strong>
             </span>
           )}
         </div>
-      )}
-    </div>
+        {affordable.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {affordable.slice(0, 6).map((item) => (
+              <button key={`${item.tab}-${item.id}`} type="button" onClick={() => onJump(item.tab)} className="group flex min-h-12 items-center gap-2 rounded-xl border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] px-3 py-2 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--app-accent)]">
+                <Sparkles size={14} className="shrink-0 text-[var(--app-warn-ink)]" />
+                <span><span className="block text-[11px] font-black text-[var(--app-text)]">{item.name}</span><span className="block text-[9px] font-semibold text-[var(--app-text-muted)]">{item.tabLabel} · {item.cost} altın</span></span>
+                <ArrowRight size={13} className="ml-auto text-[var(--app-text-muted)] transition-transform group-hover:translate-x-0.5" />
+              </button>
+            ))}
+            {affordable.length > 6 && <span className="self-center text-[10px] font-bold text-[var(--app-text-muted)]">+{affordable.length - 6} tane daha</span>}
+          </div>
+        )}
+      </div>
+    </section>
   )
 }

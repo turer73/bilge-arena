@@ -1,9 +1,20 @@
 'use client'
 
 import { useId } from 'react'
+import {
+  BookOpenText,
+  Calculator,
+  FileText,
+  Flag,
+  FlaskConical,
+  Globe2,
+  Languages,
+  type LucideIcon,
+} from 'lucide-react'
 import type { PublicQuestion } from '@/lib/utils/question-public'
 import { GAMES } from '@/lib/constants/games'
 import { renderRichText } from '@/lib/utils/rich-text'
+import styles from './academy-quiz.module.css'
 
 const DIFF_CONFIG: Record<number, { label: string; color: string; text: string }> = {
   1: { label: 'KOLAY', color: 'var(--growth)', text: 'var(--growth-text)' },
@@ -13,12 +24,12 @@ const DIFF_CONFIG: Record<number, { label: string; color: string; text: string }
   5: { label: 'BOSS', color: 'var(--wisdom)', text: 'var(--wisdom-text)' },
 }
 
-const GAME_EMOJI: Record<string, string> = {
-  matematik: '🧮',
-  turkce: '📝',
-  fen: '🔬',
-  sosyal: '🌍',
-  wordquest: '🌐',
+const GAME_ICON: Record<string, LucideIcon> = {
+  matematik: Calculator,
+  turkce: BookOpenText,
+  fen: FlaskConical,
+  sosyal: Globe2,
+  wordquest: Languages,
 }
 
 interface QuestionCardProps {
@@ -38,7 +49,7 @@ export function QuestionCard({
 }: QuestionCardProps) {
   const diff = DIFF_CONFIG[question.difficulty] || DIFF_CONFIG[2]
   const game = GAMES[question.game]
-  const emoji = GAME_EMOJI[question.game] || '📋'
+  const GameIcon = GAME_ICON[question.game] || FileText
   const progress = ((currentIndex + 1) / totalQuestions) * 100
   // Sabit id yerine useId: aynı sayfada birden fazla kart render edilirse
   // (ör. düello) duplicate id oluşup aria-labelledby belirsizleşiyordu.
@@ -46,6 +57,7 @@ export function QuestionCard({
 
   return (
     <section
+      data-quiz-question
       aria-labelledby={questionTextId}
       className="relative animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-shadow-accent)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-shadow-accent)]"
     >
@@ -53,8 +65,15 @@ export function QuestionCard({
       <div className="pointer-events-none absolute -right-[50px] -top-[50px] hidden h-[180px] w-[180px] rounded-full bg-[radial-gradient(circle,var(--focus-bg)_0%,transparent_70%)]" />
 
       {/* Meta bar */}
-      <div className="mb-3 flex items-center gap-2">
-        <span className="text-[15px]">{emoji}</span>
+      <div data-quiz-question-meta className="mb-3 flex items-center gap-2">
+        <span data-quiz-question-number className={styles.wideOnly}>SORU {currentIndex + 1}</span>
+        <span
+          data-question-subject-icon={question.game}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]"
+          aria-hidden="true"
+        >
+          <GameIcon className="h-4 w-4" strokeWidth={2.2} />
+        </span>
 
         <span
           className="rounded-md px-2 py-1 text-xs font-extrabold tracking-wider"
@@ -91,7 +110,7 @@ export function QuestionCard({
             title="Soruyu raporla (hata/eksik içerik)"
             aria-label="Soruyu raporla"
           >
-            <span className="text-sm">🐛</span>
+            <Flag className="h-4 w-4" strokeWidth={2.2} aria-hidden="true" />
             <span className="hidden sm:inline">Bildir</span>
           </button>
         )}

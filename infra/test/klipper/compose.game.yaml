@@ -1,0 +1,9 @@
+# Opt-in only after game-bootstrap + fixtures + security smoke succeed.
+# Original academy_auth_test remains available for rollback.
+services:
+  auth:
+    environment:
+      GOTRUE_DB_DATABASE_URL: postgres://auth_admin:${AUTH_DB_PASSWORD}@auth-db:5432/academy_game_test
+  auth-rest:
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${REST_DB_PASSWORD}@auth-db:5432/academy_game_test

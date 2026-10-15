@@ -38,7 +38,7 @@ describe('useDailyQuests verified-session refresh', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('refreshes with GET after a saved session and never PATCHes progress', async () => {
-    const { result } = renderHook(() => useDailyQuests())
+    const { result } = renderHook(() => useDailyQuests(incompleteQuest.user_id))
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     fetchMock.mockResolvedValueOnce(responseWith([
@@ -60,5 +60,39 @@ describe('useDailyQuests verified-session refresh', () => {
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(false)
     expect(completed).toHaveLength(1)
     expect(questToast).toHaveBeenCalledWith('Bir oturum tamamla')
+  })
+
+  it('misafir için korumalı görev API istekleri göndermez', async () => {
+    const { result } = renderHook(() => useDailyQuests())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(fetchMock).not.toHaveBeenCalled()
+    await act(async () => {
+      expect(await result.current.refetch()).toEqual([])
+      expect(await result.current.claimXP(incompleteQuest.id)).toBeNull()
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('hesap değişince önceki hesabın görevlerini ve geç gelen yanıtını göstermez', async () => {
+    let resolveFirst!: (value: ReturnType<typeof responseWith>) => void
+    fetchMock.mockReset()
+    fetchMock.mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve }))
+      .mockResolvedValueOnce(responseWith([{ ...incompleteQuest, id: 'second-quest', user_id: 'second-user' }]))
+
+    const { result, rerender } = renderHook(({ userId }) => useDailyQuests(userId), {
+      initialProps: { userId: incompleteQuest.user_id },
+    })
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    rerender({ userId: 'second-user' })
+    expect(result.current.quests).toEqual([])
+    await waitFor(() => expect(result.current.quests.map((quest) => quest.id)).toEqual(['second-quest']))
+
+    await act(async () => resolveFirst(responseWith([incompleteQuest])))
+    expect(result.current.quests.map((quest) => quest.id)).toEqual(['second-quest'])
+
+    rerender({ userId: undefined as unknown as string })
+    expect(result.current.quests).toEqual([])
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })

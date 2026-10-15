@@ -1,0 +1,5 @@
+.env
+*.log
+# Legacy cleanup guard; current smoke tests keep sessions in process memory.
+test-sessions.json
+browser-*.json

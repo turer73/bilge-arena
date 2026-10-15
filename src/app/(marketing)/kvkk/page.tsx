@@ -147,7 +147,7 @@ export default function KVKKPage() {
         <section>
           <h2 className="mb-3 text-lg font-bold text-[var(--text)]">8. Başvuru</h2>
           <p>
-            Yukarıdaki haklarınızı kullanmak için <strong>destek@bilgearena.com</strong>{' '}
+            Yukarıdaki haklarınızı kullanmak için <strong>iletisim@bilgearena.com</strong>{' '}
             adresine kimliğinizi tespit edici bilgilerle birlikte yazılı olarak
             başvurabilirsiniz. Başvurular en geç 30 gün içinde ücretsiz olarak
             sonuçlandırılır.
@@ -180,7 +180,7 @@ export default function KVKKPage() {
             Sistem güvenliği düzenli iç penetrasyon testleriyle değerlendirilmektedir.
             Bildirim yükümlülüğü doğuran bir olay yaşanması halinde bu sayfa güncellenecek
             ve etkilenen kullanıcılara doğrudan e-posta ile bilgi verilecektir. Sorularınız için{' '}
-            <strong>destek@bilgearena.com</strong>.
+            <strong>iletisim@bilgearena.com</strong>.
           </p>
         </section>
       </div>

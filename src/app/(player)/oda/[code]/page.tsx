@@ -66,7 +66,7 @@ export default async function Page({
       : null
 
   return (
-    <>
+    <div data-room-lobby-screen className="mx-auto max-w-4xl">
       <header className="mb-4">
         <Link
           href="/oda"
@@ -83,6 +83,6 @@ export default async function Page({
         initialState={initialState}
         initialPreviewQuestion={initialPreviewQuestion}
       />
-    </>
+    </div>
   )
 }

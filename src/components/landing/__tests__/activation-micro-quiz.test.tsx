@@ -4,6 +4,7 @@ import { ActivationMicroQuiz } from '../activation-micro-quiz'
 import type { PublicQuestion } from '@/lib/utils/question-public'
 
 const mocks = vi.hoisted(() => ({
+  auth: { user: null as { id: string } | null, loading: false },
   fetchPreviewQuestions: vi.fn(),
   gradeQuestion: vi.fn(),
   signInWithGoogle: vi.fn(),
@@ -22,9 +23,9 @@ vi.mock('@/lib/questions/grade-question', () => ({
 
 vi.mock('@/lib/hooks/use-auth', () => ({
   useAuth: () => ({
-    user: null,
+    user: mocks.auth.user,
     profile: null,
-    loading: false,
+    loading: mocks.auth.loading,
     signInWithGoogle: mocks.signInWithGoogle,
     signInWithMagicLink: vi.fn(),
     signOut: vi.fn(),
@@ -63,6 +64,8 @@ function makeQuestion(index: number): PublicQuestion {
 describe('ActivationMicroQuiz', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.auth.user = null
+    mocks.auth.loading = false
     document.documentElement.dataset.activationVariant = 'micro'
     mocks.fetchPreviewQuestions.mockResolvedValue([makeQuestion(1), makeQuestion(2), makeQuestion(3)])
     mocks.gradeQuestion.mockImplementation(async (_id: string, selectedOption: number) => ({
@@ -73,10 +76,50 @@ describe('ActivationMicroQuiz', () => {
     mocks.beginLegalConsentIntent.mockResolvedValue('legal-intent-token')
   })
 
+  it('giriş yapmış kullanıcıya misafir hedef seçimi yerine çalışma girişini gösterir', () => {
+    mocks.auth.user = { id: 'returning-user' }
+    render(<ActivationMicroQuiz />)
+
+    expect(screen.getByRole('heading', { name: 'Çalışmana devam et' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Öğrenmeye devam et' })).toHaveAttribute('href', '/arena')
+    expect(screen.getByRole('link', { name: 'Pratik yap' })).toHaveAttribute('href', '/arena/calisma')
+    expect(screen.queryByText('Üye olmadan hemen dene')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Hedefin hangisi?' })).not.toBeInTheDocument()
+    expect(mocks.fetchPreviewQuestions).not.toHaveBeenCalled()
+  })
+
+  it('oturum çözülmeden misafir akışını göstermez ve giriş sonucuna göre devam eder', () => {
+    mocks.auth.loading = true
+    const view = render(<ActivationMicroQuiz />)
+    expect(screen.getByRole('status')).toHaveTextContent('Oturumun kontrol ediliyor')
+    expect(screen.queryByRole('heading', { name: 'Hedefin hangisi?' })).not.toBeInTheDocument()
+
+    mocks.auth.loading = false
+    mocks.auth.user = { id: 'returning-user' }
+    view.rerender(<ActivationMicroQuiz />)
+    expect(screen.getByRole('heading', { name: 'Çalışmana devam et' })).toBeInTheDocument()
+
+    mocks.auth.user = null
+    view.rerender(<ActivationMicroQuiz />)
+    expect(screen.getByRole('heading', { name: 'Hedefin hangisi?' })).toBeInTheDocument()
+  })
+
+  it('misafir denemesi başladıktan sonra oturum açılması mevcut soruyu kaybettirmez', async () => {
+    const view = render(<ActivationMicroQuiz />)
+    fireEvent.click(screen.getByRole('button', { name: /LGS Ortaokul hedefim/i }))
+    await screen.findByText('Deneme sorusu 1')
+
+    mocks.auth.user = { id: 'signed-in-during-preview' }
+    view.rerender(<ActivationMicroQuiz />)
+    expect(screen.getByText('Deneme sorusu 1')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Çalışmana devam et' })).not.toBeInTheDocument()
+    expect(mocks.fetchPreviewQuestions).toHaveBeenCalledOnce()
+  })
+
   it('sinav hedefini ve ilk soru gorunumunu olcer', async () => {
     render(<ActivationMicroQuiz />)
 
-    fireEvent.click(screen.getByRole('button', { name: /LGS: Ortaokul hedefim/i }))
+    fireEvent.click(screen.getByRole('button', { name: /LGS Ortaokul hedefim/i }))
 
     await screen.findByText('Deneme sorusu 1')
     expect(mocks.fetchPreviewQuestions).toHaveBeenCalledWith('turkce', {
@@ -90,7 +133,7 @@ describe('ActivationMicroQuiz', () => {
 
   it('uc soruyu notlandirir ve durust deneme XP sonucunu gosterir', async () => {
     render(<ActivationMicroQuiz />)
-    fireEvent.click(screen.getByRole('button', { name: /TYT · AYT: Üniversite hedefim/i }))
+    fireEvent.click(screen.getByRole('button', { name: /TYT · AYT Üniversite hedefim/i }))
 
     for (let position = 1; position <= 3; position++) {
       await screen.findByText(`Deneme sorusu ${position}`)
@@ -113,7 +156,7 @@ describe('ActivationMicroQuiz', () => {
 
   it('misafir devam CTA’sinda onaydan sonra Google girisini intent token ile baslatir', async () => {
     render(<ActivationMicroQuiz />)
-    fireEvent.click(screen.getByRole('button', { name: /LGS: Ortaokul hedefim/i }))
+    fireEvent.click(screen.getByRole('button', { name: /LGS Ortaokul hedefim/i }))
 
     for (let position = 1; position <= 3; position++) {
       await screen.findByText(`Deneme sorusu ${position}`)
@@ -141,7 +184,7 @@ describe('ActivationMicroQuiz', () => {
   it('onay niyeti basarisizsa Google girisini baslatmaz', async () => {
     mocks.beginLegalConsentIntent.mockRejectedValueOnce(new Error('unavailable'))
     render(<ActivationMicroQuiz />)
-    fireEvent.click(screen.getByRole('button', { name: /LGS: Ortaokul hedefim/i }))
+    fireEvent.click(screen.getByRole('button', { name: /LGS Ortaokul hedefim/i }))
 
     for (let position = 1; position <= 3; position++) {
       await screen.findByText(`Deneme sorusu ${position}`)

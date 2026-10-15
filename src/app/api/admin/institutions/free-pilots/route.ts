@@ -1,6 +1,9 @@
 import type { NextRequest } from 'next/server'
 import { checkPermission, logAdminAction } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { sendEmail } from '@/lib/email/send'
+import { institutionPilotPackageEmail } from '@/lib/email/templates/institution-pilot-package'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import {
   provisionFreePilotInputSchema,
@@ -14,6 +17,10 @@ import {
   isInstitutionFreePilotEnabled,
   isInstitutionPilotEnabled,
 } from '@/lib/institution-pilot/server-security'
+import {
+  isInstitutionStudyProgramEnabled,
+  isInstitutionTrackingEnabled,
+} from '@/lib/institution-tracking/server-security'
 
 const provisionLimiter = createRateLimiter('admin-institution-free-pilot', 5, 60_000)
 
@@ -35,6 +42,12 @@ export async function POST(request: NextRequest) {
   if (!isInstitutionPilotEnabled()) {
     return institutionPilotNoStoreJson({ error: 'Kurum pilotu yapılandırılmadı' }, { status: 503 })
   }
+  if (!isInstitutionTrackingEnabled() || !isInstitutionStudyProgramEnabled()) {
+    return institutionPilotNoStoreJson(
+      { error: 'Kurum takip ve çalışma programı özellikleri kullanıma hazır değil' },
+      { status: 503 },
+    )
+  }
 
   const supabase = await createClient()
   const admin = await checkPermission(supabase, 'institution.pilots.manage')
@@ -54,21 +67,113 @@ export async function POST(request: NextRequest) {
   const input = provisionFreePilotInputSchema.safeParse(body)
   if (!input.success) {
     return institutionPilotNoStoreJson(
-      { error: 'Kurum, yönetici, süre veya kapasite sınırı geçersiz' },
+      { error: 'Kurum, yönetici, paket onayı, süre veya kapasite sınırı geçersiz' },
       { status: 400 },
     )
   }
+  const generatedApprovalReference = `PILOT-${input.data.requestId.toUpperCase()}`
 
-  const { data, error } = await supabase.rpc('provision_free_pilot_institution', {
+  const serviceClient = createServiceRoleClient()
+  const existingRequest = await serviceClient.from('pilot_institution_requests')
+    .select('request_id, result')
+    .eq('user_id', admin.id)
+    .eq('operation', 'provision_free_pilot')
+    .eq('request_id', input.data.requestId)
+    .maybeSingle()
+  if (existingRequest.error) {
+    return institutionPilotNoStoreJson({ error: 'Pilot tekrar kaydı doğrulanamadı' }, { status: 503 })
+  }
+  const existingResult = existingRequest.data
+    ? provisionFreePilotResultSchema.safeParse(existingRequest.data.result)
+    : null
+  const approvalReference = existingResult?.success
+    ? existingResult.data.institution.approvalReference
+    : generatedApprovalReference
+  const rpcArgs = {
     p_user_id: admin.id,
     p_name: input.data.name,
     p_manager_user_id: input.data.managerUserId,
-    p_approval_ref: input.data.approvalReference,
+    p_approval_ref: approvalReference,
     p_student_limit: input.data.studentLimit,
     p_staff_limit: input.data.staffLimit,
     p_trial_days: input.data.trialDays,
     p_request_id: input.data.requestId,
+  }
+  if (existingRequest.data) {
+    if (!existingResult?.success) {
+      return institutionPilotNoStoreJson(
+        { error: 'Pilot tekrar kaydı doğrulanamadı' },
+        { status: 500 },
+      )
+    }
+    const replay = await supabase.rpc('provision_free_pilot_institution', rpcArgs)
+    if (replay.error) {
+      return institutionPilotNoStoreJson(
+        { error: 'Ücretsiz kurum pilotu tekrar sonucu alınamadı' },
+        { status: institutionPilotRpcStatus(replay.error.code) },
+      )
+    }
+    const parsedReplay = provisionFreePilotResultSchema.safeParse(replay.data)
+    if (!parsedReplay.success) {
+      return institutionPilotNoStoreJson({ error: 'Ücretsiz kurum pilotu tekrar sonucu doğrulanamadı' }, { status: 500 })
+    }
+    return institutionPilotNoStoreJson({
+      ...parsedReplay.data,
+      documentDelivery: { sent: true, version: '1.0' },
+    })
+  }
+  const { data: managerResult, error: managerError } = await serviceClient.auth.admin.getUserById(
+    input.data.managerUserId,
+  )
+  const managerEmail = managerResult.user?.email
+  if (managerError || !managerEmail || !managerResult.user.email_confirmed_at) {
+    return institutionPilotNoStoreJson(
+      { error: 'Doğrulanmış kurum yöneticisi e-postası bulunamadı' },
+      { status: 422 },
+    )
+  }
+
+  const [control, openPilot, activeMembership] = await Promise.all([
+    serviceClient.from('institution_pilot_controls')
+      .select('enabled').eq('control_key', 'free_provisioning').maybeSingle(),
+    serviceClient.from('pilot_institutions')
+      .select('id').eq('pilot_kind', 'invitation_free').in('status', ['pilot', 'active']).limit(1).maybeSingle(),
+    serviceClient.from('pilot_institution_memberships')
+      .select('institution_id').eq('user_id', input.data.managerUserId).eq('status', 'active').limit(1).maybeSingle(),
+  ])
+  if (control.error || control.data?.enabled !== true || openPilot.error || openPilot.data || activeMembership.error || activeMembership.data) {
+    return institutionPilotNoStoreJson(
+      { error: 'Ücretsiz kurum pilotu için veritabanı uygunluk koşulları sağlanmıyor' },
+      { status: control.error || openPilot.error || activeMembership.error ? 503 : 409 },
+    )
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://bilgearena.com'
+  const documentUrl = baseUrl + '/documents/bilge-arena-kurum-paketleri-v1.pdf'
+  const email = institutionPilotPackageEmail({
+    institutionName: input.data.name,
+    managerName: String(managerResult.user.user_metadata?.display_name || managerEmail),
+    packageName: input.data.trialDays === 60 ? 'Paket 2 - Gelişim Pilotu' : 'Paket 1 - Başlangıç Pilotu',
+    documentUrl,
   })
+  const delivery = await sendEmail({
+    to: managerEmail,
+    subject: email.subject,
+    html: email.html,
+    template: 'institution_pilot_package_v1',
+    userId: input.data.managerUserId,
+    idempotencyKey: 'institution-pilot-package-' + input.data.requestId,
+    attachments: [{ filename: 'bilge-arena-kurum-paketleri-v1.pdf', path: documentUrl }],
+  })
+  if (!delivery.ok) {
+    console.error('[Institution Free Pilot] zorunlu belge e-postası gönderilemedi:', delivery.error)
+    return institutionPilotNoStoreJson(
+      { error: 'Kurum belgesi e-posta ile gönderilemedi; kurum oluşturulmadı' },
+      { status: 503 },
+    )
+  }
+
+  const { data, error } = await supabase.rpc('provision_free_pilot_institution', rpcArgs)
   if (error) {
     return institutionPilotNoStoreJson(
       { error: 'Ücretsiz kurum pilotu oluşturulamadı' },
@@ -91,10 +196,12 @@ export async function POST(request: NextRequest) {
     targetId: parsed.data.institution.id,
     details: {
       name: parsed.data.institution.name,
-      approvalReference: parsed.data.institution.approvalReference,
+      approvalReference,
       studentLimit: parsed.data.institution.studentLimit,
       staffLimit: parsed.data.institution.staffLimit,
       reviewDueAt: parsed.data.institution.reviewDueAt,
+      documentEmailId: delivery.id ?? null,
+      documentVersion: '1.0',
     },
     request,
   })
@@ -105,5 +212,8 @@ export async function POST(request: NextRequest) {
     console.error('[Institution Free Pilot] ikincil admin günlüğü yazılamadı:', auditError.message)
   }
 
-  return institutionPilotNoStoreJson(parsed.data, { status: 201 })
+  return institutionPilotNoStoreJson({
+    ...parsed.data,
+    documentDelivery: { sent: true, version: '1.0' },
+  }, { status: 201 })
 }

@@ -149,7 +149,12 @@ describe('InstitutionRoleManager', () => {
     render(<InstitutionRoleManager />)
     const teachers = await screen.findAllByText('Öğretmen Bir')
     const row = teachers.map((teacher) => teacher.closest('label')).find(Boolean)
-    fetchMock.mockImplementationOnce(() => json({ error: 'Rol ataması güncellenemedi' }, 409))
+    // Nested panels also fetch on mount; only the intended mutation should fail.
+    fetchMock.mockImplementation((path, init) =>
+      String(path) === `/api/institution/roles/${CUSTOM_ROLE}/members/${TEACHER_MEMBER}`
+        && init?.method === 'DELETE'
+        ? json({ error: 'Rol ataması güncellenemedi' }, 409)
+        : json(assigned))
     await user.click(row!.querySelector('input')!)
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
       `/api/institution/roles/${CUSTOM_ROLE}/members/${TEACHER_MEMBER}`,

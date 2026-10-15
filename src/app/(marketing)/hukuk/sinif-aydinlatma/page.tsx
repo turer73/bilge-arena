@@ -86,7 +86,7 @@ export default function ClassroomNoticePage() {
           <h2 className="mb-3 text-lg font-bold text-[var(--text)]">7. Haklarınız ve başvuru</h2>
           <p>
             KVKK&apos;nın 11. maddesindeki haklarınızı kullanmak veya sınıf verileriniz hakkında bilgi istemek için{' '}
-            <strong>destek@bilgearena.com</strong> adresine başvurabilirsiniz. Ayrı paylaşım tercihinizin kapsamı
+            <strong>iletisim@bilgearena.com</strong> adresine başvurabilirsiniz. Ayrı paylaşım tercihinizin kapsamı
             için{' '}
             <a href="/hukuk/sinif-paylasim-rizasi" className="font-bold text-[var(--focus)] underline underline-offset-2">
               Sınıf İlerleme Paylaşımı Açık Rıza Metni

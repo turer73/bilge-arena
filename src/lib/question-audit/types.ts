@@ -174,6 +174,13 @@ export interface BlindSolverPayload {
   computedValue: string | null
 }
 
+/** @4: model selects exact text; code alone derives the index and assessment. */
+export interface OptionTextBlindSolverPayload extends BlindSolverPayload {
+  selectionVersion: 'option-text@1'
+  selectedOptionText: string | null
+  selectionAssessment: import('./option-selection').SelectionAssessment
+}
+
 export interface AdversarialPayload {
   reasoning: string
   /** Bos dizi = kusur bulunamadi. Bu basarili bir denetimdir, yenilgi degil. */
@@ -185,7 +192,7 @@ export interface AdversarialPayload {
  * hangi sikka vardigini CIKARIR. Karsilastirmayi `deriveVerdict` yapar.
  *
  * Gerekce: "cozum isaretli cevabi destekliyor mu?" yonlendirici bir sorudur ve
- * bu ajan anahtari da cozumu de gordugu icin sycophancy'ye en acik olanidir —
+ * anahtar ve cozumu birlikte gostermek sycophancy'ye acik olurdu —
  * yani mevcut production judge'inin basarisiz oldugu tam kurulum. Cikarim +
  * kodda karsilastirma, ayni bilgiyi yanlilik yuzeyi olmadan verir.
  */
@@ -194,6 +201,44 @@ export interface SolutionVerifierPayload {
   solutionConcludesIndex: number | null
   solutionCompleteness: 'adequate' | 'terse'
 }
+
+/** @4 arsivleri: model alintilari birebir kaynakla dogrulanir. */
+export interface GroundedSolutionVerifierPayload extends SolutionVerifierPayload {
+  evidenceVersion: 'solution-evidence@1'
+  /** Model yargisidir, bagimsiz olarak dogrulanmis soru sinifi DEGILDIR. */
+  questionDemand: 'recall' | 'reasoning'
+  /** Yalniz solutionText icinden birebir parcalar. Varlik != mantiksal dogruluk. */
+  supportingQuotes: string[]
+}
+
+/** @5: model yalniz kodun verdigi yazar parcasi kimliklerini secer. */
+export interface ReferencedSolutionVerifierPayload extends SolutionVerifierPayload {
+  evidenceVersion: 'solution-evidence@2'
+  questionDemand: 'recall' | 'reasoning'
+  supportingUnitIds: string[]
+  /** Model ciktisi DEGIL. Dogrulanmis kimliklerden kodun cikardigi metin. */
+  supportingQuotes: string[]
+}
+
+export type ReferencedSolutionVerifierWirePayload = Omit<ReferencedSolutionVerifierPayload, 'supportingQuotes'>
+
+/** @6 keeps the model claim unchanged; assessment below is CODE-derived. */
+export interface AssessedSolutionVerifierPayload extends Omit<ReferencedSolutionVerifierPayload, 'evidenceVersion'> {
+  evidenceVersion: 'solution-evidence@3'
+  supportAssessment: 'answer_only_for_reported_reasoning' | 'missing_cited_support' | 'answer_only_citation' | 'not_established'
+}
+
+export type AssessedSolutionVerifierWirePayload = Omit<AssessedSolutionVerifierPayload, 'supportingQuotes' | 'supportAssessment'>
+
+/** @7: exact text, not a model-generated index. Semantic correctness is still unproven. */
+export interface OptionTextSolutionVerifierPayload extends Omit<AssessedSolutionVerifierPayload, 'evidenceVersion'> {
+  evidenceVersion: 'solution-evidence@4'
+  selectionVersion: 'option-text@1'
+  selectedOptionText: string | null
+}
+
+export type SolutionVerifierWirePayload = Omit<OptionTextSolutionVerifierPayload,
+  'supportingQuotes' | 'supportAssessment' | 'solutionConcludesIndex' | 'selectionVersion'>
 
 // ── Kosu kaydi ve verdict ──────────────────────────────────────────────────
 

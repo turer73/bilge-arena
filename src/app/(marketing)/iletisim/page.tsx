@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
+const pilotEmailHref = 'mailto:iletisim@bilgearena.com?subject=' + encodeURIComponent('Bilge Arena koçluk / dershane pilotu')
+  + '&body=' + encodeURIComponent('Merhaba,\nBilge Arena ile pilot işbirliği için görüşmek istiyorum.\n\nÇalışma şeklim / kurumum:\nYaklaşık öğrenci sayısı:\nSınav hedefi (LGS / YKS / YDT):\nTakip etmek istediğim çalışmalar:\n')
 
 export const metadata: Metadata = {
   title: 'İletişim — Bilge Arena',
@@ -30,8 +32,8 @@ const CONTACT_ITEMS = [
     icon: '🛠️',
     title: 'Teknik Destek',
     desc: 'Hesap sorunları, hata bildirimleri ve teknik konular için.',
-    value: 'destek@bilgearena.com',
-    href: 'mailto:destek@bilgearena.com',
+    value: 'iletisim@bilgearena.com',
+    href: 'mailto:iletisim@bilgearena.com',
   },
   {
     icon: '🤝',
@@ -65,8 +67,8 @@ const TOPICS = [
   },
   {
     icon: '🏫',
-    title: 'Okul & Kurum',
-    desc: 'Davetli küçük dershane canary’si için kurum türünüzü, yaklaşık öğrenci/personel sayısını ve hedefinizi iletin. Erişim otomatik açılmaz; uygunluk, KVKK ve operasyon kapıları birlikte değerlendirilir.',
+    title: 'Koçluk & Dershane',
+    desc: 'Sınav koçları, küçük dershaneler ve etüt grupları için öğrenci takibi, haftalık çalışma planları ve gelişim raporları üzerine pilot işbirliği yapabiliriz.',
   },
   {
     icon: '📣',
@@ -82,15 +84,15 @@ const FAQ = [
   },
   {
     q: 'Soru önermek mümkün mü?',
-    a: 'Evet! Doğru kaynaklara dayalı, özgün sorularınızı destek@bilgearena.com adresine gönderebilirsiniz. Soru bankasına katkı sağlayan kullanıcılara özel rozet veriyoruz.',
+    a: 'Evet! Doğru kaynaklara dayalı, özgün sorularınızı iletisim@bilgearena.com adresine gönderebilirsiniz. Soru bankasına katkı sağlayan kullanıcılara özel rozet veriyoruz.',
   },
   {
     q: 'Platform tamamen ücretsiz mi?',
-    a: 'Bireysel öğrenci başlangıcı ücretsizdir. Kurumsal kullanım herkese açık veya self-servis değildir: küçük dershane sistem canary’si davetli ve sınırlı olarak ücretsiz yürütülebilir; ücretli kurum onboarding’i şu anda kapalıdır.',
+    a: 'Bireysel öğrenci başlangıcı ücretsizdir. Koçluk ve dershane işbirlikleri için küçük bir grupla ücretsiz pilot planlayabiliriz. Süre, öğrenci sayısı ve kullanım kapsamını görüşmede birlikte belirliyoruz. Erişim otomatik açılmaz; görüşme sonrası ekibimiz tarafından tanımlanır.',
   },
   {
     q: 'Hesabımı nasıl silebilirim?',
-    a: 'Hesabınızı silmek için destek@bilgearena.com adresine kayıtlı e-posta adresinizden yazmanız yeterlidir. Talebiniz 5 iş günü içinde işleme alınır.',
+    a: 'Profil sayfanızdaki Hesap ve veri yönetimi bölümünden “Hesabımı kalıcı sil” seçeneğini açabilirsiniz. Açıklamayı onaylayıp HESABIMI SIL yazmanız gerekir. Hesap erişimi ve giriş kimliği temizlenir; ilişkili kayıtlar ve yedeklerin temizliği ayrıca değerlendirilir. Hesabınıza erişemiyorsanız kayıtlı e-posta adresinizden iletisim@bilgearena.com adresine yazabilirsiniz.',
   },
 ]
 
@@ -130,6 +132,20 @@ export default function IletisimPage() {
         </div>
       </section>
 
+      <section id="kurumsal-pilot" aria-labelledby="pilot-contact-title" className="mb-16 scroll-mt-24 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8">
+        <p className="text-xs font-bold uppercase tracking-wide text-[var(--focus-text)]">Koçluk ve dershane işbirliği</p>
+        <h2 id="pilot-contact-title" className="mt-3 text-2xl font-bold">Öğrenci takibini birlikte planlayalım.</h2>
+        <p className="mt-3 text-sm leading-6 text-[var(--text-sub)]">Size uygun pilotu konuşabilmemiz için e-postanızda şu bilgileri paylaşmanız yeterli:</p>
+        <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-6 text-[var(--text-sub)]">
+          <li>Sınav koçu, dershane veya etüt grubu olarak çalışma şekliniz.</li>
+          <li>Yaklaşık öğrenci sayınız ve sınav hedefiniz.</li>
+          <li>Takip etmek istediğiniz çalışmalar ve gelişim alanları.</li>
+        </ul>
+        <p className="mt-4 text-sm leading-6 text-[var(--text-sub)]">İlk görüşme için öğrenci isimleri veya kişisel bilgileri gerekmez. Kapsamı ve pilot paketini birlikte seçtikten sonra kurum erişiminizi planlarız.</p>
+        <a href={pilotEmailHref} className="btn-primary mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl px-5 py-3 text-sm font-bold sm:w-auto">Pilot görüşmesi için e-posta hazırla</a>
+        <p className="mt-3 break-words text-sm text-[var(--text-sub)]">iletisim@bilgearena.com</p>
+      </section>
+
       {/* Hangi Konularda Yazabilirsiniz */}
       <section className="mb-16">
         <h2 className="mb-8 text-center text-2xl font-bold">Hangi Konularda Yazabilirsiniz?</h2>
@@ -137,7 +153,6 @@ export default function IletisimPage() {
           {TOPICS.map((topic) => (
             <div
               key={topic.title}
-              id={topic.title === 'Okul & Kurum' ? 'kurumsal-pilot' : undefined}
               className="flex scroll-mt-24 gap-4 rounded-xl border border-[var(--border)] bg-[var(--card)] p-5"
             >
               <span className="text-2xl">{topic.icon}</span>

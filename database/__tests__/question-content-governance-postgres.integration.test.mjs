@@ -10,6 +10,7 @@ if (url && process.env.CONTENT_GOVERNANCE_TEST_DATABASE_DISPOSABLE !== '1') thro
 if (url && !/^bilge_r43_test_[a-z0-9_]+$/i.test(new URL(url).pathname.slice(1))) throw new Error('Refusing non-disposable content-governance database')
 const suite = url && process.env.CONTENT_GOVERNANCE_TEST_DATABASE_DISPOSABLE === '1' ? describe : describe.skip
 const migration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '106_question_content_governance.sql'), 'utf8')
+const coachContractMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '110_coach_curated_content_contract.sql'), 'utf8')
 const validationPipelineMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '136_question_validation_pipeline.sql'), 'utf8')
 const appealEvidenceMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '139_question_appeal_evidence_v2.sql'), 'utf8')
 const writeContextMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '142_question_governance_write_context.sql'), 'utf8')
@@ -24,8 +25,19 @@ const searchAdminAal2Migration = readFileSync(join(dirname(fileURLToPath(import.
 const outcomeCandidatesMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '166_question_outcome_mapping_candidates.sql'), 'utf8')
 const curriculumScopeRegistryMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '178_curriculum_scope_release_registry.sql'), 'utf8')
 const ydtEnglishReleaseMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '187_release_ydt_english_mastery_scope.sql'), 'utf8')
+const modelFreePosteriorMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '212_question_quality_model_free_posterior.sql'), 'utf8')
+const modelGateMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '213_question_quality_model_gate.sql'), 'utf8')
+const modelGateRetentionMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '214_question_quality_model_gate_retention.sql'), 'utf8')
+const turkishRestorationMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '215_question_turkish_letter_restoration.sql'), 'utf8')
+const singleSourceReviewMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '217_question_source_review_single_approval.sql'), 'utf8')
+const turkishRestorationSocialGuardMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '218_question_turkish_restoration_tyt_social_guard.sql'), 'utf8')
+const canonicalCatalogMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '219_curriculum_canonical_identity.sql'), 'utf8')
+const sourceV2Migration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '20261008183619_question_source_curriculum_v2.sql'), 'utf8')
+const aiOwnerMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '20261008200746_question_source_ai_owner_acceptance.sql'), 'utf8')
+const sourceExceptionsMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '20261009200000_question_source_evidence_exceptions.sql'), 'utf8')
 
 suite('106 content governance disposable PostgreSQL acceptance', () => {
+  let turkishQuestion; let spellingTopicQuestion; let toolQuestion; let socialQuestion; let socialOpenQuestion
   let client; let author; let reviewer1; let reviewer2; let publisher; let learner; let legacyLearner; let question; let outcome; let outcome2; let outcomeCourse; let outcomeUnit; let outcomeTopic; let outcomeNode; let legacyRevision; let candidateQuestion; let candidateOutcome; let candidateLegacyRevision; let ydtQuestion; let ydtLegacyNullQuestion; let ydtOutcome; let ydtWrongOutcome; let ydtLegacyRevision; let ydtLegacyNullRevision; let parityQuestions
   const rpc = async (call, values = []) => { await client.query("SELECT set_config('request.jwt.claim.sub','',false),set_config('request.jwt.claims',$1,false)",[JSON.stringify({ role:'service_role' })]); await client.query('SET ROLE service_role'); try { return (await client.query(`SELECT ${call} AS result`, values)).rows[0].result } finally { await client.query('RESET ROLE') } }
   const userRpc = async (userId, aal, call, values = []) => { await client.query("SELECT set_config('request.jwt.claim.sub',$1,false),set_config('request.jwt.claims',$2,false)",[userId,JSON.stringify({ sub:userId,role:'authenticated',aal })]); await client.query('SET ROLE authenticated'); try { return (await client.query(`SELECT ${call} AS result`, values)).rows[0].result } finally { await client.query('RESET ROLE') } }
@@ -104,6 +116,18 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
       ydtQuestion,{ question:'legacy YDT',options:['A','B'],answer:0 },
       ydtLegacyNullQuestion,{ question:'legacy null YDT',options:['A','B'],answer:0 },
     ])
+    ;[turkishQuestion, spellingTopicQuestion, toolQuestion, socialQuestion, socialOpenQuestion] = [randomUUID(), randomUUID(), randomUUID(), randomUUID(), randomUUID()]
+    // pasif baslar (kazanim adaylari sayimini etkilemesin); 218 testi aktiflestirir
+    await client.query(`INSERT INTO public.questions(id,game,category,difficulty,exam_ref,is_active,content) VALUES
+      ($1,'sosyal','tarih',2,'TYT',false,$2),($3,'sosyal','tarih',2,'TYT',false,$2)`, [
+      socialQuestion,{ question:'Asagidaki olaylardan hangisi once olmustur?',options:['A','B','C','D','E'],answer:0 },socialOpenQuestion,
+    ])
+    await client.query(`INSERT INTO public.questions(id,game,category,difficulty,content) VALUES
+      ($1,'matematik','Temel',2,$2),($3,'matematik','Temel',2,$4),($5,'matematik','Temel',2,$6)`, [
+      turkishQuestion,{ question:'Asagidaki ifadelerden hangisi dogrudur?',options:['Ogrenci sinifta ISIK olcumu yapar.','Gunes batar.','Deney yapilir.','Hepsi'],answer:0,solution:'Cozum: ogrenci olcum yapar.' },
+      spellingTopicQuestion,{ question:'Asagidakilerin hangisinde yazim yanlisi vardir?',options:['dogru','degil','bugun','once'],answer:1 },
+      toolQuestion,{ question:'Ucgenin ic acilari toplami kac derecedir?',options:['90','180','270','360'],answer:1 },
+    ])
     parityQuestions = Array.from({ length: 8 }, randomUUID)
     await client.query(`INSERT INTO public.questions(id,game,category,difficulty,content)
       SELECT source.id,'matematik','Temel',source.difficulty,$3::jsonb
@@ -118,10 +142,11 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     ])
     await client.query(`INSERT INTO public.question_outcomes(question_id,outcome_id,weight,is_primary)
       SELECT question_id,$2,1,true FROM unnest($1::uuid[]) AS source(question_id)`, [
-      parityQuestions,outcome,
+      [...parityQuestions,turkishQuestion,spellingTopicQuestion,toolQuestion],outcome,
     ])
     await client.query("INSERT INTO public.error_reports(id,user_id,question_id,report_type,description,status,created_at) VALUES($1,$2,$3,'typo','Eski yazım bildirimi','pending','2026-07-01T10:00:00Z')",[randomUUID(),legacyLearner,question])
     await client.query(migration)
+    await client.query(coachContractMigration)
     await client.query(validationPipelineMigration)
     await client.query(psychometricsV2Migration)
     await client.query(psychometricsV3Migration)
@@ -139,6 +164,17 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(outcomeCandidatesMigration)
     await client.query(curriculumScopeRegistryMigration)
     await client.query(ydtEnglishReleaseMigration)
+    await client.query(modelFreePosteriorMigration)
+    await client.query(modelGateMigration)
+    await client.query(modelGateRetentionMigration)
+    await client.query(turkishRestorationMigration)
+    await client.query(singleSourceReviewMigration)
+    await client.query(turkishRestorationSocialGuardMigration)
+    // Actual production outcome columns needed by 219 (legacy fixture was minimal).
+    await client.query(canonicalCatalogMigration)
+    await client.query(sourceV2Migration)
+    await client.query(aiOwnerMigration)
+    await client.query(sourceExceptionsMigration)
     legacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id
     candidateLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[candidateQuestion])).rows[0].published_revision_id
     ydtLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[ydtQuestion])).rows[0].published_revision_id
@@ -498,17 +534,20 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     expect(consensus).toEqual(expect.objectContaining({
       decision:'quarantine',independentUserCount:5,independentClusterCount:5,trustedAgreementCount:5,
       leadingReasonCode:'wrong_key',inputsSha256:expect.stringMatching(/^[0-9a-f]{64}$/),
+      policyVersion:'community-quality@2',ungatedDecision:'quarantine',modelGate:null,
     }))
     const quarantine = await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,qualityCase,'community-quality@1',randomUUID()])
-    expect(quarantine).toEqual(expect.objectContaining({ state:'quarantined',replayed:false }))
+    // A not-yet-redeployed worker still sends @1; the server records the rule it applied.
+    expect(quarantine).toEqual(expect.objectContaining({ state:'quarantined',policyVersion:'community-quality@2',replayed:false }))
+    expect((await client.query('SELECT DISTINCT policy_version FROM public.question_quality_consensus_decisions WHERE case_id=$1',[qualityCase])).rows).toEqual([{ policy_version:'community-quality@2' }])
     expect((await client.query('SELECT is_active FROM public.questions WHERE id=$1',[question])).rows[0].is_active).toBe(false)
     expect((await client.query('SELECT count(*)::int AS n FROM public.question_quality_consensus_queue WHERE case_id=$1',[qualityCase])).rows[0].n).toBe(0)
 
     await rpc('public.record_question_quality_external_proof($1,$2,$3,$4,$5::jsonb,$6)',[publisher,qualityCase,'deterministic','supports_flaw',JSON.stringify({ rule:'independent arithmetic proof',version:1 }),randomUUID()])
     const confirmRequest = randomUUID()
-    const confirmed = await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,qualityCase,'community-quality@1',confirmRequest])
+    const confirmed = await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,qualityCase,'community-quality@2',confirmRequest])
     expect(confirmed).toEqual(expect.objectContaining({ state:'confirmed',replayed:false }))
-    expect(await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,qualityCase,'community-quality@1',confirmRequest])).toEqual(expect.objectContaining({ state:'confirmed',replayed:true }))
+    expect(await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,qualityCase,'community-quality@2',confirmRequest])).toEqual(expect.objectContaining({ state:'confirmed',replayed:true }))
     expect((await client.query("SELECT count(*)::int AS n,sum(amount)::int AS total FROM public.reward_ledger WHERE source_type='question_quality_claim' AND metadata->>'caseId'=$1",[qualityCase])).rows[0]).toEqual({ n:6,total:240 })
     expect((await client.query('SELECT coins FROM public.profiles WHERE id=$1',[voters[0]])).rows[0].coins).toBe(200)
 
@@ -923,5 +962,388 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(outcomeScopeMigration)
     expect((await client.query("SELECT convalidated FROM pg_constraint WHERE conrelid='public.questions'::regclass AND conname='questions_published_revision_question_fkey'")).rows[0]).toEqual({ convalidated:true })
     expect((await client.query("SELECT has_function_privilege('authenticated','public.set_question_revision_outcomes(uuid,uuid,jsonb,uuid)','EXECUTE') AS client_exec,has_function_privilege('service_role','public.set_question_revision_outcomes(uuid,uuid,jsonb,uuid)','EXECUTE') AS server_exec")).rows[0]).toEqual({ client_exec:false,server_exec:true })
+  })
+  it('never lets the capped model term carry a case across an automatic threshold', async () => {
+    const target = (await client.query(`SELECT q.id AS question_id,r.id AS revision_id,r.content_sha256,r.game
+      FROM public.questions q JOIN public.question_content_revisions r ON r.id=q.published_revision_id
+      WHERE q.is_active AND NOT EXISTS (SELECT 1 FROM public.question_quality_cases c WHERE c.revision_id=r.id)
+      ORDER BY q.id LIMIT 1`)).rows[0]
+    expect(target).toBeDefined()
+    const gatedCase = (await client.query('INSERT INTO public.question_quality_cases(question_id,revision_id,content_sha256) VALUES($1,$2,$3) RETURNING id',[target.question_id,target.revision_id,target.content_sha256])).rows[0].id
+    const reporters = Array.from({ length: 5 }, () => randomUUID())
+    await client.query('INSERT INTO public.profiles SELECT unnest($1::uuid[])',[reporters])
+    for (const [index, reporter] of reporters.entries()) {
+      // Trusted but only moderately calibrated: ~6.7 human log-odds for five
+      // reporters, below the 0.98 quarantine threshold without the model term.
+      await client.query(`INSERT INTO public.question_quality_worker_profiles(user_id,domain,resolved_total,flawed_controls,flawed_controls_correct,clean_controls,clean_controls_correct,correction_checks,correction_checks_correct,trust_state) VALUES($1,$2,40,10,9,10,10,10,9,'trusted')`,[reporter,target.game])
+      const independenceKey = (index + 101).toString(16).padStart(64,'0')
+      const mission = (await client.query(`INSERT INTO public.question_quality_missions(user_id,case_id,question_id,revision_id,content_sha256,source,status,independence_key,locked_answer_index,locked_at,submitted_at)
+        VALUES($1,$2,$3,$4,$5,'assigned_review','submitted',$6,1,clock_timestamp(),clock_timestamp()) RETURNING id`,[reporter,gatedCase,target.question_id,target.revision_id,target.content_sha256,independenceKey])).rows[0].id
+      await client.query(`INSERT INTO public.question_quality_claims(mission_id,case_id,user_id,revision_id,solved_answer_index,verdict,reason_code,proposed_answer_index,correction_fingerprint,explanation,confidence,independence_key)
+        VALUES($1,$2,$3,$4,1,'flawed','wrong_key',1,$5,'Bağımsız çözüm işaretli anahtarla uyuşmuyor.',90,$6)`,[mission,gatedCase,reporter,target.revision_id,'c'.repeat(64),independenceKey])
+    }
+    await client.query(`INSERT INTO public.question_quality_verifications(case_id,role,status,direction,strength) VALUES($1,'model_a','ok','supports_flaw',1)`,[gatedCase])
+
+    const gated = (await client.query('SELECT public.compute_question_quality_consensus($1) AS result',[gatedCase])).rows[0].result
+    expect(gated).toEqual(expect.objectContaining({
+      policyVersion:'community-quality@2',ungatedDecision:'quarantine',decision:'suspected',modelGate:'held_for_human_review',
+      independentUserCount:5,independentClusterCount:5,trustedAgreementCount:5,
+    }))
+    expect(Number(gated.posterior)).toBeGreaterThanOrEqual(0.98)
+    expect(Number(gated.posteriorWithoutModel)).toBeLessThan(0.98)
+
+    const held = await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,gatedCase,'community-quality@2',randomUUID()])
+    expect(held).toEqual(expect.objectContaining({ state:'suspected',policyVersion:'community-quality@2',replayed:false }))
+    expect((await client.query('SELECT is_active FROM public.questions WHERE id=$1',[target.question_id])).rows[0].is_active).toBe(true)
+    expect((await client.query("SELECT count(*)::int AS n FROM public.question_governance_events WHERE question_id=$1 AND event_type='quarantined'",[target.question_id])).rows[0].n).toBe(0)
+
+    // A case already quarantined under community-quality@1 is never lifted by
+    // the gate alone, and recording it must not raise the regression error.
+    await client.query("UPDATE public.question_quality_cases SET state='quarantined' WHERE id=$1",[gatedCase])
+    const retained = (await client.query('SELECT public.compute_question_quality_consensus($1) AS result',[gatedCase])).rows[0].result
+    expect(retained).toEqual(expect.objectContaining({ decision:'quarantine',ungatedDecision:'quarantine',modelGate:'retained_existing_action' }))
+    const recorded = await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,gatedCase,'community-quality@2',randomUUID()])
+    expect(recorded).toEqual(expect.objectContaining({ state:'quarantined',replayed:false }))
+    expect((await client.query('SELECT rationale FROM public.question_quality_consensus_decisions WHERE case_id=$1 ORDER BY created_at DESC LIMIT 1',[gatedCase])).rows[0].rationale)
+      .toContain('"modelGate": "retained_existing_action"')
+
+    // Codex #523 P1: contrary model evidence on a quarantined case lowers BOTH
+    // rules to 'suspected'. 213 skipped retention there and record raised
+    // 'cannot regress automatically' from the worker's uncaught call.
+    await client.query(`INSERT INTO public.question_quality_verifications(case_id,role,status,direction,strength) VALUES($1,'model_b','ok','supports_clean',1)`,[gatedCase])
+    const contrary = (await client.query('SELECT public.compute_question_quality_consensus($1) AS result',[gatedCase])).rows[0].result
+    expect(contrary).toEqual(expect.objectContaining({ ungatedDecision:'suspected',decision:'quarantine',modelGate:'retained_existing_action' }))
+    expect(Number(contrary.posterior)).toBeLessThan(0.98)
+    expect(Number(contrary.posteriorWithoutModel)).toBeLessThan(0.98)
+    const stillQuarantined = await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,gatedCase,'community-quality@2',randomUUID()])
+    expect(stillQuarantined).toEqual(expect.objectContaining({ state:'quarantined',replayed:false }))
+    expect((await client.query('SELECT is_active FROM public.questions WHERE id=$1',[target.question_id])).rows[0].is_active).toBe(true)
+  })
+  it('prepare-question-revision-drafts: kaynak kaydi yalniz RPC ile okunur (question_revision_sources service_role\'a kapali); kurulan payload (coach dahil) yalniz TASLAK olur; replay cogaltmaz; bayat taban reddedilir; retire soruyu pasife almaz', async () => {
+    const { buildRevisionPayload, currentFromRevisionDetail, draftRequestId, validatePayloadShape } = await import('../prepare-question-revision-drafts.mjs')
+    // Codex #526 P1: 106 REVOKE ALL; 136 yalniz question_content_revisions icin sutun bazli
+    // SELECT geri verir, question_revision_sources service_role'a kapali kalir (42501).
+    // Kaynak kaydi ancak get_question_content_revision RPC'siyle okunur.
+    await client.query('SET ROLE service_role')
+    await err(() => client.query('SELECT revision_id FROM public.question_revision_sources LIMIT 1'), '42501')
+    await client.query('RESET ROLE')
+    const q = (await client.query('SELECT id,game,category,subcategory,topic,difficulty,level_tag,exam_ref,is_boss,is_active,content,published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0]
+    expect(q.published_revision_id).toBeTruthy()
+    const detail = await rpc('public.get_question_content_revision($1,$2)',[author,q.published_revision_id])
+    expect(detail.revision).toEqual(expect.objectContaining({ revisionId: q.published_revision_id, status:'published' }))
+    const fallbackOutcomes = (await client.query('SELECT outcome_id,weight,is_primary FROM public.question_outcomes WHERE question_id=$1',[question])).rows
+    const current = currentFromRevisionDetail({ question: q, detail, fallbackOutcomes })
+    expect(current.baseRevisionId).toBe(q.published_revision_id); expect(current.outcomes.length).toBeGreaterThan(0); expect(current.source).toEqual(expect.objectContaining({ kind:'original' }))
+    const base = { ref:'P4-Q10', questionId: question.toUpperCase(), finding:{ code:'STEM_MISSING_TOKEN', severity:'P1', summary:'kok ile anahtar uyumsuz' }, evidence:['pilot 4'], rationale:'insan onayina taslak' }
+    // 110 coach sozlesmesi: yayimli icerikte coach varmis gibi tasinir; RPC dogrulayicisi kabul etmeli
+    const options = current.content.options
+    const coach = { hint1:'Once tanimi hatirla.', hint2:'Secenekleri tek tek dene.', miniExample:'2 + 2 = 4', misconceptions: options.map((_, i) => (i === current.content.answer ? null : `Secenek ${i} yaygin yanilgi`)) }
+    const coached = { ...current, content: { ...current.content, coach } }
+    const edit = buildRevisionPayload({ current: coached, proposal: { ...base, changeKind:'edit', patch:{ question: `${current.content.question} (taslak duzeltme)` } } })
+    expect(edit.errors).toEqual([]); expect(validatePayloadShape(edit.payload)).toEqual([]); expect(edit.payload.content.coach).toEqual(coach)
+    const before = (await client.query('SELECT content,is_active,published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0]
+    const requestId = draftRequestId(question, edit.payload)
+    const draft = await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,current.baseRevisionId,JSON.stringify(edit.payload),requestId])
+    expect(draft).toEqual(expect.objectContaining({ questionId: question, status:'draft', replayed:false }))
+    const replay = await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,current.baseRevisionId,JSON.stringify(edit.payload),requestId])
+    expect(replay).toEqual(expect.objectContaining({ revisionId: draft.revisionId, replayed:true }))
+    expect((await client.query('SELECT status,change_kind,base_revision_id,content FROM public.question_content_revisions WHERE id=$1',[draft.revisionId])).rows[0]).toEqual({ status:'draft', change_kind:'edit', base_revision_id: current.baseRevisionId, content: edit.payload.content })
+    await err(() => rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,legacyRevision,JSON.stringify(edit.payload),randomUUID()]), '22023')
+    const retire = buildRevisionPayload({ current, proposal: { ...base, ref:'P1-Q21', changeKind:'retire', patch:{} } })
+    expect(retire.errors).toEqual([])
+    const retireDraft = await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,current.baseRevisionId,JSON.stringify(retire.payload),draftRequestId(question, retire.payload)])
+    expect((await client.query('SELECT status,change_kind FROM public.question_content_revisions WHERE id=$1',[retireDraft.revisionId])).rows[0]).toEqual({ status:'draft', change_kind:'retire' })
+    const after = (await client.query('SELECT content,is_active,published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0]
+    expect(after).toEqual(before)
+  })
+
+  it('215: yalniz listelenmis govdelerin Turkce harf duzeltmesi iki onaysiz yayinlanir; karar devri kapiyi gecer; digerleri reddedilir', async () => {
+    const words = async (a, b) => (await client.query('SELECT public.question_turkish_restoration_words($1::jsonb,$2::jsonb) AS w', [JSON.stringify(a), JSON.stringify(b)])).rows[0].w
+    // saf harf duzeltmesi, buyuk harf ve ek dahil
+    expect(await words({ q: 'Asagidaki sinifta ISIK' }, { q: 'Aşağıdaki sınıfta IŞIK' })).toEqual(['Asagidaki>Aşağıdaki', 'sinifta>sınıfta', 'ISIK>IŞIK'])
+    // listede olmayan govde ("ol"->"öl" gibi), kisi/kısım onek tuzagi, harf disi degisiklik, yapi ve sayi degisikligi reddedilir
+    expect(await words({ q: 'ol' }, { q: 'öl' })).toBeNull()
+    expect(await words({ q: 'kisim' }, { q: 'kişim' })).toBeNull()
+    expect(await words({ q: 'dogru' }, { q: 'doğru.' })).toBeNull()
+    expect(await words({ q: 'dogru' }, { q: 'Doğru' })).toBeNull()
+    expect(await words({ q: 'dogru', answer: 0 }, { q: 'doğru', answer: 1 })).toBeNull()
+    expect(await words({ o: ['dogru', 'degil'] }, { o: ['değil', 'doğru'] })).toBeNull()
+    expect(await words({ o: ['dogru'] }, { o: ['doğru', 'x'] })).toBeNull()
+    expect(await words({ q: 'dogru' }, { q: 'dogru', extra: 'x' })).toBeNull()
+    expect(await words({ q: 'dogru' }, { q: 'doğru' })).toBeNull()
+
+    const pubPrepare = randomUUID(); await client.query("INSERT INTO public.roles(id,slug,name,is_system) VALUES($1,'pub-prepare','pub-prepare',true)",[pubPrepare]); await client.query("INSERT INTO public.role_permissions(role_id,permission) VALUES($1,'content.prepare')",[pubPrepare]); await client.query('INSERT INTO public.user_roles(user_id,role_id) VALUES($1,$2)',[publisher,pubPrepare])
+    const before = (await client.query('SELECT content,published_revision_id,is_active FROM public.questions WHERE id=$1',[turkishQuestion])).rows[0]
+    const base = before.published_revision_id
+    const restored = { ...before.content, question: 'Aşağıdaki ifadelerden hangisi doğrudur?', options: ['Öğrenci sınıfta IŞIK ölçümü yapar.', 'Gunes batar.', 'Deney yapilir.', 'Hepsi'], solution: 'Çözüm: öğrenci ölçüm yapar.' }
+    const call = 'public.publish_question_turkish_restoration($1,$2,$3,$4::jsonb,$5)'
+    const errMsg = async (fn, code, re) => { let caught; try { await fn() } catch (e) { caught = e } expect(caught?.code).toBe(code); expect(caught?.message).toMatch(re) }
+    // yetki: prepare tek basina yetmez; istemci rolune kapali
+    await err(() => rpc(call,[author,turkishQuestion,base,JSON.stringify(restored),randomUUID()]), '42501')
+    await err(() => userRpc(publisher,'aal2',call,[publisher,turkishQuestion,base,JSON.stringify(restored),randomUUID()]), '42501')
+    // taban revizyonun gecerli politikada APPROVED karari yoksa kapali
+    await errMsg(() => rpc(call,[publisher,turkishQuestion,base,JSON.stringify(restored),randomUUID()]), '22023', /APPROVED validation decision/)
+    const policy = (await client.query('SELECT required_policy_version FROM public.question_validation_runtime WHERE singleton')).rows[0].required_policy_version
+    const baseHash = (await client.query('SELECT content_sha256 FROM public.question_content_revisions WHERE id=$1',[base])).rows[0].content_sha256
+    await client.query("INSERT INTO public.question_validation_decisions(question_id,revision_id,content_sha256,policy_version,verdict,findings,rationale,run_id,decided_at) VALUES($1,$2,$3,$4,'APPROVED','[]','blind solvers agree',$5,clock_timestamp())",[turkishQuestion,base,baseHash,policy,randomUUID()])
+    // listede olmayan govde (gunes) ve harf disi degisiklik iki onayli yola gider
+    await errMsg(() => rpc(call,[publisher,turkishQuestion,base,JSON.stringify({ ...restored, options: ['Öğrenci sınıfta IŞIK ölçümü yapar.','Güneş batar.','Deney yapilir.','Hepsi'] }),randomUUID()]), '22023', /not a pure Turkish letter restoration/)
+    await errMsg(() => rpc(call,[publisher,turkishQuestion,base,JSON.stringify({ ...restored, answer: 1 }),randomUUID()]), '22023', /not a pure Turkish letter restoration/)
+    await errMsg(() => rpc(call,[publisher,turkishQuestion,base,JSON.stringify(before.content),randomUUID()]), '22023', /not a pure Turkish letter restoration/)
+    // yazim konulu soru kapsam disi
+    const spelling = (await client.query('SELECT content,published_revision_id FROM public.questions WHERE id=$1',[spellingTopicQuestion])).rows[0]
+    await errMsg(() => rpc(call,[publisher,spellingTopicQuestion,spelling.published_revision_id,JSON.stringify({ ...spelling.content, options:['doğru','değil','bugün','önce'] }),randomUUID()]), '22023', /spelling-topic question/)
+
+    // kapi acikken: devredilen karar yeni revizyonun ozetiyle eslesir
+    await client.query('UPDATE public.question_validation_runtime SET enforce_publish_gate=true WHERE singleton')
+    try {
+      const requestId = randomUUID()
+      const out = await rpc(call,[publisher,turkishQuestion,base,JSON.stringify(restored),requestId])
+      expect(out).toEqual(expect.objectContaining({ questionId: turkishQuestion, status: 'published', replayed: false }))
+      // anahtar sirasi: answer, options, question, solution
+      expect(out.words).toEqual(['Ogrenci>Öğrenci','sinifta>sınıfta','ISIK>IŞIK','olcumu>ölçümü','Asagidaki>Aşağıdaki','dogrudur>doğrudur','Cozum>Çözüm','ogrenci>öğrenci','olcum>ölçüm'])
+      const live = (await client.query('SELECT content,published_revision_id,is_active FROM public.questions WHERE id=$1',[turkishQuestion])).rows[0]
+      expect(live).toEqual({ content: restored, published_revision_id: out.revisionId, is_active: true })
+      const revisions = (await client.query('SELECT id,status,change_kind,base_revision_id,prepared_by,content_sha256 FROM public.question_content_revisions WHERE question_id=$1 ORDER BY revision_no',[turkishQuestion])).rows
+      expect(revisions.map((r) => [r.id, r.status])).toEqual([[base,'superseded'],[out.revisionId,'published']])
+      expect(revisions[1]).toEqual(expect.objectContaining({ change_kind:'edit', base_revision_id: base, prepared_by: publisher }))
+      expect((await client.query('SELECT count(*)::int AS n FROM public.question_revision_approvals WHERE revision_id=$1',[out.revisionId])).rows[0].n).toBe(0)
+      const decision = (await client.query('SELECT verdict,content_sha256,policy_version,rationale FROM public.question_validation_decisions WHERE revision_id=$1',[out.revisionId])).rows
+      expect(decision).toHaveLength(1)
+      expect(decision[0]).toEqual(expect.objectContaining({ verdict:'APPROVED', content_sha256: revisions[1].content_sha256, policy_version: policy }))
+      expect(decision[0].rationale).toContain(`Carried over from revision ${base}`)
+      expect((await client.query('SELECT count(*)::int AS n FROM public.question_revision_sources WHERE revision_id=$1',[out.revisionId])).rows[0].n).toBe(1)
+      expect((await client.query('SELECT base_revision_id,published_by,rule_version FROM public.question_turkish_restorations WHERE revision_id=$1',[out.revisionId])).rows[0]).toEqual({ base_revision_id: base, published_by: publisher, rule_version:'turkish-letter-restoration@1' })
+      expect((await client.query("SELECT count(*)::int AS n FROM public.question_governance_events WHERE revision_id=$1 AND event_type='published'",[out.revisionId])).rows[0].n).toBe(1)
+      // replay ayni sonucu dondurur, cogaltmaz; eski taban artik bayat
+      expect(await rpc(call,[publisher,turkishQuestion,base,JSON.stringify(restored),requestId])).toEqual(expect.objectContaining({ revisionId: out.revisionId, replayed: true }))
+      await errMsg(() => rpc(call,[publisher,turkishQuestion,base,JSON.stringify(restored),randomUUID()]), '22023', /stale or unknown revision base/)
+      // ic tablolar ve yardimci fonksiyonlar istemciye ve service_role'a kapali
+      expect((await client.query("SELECT has_table_privilege('service_role','public.question_turkish_restorations','SELECT') AS audit_read,has_table_privilege('service_role','public.question_turkish_restoration_stems','SELECT') AS stems_read,has_function_privilege('authenticated','public.publish_question_turkish_restoration(uuid,uuid,uuid,jsonb,uuid)','EXECUTE') AS client_rpc,has_function_privilege('service_role','public.question_turkish_restoration_words(jsonb,jsonb)','EXECUTE') AS helper")).rows[0]).toEqual({ audit_read:false, stems_read:false, client_rpc:false, helper:false })
+    } finally {
+      await client.query('UPDATE public.question_validation_runtime SET enforce_publish_gate=false WHERE singleton')
+    }
+  })
+
+  it('215: govde listesi ve kural JS aynasiyla birebir ayni; aracin kurdugu icerik RPC\'den gecer; migration tekrar uygulanabilir', async () => {
+    const { TURKISH_RESTORATION_STEMS, turkishRestorationWords } = await import('../scan-question-text-defects.mjs')
+    const { buildBatch, currentFromRevisionDetail } = await import('../prepare-question-revision-drafts.mjs')
+    await client.query(turkishRestorationMigration)
+    const rows = (await client.query('SELECT ascii_stem,turkish_stem FROM public.question_turkish_restoration_stems ORDER BY ascii_stem')).rows
+    expect(rows.map((r) => [r.ascii_stem, r.turkish_stem])).toEqual([...TURKISH_RESTORATION_STEMS].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+    const cases = [
+      [{ q: 'Asagidaki sinifta ISIK' }, { q: 'Aşağıdaki sınıfta IŞIK' }],
+      [{ q: 'Iliski ogrencilerin' }, { q: 'İlişki öğrencilerin' }],
+      [{ q: 'aşagidaki' }, { q: 'aşağıdaki' }],
+      [{ q: "Turkiye'nin dogru" }, { q: "Turkiye'nin doğru" }],
+      [{ c: { m: ['dogru', null], k: 2 } }, { c: { m: ['doğru', null], k: 2 } }],
+      [{ q: 'SINIF' }, { q: 'SINIF' }],
+      [{ q: 'SINIF' }, { q: 'SİNİF' }],
+      [{ q: 'ol' }, { q: 'öl' }],
+      [{ q: 'kisim' }, { q: 'kişim' }],
+      [{ q: 'dogru' }, { q: 'doğru.' }],
+      [{ q: 'dogru' }, { q: 'Doğru' }],
+      [{ q: 'dogru', a: 0 }, { q: 'doğru', a: 1 }],
+      [{ o: ['dogru', 'degil'] }, { o: ['değil', 'doğru'] }],
+      [{ q: 'dogru' }, { q: 'dog\u0306ru' }],
+      [{ q: 'dogru' }, { q: 'doğru', x: 1 }],
+      [{ q: 1 }, { q: '1' }],
+    ]
+    for (const [a, b] of cases) {
+      const sql = (await client.query('SELECT public.question_turkish_restoration_words($1::jsonb,$2::jsonb) AS w', [JSON.stringify(a), JSON.stringify(b)])).rows[0].w
+      expect(sql, JSON.stringify([a, b])).toEqual(turkishRestorationWords(a, b))
+    }
+    // aracin kurdugu 215 ogesi RPC'den gecer
+    const q = (await client.query('SELECT id,game,category,subcategory,topic,difficulty,level_tag,exam_ref,is_boss,is_active,content,published_revision_id FROM public.questions WHERE id=$1',[toolQuestion])).rows[0]
+    const detail = await rpc('public.get_question_content_revision($1,$2)',[publisher,q.published_revision_id])
+    const current = currentFromRevisionDetail({ question: q, detail, fallbackOutcomes: [] })
+    const [item] = buildBatch({ proposals: [{ ref:'T-215', questionId: toolQuestion, finding:{ code:'ASCII_DIACRITIC_LOSS', severity:'P2', summary:'karakter kaybi' }, evidence:['scan'], changeKind:'edit', patch:{ question:'Üçgenin ic acilari toplamı kac derecedir?' }, rationale:'yalniz Turkce harf' }], currentById: new Map([[toolQuestion, current]]) })
+    expect(item).toEqual(expect.objectContaining({ status:'ready', lane:'turkish_restoration', words:['Ucgenin>Üçgenin','toplami>toplamı'] }))
+    const policy = (await client.query('SELECT required_policy_version FROM public.question_validation_runtime WHERE singleton')).rows[0].required_policy_version
+    await client.query("INSERT INTO public.question_validation_decisions(question_id,revision_id,content_sha256,policy_version,verdict,findings,rationale,run_id,decided_at) SELECT $1,id,content_sha256,$2,'APPROVED','[]','ok',$3,clock_timestamp() FROM public.question_content_revisions WHERE id=$4",[toolQuestion,policy,randomUUID(),item.baseRevisionId])
+    const out = await rpc('public.publish_question_turkish_restoration($1,$2,$3,$4::jsonb,$5)',[publisher,toolQuestion,item.baseRevisionId,JSON.stringify(item.payload.content),item.requestId])
+    expect(out).toEqual(expect.objectContaining({ status:'published', words:item.words }))
+    expect((await client.query('SELECT content FROM public.questions WHERE id=$1',[toolQuestion])).rows[0].content).toEqual(item.payload.content)
+  })
+
+  it('218: tabani onayli TYT sosyal sorusu onaysiz harf duzeltmesiyle yayimlanmaz; onaysiz TYT sosyal sorusu yayimlanir; migration tekrar uygulanabilir', async () => {
+    await client.query(turkishRestorationSocialGuardMigration)
+    // yonetisimin ic yazma baglamiyla aktiflestir (142 korumasi bunu kabul eder)
+    await client.query('BEGIN')
+    for (const id of [socialQuestion, socialOpenQuestion]) {
+      await client.query("SELECT public.content_governance_authorize_question_write($1,'publish')",[id])
+      await client.query('UPDATE public.questions SET is_active=true WHERE id=$1',[id])
+      await client.query('SELECT public.content_governance_clear_question_write($1)',[id])
+    }
+    await client.query('COMMIT')
+    const call = 'public.publish_question_turkish_restoration($1,$2,$3,$4::jsonb,$5)'
+    const policy = (await client.query('SELECT required_policy_version FROM public.question_validation_runtime WHERE singleton')).rows[0].required_policy_version
+    const prepare = async (id) => {
+      const q = (await client.query('SELECT content,published_revision_id FROM public.questions WHERE id=$1',[id])).rows[0]
+      await client.query("INSERT INTO public.question_validation_decisions(question_id,revision_id,content_sha256,policy_version,verdict,findings,rationale,run_id,decided_at) SELECT $1,id,content_sha256,$2,'APPROVED','[]','ok',$3,clock_timestamp() FROM public.question_content_revisions WHERE id=$4",[id,policy,randomUUID(),q.published_revision_id])
+      return { base: q.published_revision_id, restored: { ...q.content, question: 'Aşağıdaki olaylardan hangisi önce olmustur?' } }
+    }
+    const approved = await prepare(socialQuestion)
+    // taban revizyon stage 1'de onaylanmis (iki asama ya da 217 tek onay yolu)
+    await client.query("INSERT INTO public.question_revision_approvals(revision_id,stage,reviewer_id,decision,rationale) VALUES($1,1,$2,'approved','kaynak karsilastirmali onay')",[approved.base,reviewer1])
+    let caught
+    try { await rpc(call,[publisher,socialQuestion,approved.base,JSON.stringify(approved.restored),randomUUID()]) } catch (e) { caught = e }
+    expect(caught?.code).toBe('22023'); expect(caught?.message).toMatch(/approved TYT social revision/)
+    expect((await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[socialQuestion])).rows[0].published_revision_id).toBe(approved.base)
+    // onaysiz TYT sosyal tabani 215 hattinda kalir
+    const open = await prepare(socialOpenQuestion)
+    const out = await rpc(call,[publisher,socialOpenQuestion,open.base,JSON.stringify(open.restored),randomUUID()])
+    expect(out).toEqual(expect.objectContaining({ status:'published', words:['Asagidaki>Aşağıdaki','once>önce'] }))
+  })
+  it('v2: real governance chain binds catalog/year, separates acceptance from quality/publication, and serializes replay', async () => {
+    // Earlier migration replay tests intentionally install older definitions.
+    // Restore the current source path, without replacing real governance helpers.
+    await client.query(singleSourceReviewMigration)
+    await client.query(sourceV2Migration)
+    const mappedOutcome = randomUUID()
+    let parent = null
+    for (const nodeType of ['course','unit','topic','outcome']) {
+      const id = randomUUID()
+      await client.query("INSERT INTO public.curriculum_nodes(id,game,category,exam_ref,parent_id,node_type,taxonomy_version) VALUES($1,'sosyal','din_kulturu','LGS',$2,$3,'fixture-source-v2')", [id,parent,nodeType])
+      parent = id
+    }
+    await client.query("INSERT INTO public.curriculum_outcomes(id,code,title,game,category,exam_ref,node_id,taxonomy_version) VALUES($1,'FIXTURE-8.2.2','TEST ONLY','sosyal','din_kulturu','LGS',$2,'fixture-source-v2')", [mappedOutcome,parent])
+    const content = { question:'TEST ONLY: 2 + 3?', options:['3','4','5','6'], answer:2, solution:'TEST ONLY: 2 + 3 = 5.' }
+    const draft = await rpc('public.create_governed_question($1,$2::jsonb,$3)', [author,JSON.stringify({
+      content, metadata:{game:'sosyal',category:'din_kulturu',difficulty:2,examRef:'LGS'},
+      outcomes:[{outcomeId:mappedOutcome,weight:1,primary:true}],
+      source:{kind:'original',title:'TEST ONLY',licenseCode:'INTERNAL',provenanceRef:'fixture:source-v2'},
+      changeKind:'create',summary:'Disposable fixture, not a real academic claim',
+    }),randomUUID()])
+    const { content_sha256: hash } = (await client.query('SELECT content_sha256 FROM public.question_content_revisions WHERE id=$1',[draft.revisionId])).rows[0]
+    const canonicalId = 'fixture@2018:grade8:LGS:8.2.2'
+    const report = {
+      format:'source-comparison@2', questionId:draft.questionId, revisionId:draft.revisionId, contentSha256:hash,
+      sources:[0,1,2].map(i => ({ id:'s'+i,title:'TEST ONLY',institutionOrAuthor:'Fixture '+i,editionOrDate:'2026',language:'tr',
+        kind:['official_curriculum','textbook','official_exam'][i],url:'https://example.org/source'+i,workId:'w'+i,independenceGroup:'g'+i,
+        independenceRationale:'TEST ONLY',access:'inspected_section',locator:'Section',accessedAt:'2026-10-01T00:00:00Z',
+        retrievalRef:'fixture:'+i,retrievedTextSha256:String(i+1).repeat(64),license:{code:'UNKNOWN',url:null,checked:false,usage:'reference_only'} })),
+      claims:['stem','solution','curriculum','option0','option1','option2','option3'].map(target => ({
+        id:target,target:target.startsWith('option')?'option':target,optionIndex:target.startsWith('option')?Number(target.at(-1)):null,
+        statement:'TEST ONLY',reasoningSummary:'TEST ONLY',evidence:(target==='curriculum'?[0]:[0,1]).map(i => ({
+          sourceId:'s'+i,relation:'supports',locator:'Section',scopeMatch:true,scopeNote:'TEST ONLY',explanation:'TEST ONLY',
+        })),
+      })),
+      optionChecks:content.options.map((_,index) => ({index,assessment:index===2?'supported':'excluded',claimIds:['option'+index],explanation:'TEST ONLY'})),
+      examComparison:{status:'not_found',sourceIds:[],reference:null,comparison:'TEST ONLY',optionOrderChecked:false,answerKeyTransfer:false},
+      terminology:[],limitations:['Synthetic structural fixture, not source evidence'],
+      curriculumBinding:{examRef:'LGS',examYear:2026,mappings:[{claimId:'curriculum',outcomeId:mappedOutcome,canonicalId,
+        programKey:'fixture',programEdition:'2018',grade:8,officialCode:'8.2.2',programSourceId:'s0',programPageTextSha256:'1'.repeat(64),
+        examScopeSourceId:'s2',examScopeLocator:'Table 1'}]},
+    }
+    const acceptCall = 'public.accept_question_revision_source_review($1,$2,$3::jsonb,$4,$5)'
+    const acceptArgs = [reviewer1,draft.revisionId,JSON.stringify(report),'TEST ONLY',randomUUID()]
+    const state = () => rpc('public.get_question_revision_source_review($1,$2)',[reviewer1,draft.revisionId])
+    const publishCall = 'public.publish_question_content_revision($1,$2,$3)'
+    const publishArgs = [publisher,draft.revisionId,randomUUID()]
+    // Valid-looking declarations cannot substitute for actual registered rows.
+    await err(() => rpc(acceptCall,acceptArgs),'22023')
+    await client.query(`INSERT INTO public.curriculum_canonical_outcomes(canonical_id,program_key,program_edition,grade,exam_ref,game,official_code,title,official_path,source_receipt)
+      VALUES($1,'fixture','2018',8,'LGS','sosyal','8.2.2','TEST ONLY',$2::jsonb,$3::jsonb)`,[canonicalId,
+      JSON.stringify([{nodeType:'course',title:'TEST ONLY'},{nodeType:'outcome',title:'TEST ONLY',officialCode:'8.2.2'}]),
+      JSON.stringify({reviewedCanonicalId:canonicalId,url:report.sources[0].url,responseSha256:'4'.repeat(64),pageTextSha256:'1'.repeat(64),pdfPage:44,extractor:'fixture',extractorVersion:'1',packageSha256:'5'.repeat(64)})])
+    await client.query("INSERT INTO public.curriculum_outcome_canonical_links(outcome_id,canonical_id,taxonomy_version,package_sha256) VALUES($1,$2,'fixture-source-v2',$3)",[mappedOutcome,canonicalId,'5'.repeat(64)])
+    await err(() => rpc(acceptCall,acceptArgs),'22023') // Still no exam-year receipt.
+    await client.query('INSERT INTO public.curriculum_canonical_exam_scopes(canonical_id,exam_year,source_receipt,reviewed_by) VALUES($1,2026,$2::jsonb,$3)',[canonicalId,
+      JSON.stringify({kind:'official_exam',url:report.sources[2].url,retrievedTextSha256:'3'.repeat(64),retrievalRef:'fixture:2',locator:'Table 1',acceptanceRef:'fixture:owner'}),reviewer2])
+    await err(() => rpc(acceptCall,[author,...acceptArgs.slice(1)]),'22023')
+    await err(() => userRpc(reviewer1,'aal2',acceptCall,acceptArgs),'42501')
+    const concurrent = await concurrentReplay(acceptCall,acceptArgs)
+    expect(concurrent.map(r => r.replayed)).toEqual([false,true])
+    expect(concurrent[0]).toMatchObject({status:'stage1_approved'})
+    expect((await client.query('SELECT count(*)::int AS n FROM public.question_revision_approvals WHERE revision_id=$1',[draft.revisionId])).rows[0].n).toBe(1)
+    expect((await client.query('SELECT count(*)::int AS n FROM public.question_revision_source_reviews WHERE revision_id=$1',[draft.revisionId])).rows[0].n).toBe(1)
+    expect(await state()).toMatchObject({accepted:true,readyToPublish:false})
+    await err(() => rpc(publishCall,publishArgs),'22023')
+    expect((await client.query('SELECT is_active,published_revision_id FROM public.questions WHERE id=$1',[draft.questionId])).rows[0]).toEqual({is_active:false,published_revision_id:null})
+    const previous = (await client.query('SELECT enforce_publish_gate,required_policy_version FROM public.question_validation_runtime WHERE singleton')).rows[0]
+    await client.query("UPDATE public.question_validation_runtime SET enforce_publish_gate=true,required_policy_version='question-quality@2' WHERE singleton")
+    try {
+      // Even an APPROVED decision for the wrong hash must not unlock publication.
+      const insertDecision = testHash => client.query("INSERT INTO public.question_validation_decisions(question_id,revision_id,content_sha256,policy_version,verdict,findings,rationale,run_id,decided_at) VALUES($1,$2,$3,'question-quality@2','APPROVED','[]','TEST ONLY',$4,clock_timestamp())",[draft.questionId,draft.revisionId,testHash,randomUUID()])
+      await insertDecision('0'.repeat(64))
+      expect((await state()).readyToPublish).toBe(false)
+      await err(() => rpc(publishCall,publishArgs),'22023')
+      await insertDecision(hash)
+      expect((await state()).readyToPublish).toBe(true)
+      await err(() => client.query('UPDATE public.questions SET is_active=true WHERE id=$1',[draft.questionId]),'42501')
+      expect(await rpc(publishCall,publishArgs)).toMatchObject({status:'published',replayed:false})
+      expect(await rpc(publishCall,publishArgs)).toMatchObject({status:'published',replayed:true})
+      expect((await client.query('SELECT is_active,published_revision_id,content FROM public.questions WHERE id=$1',[draft.questionId])).rows[0]).toEqual({is_active:true,published_revision_id:draft.revisionId,content})
+      expect((await client.query('SELECT outcome_id FROM public.question_outcomes WHERE question_id=$1',[draft.questionId])).rows).toEqual([{outcome_id:mappedOutcome}])
+      // Revision immutability is a client/service privilege boundary, not an
+      // assertion that the database owner cannot repair its own tables.
+      await client.query('SET ROLE service_role')
+      try {
+        await err(() => client.query("UPDATE public.question_content_revisions SET content='{}'::jsonb WHERE id=$1",[draft.revisionId]),'42501')
+      } finally { await client.query('RESET ROLE') }
+      expect((await client.query('SELECT content FROM public.question_content_revisions WHERE id=$1',[draft.revisionId])).rows[0].content).toEqual(content)
+      await err(() => client.query("UPDATE public.question_revision_source_reviews SET report='{}'::jsonb WHERE revision_id=$1",[draft.revisionId]),'42501')
+    } finally {
+      await client.query('UPDATE public.question_validation_runtime SET enforce_publish_gate=$1,required_policy_version=$2 WHERE singleton',[previous.enforce_publish_gate,previous.required_policy_version])
+    }
+  })
+  it('AI owner: real RBAC, concurrent replay, source/year validation and quality-gated publication', async () => {
+    await client.query(aiOwnerMigration)
+    // Reuse the synthetic catalog/report above, not any production source evidence.
+    const report = (await client.query("SELECT report FROM public.question_revision_source_reviews WHERE report->'curriculumBinding'->'mappings'->0->>'canonicalId'='fixture@2018:grade8:LGS:8.2.2'")).rows[0].report
+    const mappedOutcome = report.curriculumBinding.mappings[0].outcomeId
+    const content = {question:'TEST ONLY owner flow: 2 + 3?',options:['3','4','5','6'],answer:2,solution:'TEST ONLY: 2 + 3 = 5.'}
+    const draft = await rpc('public.create_governed_question($1,$2::jsonb,$3)', [author,JSON.stringify({
+      content,metadata:{game:'sosyal',category:'din_kulturu',difficulty:2,examRef:'LGS'},
+      outcomes:[{outcomeId:mappedOutcome,weight:1,primary:true}],
+      source:{kind:'original',title:'TEST ONLY AI owner',licenseCode:'INTERNAL',provenanceRef:'fixture:ai-owner'},
+      changeKind:'create',summary:'Synthetic AI owner governance test',
+    }),randomUUID()])
+    const pinned = (await client.query('SELECT content_sha256,prepared_by,outcomes_prepared_by FROM public.question_content_revisions WHERE id=$1',[draft.revisionId])).rows[0]
+    Object.assign(report,{questionId:draft.questionId,revisionId:draft.revisionId,contentSha256:pinned.content_sha256})
+    const state = () => rpc('public.get_question_revision_source_review($1,$2)',[author,draft.revisionId])
+    expect((await state()).canAcceptAiPrepared).toBe(false)
+    const preparation={version:'ai-preparation-declaration@1',agent:'TEST ONLY AI',evidenceRef:'fixture:ai-preparation',evidenceSha256:'9'.repeat(64),
+      revisionEvidenceFingerprint:(await client.query('SELECT public.question_source_review_fingerprint($1) AS value',[draft.revisionId])).rows[0].value,
+      acknowledgesNonIndependentReview:true,acceptsResponsibility:true}
+    const call='public.accept_question_revision_ai_source_review($1,$2,$3::jsonb,$4,$5,$6::jsonb)'
+    const args=[author,draft.revisionId,JSON.stringify(report),'TEST ONLY non-independent owner acceptance',randomUUID(),JSON.stringify(preparation)]
+    await err(()=>rpc(call,args),'42501') // Existing prepare + stage1 alone is insufficient.
+    await client.query("INSERT INTO public.role_permissions(role_id,permission) SELECT id,'content.publish' FROM public.roles WHERE slug='author' ON CONFLICT DO NOTHING")
+    const previous=(await client.query('SELECT enforce_publish_gate,required_policy_version FROM public.question_validation_runtime WHERE singleton')).rows[0]
+    try {
+      await client.query("UPDATE public.question_validation_runtime SET enforce_publish_gate=true,required_policy_version='question-quality@2' WHERE singleton")
+      expect(await state()).toMatchObject({canAcceptAiPrepared:true,evidenceFingerprint:preparation.revisionEvidenceFingerprint,accepted:false,readyToPublish:false})
+      await err(()=>userRpc(author,'aal2',call,args),'42501')
+      await err(()=>rpc('public.accept_question_revision_source_review($1,$2,$3::jsonb,$4,$5)',args.slice(0,5)),'22023')
+      const wrongYear=structuredClone(report);wrongYear.curriculumBinding.examYear=2027
+      await err(()=>rpc(call,[...args.slice(0,2),JSON.stringify(wrongYear),...args.slice(3)]),'22023')
+      expect((await client.query('SELECT count(*)::int AS n FROM public.question_revision_approvals WHERE revision_id=$1',[draft.revisionId])).rows[0].n).toBe(0)
+      const results=await concurrentReplay(call,args)
+      expect(results.map(r=>r.replayed)).toEqual([false,true])
+      expect(results[0]).toMatchObject({status:'stage1_approved',acceptanceMode:'ai_assisted_owner'})
+      expect(await state()).toMatchObject({accepted:true,acceptanceMode:'ai_assisted_owner',canAcceptAiPrepared:false,readyToPublish:false})
+      const publishCall='public.publish_question_content_revision($1,$2,$3)'
+      const publishArgs=[author,draft.revisionId,randomUUID()]
+      await err(()=>rpc(publishCall,publishArgs),'22023')
+      const insertDecision=testHash=>client.query("INSERT INTO public.question_validation_decisions(question_id,revision_id,content_sha256,policy_version,verdict,findings,rationale,run_id,decided_at) VALUES($1,$2,$3,'question-quality@2','APPROVED','[]','TEST ONLY',$4,clock_timestamp())",[draft.questionId,draft.revisionId,testHash,randomUUID()])
+      await insertDecision('0'.repeat(64));await err(()=>rpc(publishCall,publishArgs),'22023')
+      await insertDecision(pinned.content_sha256)
+      expect((await state()).readyToPublish).toBe(true)
+      expect(await rpc(publishCall,publishArgs)).toMatchObject({status:'published',replayed:false})
+      expect(await rpc(publishCall,publishArgs)).toMatchObject({status:'published',replayed:true})
+      expect((await client.query('SELECT is_active,published_revision_id,content FROM public.questions WHERE id=$1',[draft.questionId])).rows[0]).toEqual({is_active:true,published_revision_id:draft.revisionId,content})
+      expect((await client.query('SELECT prepared_by,outcomes_prepared_by FROM public.question_content_revisions WHERE id=$1',[draft.revisionId])).rows[0]).toEqual({prepared_by:pinned.prepared_by,outcomes_prepared_by:pinned.outcomes_prepared_by})
+      expect((await client.query('SELECT stage,reviewer_id FROM public.question_revision_approvals WHERE revision_id=$1',[draft.revisionId])).rows).toEqual([{stage:1,reviewer_id:author}])
+      const evidence=(await client.query('SELECT acceptance_mode,policy_version,ai_preparation FROM public.question_revision_source_reviews WHERE revision_id=$1',[draft.revisionId])).rows
+      expect(evidence).toEqual([{acceptance_mode:'ai_assisted_owner',policy_version:'source-review-ai-owner@1',ai_preparation:preparation}])
+      await client.query(aiOwnerMigration) // Replay on a real accepted row preserves history.
+      expect((await state()).readyToPublish).toBe(true)
+      await err(()=>client.query("UPDATE public.question_revision_source_reviews SET ai_preparation='{}' WHERE revision_id=$1",[draft.revisionId]),'42501')
+    } finally {
+      await client.query("DELETE FROM public.role_permissions WHERE permission='content.publish' AND role_id IN (SELECT id FROM public.roles WHERE slug='author')")
+      await client.query('UPDATE public.question_validation_runtime SET enforce_publish_gate=$1,required_policy_version=$2 WHERE singleton',[previous.enforce_publish_gate,previous.required_policy_version])
+    }
   })
 })

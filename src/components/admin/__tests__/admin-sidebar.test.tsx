@@ -79,6 +79,13 @@ describe('AdminSidebar (mobil drawer)', () => {
     expect(screen.queryByText('Sorular')).not.toBeInTheDocument()
   })
 
+  test('anasayfa editörü kaldırıldığı için yetkili kullanıcıya bile menü bağlantısı göstermez', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ permissions: ['admin.homepage.view'], roles: [] }) }) as unknown as typeof fetch
+    render(<AdminSidebar />)
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled())
+    expect(screen.queryByRole('link', { name: 'Anasayfa' })).not.toBeInTheDocument()
+  })
+
   test('kurum yönetimi izni olan admin Kurumlar menüsünü görür', async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ permissions: ['institution.pilots.manage'], roles: [{ name: 'Süper Admin' }] }) }) as unknown as typeof fetch
     render(<AdminSidebar />)

@@ -15,7 +15,8 @@ describe('OdaLayout', () => {
   })
 
   test('3) aria-label donen ok isaretli buton', () => {
-    render(<OdaLayout><div /></OdaLayout>)
+    const { container } = render(<OdaLayout><div /></OdaLayout>)
     expect(screen.getByLabelText(/ana sayfaya dön/i)).toBeInTheDocument()
+    expect(container.querySelector('.md\\:hidden')).toBeInTheDocument()
   })
 })

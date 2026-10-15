@@ -68,6 +68,7 @@ export async function tytSocialExamRoleRpc(
     | 'prepare_tyt_social_exam_role'
     | 'review_tyt_social_exam_role'
     | 'get_tyt_social_release_operations'
+    | 'get_tyt_social_reviewed_pool_preflight'
     | 'release_tyt_social_mastery_scope',
   args: Record<string, unknown>,
 ) {

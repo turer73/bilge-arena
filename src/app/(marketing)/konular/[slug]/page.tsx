@@ -12,6 +12,7 @@ import {
 import { SUBJECT_EMOJI, SUBJECT_CONTENT } from '@/lib/content/konular'
 import { SAMPLE_QUESTIONS } from '@/lib/content/ornek-sorular'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
+import { serializeJsonLd } from '@/lib/seo/serialize-json-ld'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
@@ -97,7 +98,7 @@ export default async function KonuPage({
     <div className="mx-auto max-w-[900px] px-6 py-12 lg:px-8">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
 
       {/* Breadcrumb */}

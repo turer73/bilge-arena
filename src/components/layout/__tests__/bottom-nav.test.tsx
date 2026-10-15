@@ -42,10 +42,10 @@ describe('BottomNav', () => {
     expect(linkFor('Profil')).toHaveAttribute('href', '/arena/profil')
   })
 
-  test('bilgisayarda gizli, tablet ve mobilde görünür (lg:hidden)', () => {
+  test('tablet ve bilgisayarda gizli, telefonda görünür (md:hidden)', () => {
     render(<BottomNav />)
     const nav = screen.getByRole('navigation', { name: /mobil gezinme/i })
-    expect(nav.className).toContain('lg:hidden')
+    expect(nav.className).toContain('md:hidden')
     expect(nav.style.minHeight).toBe('calc(var(--bottom-nav-h) + env(safe-area-inset-bottom))')
     expect(linkFor('Öğren').className).toContain('min-h-12')
     expect(nav.className).toContain('overflow-x-clip')
@@ -80,6 +80,19 @@ describe('BottomNav', () => {
     mockUsePathname.mockReturnValue('/oda/kod')
     render(<BottomNav />)
     expect(linkFor('Arena')).toHaveAttribute('aria-current', 'page')
+  })
+
+  test.each(['matematik', 'turkce', 'fen', 'sosyal', 'wordquest'])('%s hazırlığında yalnız Pratik sekmesi aktiftir', (game) => {
+    mockUsePathname.mockReturnValue(`/arena/${game}`)
+    render(<BottomNav />)
+    expect(linkFor('Pratik')).toHaveAttribute('aria-current', 'page')
+    expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(1)
+  })
+
+  test('ders adına benzeyen ilgisiz rotayı Pratik olarak işaretlemez', () => {
+    mockUsePathname.mockReturnValue('/arena/matematik-extra')
+    render(<BottomNav />)
+    expect(linkFor('Pratik')).not.toHaveAttribute('aria-current')
   })
 
   test('hassas dokumanda tum public sekmeleri native anchor olarak render eder', () => {

@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   mockGetUser,
@@ -100,6 +100,16 @@ function request(body: unknown, headers?: HeadersInit) {
 }
 
 describe('POST /api/questions/grade', () => {
+  afterEach(() => vi.unstubAllEnvs())
+  it('blocks premature measurement feedback even with an otherwise valid guest cookie', async () => {
+    vi.stubEnv('MEASUREMENT_SCHEMA_READY', 'true')
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-42' } } })
+    mockRpc.mockResolvedValueOnce({ data: true, error: null })
+    const res = await POST(request({ questionId: QUESTION_ID, selectedOption: 2 }))
+    expect(res.status).toBe(409)
+    expect(mockQuestionQuery).not.toHaveBeenCalled()
+    expect(mockRecordAttempt).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     delete process.env.MOCK_STRATEGY_ENABLED

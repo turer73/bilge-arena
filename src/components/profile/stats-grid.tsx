@@ -1,9 +1,11 @@
 'use client'
 
+import type { ReactNode } from 'react'
+
 interface Stat {
   label: string
   value: string | number
-  icon: string
+  icon: ReactNode
   color: string
 }
 
@@ -13,15 +15,16 @@ interface StatsGridProps {
 
 export function StatsGrid({ stats }: StatsGridProps) {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div data-profile-stats className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="flex min-h-[5.25rem] items-center gap-3 rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] p-3 text-left shadow-[0_4px_0_var(--app-border)]"
+          className="flex min-h-[5.75rem] items-center gap-3 rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] p-3 text-left shadow-[0_4px_0_var(--app-border)]"
         >
           <div
             aria-hidden
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--app-hover)] text-xl"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--app-border)] bg-[var(--app-card-sunken)]"
+            style={{ color: stat.color }}
           >
             {stat.icon}
           </div>

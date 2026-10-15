@@ -85,6 +85,21 @@ describe('platform access boundary', () => {
     expect(String(fetchImpl.mock.calls[1][0])).toContain('permission=in.%28admin.dashboard.view%29')
   })
 
+  it('sends a modern secret key only on apikey for both REST permission reads', async () => {
+    const serviceKey = 'sb_secret_test-key'
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ role_id: ROLE_ID }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ role_id: ROLE_ID }]), { status: 200 }))
+
+    expect(await userHasAnyPlatformPermissionViaRest({
+      supabaseUrl: 'https://example.supabase.co', serviceKey, userId: 'user-1',
+      permissions: ['admin.dashboard.view'], fetchImpl,
+    })).toBe(true)
+    for (const call of fetchImpl.mock.calls) {
+      expect(call[1].headers).toEqual({ apikey: serviceKey })
+    }
+  })
+
   it('REST guard rejects malformed role ids and never performs the permission lookup', async () => {
     const fetchImpl = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify([{ role_id: 'not-a-uuid' }]), { status: 200 }))
@@ -111,6 +126,23 @@ describe('platform access boundary', () => {
     expect(String(fetchImpl.mock.calls[0][0])).toContain('/rest/v1/profiles?id=eq.')
     expect(String(fetchImpl.mock.calls[0][0])).toContain('select=id%2Cdeleted_at')
     expect(fetchImpl.mock.calls[0][1]).toMatchObject({ cache: 'no-store' })
+  })
+
+  it('uses apikey only for a modern secret and preserves Bearer for a legacy JWT', async () => {
+    const userId = '22222222-2222-4222-8222-222222222222'
+    const fetchImpl = vi.fn().mockImplementation(async () =>
+      new Response(JSON.stringify([{ id: userId, deleted_at: null }]), { status: 200 }),
+    )
+
+    for (const serviceKey of ['sb_secret_test-key', 'legacy-jwt']) {
+      expect(await getUserProfileAccessStateViaRest({
+        supabaseUrl: 'https://example.supabase.co', serviceKey, userId, fetchImpl,
+      })).toBe('active')
+    }
+    expect(fetchImpl.mock.calls[0][1].headers).toEqual({ apikey: 'sb_secret_test-key' })
+    expect(fetchImpl.mock.calls[1][1].headers).toEqual({
+      apikey: 'legacy-jwt', Authorization: 'Bearer legacy-jwt',
+    })
   })
 
   it('REST account guard distinguishes a tombstone from operational uncertainty', async () => {

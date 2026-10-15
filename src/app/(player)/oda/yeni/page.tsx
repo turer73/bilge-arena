@@ -17,7 +17,7 @@ export default async function Page() {
   if (!user) redirect('/giris?redirect=/oda/yeni')
 
   return (
-    <>
+    <div data-room-create-screen className="mx-auto max-w-4xl">
       <header className="mb-6">
         <Link
           href="/oda"
@@ -39,6 +39,6 @@ export default async function Page() {
         </p>
       </header>
       <CreateRoomForm />
-    </>
+    </div>
   )
 }

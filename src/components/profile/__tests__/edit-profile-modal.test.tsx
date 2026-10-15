@@ -97,6 +97,20 @@ describe('EditProfileModal', () => {
     expect(JSON.parse(patchCall[1].body).username).toBe('arenaci')
   })
 
+  test('Mezun seçimi API sözleşmesine uygun olarak 13 sayısını gönderir', async () => {
+    render(<EditProfileModal open onClose={vi.fn()} />)
+    fireEvent.change(screen.getByRole('combobox', { name: 'Sınıf' }), {
+      target: { value: '13' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Kaydet' }))
+
+    await waitFor(() => {
+      const patchCall = fetchMock.mock.calls.find((call) => call[0] === '/api/profile')
+      expect(patchCall).toBeTruthy()
+      expect(JSON.parse(patchCall![1].body).grade).toBe(13)
+    })
+  })
+
   test('kısa isim → PATCH atılmaz, hata toast', () => {
     auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), username: 'a' }
     render(<EditProfileModal open onClose={vi.fn()} />)

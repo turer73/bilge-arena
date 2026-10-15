@@ -1,7 +1,22 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
+import {
+  Award,
+  CircleUserRound,
+  Coins,
+  Frame,
+  IdCard,
+  Layers3,
+  Palette,
+  ShoppingBag,
+  Sparkles,
+  Store,
+  Tag,
+  type LucideIcon,
+} from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { getLevelFromXP } from '@/lib/constants/levels'
 import {
@@ -41,17 +56,20 @@ import { AVATAR_GROUPS, avatarMinLevel } from '@/lib/constants/avatars'
 import { StudioPreview } from './studio-preview'
 import { useCosmeticPurchase, type CosmeticCategory } from '@/lib/hooks/use-cosmetic-purchase'
 import { CosmeticPurchaseDialog } from '@/components/profile/cosmetic-purchase-dialog'
+import { ThemeToggle } from '@/components/layout/theme-toggle'
+import { AcademyTabletNav } from '@/components/academy/academy-tablet-nav'
+import { BilgePersonalization } from '@/components/academy/bilge-personalization'
 
 type Area = 'avatar' | 'zemin' | 'kart' | 'panel' | 'cerceve' | 'rozet' | 'sus'
 
-const AREAS: { id: Area; label: string; icon: string; hint: string }[] = [
-  { id: 'avatar', label: 'Avatar', icon: '🧑', hint: 'Profil fotoğrafın — maskot karakterler + hazır set' },
-  { id: 'zemin', label: 'Zemin', icon: '🌅', hint: 'Tüm sayfaların arka planı' },
-  { id: 'kart', label: 'Profil Kartı', icon: '🪪', hint: 'Profil başlık kartının arkası' },
-  { id: 'panel', label: 'İsim Paneli', icon: '🏷️', hint: 'İsmin arkasındaki panel — sıralamada da görünür' },
-  { id: 'cerceve', label: 'Çerçeve', icon: '🖼️', hint: 'Avatar çerçeven' },
-  { id: 'sus', label: 'Süs', icon: '🪽', hint: 'Avatarın etrafındaki süs (kanat, taç, yıldız…)' },
-  { id: 'rozet', label: 'Rozet', icon: '🏅', hint: 'Profilinde sergilenen rozetler' },
+const AREAS: { id: Area; label: string; Icon: LucideIcon; hint: string }[] = [
+  { id: 'avatar', label: 'Avatar', Icon: CircleUserRound, hint: 'Profil fotoğrafın — maskot karakterler ve hazır set' },
+  { id: 'zemin', label: 'Zemin', Icon: Layers3, hint: 'Tüm sayfaların arka planı' },
+  { id: 'kart', label: 'Profil Kartı', Icon: IdCard, hint: 'Profil başlık kartının arkası' },
+  { id: 'panel', label: 'İsim Paneli', Icon: Tag, hint: 'İsmin arkasındaki panel — sıralamada da görünür' },
+  { id: 'cerceve', label: 'Çerçeve', Icon: Frame, hint: 'Avatar çerçeven' },
+  { id: 'sus', label: 'Süs', Icon: Sparkles, hint: 'Avatarın etrafındaki süs; kanat, taç veya yıldız' },
+  { id: 'rozet', label: 'Rozet', Icon: Award, hint: 'Profilinde sergilenen rozetler' },
 ]
 
 /**
@@ -66,7 +84,7 @@ const AREAS: { id: Area; label: string; icon: string; hint: string }[] = [
  * Sahiplik guard'ı her alanda: personel (RBAC rolü) tümünü ücretsiz kullanır.
  */
 export function KisisellestirClient() {
-  const { user, profile, setProfile, loading } = useAuthStore()
+  const { user, profile, patchProfile, loading } = useAuthStore()
 
   useEffect(() => {
     document.body.classList.add('mobile-studio-active')
@@ -255,7 +273,9 @@ export function KisisellestirClient() {
         toast.error('Uygulanamadı', data.error ?? 'Bir şeyler ters gitti')
         return
       }
-      setProfile({ ...profile, selected_avatar_decorations: next })
+      // Yalnız bu alanı yama: closure'daki eski `profile` yayılırsa araya giren
+      // taze değerler (XP, bakiye, sahiplik) ezilirdi.
+      patchProfile({ selected_avatar_decorations: next })
     } catch {
       setDecorationIds(prev)
       toast.error('Bağlantı hatası', 'Tekrar dene')
@@ -294,11 +314,12 @@ export function KisisellestirClient() {
         toast.error('Uygulanamadı', data.error ?? 'Bir şeyler ters gitti')
         return
       }
-      // EN GÜNCEL profili oku (Codex PR#243 avatar-clobber dersi). Satın alma
+      // Yalnız bu alanı yama (Codex PR#243 avatar-clobber dersi). Satın alma
       // hemen öncesinde bakiyeyi ve sahiplik dizisini güncellemiş olabilir;
-      // closure'daki eski `profile` yazılırsa o güncelleme ezilir.
-      const latest = useAuthStore.getState().profile ?? profile
-      setProfile({ ...latest, selected_nameplate: id })
+      // closure'daki eski `profile` yazılırsa o güncelleme ezilirdi. patchProfile
+      // EN GÜNCEL store profiline yazar ve uçuştaki eski bir profil cevabı bu
+      // seçimi geri alamaz.
+      patchProfile({ selected_nameplate: id })
       toast.success('İsim paneli uygulandı', 'Sıralama ve profilinde görünecek ✨')
     } catch {
       toast.error('Bağlantı hatası', 'Tekrar dene')
@@ -324,12 +345,14 @@ export function KisisellestirClient() {
         toast.error('Uygulanamadı', data?.error ?? 'Avatar seçilemedi')
         return
       }
-      // P2 fix (Codex PR#243): closure'daki bayat `profile` yerine EN GUNCEL store
-      // profilini oku + yalniz avatar_url'i merge et. Avatar POST donerken eszamanli
-      // nameplate/sus kaydi yapilmissa onu ezme (stale-spread clobber'i onler).
-      const latest = useAuthStore.getState().profile
-      if (latest) {
-        setProfile({ ...latest, avatar_url: data?.avatar_url ?? latest.avatar_url })
+      // P2 fix (Codex PR#243): closure'daki bayat `profile` yayilmaz; patchProfile
+      // EN GUNCEL store profiline yalniz avatar_url'i yazar. Avatar POST donerken
+      // eszamanli nameplate/sus kaydi yapilmissa onu ezmez (stale-spread clobber'i
+      // onler) ve ucustaki eski bir profil cevabi yeni avatari geri alamaz.
+      // Sunucu avatar_url dondurmediyse (null/undefined) mevcut deger korunur.
+      const avatarUrl = data?.avatar_url
+      if (avatarUrl !== undefined && avatarUrl !== null) {
+        patchProfile({ avatar_url: avatarUrl })
       }
       toast.success('Avatar uygulandı ✨')
     } catch {
@@ -350,10 +373,20 @@ export function KisisellestirClient() {
   }
   if (!user || !profile) {
     return (
-      <div data-studio-screen className="mx-auto min-h-dvh max-w-md bg-[var(--app-bg)] px-4 py-16 text-center">
+      <div data-studio-screen className="mx-auto min-h-dvh max-w-md bg-[var(--app-bg)] px-4 py-16 text-center md:max-w-[1180px] md:pt-0">
         <StudioShellStyle />
+        <AcademyTabletNav active="personalize" />
+        <div className="mb-8">
+          <h1 className="mb-5 pt-6 text-left text-2xl font-extrabold">Kişiselleştir</h1>
+          <div className="mx-auto grid max-w-[900px] gap-5 text-left">
+          <ThemeToggle variant="panel" />
+          <BilgePersonalization />
+          </div>
+          <p className="mt-3 text-sm text-[var(--app-text-sub)]">Renk temasını giriş yapmadan seçebilirsin. Seçimin bu tarayıcıda saklanır.</p>
+          <Link href="/arena/calisma" className="mt-3 inline-block text-sm font-semibold text-[var(--app-accent-text)]">← Ders Çalış’a dön</Link>
+        </div>
         <div className="mb-4 text-5xl">🎨</div>
-        <h1 className="mb-2 text-xl font-bold">Giriş Yapmanız Gerekiyor</h1>
+        <h2 className="mb-2 text-xl font-bold">Profilini de kişiselleştir</h2>
         <p className="mb-6 text-sm text-[var(--text-sub)]">
           Profilini kişiselleştirmek için giriş yap.
         </p>
@@ -370,30 +403,32 @@ export function KisisellestirClient() {
   const level = getLevelFromXP(profile.total_xp ?? 0)
   const displayName = profile.username || profile.display_name || 'Arenacı'
   const activeAreaDef = AREAS.find((a) => a.id === area)!
+  const ActiveAreaIcon = activeAreaDef.Icon
 
   return (
-    <div data-studio-screen className="mx-auto min-h-dvh w-full max-w-[1180px] bg-[var(--app-bg)] px-4 pb-28 pt-4 md:px-5 md:pt-5 lg:px-6 lg:pb-10 lg:pt-8">
+    <div data-studio-screen className="mx-auto min-h-dvh w-full max-w-[1180px] bg-[var(--app-bg)] px-3 pb-28 pt-3 text-[var(--app-text)] sm:px-4 md:px-5 md:pt-5 lg:bg-transparent lg:px-6 lg:pb-10 lg:pt-8">
       <StudioShellStyle />
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[24px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-shadow-accent)] md:p-5">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]">Profilini tasarla</p>
-          <h1 className="font-display text-2xl font-black text-[var(--app-text)]">🎨 Kişiselleştirme Stüdyosu</h1>
-          <p className="mt-1 text-sm font-semibold text-[var(--app-text-sub)]">
-            Sahip olduğun kozmetikleri profiline uygula. Yeni kozmetikler için{' '}
-            <Link href="/arena/magaza" className="font-black text-[var(--app-accent-text)] hover:underline">
-              Mağaza
-            </Link>
-            &apos;ya uğra.
-          </p>
+      <AcademyTabletNav active="personalize" />
+      <section data-studio-hero className="relative mb-5 min-h-[205px] overflow-hidden rounded-[26px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-5 shadow-[0_6px_0_var(--app-shadow-accent)] md:min-h-[225px] md:p-7">
+        <Image src="/academy/academy-landscape.png" alt="" fill priority sizes="(min-width: 1024px) 1120px, 100vw" className="pointer-events-none object-cover object-center opacity-30" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[var(--app-card)] via-[var(--app-card)]/95 to-[var(--app-card)]/45" />
+        <div className="pointer-events-none absolute -right-14 -top-20 h-56 w-56 rounded-full border-[38px] border-[var(--app-accent)]/10" />
+        <div className="relative z-10 max-w-2xl">
+          <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]"><Palette size={14} /> Profilini tasarla</p>
+          <h1 className="mt-2 font-display text-2xl font-black leading-tight text-[var(--app-text)] md:text-4xl">Kişiselleştirme Stüdyosu</h1>
+          <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-[var(--app-text-sub)]">Avatarından sayfa zeminine kadar Arena görünümünü canlı önizlemeyle oluştur.</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--app-warn-border)] bg-[var(--app-warn-tint)] px-3 text-[10px] font-black text-[var(--app-warn-ink)]"><Coins size={14} />{balance.toLocaleString('tr-TR')} altın</span>
+            <span className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] px-3 text-[10px] font-black text-[var(--app-accent-text)]"><Sparkles size={14} />7 düzenleme alanı</span>
+          </div>
         </div>
-        <Link
-          href="/arena/profil"
-          className="flex min-h-11 items-center rounded-xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-3 py-2 text-xs font-black text-[var(--app-text-sub)] shadow-[0_3px_0_var(--app-border)] transition-colors hover:border-[var(--app-accent)] hover:text-[var(--app-accent-text)]"
-        >
-          ← Profilim
-        </Link>
-      </div>
+        <div className="relative z-10 mt-5 flex flex-wrap gap-2 md:absolute md:bottom-6 md:right-6 md:mt-0">
+          <Link href="/arena/magaza" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--app-accent)] px-4 text-xs font-black text-white shadow-[0_4px_0_var(--app-accent-strong)]"><ShoppingBag size={16} /> Mağazayı aç</Link>
+          <Link href="/arena/profil" className="inline-flex min-h-11 items-center gap-2 rounded-xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-4 text-xs font-black text-[var(--app-text-sub)] shadow-[0_3px_0_var(--app-border)]"><CircleUserRound size={16} /> Profilim</Link>
+        </div>
+      </section>
 
+      <div data-studio-settings className="mb-5 grid gap-5 md:grid-cols-2"><ThemeToggle variant="panel" /><BilgePersonalization /></div>
       <div data-studio-layout className="grid min-w-0 gap-5 md:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
         {/* Canlı önizleme — masaüstünde yapışkan */}
         <div className="min-w-0 md:sticky md:top-4 md:self-start lg:top-[calc(var(--navbar-h)+1.5rem)]">
@@ -414,38 +449,44 @@ export function KisisellestirClient() {
         </div>
 
         {/* Alan seçimi + ilgili kozmetik grid'i */}
-        <div className="min-w-0">
-          {/* Alan sekmeleri */}
-          <div className="flex flex-wrap gap-2">
-            {AREAS.map((a) => (
-              <button
-                key={a.id}
-                onClick={() => setArea(a.id)}
-                aria-pressed={area === a.id}
-                className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
-                  area === a.id
-                    ? 'border-[var(--focus)] bg-[var(--focus-bg)] text-[var(--focus)]'
-                    : 'border-[var(--border)] bg-[var(--card-bg)] text-[var(--text-sub)] hover:border-[var(--focus-border)]'
-                }`}
-              >
-                {a.icon} {a.label}
-              </button>
-            ))}
+        <div className="min-w-0 rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-border)] md:p-5">
+          <div className="mb-4 flex items-start gap-3 border-b-2 border-[var(--app-border-soft)] pb-4">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--app-accent-tint)] text-[var(--app-accent)]"><ActiveAreaIcon size={22} strokeWidth={2.6} /></span>
+            <div><p className="text-[9px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]">Düzenleme alanı</p><h2 className="mt-0.5 text-lg font-black">{activeAreaDef.label}</h2><p className="mt-1 text-xs font-semibold text-[var(--app-text-muted)]">{activeAreaDef.hint}</p></div>
           </div>
-          <p className="mt-2 text-xs text-[var(--text-muted)]">{activeAreaDef.hint}</p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+            {AREAS.map((areaDefinition) => {
+              const AreaIcon = areaDefinition.Icon
+              return (
+                <button
+                  key={areaDefinition.id}
+                  type="button"
+                  onClick={() => setArea(areaDefinition.id)}
+                  aria-pressed={area === areaDefinition.id}
+                  className={`flex min-h-12 items-center gap-2 rounded-xl border-2 px-3 text-left text-[11px] font-black transition-all ${
+                    area === areaDefinition.id
+                      ? 'border-[var(--app-accent)] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)] shadow-[0_3px_0_var(--app-shadow-accent)]'
+                      : 'border-[var(--app-border)] bg-[var(--app-card-sunken)] text-[var(--app-text-sub)] hover:border-[var(--app-accent-border)]'
+                  }`}
+                >
+                  <AreaIcon size={17} strokeWidth={2.5} /> {areaDefinition.label}
+                </button>
+              )
+            })}
+          </div>
 
           {/* Çözünürlük seçici (video arka plan seçiliyse) */}
           {showResolution && (
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-[11px] font-bold text-[var(--text-sub)]">Kalite:</span>
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-[var(--app-border)] bg-[var(--app-card-sunken)] p-2.5">
+              <span className="text-[11px] font-black text-[var(--app-text-sub)]">Kalite:</span>
               {RESOLUTION_ORDER.filter((r) => availableResolutions(areaActiveBg.variants).includes(r)).map((r) => (
                 <button
                   key={r}
                   onClick={() => applyResolution(r)}
                   className={`rounded-md border px-2 py-1 text-[10px] font-bold transition-colors ${
                     resolution === r
-                      ? 'border-[var(--focus)] bg-[var(--focus-bg)] text-[var(--focus)]'
-                      : 'border-[var(--border)] text-[var(--text-sub)] hover:border-[var(--focus-border)]'
+                      ? 'border-[var(--app-accent)] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]'
+                      : 'border-[var(--app-border)] text-[var(--app-text-sub)] hover:border-[var(--app-accent-border)]'
                   }`}
                 >
                   {RESOLUTION_LABELS[r]}
@@ -826,9 +867,9 @@ function StoreCta() {
   return (
     <Link
       href="/arena/magaza"
-      className="flex min-h-[40px] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[var(--border)] p-3 text-center text-[var(--text-sub)] transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]"
+      className="flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] p-3 text-center text-[var(--app-accent-text)] transition-colors hover:border-[var(--app-accent)]"
     >
-      <span className="text-lg">🛍️</span>
+      <Store size={19} strokeWidth={2.5} />
       <span className="text-[10px] font-bold">Mağazada daha fazlası</span>
     </Link>
   )

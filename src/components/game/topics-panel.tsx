@@ -15,14 +15,14 @@ interface TopicsPanelProps {
  */
 export function TopicsPanel({ topics }: TopicsPanelProps) {
   return (
-    <div className="overflow-hidden rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] shadow-[0_4px_0_var(--app-shadow-accent)]">
+    <div data-quiz-topics className="overflow-hidden rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] shadow-[0_4px_0_var(--app-shadow-accent)]">
       <div className="border-b border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] px-3 py-2">
         <span className="text-[9px] font-extrabold tracking-[0.18em] text-[var(--app-accent-text)]">
           KONU GUCU
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-x-5 gap-y-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:gap-x-6">
+      <div data-quiz-topics-grid className="grid grid-cols-2 gap-x-5 gap-y-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:gap-x-6">
         {topics.map((topic, i) => {
           const color = topic.percentage === 0
             ? 'var(--app-text-muted)'

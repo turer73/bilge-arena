@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Heart } from 'lucide-react'
+import { ThumbsUp } from 'lucide-react'
 
 interface LikeButtonProps {
   initialLiked?: boolean
@@ -46,7 +46,7 @@ export function LikeButton({
       aria-label={liked ? 'Begeniyi geri al' : 'Begen'}
     >
       {appearance === 'learning' ? (
-        <Heart
+        <ThumbsUp
           className={`${size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} transition-transform ${liked ? 'scale-110 fill-current' : ''}`}
           aria-hidden="true"
         />

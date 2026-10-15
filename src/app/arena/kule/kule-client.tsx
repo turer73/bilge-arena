@@ -1,7 +1,24 @@
 'use client'
 
 import { useEffect, useCallback, useReducer, useRef } from 'react'
+import type { CSSProperties } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
+import {
+  ArrowLeft,
+  BookOpenText,
+  Calculator,
+  ChevronRight,
+  FlaskConical,
+  Globe2,
+  Heart,
+  Languages,
+  Layers3,
+  Shield,
+  Sparkles,
+  Trophy,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { GAME_LIST } from '@/lib/constants/games'
 import type { GameSlug } from '@/lib/constants/games'
 import { shufflePublicOptionsWithMap } from '@/lib/utils/question'
@@ -10,6 +27,7 @@ import type { PublicQuestion } from '@/lib/utils/question-public'
 import { renderRichText } from '@/lib/utils/rich-text'
 import { isValidUuid } from '@/lib/utils/uuid'
 import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
+import styles from './kule.module.css'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -22,8 +40,12 @@ const DIFFICULTY_TIERS = [
   { from: 21, to: 99, difficulty: 3, label: 'Uzman' },
 ]
 
-const GAME_EMOJI: Record<string, string> = {
-  matematik: '🧮', turkce: '📝', fen: '🔬', sosyal: '🌍', wordquest: '🌐',
+const GAME_PRESENTATION: Record<string, { icon: LucideIcon; image: string; note: string }> = {
+  matematik: { icon: Calculator, image: '/academy/subjects/matematik-magic-v1.png', note: 'Sayılar ve problem çözme' },
+  turkce: { icon: BookOpenText, image: '/academy/subjects/turkce-magic-v1.png', note: 'Dil bilgisi ve anlam' },
+  fen: { icon: FlaskConical, image: '/academy/subjects/fen-magic-v1.png', note: 'Bilim ve deney soruları' },
+  sosyal: { icon: Globe2, image: '/academy/subjects/sosyal-magic-v1.png', note: 'Tarih ve coğrafya' },
+  wordquest: { icon: Languages, image: '/academy/modes/wordquest-v1.png', note: 'İngilizce kelime ve dil' },
 }
 const HS_KEY = 'bilge-arena-kule-hs-v1'
 
@@ -247,57 +269,100 @@ export function KuleClient() {
   // ── Menü ──
   if (state.phase === 'menu') {
     return (
-      <div className="mx-auto max-w-md px-4 py-8 text-center">
-        <h1 className="mb-2 font-display text-3xl font-black md:text-4xl">
-          🗼{' '}
-          <span className="bg-gradient-to-b from-[var(--reward)] to-[var(--focus)] bg-clip-text text-transparent">
-            Kule Modu
-          </span>
-        </h1>
-        <p className="mb-1 text-sm text-[var(--text-sub)]">
-          3 can ile kuleyi tırman. Her katta zorluk artar.
-        </p>
-        <div className="mb-6 flex justify-center gap-3 text-xs text-[var(--text-muted)]">
-          <span>❤️ 3 can</span>
-          <span>·</span>
-          <span>⬆️ Sonsuz kat</span>
-          <span>·</span>
-          <span>🏆 Skor kazan</span>
-        </div>
+      <div className={styles.root}>
+        <div className={styles.menuShell}>
+          <section className={styles.towerHero} aria-labelledby="kule-baslik">
+            <div className={styles.towerArt} aria-hidden="true">
+              <Image
+                src="/academy/modes/tower-portrait-v2.png"
+                alt=""
+                fill
+                sizes="(min-width: 980px) 58vw, 100vw"
+                priority
+              />
+            </div>
+            <div className={styles.towerCopy}>
+              <Link href="/arena" className={styles.backLink}>
+                <ArrowLeft size={15} aria-hidden="true" /> Oyunlara dön
+              </Link>
+              <span className={styles.eyebrow}>Adım adım zorlaşan mücadele</span>
+              <h1 id="kule-baslik">Bilginle yüksel, kulenin zirvesini gör.</h1>
+              <p>
+                Üç canla başla. Her doğru cevap seni bir kat yukarı taşırken sorular
+                giderek zorlaşır. En yüksek skorunu geçmeye çalış.
+              </p>
+              <div className={styles.statRow} aria-label="Kule Modu kuralları">
+                <div className={styles.statCard}>
+                  <span className={styles.statIcon}><Heart size={17} aria-hidden="true" /></span>
+                  <div><strong>3 can</strong><span>Yanlışlarda azalır</span></div>
+                </div>
+                <div className={styles.statCard}>
+                  <span className={styles.statIcon}><Layers3 size={17} aria-hidden="true" /></span>
+                  <div><strong>Sonsuz kat</strong><span>Zorluk yükselir</span></div>
+                </div>
+                <div className={styles.statCard}>
+                  <span className={styles.statIcon}><Trophy size={17} aria-hidden="true" /></span>
+                  <div><strong>Rekor hedefi</strong><span>Her doğru +10</span></div>
+                </div>
+              </div>
+            </div>
+          </section>
 
-        <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
-          Bir Oyun Seç
-        </p>
+          <section className={styles.subjectPanel} aria-labelledby="ders-sec-baslik">
+            <span className={styles.eyebrow}>Mücadele alanını seç</span>
+            <h2 id="ders-sec-baslik">Kuleye hangi dersle çıkacaksın?</h2>
+            <p className={styles.subjectIntro}>
+              Her dersin rekoru ayrı tutulur. Kartını seçtiğinde ilk kat hemen başlar.
+            </p>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {GAME_LIST.map((game) => {
-            const hs = loadHighScore(game.slug)
-            return (
-              <button
-                key={game.slug}
-                onClick={() => {
-                  const highScore = loadHighScore(game.slug)
-                  dispatch({ type: 'SELECT_GAME', game: game.slug as GameSlug, highScore })
-                }}
-                className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3 transition-all hover:-translate-y-0.5 hover:shadow-md"
-                style={{ '--c': game.colorHex } as React.CSSProperties}
-              >
-                <span className="text-2xl leading-none">{GAME_EMOJI[game.slug] || '📋'}</span>
-                <span className="text-xs font-bold" style={{ color: game.colorHex }}>
-                  {game.name}
-                </span>
-                {hs > 0 && (
-                  <span className="text-[9px] text-[var(--text-muted)]">En iyi: {hs}</span>
-                )}
-              </button>
-            )
-          })}
-        </div>
+            <div className={styles.subjectGrid}>
+              {GAME_LIST.map((game) => {
+                const hs = loadHighScore(game.slug)
+                const presentation = GAME_PRESENTATION[game.slug] ?? {
+                  icon: Sparkles,
+                  image: '/academy/modes/tower-v1.png',
+                  note: 'Karışık soru mücadelesi',
+                }
+                const Icon = presentation.icon
+                return (
+                  <button
+                    key={game.slug}
+                    onClick={() => {
+                      const highScore = loadHighScore(game.slug)
+                      dispatch({ type: 'SELECT_GAME', game: game.slug as GameSlug, highScore })
+                    }}
+                    className={styles.subjectCard}
+                    style={{ '--subject': game.colorHex } as CSSProperties}
+                    aria-label={`${game.name} ile Kule Modu başlat${hs > 0 ? `, en iyi skor ${hs}` : ''}`}
+                  >
+                    <span className={styles.subjectArt} aria-hidden="true">
+                      <Image
+                        src={presentation.image}
+                        alt=""
+                        fill
+                        sizes="(min-width: 980px) 240px, (min-width: 640px) 45vw, 100vw"
+                      />
+                    </span>
+                    <span className={styles.subjectCardContent}>
+                      <span className={styles.subjectCardIcon}><Icon size={18} aria-hidden="true" /></span>
+                      <span>
+                        <strong>{game.name}</strong>
+                        <small>{hs > 0 ? `En iyi skor: ${hs}` : presentation.note}</small>
+                      </span>
+                      <span className={styles.subjectArrow}><ChevronRight size={15} aria-hidden="true" /></span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
 
-        <div className="mt-4">
-          <Link href="/arena" className="text-xs text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text-sub)]">
-            ← Arena&apos;ya Dön
-          </Link>
+            <div className={styles.ruleStrip} aria-label="Zorluk katları">
+              <span><b>1–5</b> Temel</span>
+              <span><b>6–12</b> Orta</span>
+              <span><b>13–20</b> Zor</span>
+              <span><b>21+</b> Uzman</span>
+            </div>
+          </section>
         </div>
       </div>
     )
@@ -312,48 +377,55 @@ export function KuleClient() {
     const best = Math.max(state.score, state.highScore)
     const isNewRecord = state.score > state.highScore
     return (
-      <div className="mx-auto max-w-sm px-4 py-10 text-center">
-        <div className="mb-2 text-6xl">💀</div>
-        <h2 className="mb-1 font-display text-2xl font-black">Oyun Bitti</h2>
-        <p className="mb-5 text-sm text-[var(--text-sub)]">
-          {state.floor - 1}. kata kadar çıktın
-        </p>
-
-        <div
-          className="mb-6 rounded-2xl border p-5"
-          style={{ borderColor: `${color}40`, background: `color-mix(in srgb, ${color} 8%, transparent)` }}
-        >
-          <div className="mb-1 text-[10px] font-extrabold tracking-widest text-[var(--text-muted)] uppercase">
-            Skor
-          </div>
-          <div className="font-display text-4xl font-black" style={{ color }}>
-            {state.score}
-          </div>
-          {isNewRecord ? (
-            <div className="mt-1 text-xs font-bold" style={{ color: 'var(--reward)' }}>
-              🏆 Yeni rekoru kırdın!
+      <div className={styles.root} style={{ '--subject': color } as CSSProperties}>
+        <div className={styles.gameOverShell}>
+          <section className={styles.gameOverCard} aria-labelledby="oyun-bitti-baslik">
+            <div className={styles.gameOverIcon}>
+              <Image src="/academy/modes/tower-v1.png" alt="Kule" fill sizes="148px" priority />
             </div>
-          ) : (
-            <div className="mt-1 text-xs text-[var(--text-muted)]">
-              En iyi: {best}
-            </div>
-          )}
-        </div>
+            <span className={styles.eyebrow}>{gameConfig?.name ?? 'Kule Modu'} · Tur tamamlandı</span>
+            <h2 id="oyun-bitti-baslik" className="mt-2">Oyun Bitti</h2>
+            <p className="mt-2 text-sm text-[#aebddb]">
+              {state.floor - 1}. kata kadar çıktın
+            </p>
 
-        <div className="flex gap-2">
-          <button
-            onClick={() => dispatch({ type: 'RESTART' })}
-            className="flex-1 rounded-xl py-3 text-sm font-bold text-white"
-            style={{ background: color }}
-          >
-            Tekrar Oyna
-          </button>
-          <button
-            onClick={() => dispatch({ type: 'BACK_TO_MENU' })}
-            className="flex-1 rounded-xl border border-[var(--border)] py-3 text-sm font-semibold text-[var(--text-sub)]"
-          >
-            Menüye Dön
-          </button>
+            <div
+              className={styles.resultCard}
+              style={{ border: `1px solid ${color}40`, background: `color-mix(in srgb, ${color} 10%, rgba(6, 15, 36, 0.72))` }}
+            >
+              <div className="mb-1 text-[10px] font-extrabold tracking-widest text-[#91a3c3] uppercase">
+                Toplam skor
+              </div>
+              <div className="text-4xl font-black" style={{ color }}>
+                {state.score}
+              </div>
+              {isNewRecord ? (
+                <div className="mt-1 text-xs font-bold text-[#ffc44d]">
+                  Yeni rekoru kırdın!
+                </div>
+              ) : (
+                <div className="mt-1 text-xs text-[#91a3c3]">
+                  En iyi: {best}
+                </div>
+              )}
+            </div>
+
+            <div className={styles.resultActions}>
+              <button
+                onClick={() => dispatch({ type: 'RESTART' })}
+                className={styles.primaryButton}
+                style={{ background: color, color: '#fff' }}
+              >
+                Tekrar Oyna
+              </button>
+              <button
+                onClick={() => dispatch({ type: 'BACK_TO_MENU' })}
+                className={styles.secondaryButton}
+              >
+                Ders Seçimine Dön
+              </button>
+            </div>
+          </section>
         </div>
       </div>
     )
@@ -361,164 +433,214 @@ export function KuleClient() {
 
   // ── Oyun HUD ──
   const liveArr = Array.from({ length: MAX_LIVES }, (_, i) => i < state.lives)
+  const activePresentation = state.game ? GAME_PRESENTATION[state.game] : null
+  const ActiveIcon = activePresentation?.icon ?? Shield
+  const towerStart = Math.max(1, state.floor - 2)
+  const towerFloors = Array.from({ length: 7 }, (_, index) => towerStart + 6 - index)
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-5">
-
-      {/* HUD */}
-      <div className="mb-4 flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-4 py-2.5">
-        <div className="flex items-center gap-1">
-          {liveArr.map((alive, i) => (
-            <span key={i} className="text-lg leading-none" style={{ opacity: alive ? 1 : 0.25 }}>
-              ❤️
-            </span>
-          ))}
-        </div>
-
-        <div className="text-center">
-          <div
-            className="font-display text-lg font-black leading-none"
-            style={{ color }}
-          >
-            {state.floor}. KAT
-          </div>
-          <div className="text-[9px] font-bold tracking-widest text-[var(--text-muted)] uppercase">
-            {tierLabel}
-          </div>
-        </div>
-
-        <div className="text-right">
-          <div className="text-sm font-black" style={{ color: 'var(--reward)' }}>
-            {state.score}
-          </div>
-          <div className="text-[9px] text-[var(--text-muted)]">skor</div>
-        </div>
-      </div>
-
-      {/* Yükleniyor */}
-      {state.loading && (
-        <div className="flex h-60 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-[var(--border)] border-t-[var(--focus)]" />
-        </div>
-      )}
-
-      {/* Hata */}
-      {!state.loading && state.error && (
-        <div className="flex flex-col items-center gap-3 py-12 text-center">
-          <span className="text-3xl">😕</span>
-          <p className="text-sm text-[var(--text-sub)]">{state.error}</p>
-          <button
-            onClick={() => fetchQuestion(state.game!, state.floor)}
-            className="rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-bold"
-          >
-            Tekrar Dene
+    <div className={styles.root} style={{ '--subject': color } as CSSProperties}>
+      <div className={styles.gameShell}>
+        <div className={styles.gameTopline}>
+          <button onClick={() => dispatch({ type: 'BACK_TO_MENU' })} className={styles.backButton}>
+            <ArrowLeft size={15} aria-hidden="true" /> Ders seçimine dön
           </button>
-          {state.game === 'sosyal' && (
-            <Link
-              href="/arena/calisma"
-              className="text-xs font-bold text-[var(--focus)] underline underline-offset-2"
-            >
-              Çalış sayfasına git
-            </Link>
-          )}
+          <div className={styles.gameIdentity}>
+            <span><ActiveIcon size={17} aria-hidden="true" /></span>
+            <span>{gameConfig?.name ?? 'Kule Modu'}</span>
+          </div>
         </div>
-      )}
 
-      {/* Soru */}
-      {!state.loading && !state.error && state.question && (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-5">
-          <p className="mb-5 text-sm font-semibold leading-relaxed md:text-base">
-            {renderRichText(state.question.content.question || state.question.content.sentence || '')}
-          </p>
-
-          <div className="space-y-2">
-            {state.question.content.options.map((opt, i) => {
-              const answered = state.selected !== null
-              const isCorrect = i === state.correctOption
-              const isSelected = i === state.selected
-
-              let bg = 'var(--bg-secondary)'
-              let borderColor = 'var(--border)'
-              let textColor = 'var(--text)'
-
-              if (answered) {
-                if (isCorrect) {
-                  bg = 'var(--growth-bg)'
-                  borderColor = 'var(--growth-border)'
-                  textColor = 'var(--growth)'
-                } else if (isSelected) {
-                  bg = 'color-mix(in srgb, var(--urgency) 10%, transparent)'
-                  borderColor = 'color-mix(in srgb, var(--urgency) 30%, transparent)'
-                  textColor = 'var(--urgency)'
-                }
-              }
-
-              const label = ['A', 'B', 'C', 'D', 'E'][i] ?? String(i + 1)
-
-              return (
-                <button
-                  key={i}
-                  onClick={() => void handleAnswer(i)}
-                  disabled={answered || state.grading}
-                  className="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-all duration-150 disabled:cursor-default"
-                  style={{ background: bg, borderColor, color: textColor }}
-                >
-                  <span
-                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black"
-                    style={{ background: borderColor, color: textColor }}
-                  >
-                    {answered && isCorrect ? '✓' : answered && isSelected ? '✕' : label}
-                  </span>
-                  <span>{renderRichText(opt)}</span>
-                </button>
-              )
-            })}
+        {/* HUD */}
+        <div className={styles.hud}>
+          <div className={styles.lives} aria-label={`${state.lives} can kaldı`}>
+            {liveArr.map((alive, i) => (
+              <Heart
+                key={i}
+                size={19}
+                className={styles.heart}
+                fill="currentColor"
+                aria-hidden="true"
+                style={{ opacity: alive ? 1 : 0.18 }}
+              />
+            ))}
           </div>
 
-          {/* Geri bildirim sonrası devam */}
-          {state.grading && (
-            <p className="mt-3 text-center text-xs text-[var(--text-sub)]">Kontrol ediliyor...</p>
-          )}
-          {state.gradeError && (
-            <p className="mt-3 text-center text-xs text-[var(--urgency)]">{state.gradeError}</p>
-          )}
+          <div className={styles.floor}>
+            <strong style={{ color }}>{state.floor}. KAT</strong>
+            <span>{tierLabel}</span>
+          </div>
 
-          {state.phase === 'feedback' && (
-            <>
-              <div
-                className={`mt-4 rounded-xl border p-3 text-center text-sm font-bold ${
-                  state.lastCorrect ? 'border-[var(--growth-border)] bg-[var(--growth-bg)] text-[var(--growth)]' : 'border-[color-mix(in_srgb,var(--urgency)_30%,transparent)] bg-[color-mix(in_srgb,var(--urgency)_10%,transparent)] text-[var(--urgency)]'
-                }`}
-              >
-                {state.lastCorrect
-                  ? `✓ Doğru! +${SCORE_PER_FLOOR} puan`
-                  : `✕ Yanlış! ${state.lives} can kaldı`}
-              </div>
-              {state.solution && (
-                <p className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[10px] text-[var(--text-sub)]">
-                  💡 {state.solution}
-                </p>
-              )}
-              <button
-                onClick={() => dispatch({ type: 'NEXT_FLOOR' })}
-                className="mt-3 w-full rounded-xl py-2.5 text-sm font-bold text-white"
-                style={{ background: color }}
-              >
-                Sonraki Kat ↑
-              </button>
-            </>
-          )}
+          <div className={styles.score}>
+            <strong>{state.score}</strong>
+            <span>Skor</span>
+          </div>
         </div>
-      )}
 
-      {/* Menüye dön linki */}
-      <div className="mt-4 text-center">
-        <button
-          onClick={() => dispatch({ type: 'BACK_TO_MENU' })}
-          className="text-[10px] text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text-sub)]"
-        >
-          ← Menüye Dön
-        </button>
+        <div className={styles.gameArena}>
+          <aside className={styles.towerProgress} aria-label="Kule katları">
+            <div className={styles.towerBackdrop} aria-hidden="true">
+              <Image
+                src="/academy/modes/tower-portrait-v2.png"
+                alt=""
+                fill
+                sizes="(max-width: 640px) 100vw, 270px"
+                priority
+              />
+            </div>
+
+            <div className={styles.towerStack}>
+              {towerFloors.map((floorNumber) => {
+                const floorState = floorNumber === state.floor
+                  ? 'active'
+                  : floorNumber < state.floor
+                    ? 'complete'
+                    : 'locked'
+
+                return (
+                  <div
+                    key={floorNumber}
+                    className={styles.towerFloor}
+                    data-state={floorState}
+                    aria-current={floorState === 'active' ? 'step' : undefined}
+                    aria-label={floorNumber + '. Kat, ' + (floorState === 'complete' ? 'geçildi' : floorState === 'active' ? 'buradasın' : 'kilitli')}
+                  >
+                    <span className={styles.floorCopy}>
+                      <strong>{floorNumber}. Kat</strong>
+                      {floorState === 'active' && <small>Buradasın</small>}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className={styles.towerRule}>
+              <span>Yükseliş kuralı</span>
+              <strong>Her doğru cevapta bir kat</strong>
+            </div>
+          </aside>
+
+          <div className={styles.challengeColumn}>
+            {/* Yükleniyor */}
+            {state.loading && (
+              <div className={styles.loading}>
+                <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-[var(--border)] border-t-[var(--focus)]" />
+              </div>
+            )}
+
+            {/* Hata */}
+            {!state.loading && state.error && (
+              <div className={styles.errorState}>
+                <Shield size={30} className="text-[#7eacff]" aria-hidden="true" />
+                <p className="text-sm text-[#b7c4df]">{state.error}</p>
+                <button
+                  onClick={() => fetchQuestion(state.game!, state.floor)}
+                  className={styles.secondaryButton}
+                  style={{ paddingInline: 18 }}
+                >
+                  Tekrar Dene
+                </button>
+                {state.game === 'sosyal' && (
+                  <Link
+                    href="/arena/calisma"
+                    className="text-xs font-bold text-[var(--focus)] underline underline-offset-2"
+                  >
+                    Çalış sayfasına git
+                  </Link>
+                )}
+              </div>
+            )}
+
+            {/* Soru */}
+            {!state.loading && !state.error && state.question && (
+              <div className={styles.gamePanel}>
+                <p className={styles.questionLabel}>Kule sorusu · Kat {state.floor}</p>
+                <p className={styles.questionText}>
+                  {renderRichText(state.question.content.question || state.question.content.sentence || '')}
+                </p>
+
+                <div className={styles.options}>
+                  {state.question.content.options.map((opt, i) => {
+                    const answered = state.selected !== null
+                    const isCorrect = i === state.correctOption
+                    const isSelected = i === state.selected
+
+                    let bg = 'var(--bg-secondary)'
+                    let borderColor = 'var(--border)'
+                    let textColor = 'var(--text)'
+
+                    if (answered) {
+                      if (isCorrect) {
+                        bg = 'var(--growth-bg)'
+                        borderColor = 'var(--growth-border)'
+                        textColor = 'var(--growth)'
+                      } else if (isSelected) {
+                        bg = 'color-mix(in srgb, var(--urgency) 10%, transparent)'
+                        borderColor = 'color-mix(in srgb, var(--urgency) 30%, transparent)'
+                        textColor = 'var(--urgency)'
+                      }
+                    }
+
+                    const label = ['A', 'B', 'C', 'D', 'E'][i] ?? String(i + 1)
+
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => void handleAnswer(i)}
+                        disabled={answered || state.grading}
+                        className={`${styles.option} flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-all duration-150 disabled:cursor-default`}
+                        style={{ background: bg, borderColor, color: textColor }}
+                        data-state={answered ? (isCorrect ? 'correct' : isSelected ? 'wrong' : 'answered') : 'idle'}
+                      >
+                        <span
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black"
+                          style={{ background: borderColor, color: textColor }}
+                        >
+                          {answered && isCorrect ? '✓' : answered && isSelected ? '✕' : label}
+                        </span>
+                        <span>{renderRichText(opt)}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Geri bildirim sonrası devam */}
+                {state.grading && (
+                  <p className="mt-3 text-center text-xs text-[var(--text-sub)]">Kontrol ediliyor...</p>
+                )}
+                {state.gradeError && (
+                  <p className="mt-3 text-center text-xs text-[var(--urgency)]">{state.gradeError}</p>
+                )}
+
+                {state.phase === 'feedback' && (
+                  <>
+                    <div
+                      className={`${styles.feedback} border p-3 text-center text-sm font-bold ${
+                        state.lastCorrect ? 'border-[var(--growth-border)] bg-[var(--growth-bg)] text-[var(--growth)]' : 'border-[color-mix(in_srgb,var(--urgency)_30%,transparent)] bg-[color-mix(in_srgb,var(--urgency)_10%,transparent)] text-[var(--urgency)]'
+                      }`}
+                    >
+                      {state.lastCorrect
+                        ? `✓ Doğru! +${SCORE_PER_FLOOR} puan`
+                        : `✕ Yanlış! ${state.lives} can kaldı`}
+                    </div>
+                    {state.solution && (
+                      <p className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[10px] text-[var(--text-sub)]">
+                        💡 {state.solution}
+                      </p>
+                    )}
+                    <button
+                      onClick={() => dispatch({ type: 'NEXT_FLOOR' })}
+                      className={`${styles.nextButton} mt-3 w-full text-sm text-white`}
+                      style={{ background: color }}
+                    >
+                      Sonraki Kat ↑
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

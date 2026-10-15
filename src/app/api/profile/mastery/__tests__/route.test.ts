@@ -13,6 +13,7 @@ const {
   mockIntegrityResult,
   mockSocialContextResult,
   mockSocialStateResult,
+  mockCanonicalResult,
   mockFrom,
   mockRpc,
   mockEq,
@@ -30,6 +31,7 @@ const {
   mockIntegrityResult: vi.fn(),
   mockSocialContextResult: vi.fn(),
   mockSocialStateResult: vi.fn(),
+  mockCanonicalResult: vi.fn(),
   mockFrom: vi.fn(),
   mockRpc: vi.fn(),
   mockEq: vi.fn(),
@@ -76,8 +78,17 @@ vi.mock('@/lib/supabase/service-role', () => ({
       if (name === 'resolve_released_curriculum_scope') return Promise.resolve(mockScopeResult())
       if (name === 'resolve_released_diagnostic_scope') return Promise.resolve(mockDiagnosticScopeResult())
       if (name === 'curriculum_scope_integrity') return Promise.resolve(mockIntegrityResult())
-      if (name === 'resolve_tyt_social_mastery_read_context') return Promise.resolve(mockSocialContextResult())
-      if (name === 'read_tyt_social_mastery_outcome_state') return Promise.resolve(mockSocialStateResult())
+      if (name === 'read_tyt_social_learning_snapshot') {
+        const context = mockSocialContextResult()
+        const states = mockSocialStateResult()
+        if (context.error) return Promise.resolve(context)
+        if (states.error) return Promise.resolve(states)
+        return Promise.resolve({
+          data: { context: context.data, states: states.data, allowedQuestionIds: [] },
+          error: null,
+        })
+      }
+      if (name === 'read_canonical_mastery_context') return Promise.resolve(mockCanonicalResult())
       throw new Error(`unexpected rpc: ${name}`)
     }),
   })),
@@ -85,7 +96,7 @@ vi.mock('@/lib/supabase/service-role', () => ({
 
 import { GET } from '../route'
 
-const USER_ID = '11111111-2222-3333-4444-555555555555'
+const USER_ID = '11111111-2222-4333-8444-555555555555'
 const OUTCOME_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
 const COURSE_ID = '10000000-0000-4000-8000-000000000001'
 const UNIT_ID = '10000000-0000-4000-8000-000000000002'
@@ -247,7 +258,7 @@ describe('GET /api/profile/mastery', () => {
         variant: 'questions_16_20',
         selectionEventId: SOCIAL_EVENT_ID,
         selectionEffectiveAt: '2026-08-31T08:00:00.000Z',
-        allowedCategories: ['cografya', 'din_kulturu', 'felsefe', 'sosyoloji', 'tarih'],
+        allowedCategories: ['cografya', 'din_kulturu', 'felsefe', 'tarih'],
         rebuildRequired: false,
         legacyAggregateUsed: false,
       },
@@ -259,6 +270,53 @@ describe('GET /api/profile/mastery', () => {
   it('auth yoksa 401 doner', async () => {
     const response = await GET(request() as never)
     expect(response.status).toBe(401)
+  })
+
+  function canonicalFixture() {
+    const key = 'meb-turkce@2019:grade8:LGS:T.8.3.25'
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockScopeResult.mockReturnValue({ data: {
+      game: 'turkce', displayExamRef: 'LGS', questionExamRef: 'LGS', taxonomyVersion: 'ba-lgs-turkce-v1',
+      mappingMode: 'canonical_reviewed', diagnosticEnabled: false,
+    }, error: null })
+    return { format: 'canonical-mastery@1', game: 'turkce', examRef: 'LGS', taxonomyVersion: 'ba-lgs-turkce-v1',
+      integrity: { total: 2, mapped: 2, unmapped: 0, scopeMismatch: 0, nodeOrphan: 0, outcomeOrphan: 0, primaryMismatch: 0, emptyOutcome: 0 },
+      items: [{ canonicalId: key, programKey: 'meb-turkce', programEdition: '2019', grade: 8,
+        officialCode: 'T.8.3.25', title: 'Kazanım', path: [
+          { nodeType: 'course', title: 'Türkçe' }, { nodeType: 'outcome', title: 'Kazanım', officialCode: 'T.8.3.25' },
+        ], aliases: [{ id: OUTCOME_ID, code: 'ALIAS-1', category: 'paragraf' },
+          { id: SOCIAL_PHILOSOPHY_OUTCOME_ID, code: 'ALIAS-2', category: 'dil_bilgisi' }] }], states: [] }
+  }
+
+  it('canonical map uses the authenticated user, one leaf, and no raw alias state query', async () => {
+    mockCanonicalResult.mockReturnValue({ data: canonicalFixture(), error: null })
+    const response = await GET(request('game=turkce&exam_ref=LGS&user_id=attacker') as never)
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    const body = await response.json()
+    expect(body.graphFormat).toBe('canonical@1')
+    expect(body.outcomes).toHaveLength(1)
+    expect(body.discovery).toMatchObject({ totalOutcomes: 1, diagnosticCompleted: false })
+    expect(mockRpc).toHaveBeenCalledWith('read_canonical_mastery_context', {
+      p_user_id: USER_ID, p_game: 'turkce', p_exam_ref: 'LGS', p_taxonomy_version: 'ba-lgs-turkce-v1',
+    })
+    expect(mockFrom).not.toHaveBeenCalled()
+    expect(JSON.stringify(body)).not.toContain(OUTCOME_ID)
+  })
+
+  it.each([null, { format: 'catalog-only' }])('refuses incomplete canonical context without legacy fallback: %j', async data => {
+    canonicalFixture()
+    mockCanonicalResult.mockReturnValue({ data, error: null })
+    const response = await GET(request('game=turkce&exam_ref=LGS') as never)
+    expect(response.status).toBe(503)
+    expect(mockFrom).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when canonical RPC is missing during app-first deployment', async () => {
+    canonicalFixture()
+    mockCanonicalResult.mockReturnValue({ data: null, error: { code: 'PGRST202' } })
+    expect((await GET(request('game=turkce&exam_ref=LGS') as never)).status).toBe(503)
+    expect(mockFrom).not.toHaveBeenCalled()
   })
 
   it('gecersiz oyun ve exam_ref parametrelerini reddeder', async () => {
@@ -526,7 +584,7 @@ describe('GET /api/profile/mastery', () => {
         variant: 'questions_21_25',
         selectionEventId: SOCIAL_EVENT_ID,
         selectionEffectiveAt: '2026-08-31T08:00:00.000Z',
-        allowedCategories: ['cografya', 'felsefe', 'sosyoloji', 'tarih'],
+        allowedCategories: ['cografya', 'felsefe', 'tarih'],
         rebuildRequired: false, legacyAggregateUsed: false,
       },
       error: null,
@@ -558,11 +616,8 @@ describe('GET /api/profile/mastery', () => {
     expect(JSON.stringify(body)).not.toContain('SOS-DIN-01')
     expect(JSON.stringify(body)).not.toContain('questions_21_25')
     expect(JSON.stringify(body)).not.toContain(SOCIAL_EVENT_ID)
-    expect(mockRpc).toHaveBeenCalledWith('resolve_tyt_social_mastery_read_context', {
-      p_user_id: USER_ID,
-    })
-    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_mastery_outcome_state', {
-      p_user_id: USER_ID,
+    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_learning_snapshot', {
+      p_user_id: USER_ID, p_question_ids: [],
     })
     expect(mockFrom).not.toHaveBeenCalledWith('user_outcome_state')
     expect(mockFrom).not.toHaveBeenCalledWith('user_diagnostic_outcome_state')
@@ -597,7 +652,9 @@ describe('GET /api/profile/mastery', () => {
     expect(response.status).toBe(500)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
     expect(await response.json()).toEqual({ error: 'Sorgu basarisiz' })
-    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_mastery_outcome_state', { p_user_id: USER_ID })
+    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_learning_snapshot', {
+      p_user_id: USER_ID, p_question_ids: [],
+    })
     expect(mockFrom).not.toHaveBeenCalledWith('user_outcome_state')
     expect(mockFrom).not.toHaveBeenCalledWith('user_diagnostic_outcome_state')
     expect(mockStateResult).not.toHaveBeenCalled()
@@ -647,15 +704,17 @@ describe('GET /api/profile/mastery', () => {
     for (let index = 0; index < 2; index += 1) {
       const response = await GET(request('game=sosyal&exam_ref=TYT') as never)
       const body = await response.json()
-      expect(response.status).toBe(200)
-      expect(body).toEqual({
-        game: 'sosyal', examRef: 'TYT',
-        coverage: {
-          supported: false, diagnosticAvailable: false, taxonomyVersion: null,
-          totalQuestions: 0, mappedQuestions: 0, percentage: 0,
-        },
-        discovery: null, graph: null, outcomes: [],
-      })
+      expect(response.status).toBe(index === 0 ? 200 : 500)
+      expect(body).toEqual(index === 0
+        ? {
+            game: 'sosyal', examRef: 'TYT',
+            coverage: {
+              supported: false, diagnosticAvailable: false, taxonomyVersion: null,
+              totalQuestions: 0, mappedQuestions: 0, percentage: 0,
+            },
+            discovery: null, graph: null, outcomes: [],
+          }
+        : { error: 'Sorgu basarisiz' })
       const serialized = JSON.stringify(body)
       expect(serialized).not.toContain('selection-required')
       expect(serialized).not.toContain('questions_')
@@ -663,8 +722,8 @@ describe('GET /api/profile/mastery', () => {
     }
     expect(mockFrom).not.toHaveBeenCalled()
     expect(mockRpc.mock.calls.filter(([name]) => (
-      name === 'read_tyt_social_mastery_outcome_state'
-    ))).toHaveLength(0)
+      name === 'read_tyt_social_learning_snapshot'
+    ))).toHaveLength(2)
   })
 
   it('V3 resolver exact Fen blueprintini yayinladiginda on soruluk baslangic taramasini acar', async () => {

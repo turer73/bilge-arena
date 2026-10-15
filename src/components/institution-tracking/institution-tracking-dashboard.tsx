@@ -50,6 +50,8 @@ import { InstitutionPanelNav } from './institution-panel-nav'
 import { InstitutionStudentInviteDialog } from './institution-student-invite-dialog'
 import { EvidenceDistributionChart, PercentBar } from './analytics-charts'
 import { InstitutionOverviewPanel } from './institution-overview-panel'
+import { DocumentBoundaryLink } from '@/components/privacy/document-boundary-link'
+import { InstitutionAccessHelp } from './institution-access-help'
 import type { InstitutionInitialScope } from '@/app/arena/kurum/scope-query'
 
 const statusCopy = {
@@ -330,20 +332,38 @@ export function InstitutionTrackingDashboard({
   if (directoryLoading && !directory) return <DashboardSkeleton />
 
   if (!directory) {
+    // 403: hesapta hic kurum yetkisi yok (yeni kayit, kuruma tanimlanmamis).
+    // 404: yetki var ama aktif uyelik yok (kaldirilmis / suresi dolmus pilot).
+    // Ikisi de "yeniden dene" ile cozulmez; kullaniciya erisimin NASIL
+    // verildigini ve nereye donecegini soyleriz.
+    const noAccess = errorStatus === 403 || errorStatus === 404
     return (
       <section className="mx-auto max-w-3xl rounded-2xl border border-red-400/20 bg-red-400/5 p-6 text-center sm:p-10">
         <AlertTriangle className="mx-auto h-10 w-10 text-red-300" aria-hidden="true" />
-        <h1 className="mt-4 text-xl font-black">Kurum çalışma alanı alınamadı</h1>
+        <h1 className="mt-4 text-xl font-black">
+          {noAccess ? 'Bu hesabın kurum paneli erişimi yok' : 'Kurum çalışma alanı alınamadı'}
+        </h1>
         <p className="mt-2 text-sm text-[var(--text-sub)]">
-          {errorStatus === 403 ? 'Bu hesap için aktif kurum yetkisi bulunamadı.' : 'Bağlantıyı ve pilot ayarlarını kontrol edip yeniden deneyin.'}
+          {errorStatus === 403 && 'Bu hesap için aktif kurum yetkisi bulunamadı. Kurum paneli yalnız kuruma tanımlı yönetici ve öğretmen hesaplarına açıktır; normal kayıt tek başına kurum yetkisi vermez.'}
+          {errorStatus === 404 && 'Bu hesabın aktif bir kurum üyeliği yok. Üyeliğiniz kaldırılmış ya da kurum pilotunun süresi dolmuş olabilir.'}
+          {!noAccess && 'Bağlantıyı ve pilot ayarlarını kontrol edip yeniden deneyin.'}
         </p>
-        <button
-          type="button"
-          onClick={() => setRefreshKey((value) => value + 1)}
-          className="btn-primary mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-bold"
-        >
-          <RefreshCw className="h-4 w-4" aria-hidden="true" /> Yeniden dene
-        </button>
+        {noAccess && <InstitutionAccessHelp />}
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <DocumentBoundaryLink
+            href="/arena"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--border)] px-4 text-sm font-bold"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Arenaya dön
+          </DocumentBoundaryLink>
+          <button
+            type="button"
+            onClick={() => setRefreshKey((value) => value + 1)}
+            className="btn-primary inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-bold"
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden="true" /> Yeniden dene
+          </button>
+        </div>
       </section>
     )
   }

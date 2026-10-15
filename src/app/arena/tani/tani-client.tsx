@@ -61,7 +61,8 @@ function IntroCard({
           </h2>
           <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">
             {outcomeCount} {subjectName} kazanım alanını kısa bir taramayla yoklarız. Sorular yanıtına göre bir kademe
-            kolaylaşabilir veya zorlaşabilir; bu bir hâkimiyet ölçümü değildir ve sonuç ödül ya da sıralamayı etkilemez.
+            kolaylaşabilir veya zorlaşabilir. Sonuç ilk çalışma adımını seçer; doğrulanmış pratiklerin sonraki günlük
+            planlarını giderek kişiselleştirir. Bu bir hâkimiyet ölçümü değildir ve ödül ya da sıralamayı etkilemez.
           </p>
           <button
             type="button"
@@ -133,11 +134,17 @@ function SummaryCard({
         >
           <span className="flex items-center gap-2">
             <Target className="h-4 w-4" aria-hidden="true" />
-            Önce {weakest.title} çalış
+            Sana özel ilk adım: {weakest.title}
           </span>
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </button>
       )}
+      <Link
+        href="/arena/calisma#gunluk-plan"
+        className="flex min-h-11 w-full items-center justify-center text-xs font-bold text-[var(--text-sub)] hover:text-[var(--focus)] hover:underline"
+      >
+        Günlük çalışma planına dön
+      </Link>
     </section>
   )
 }
@@ -247,7 +254,7 @@ export default function TaniClient() {
       <header className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--text-sub)]">{subjectName.toLocaleUpperCase('tr-TR')} · İÇ TAKSONOMİ</p>
-          <h1 className="mt-1 text-xl font-bold text-[var(--text)]">Kısa Başlangıç Taraması</h1>
+          <h1 className="mt-1 text-xl font-bold text-[var(--text)]">Seviyeni ölç</h1>
         </div>
         <Link href="/arena/calisma" className="text-xs font-bold text-[var(--focus)] hover:underline">Çalışmaya dön</Link>
       </header>

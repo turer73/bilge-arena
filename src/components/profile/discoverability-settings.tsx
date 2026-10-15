@@ -22,7 +22,7 @@ const VISIBILITY_OPTIONS: Array<{
 /** Aramada bulunabilirlik ve profil hedef kitlesi birbirinden bağımsızdır. */
 export function DiscoverabilitySettings() {
   const profile = useAuthStore((state) => state.profile)
-  const setProfile = useAuthStore((state) => state.setProfile)
+  const patchProfile = useAuthStore((state) => state.patchProfile)
   const [savingField, setSavingField] = useState<'discovery' | 'visibility' | null>(null)
 
   if (!profile) return null
@@ -32,7 +32,6 @@ export function DiscoverabilitySettings() {
 
   const updateProfile = async (
     body: { is_discoverable: boolean } | { profile_visibility: ProfileVisibility },
-    nextProfile: typeof profile,
     successMessage: string,
   ) => {
     try {
@@ -47,7 +46,9 @@ export function DiscoverabilitySettings() {
         return false
       }
 
-      setProfile(nextProfile)
+      // Yalniz gonderilen alan yamalanir: render anindaki profil kopyasini
+      // yaymak, istek surerken gelen taze XP/coin degerlerini ezerdi.
+      patchProfile(body)
       toast.success(successMessage)
       return true
     } catch {
@@ -62,7 +63,6 @@ export function DiscoverabilitySettings() {
     const next = !isDiscoverable
     await updateProfile(
       { is_discoverable: next },
-      { ...profile, is_discoverable: next },
       next ? 'Artık arkadaş aramasında görünüyorsun' : 'Arkadaş aramasında gizlendin',
     )
     setSavingField(null)
@@ -73,7 +73,6 @@ export function DiscoverabilitySettings() {
     setSavingField('visibility')
     await updateProfile(
       { profile_visibility: next },
-      { ...profile, profile_visibility: next },
       'Profil hedef kitlesi güncellendi',
     )
     setSavingField(null)

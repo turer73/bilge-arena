@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  assertPromotionEvidence,
+  assertPromotionEvidence as assertPromotionWithScope,
   DEFAULT_PROMOTION_POLICY,
   evaluateBenchmark,
   type GoldLabel,
@@ -9,6 +9,19 @@ import {
 } from '../benchmark'
 import type { CalibrationItem } from '../calibration'
 import type { AuditExecutionIdentity, Finding, Verdict } from '../types'
+import type { PromotionContext, PromotionScope } from '../promotion-scope'
+
+const scope: PromotionScope = {
+  schemaVersion: 'promotion-scope@1', kind: 'bounded_cohort', game: 'turkce', examRef: 'LGS',
+  controlSetSha256: 'c'.repeat(64),
+  targets: [{ questionId: '11111111-1111-4111-8111-111111111111', revisionId: '22222222-2222-4222-8222-222222222222', contentSha256: 'd'.repeat(64) }],
+}
+const context: PromotionContext = {
+  controlSetSha256: scope.controlSetSha256,
+  targets: scope.targets.map(t => ({ ...t, game: scope.game, examRef: scope.examRef })),
+}
+const assertPromotionEvidence = (evidence: unknown, runIdentity: AuditExecutionIdentity) =>
+  assertPromotionWithScope(evidence, runIdentity, context)
 
 const permissive: PromotionPolicy = {
   minLabels: 2,
@@ -72,6 +85,7 @@ const identity: AuditExecutionIdentity = {
 
 function promotionEvidence(): PromotionEvidence {
   return {
+    scope,
     subject: {
       policyVersion: identity.policyVersion,
       providerIds: identity.providerIds,
@@ -177,6 +191,45 @@ describe('insan-altin benchmark', () => {
 })
 
 describe('terfi kaniti kimlik bagi', () => {
+  const bounded = (ids: unknown[], conditions: unknown = ['clean', 'wrong', 'incomplete']) => ({
+    ...promotionEvidence(), extraReleaseConditionsPassed: true,
+    boundedScope: { releaseConditions: conditions },
+    checks: ids.map((conditionId) => ({ conditionId, passed: true })),
+  })
+  it('requires exact coverage of every declared release condition', () => {
+    expect(() => assertPromotionEvidence(bounded(['wrong', 'clean', 'incomplete']), identity)).not.toThrow()
+  })
+  it.each([['clean'], ['clean', 'wrong'], ['clean', 'wrong', 'wrong'], ['clean', 'wrong', 'other'],
+    ['clean', 'wrong', 'incomplete', 'extra'], [undefined, undefined, undefined]])('rejects missing/duplicate/unknown conditions %j', (...ids) => {
+    expect(() => assertPromotionEvidence(bounded(ids), identity)).toThrow('ek kosul')
+  })
+  it.each([[], ['clean', 'clean'], [''], null])('rejects malformed declared conditions %j', (conditions) => {
+    expect(() => assertPromotionEvidence(bounded(['clean'], conditions), identity)).toThrow('ek kosul')
+  })
+  it.each([false, null, 'true', 1, undefined])('beyan edilmis ek kosul %j ise varsayilan yesil olsa da reddeder', (extra) => {
+    const evidence = { ...promotionEvidence(), extraReleaseConditionsPassed: extra }
+    expect(() => assertPromotionEvidence(evidence, identity)).toThrow('ek')
+  })
+
+  it('ek bayrak silinmis ama kosullar beyan edilmisse kabul etmez', () => {
+    const evidence = { ...promotionEvidence(), boundedScope: { releaseConditions: ['all controls'] } }
+    expect(() => assertPromotionEvidence(evidence, identity)).toThrow('ek')
+  })
+
+  it('ek bayrak yesil olsa bile tekil kontrol basarisizsa reddeder', () => {
+    const evidence = { ...promotionEvidence(), extraReleaseConditionsPassed: true, checks: [{ passed: false }] }
+    expect(() => assertPromotionEvidence(evidence, identity)).toThrow('ek')
+  })
+
+  it('butun acik ek kontroller gectiyse diger kimlik kapilari korunur', () => {
+    const evidence = { ...promotionEvidence(), extraReleaseConditionsPassed: true, checks: [{ passed: true }] }
+    expect(() => assertPromotionEvidence(evidence, identity)).not.toThrow()
+  })
+
+  it.each([undefined, [], null, [{ passed: 'true' }], [null], [true]])('ek onay tek basina yeterli degil: %j', (checks) => {
+    expect(() => assertPromotionEvidence({ ...promotionEvidence(), extraReleaseConditionsPassed: true, checks }, identity)).toThrow('ek kontrol')
+  })
+
   it('ayni policy/provider/model/prompt/ayar raporunu kabul eder', () => {
     expect(() => assertPromotionEvidence(promotionEvidence(), identity)).not.toThrow()
   })

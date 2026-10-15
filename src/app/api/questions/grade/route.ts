@@ -6,6 +6,7 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { recordFirstQuestionAttempt } from '@/lib/questions/attempt-store'
 import { readVerifiedAttemptQuestionSnapshots } from '@/lib/verified-attempts'
+import { measurementFeedbackGuard } from '@/lib/measurement/server'
 import {
   activationActorKey,
   readActivationRewardCookie,
@@ -75,6 +76,10 @@ export async function POST(request: Request) {
   }
 
   const admin = createServiceRoleClient()
+  if (user) {
+    const blocked = await measurementFeedbackGuard(admin, user.id, parsed.data.questionId)
+    if (blocked) return blocked
+  }
   let actorKey: string
   let verifiedQuestionIds: string[] | null = null
   let contentValue: unknown = null

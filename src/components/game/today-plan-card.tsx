@@ -9,6 +9,7 @@ interface TodayPlanCardProps {
   onStart: () => void
   paperHref?: string | null
   showStickyMobileAction?: boolean
+  presentation?: 'card' | 'details'
 }
 
 const COMPOSITION_LABELS = [
@@ -25,6 +26,7 @@ export function TodayPlanCard({
   onStart,
   paperHref,
   showStickyMobileAction = false,
+  presentation = 'card',
 }: TodayPlanCardProps) {
   if (loading) {
     return (
@@ -48,6 +50,7 @@ export function TodayPlanCard({
   const estimatedMinutes = Math.max(2, Math.ceil(actionCount * 0.75))
   const title = total === 15 ? "BUGÜNÜN 15'İ" : `BUGÜNÜN PLANI · ${total} SORU`
   const actionLabel = isDone ? 'Tekrar Çöz' : completed > 0 ? 'Devam Et' : 'Planı Başlat'
+  const details = presentation === 'details'
   const composition = COMPOSITION_LABELS
     .map(([slotType, label]) => ({
       label,
@@ -58,13 +61,15 @@ export function TodayPlanCard({
   return (
     <>
       <article
-        className="animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-warn-border)] bg-[var(--app-card)] shadow-[0_5px_0_var(--app-warn-border)]"
-        style={{ animationDelay: '0.28s', animationFillMode: 'both' }}
+        className={details
+          ? 'overflow-hidden rounded-2xl border border-[var(--app-border)] bg-[var(--app-card)]'
+          : 'animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-warn-border)] bg-[var(--app-card)] shadow-[0_5px_0_var(--app-warn-border)]'}
+        style={details ? undefined : { animationDelay: '0.28s', animationFillMode: 'both' }}
       >
-        <div className="flex items-center justify-between gap-3 border-b-2 border-[var(--app-warn-border)] bg-[var(--app-warn-tint)] px-4 py-3">
+        <div className={`flex items-center justify-between gap-3 px-4 py-3 ${details ? 'border-b border-[var(--app-border)] bg-[var(--app-card-sunken)]' : 'border-b-2 border-[var(--app-warn-border)] bg-[var(--app-warn-tint)]'}`}>
           <div>
-            <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-warn-ink)]">{title}</p>
-            <p className="mt-0.5 text-[10px] font-semibold text-[var(--app-text-sub)]">
+            {!details && <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-warn-ink)]">{title}</p>}
+            <p className={details ? 'text-sm font-semibold text-[var(--app-text)]' : 'mt-0.5 text-[10px] font-semibold text-[var(--app-text-sub)]'}>
               {actionCount} soru · yaklaşık {estimatedMinutes} dk
             </p>
           </div>
@@ -74,19 +79,23 @@ export function TodayPlanCard({
         </div>
 
         <div className="p-4 md:p-5">
-          <h2 className="text-base font-black text-[var(--app-text)] md:text-lg">
-            {isDone ? 'Bugünkü hedef tamamlandı' : completed > 0 ? 'Kaldığın yerden devam et' : 'Dengeli planın hazır'}
-          </h2>
-          <p className="mt-1 text-xs font-semibold leading-relaxed text-[var(--app-text-sub)]">
-            Tekrar zamanı gelenler, gelişmekte olan konular ve yeni sorular tek oturumda dengelendi.
-          </p>
+          {!details && (
+            <>
+              <h2 className="text-base font-black text-[var(--app-text)] md:text-lg">
+                {isDone ? 'Bugünkü hedef tamamlandı' : completed > 0 ? 'Kaldığın yerden devam et' : 'Dengeli planın hazır'}
+              </h2>
+              <p className="mt-1 text-xs font-semibold leading-relaxed text-[var(--app-text-sub)]">
+                Tekrar zamanı gelenler, gelişmekte olan konular ve yeni sorular tek oturumda dengelendi.
+              </p>
+            </>
+          )}
 
           {composition.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Plan dengesi">
+            <div className={`flex flex-wrap ${details ? 'gap-2' : 'mt-3 gap-1.5'}`} aria-label="Plan dengesi">
               {composition.map((entry) => (
                 <span
                   key={entry.label}
-                  className="rounded-xl border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] px-2.5 py-1 text-[10px] font-bold text-[var(--app-text-sub)]"
+                  className={`rounded-xl border-[var(--app-border)] bg-[var(--app-card-sunken)] px-2.5 py-1 font-bold text-[var(--app-text-sub)] ${details ? 'border text-xs' : 'border-2 text-[10px]'}`}
                 >
                   {entry.count} {entry.label}
                 </span>
@@ -104,7 +113,7 @@ export function TodayPlanCard({
               }}
             />
           </div>
-          <p className="mt-1.5 text-right text-[10px] font-bold text-[var(--app-text-sub)]">
+          <p className={`mt-1.5 text-right font-bold text-[var(--app-text-sub)] ${details ? 'text-xs' : 'text-[10px]'}`}>
             %{pct} tamamlandı
           </p>
 

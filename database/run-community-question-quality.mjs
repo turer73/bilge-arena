@@ -49,6 +49,8 @@ let failures = 0
 try {
   const providerModule = await vite.ssrLoadModule('/src/lib/question-audit/provider.ts')
   const workerModule = await vite.ssrLoadModule('/src/lib/question-quality/worker.ts')
+  // Single source of truth for the consensus rule version the worker requests.
+  const { COMMUNITY_QUALITY_POLICY_VERSION: policyVersion } = await vite.ssrLoadModule('/src/lib/question-quality/community-policy.ts')
   const modelA = providerModule.createGeminiProvider({
     apiKey: process.env.GEMINI_API_KEY, modelId: config.modelA,
   })
@@ -87,7 +89,7 @@ try {
       })
       await rpc('record_question_quality_consensus', {
         p_actor_id: actorId, p_case_id: job.caseId,
-        p_policy_version: 'community-quality@1', p_request_id: randomUUID(),
+        p_policy_version: policyVersion, p_request_id: randomUUID(),
       })
       processed++
       console.log(JSON.stringify({ caseId: job.caseId, role, status: result.status, direction: result.direction }))
@@ -103,7 +105,7 @@ try {
     try {
       const decision = await rpc('record_question_quality_consensus', {
         p_actor_id: actorId, p_case_id: job.caseId,
-        p_policy_version: 'community-quality@1', p_request_id: randomUUID(),
+        p_policy_version: policyVersion, p_request_id: randomUUID(),
       })
       consensusProcessed++
       console.log(JSON.stringify({ caseId: job.caseId, consensus: decision.state }))

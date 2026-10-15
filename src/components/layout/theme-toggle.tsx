@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useUIStore, type Theme } from '@/stores/ui-store'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -36,17 +36,26 @@ function Dot({ opt, size = 16 }: { opt: ThemeOption; size?: number }) {
   )
 }
 
+/** Giriş yapmış kullanıcının en son seçtiği tema (tüm seçici örnekleri için ortak). */
+let latestThemeChoice: Theme | null = null
+
+/** Yalnız olay işleyicisinden çağrılır (render sırasında değil). */
+function rememberThemeChoice(id: Theme) {
+  latestThemeChoice = id
+}
+
 /**
  * Tema seçici — tek tetikleyici butona basınca açılan popover.
  * (Önceden 6 renk dairesi navbar'da yan yana inline duruyordu, çok yer
  * kaplıyordu; artık geçerli temanın noktası + chevron, tıklayınca liste açılır.)
  */
-export function ThemeToggle() {
+export function ThemeToggle({ variant = 'menu' }: { variant?: 'menu' | 'panel' | 'sync-only' }) {
   const { theme, setTheme } = useUIStore()
   const { user, profile } = useAuthStore()
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
+  const radioGroupId = useId()
 
   // Sayfa yüklendiğinde kayıtlı temayı uygula (localStorage — hızlı, oturumsuz)
   useEffect(() => {
@@ -88,16 +97,56 @@ export function ThemeToggle() {
 
     // Giriş yapmış kullanıcılar için DB'ye debounc'lu sync (600ms)
     if (!user) return
+    // Keep remounted pickers from restoring an old in-memory preference. Merge
+    // only this field into the latest profile, preserving concurrent cosmetics.
+    const latest = useAuthStore.getState()
+    if (latest.user?.id !== user.id) return
+    rememberThemeChoice(id)
+    // Yama güncel profile uygulanır (eşzamanlı kozmetik değişiklikleri korunur);
+    // profil henüz yüklenmediyse ilk gelen profile uygulanmak üzere bekler.
+    latest.patchProfile({ preferred_theme: id })
     if (syncTimer.current) clearTimeout(syncTimer.current)
     syncTimer.current = setTimeout(() => {
+      if (useAuthStore.getState().user?.id !== user.id) return
       fetch('/api/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ preferred_theme: id }),
+      }).then((res) => {
+        // PATCH commit edildi. Commit'ten önce başlamış bir profil isteği eski
+        // temayı okumuş olabilir; cevabı store'a gelince tema geri dönmesin diye
+        // yamayı yazım kapısına yeniden bildir. Arada başka tema seçildiyse dokunma.
+        if (!res.ok || latestThemeChoice !== id) return
+        const now = useAuthStore.getState()
+        if (now.user?.id !== user.id) return
+        now.patchProfile({ preferred_theme: id })
       }).catch(() => {
         // Sessiz hata — localStorage tema çalışmaya devam eder
       })
     }, 600)
+  }
+
+  // The academy header no longer exposes a picker, but saved preferences must
+  // still initialize in the standalone design preview.
+  if (variant === 'sync-only') return null
+
+  if (variant === 'panel') {
+    return (
+      <fieldset className="min-w-0 rounded-2xl border border-[var(--app-border)] bg-[var(--app-card)] p-4 text-left md:p-5">
+        <legend className="px-2 text-base font-bold text-[var(--app-text)]">Renk teması</legend>
+        <p className="mb-4 text-sm text-[var(--app-text-sub)]">Sayfa renklerini seç. Arka planın ve profil görsellerin ayrı kalır.</p>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-2">
+          {THEME_OPTIONS.map((opt) => (
+            <label key={opt.id} className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm ${theme === opt.id ? 'border-[var(--app-accent)] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]' : 'border-[var(--app-border)] text-[var(--app-text)]'}`}>
+              <input type="radio" name={radioGroupId} value={opt.id} checked={theme === opt.id}
+                aria-label={`Renk teması: ${opt.label}`} onChange={() => handleThemeChange(opt.id)}
+                className="h-4 w-4 shrink-0 accent-[var(--app-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)]" />
+              <Dot opt={opt} /><span>{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    )
   }
 
   return (

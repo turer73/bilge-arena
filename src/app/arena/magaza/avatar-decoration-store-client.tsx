@@ -22,7 +22,7 @@ import { isStaff } from '@/lib/utils/is-staff'
  * Personel (RBAC) tümünü ücretsiz kullanır.
  */
 export function AvatarDecorationStoreClient() {
-  const { user, profile, setProfile } = useAuthStore()
+  const { user, profile, patchProfile } = useAuthStore()
   const [worn, setWorn] = useState<string[]>(profile?.selected_avatar_decorations ?? [])
   const [selectedId, setSelectedId] = useState(AVATAR_DECORATIONS[0].id)
   const [busy, setBusy] = useState(false)
@@ -30,7 +30,7 @@ export function AvatarDecorationStoreClient() {
 
   // Profil geç yüklenirse worn'u senkronize et — yoksa initializer stale [] yakalar
   // ve ilk Tak/satın al mevcut süsleri /select ile siler (Codex P2). Optimistic
-  // toggle sonrası setProfile de buraya düşer (aynı değer → no-op).
+  // toggle sonrası patchProfile de buraya düşer (aynı değer → no-op).
   useEffect(() => {
     setWorn(profile?.selected_avatar_decorations ?? [])
   }, [profile?.selected_avatar_decorations])
@@ -64,7 +64,9 @@ export function AvatarDecorationStoreClient() {
         toast.error('Uygulanamadı', data.error ?? 'Bir şeyler ters gitti')
         return false
       }
-      if (profile) setProfile({ ...profile, selected_avatar_decorations: next })
+      // Yalnız değişen alanı yamala: render anındaki profili yaymak, istek
+      // sürerken gelen taze XP/coin değerlerini eski kopyayla ezerdi.
+      patchProfile({ selected_avatar_decorations: next })
       return true
     } catch {
       setWorn(prev)
@@ -98,7 +100,7 @@ export function AvatarDecorationStoreClient() {
       }
       // Satın alındı → otomatik tak (worn'a ekle + /select)
       const next = worn.includes(selected.id) ? worn : [...worn, selected.id]
-      let applied = profile?.selected_avatar_decorations ?? []
+      let applied = false
       try {
         const selRes = await fetch('/api/profile/avatar-decorations/select', {
           method: 'POST',
@@ -106,18 +108,19 @@ export function AvatarDecorationStoreClient() {
           body: JSON.stringify({ decorationIds: next }),
         })
         if (selRes.ok) {
-          applied = next
+          applied = true
           setWorn(next)
         }
       } catch {}
-      if (profile) {
-        setProfile({
-          ...profile,
-          coin_balance: data.coin_balance,
-          owned_avatar_decorations: data.owned_avatar_decorations,
-          selected_avatar_decorations: applied,
-        })
-      }
+      // Yalnız sunucunun değiştirdiği alanları yamala: render anındaki profili
+      // yaymak, istek sürerken gelen taze XP/coin değerlerini eski kopyayla
+      // ezerdi. Takma (select) başarısızsa takılı süslere dokunma — eski
+      // değeri yeniden yazmak araya giren bir seçimi geri alırdı.
+      patchProfile({
+        coin_balance: data.coin_balance,
+        owned_avatar_decorations: data.owned_avatar_decorations,
+        ...(applied ? { selected_avatar_decorations: next } : {}),
+      })
       toast.success('Satın alındı! 🪙', `Yeni bakiye: ${data.coin_balance}`)
     } catch {
       toast.error('Bağlantı hatası', 'Tekrar dene')

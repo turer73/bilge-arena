@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, GraduationCap } from 'lucide-react'
 import { BilgeTahtaDialog } from './bilge-tahta-dialog'
 import type { BilgeTahtaLesson } from '@/lib/bilge-tahta/contract'
 import { buildTopicExplanationPrompt } from '@/lib/bilge-tahta/topic-explanation'
@@ -114,7 +114,9 @@ export function TopicExplanationButton({
           } : undefined}
           title="Bu konuyu ayrıntılı olarak Bilge Tahta'da öğren"
         >
-          <BookOpen className="h-4 w-4 shrink-0" aria-hidden="true" />
+          {appearance === 'learning'
+            ? <GraduationCap className="h-4 w-4 shrink-0" aria-hidden="true" />
+            : <BookOpen className="h-4 w-4 shrink-0" aria-hidden="true" />}
           {loading ? 'Hazırlanıyor…' : 'Konu Anlatımı'}
         </button>
         {error && <p role="alert" className="mt-1 max-w-52 text-[10px] leading-4 text-[var(--urgency)]">{error}</p>}

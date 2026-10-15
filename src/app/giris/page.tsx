@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
+import { redirect as redirectTo } from 'next/navigation'
 import GirisClient from './giris-client'
+import { safeAuthNext } from '@/lib/auth/safe-next'
+import { isIsolatedAcademyTest } from '@/lib/auth/isolated-test'
 
 export const metadata: Metadata = {
   title: 'Giris Yap',
@@ -10,9 +13,18 @@ export const metadata: Metadata = {
 export default async function GirisPage({
   searchParams,
 }: {
-  searchParams: Promise<{ deleted?: string; error?: string }>
+  searchParams: Promise<{
+    deleted?: string
+    error?: string
+    next?: string
+    redirect?: string
+  }>
 }) {
-  const { deleted, error } = await searchParams
+  const { deleted, error, next, redirect } = await searchParams
+  if (isIsolatedAcademyTest()) {
+    const destination = safeAuthNext(next ?? redirect, '/arena')
+    redirectTo(`/__test/login?next=${encodeURIComponent(destination)}`)
+  }
   const initialAccountNotice = deleted === '1'
     ? {
         kind: 'deleted' as const,

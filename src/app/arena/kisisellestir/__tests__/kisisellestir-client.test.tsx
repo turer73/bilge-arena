@@ -6,10 +6,10 @@
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 
-const auth = vi.hoisted(() => ({
-  value: {
+const auth = vi.hoisted(() => {
+  const value = {
     user: { id: 'u1' } as { id: string } | null,
     profile: {
       username: 'Arenacı',
@@ -27,11 +27,17 @@ const auth = vi.hoisted(() => ({
       role: 'user',
     } as Record<string, unknown> | null,
     setProfile: vi.fn(),
+    // Gercek store gibi: yamayi render anindaki closure'a degil, mock'un EN
+    // GUNCEL profiline birlestirir (yalniz yamadaki alanlar degisir).
+    patchProfile: vi.fn((patch: Record<string, unknown>) => {
+      if (value.profile) value.profile = { ...value.profile, ...patch }
+    }),
     loading: false,
-  },
-}))
-// getState: applyAvatar concurrent-clobber fix (Codex PR#243) en guncel store
-// profilini useAuthStore.getState() ile okur — mock da saglamali.
+  }
+  return { value }
+})
+// getState: ThemeToggle tema yamasi icin useAuthStore.getState() okur — mock da
+// saglamali. Bilesenin kendi alan yazimlari patchProfile'dan gecer.
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: Object.assign(() => auth.value, { getState: () => auth.value }),
 }))
@@ -81,9 +87,36 @@ beforeEach(() => {
 })
 
 describe('KisisellestirClient', () => {
+  test('renk teması bölümü mobilde de görünür; stüdyo düzeni korunur', () => {
+    render(<KisisellestirClient />)
+    const themes = screen.getByRole('group', {name:'Renk teması'})
+    expect(themes.parentElement).toHaveClass('grid', 'md:grid-cols-2')
+    expect(themes.parentElement).not.toHaveClass('hidden')
+    expect(within(themes).getAllByRole('radio')).toHaveLength(6)
+    expect(screen.getByRole('button', {name:'Avatar'})).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('misafir rengi bu tarayıcıya kaydeder; zemin, profil ve giriş korumaları değişmez', () => {
+    auth.value.user = null
+    auth.value.profile = null
+    localStorage.setItem('bilge-arena-zemin-v1', 'sis-vadisi')
+    localStorage.setItem('bilge-arena-profile-background-v1', 'gece-mavisi')
+    render(<KisisellestirClient />)
+    const themes = screen.getByRole('group', {name:'Renk teması'})
+    expect(themes.closest('.hidden')).toBeNull()
+    fireEvent.click(within(themes).getByRole('radio', {name:'Renk teması: Kadim Orman'}))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'orman')
+    expect(localStorage.getItem('bilge-theme')).toBe('orman')
+    expect(localStorage.getItem('bilge-arena-zemin-v1')).toBe('sis-vadisi')
+    expect(localStorage.getItem('bilge-arena-profile-background-v1')).toBe('gece-mavisi')
+    expect(screen.queryByRole('button', {name:'Avatar'})).not.toBeInTheDocument()
+    expect(screen.getByRole('link', {name:'Giriş Yap'})).toHaveAttribute('href', '/giris?redirect=/arena/kisisellestir')
+    expect(fetchMock.mock.calls.some(([url]) => url === '/api/profile')).toBe(false)
+  })
+
   test('başlık + alan sekmeleri render olur, varsayılan alan avatar', () => {
     const { container } = render(<KisisellestirClient />)
-    expect(screen.getByText('🎨 Kişiselleştirme Stüdyosu')).toBeInTheDocument()
+    expect(screen.getByText('Kişiselleştirme Stüdyosu')).toBeInTheDocument()
     const page = container.querySelector('[data-studio-screen]')
     const layout = container.querySelector('[data-studio-layout]')
     expect(page).toHaveClass('max-w-[1180px]', 'md:px-5', 'lg:px-6')
@@ -91,8 +124,8 @@ describe('KisisellestirClient', () => {
     expect(layout).toHaveClass('lg:grid-cols-[360px_minmax(0,1fr)]')
     // Avatar artık ilk + varsayılan alan (en sık aranan kişiselleştirme — kullanıcı
     // "Kişiselleştir"e tıklayınca avatar seçici hemen önünde olsun).
-    expect(screen.getByRole('button', { name: '🧑 Avatar' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: '🌅 Zemin' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'Avatar' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Zemin' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   test('avatar alanı (varsayılan): hazır avatar seçimi preset API POST eder + profil günceller', async () => {
@@ -110,13 +143,35 @@ describe('KisisellestirClient', () => {
     // aria-label artık grup-içi benzersiz (Codex PR#243 a11y fix): "Bilge Chan avatar 1".
     fireEvent.click(screen.getByLabelText('Bilge Chan avatar 1'))
 
-    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(auth.value.patchProfile).toHaveBeenCalled())
     const call = fetchMock.mock.calls.find((c) => c[0] === '/api/profile/avatar/preset')!
     expect(call).toBeTruthy()
     expect(JSON.parse(call[1].body)).toHaveProperty('presetId')
-    expect(auth.value.setProfile.mock.calls[0][0]).toMatchObject({
+    // Yama YALNIZ sunucunun döndürdüğü alanı taşır; tüm profil değiştirilmez.
+    expect(auth.value.patchProfile).toHaveBeenCalledTimes(1)
+    expect(auth.value.patchProfile).toHaveBeenCalledWith({
       avatar_url: '/avatars/mascot/chan-avatar-3d-smile.webp',
     })
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+    expect(auth.value.profile).toMatchObject({
+      avatar_url: '/avatars/mascot/chan-avatar-3d-smile.webp',
+    })
+  })
+
+  test('avatar: sunucu avatar_url döndürmezse profil yamalanmaz (mevcut değer korunur)', async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('/api/profile/avatar/preset')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ backgrounds: [], badges: [] }) })
+    })
+    render(<KisisellestirClient />)
+    fireEvent.click(screen.getByLabelText('Bilge Chan avatar 1'))
+
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith('Avatar uygulandı ✨'))
+    expect(auth.value.patchProfile).not.toHaveBeenCalled()
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+    expect(auth.value.profile).toMatchObject({ avatar_url: null })
   })
 
   test('avatar kaydı EN GÜNCEL profili merge eder — eşzamanlı alanı ezmez (Codex PR#243)', async () => {
@@ -131,9 +186,14 @@ describe('KisisellestirClient', () => {
     render(<KisisellestirClient />)
     fireEvent.click(screen.getByLabelText('Bilge Chan avatar 1'))
 
-    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
-    // Bayat closure olsa selected_nameplate 'none'a dönerdi (clobber); fix EN GÜNCEL'i ('gece') korur.
-    expect(auth.value.setProfile.mock.calls[0][0]).toMatchObject({
+    await waitFor(() => expect(auth.value.patchProfile).toHaveBeenCalled())
+    // Yama bayat closure'dan alan taşımaz: yalnız avatar_url.
+    expect(auth.value.patchProfile).toHaveBeenCalledWith({
+      avatar_url: '/avatars/mascot/chan-avatar-3d-smile.webp',
+    })
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+    // Bayat closure olsa selected_nameplate 'none'a dönerdi (clobber); yama EN GÜNCEL'i ('gece') korur.
+    expect(auth.value.profile).toMatchObject({
       selected_nameplate: 'gece',
       avatar_url: '/avatars/mascot/chan-avatar-3d-smile.webp',
     })
@@ -143,8 +203,8 @@ describe('KisisellestirClient', () => {
     const zeminSpy = vi.fn()
     window.addEventListener('zemin-changed', zeminSpy)
     render(<KisisellestirClient />)
-    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
-    fireEvent.click(screen.getByLabelText('Gece Mavisi'))
+    fireEvent.click(screen.getByRole('button', { name: 'Zemin' }))
+    fireEvent.click(screen.getByRole('button', {name:'Gece Mavisi'}))
 
     expect(localStorage.getItem('bilge-arena-zemin-v1')).toBe('gece-mavisi')
     // kart anahtarı DOKUNULMAMIŞ olmalı (ayrışma)
@@ -158,7 +218,7 @@ describe('KisisellestirClient', () => {
     window.addEventListener('bg-changed', bgSpy)
     render(<KisisellestirClient />)
     fireEvent.click(screen.getByRole('button', { name: /Profil Kartı/ }))
-    fireEvent.click(screen.getByLabelText('Gece Mavisi'))
+    fireEvent.click(screen.getByRole('button', {name:'Gece Mavisi'}))
 
     expect(localStorage.getItem('bilge-arena-profile-background-v1')).toBe('gece-mavisi')
     expect(localStorage.getItem('bilge-arena-zemin-v1')).toBeNull()
@@ -179,10 +239,39 @@ describe('KisisellestirClient', () => {
     // 'Gece' ücretsiz panel — adına tıkla
     fireEvent.click(screen.getByText('Gece').closest('button')!)
 
-    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(auth.value.patchProfile).toHaveBeenCalled())
     const call = fetchMock.mock.calls.find((c) => c[0] === '/api/profile/nameplates/select')!
     expect(JSON.parse(call[1].body)).toEqual({ nameplateId: 'gece' })
-    expect(auth.value.setProfile.mock.calls[0][0]).toMatchObject({ selected_nameplate: 'gece' })
+    expect(auth.value.patchProfile).toHaveBeenCalledTimes(1)
+    expect(auth.value.patchProfile).toHaveBeenCalledWith({ selected_nameplate: 'gece' })
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+    expect(auth.value.profile).toMatchObject({ selected_nameplate: 'gece' })
+  })
+
+  test('isim paneli: eşzamanlı satın alma güncellemesini (bakiye/sahiplik) ezmez', async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('/api/profile/nameplates/select')) {
+        // Yanıt dönmeden ÖNCE store'a taze bakiye + sahiplik gelmiş gibi güncelle.
+        auth.value.profile = {
+          ...(auth.value.profile as Record<string, unknown>),
+          coin_balance: 4200,
+          owned_nameplates: ['none', 'gece', 'altin'],
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) })
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ backgrounds: [], badges: [] }) })
+    })
+    render(<KisisellestirClient />)
+    fireEvent.click(screen.getByRole('button', { name: /İsim Paneli/ }))
+    fireEvent.click(screen.getByText('Gece').closest('button')!)
+
+    await waitFor(() => expect(auth.value.patchProfile).toHaveBeenCalled())
+    expect(auth.value.patchProfile).toHaveBeenCalledWith({ selected_nameplate: 'gece' })
+    expect(auth.value.profile).toMatchObject({
+      selected_nameplate: 'gece',
+      coin_balance: 4200,
+      owned_nameplates: ['none', 'gece', 'altin'],
+    })
   })
 
   test('süs alanı: ücretsiz süs takma /select API POST eder + profil günceller', async () => {
@@ -191,10 +280,15 @@ describe('KisisellestirClient', () => {
     // Konfeti ücretsiz → takılabilir
     fireEvent.click(screen.getByText('Konfeti').closest('button')!)
 
-    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
+    await waitFor(() => expect(auth.value.patchProfile).toHaveBeenCalled())
     const call = fetchMock.mock.calls.find((c) => c[0] === '/api/profile/avatar-decorations/select')!
     expect(JSON.parse(call[1].body)).toEqual({ decorationIds: ['konfeti'] })
-    expect(auth.value.setProfile.mock.calls[0][0]).toMatchObject({
+    expect(auth.value.patchProfile).toHaveBeenCalledTimes(1)
+    expect(auth.value.patchProfile).toHaveBeenCalledWith({
+      selected_avatar_decorations: ['konfeti'],
+    })
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+    expect(auth.value.profile).toMatchObject({
       selected_avatar_decorations: ['konfeti'],
     })
   })
@@ -214,7 +308,7 @@ describe('KisisellestirClient', () => {
   test('sahip olunmayan ücretli tema GÖRÜNÜR; bakiye yetiyorsa satın alınabilir', () => {
     // Bakiye 5000, Nebula 400 → kilitli ama alınabilir: tıklanabilir olmalı
     render(<KisisellestirClient />)
-    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Zemin' }))
     const nebula = screen.getByLabelText('Nebula')
     expect(nebula).toBeInTheDocument()
     expect(nebula).not.toBeDisabled()
@@ -223,7 +317,7 @@ describe('KisisellestirClient', () => {
   test('bakiye yetmiyorsa kilitli ürün seçilemez (disabled)', () => {
     auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), coin_balance: 10 }
     render(<KisisellestirClient />)
-    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Zemin' }))
     expect(screen.getByLabelText('Nebula')).toBeDisabled()
   })
 
@@ -237,7 +331,7 @@ describe('KisisellestirClient', () => {
       }),
     })
     render(<KisisellestirClient />)
-    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Zemin' }))
     fireEvent.click(screen.getByLabelText('Nebula'))
 
     // Onay modalı açıldı
@@ -253,14 +347,14 @@ describe('KisisellestirClient', () => {
   test('bakiye yetiyorsa kilit-açık fiyat etiketi gösterilir', () => {
     // Bakiye 5000 → 400'lük temalar alınabilir (birden fazla tema aynı fiyatta)
     render(<KisisellestirClient />)
-    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Zemin' }))
     expect(screen.getAllByText('🔓 🪙400').length).toBeGreaterThan(0)
   })
 
   test('bakiye yetmiyorsa "ne kadar eksik" yazar', () => {
     auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), coin_balance: 150 }
     render(<KisisellestirClient />)
-    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Zemin' }))
     // 400 - 150 = 250 daha gerekiyor
     expect(screen.getAllByText('🔒 🪙250 daha').length).toBeGreaterThan(0)
   })
@@ -285,7 +379,7 @@ describe('KisisellestirClient', () => {
   test('personel bypass: admin tüm ücretli temaları seçebilir', () => {
     auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), role: 'admin' }
     render(<KisisellestirClient />)
-    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Zemin' }))
     const nebula = screen.getByLabelText('Nebula')
     expect(nebula).toBeInTheDocument()
     expect(nebula).not.toBeDisabled()

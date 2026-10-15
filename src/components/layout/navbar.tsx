@@ -1,16 +1,35 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import type { CSSProperties } from 'react'
 import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
 import { usePathname } from 'next/navigation'
 import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords, Palette, ShoppingBag, BookX, GraduationCap, Building2, Settings } from 'lucide-react'
 import { Logo } from './logo'
+import { AcademyLogo } from '@/components/academy/academy-logo'
 import { ThemeToggle } from './theme-toggle'
 import { NotificationBell } from './notification-bell'
 import { Button } from '@/components/ui/button'
+import { buttonStyles } from '@/components/ui/button-styles'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { institutionPilotWorkspaceSchema } from '@/lib/institution-pilot/server-contract'
 import { trUpper } from '@/lib/utils/tr-text'
+import { GAME_SLUGS } from '@/lib/constants/games'
+import { useWideStudy } from '@/lib/hooks/use-wide-study'
+
+// These routes render the wide academy UI. The home page also uses Academy
+// branding on mobile; other game routes keep their existing mobile header.
+const WIDE_ACADEMY_ROUTES = new Set([
+  '/',
+  ...GAME_SLUGS.map(game => `/arena/${game}`),
+  '/arena/kule',
+  '/arena/fethet',
+  '/arena/profil',
+  '/arena/siralama',
+  '/arena/arkadaslar',
+  '/arena/yanlislarim',
+  '/arena/magaza',
+])
 
 const NAV_LINKS = [
   { href: '/', label: 'Ana Sayfa' },
@@ -19,6 +38,7 @@ const NAV_LINKS = [
   { href: '/oda', label: 'Oda Modu' },
   { href: '/arena/siralama', label: 'Sıralama' },
   { href: '/nasil-calisir', label: 'Nasıl Çalışır' },
+  { href: '/kurumlar', label: 'Kurumlar' },
   { href: '/hakkinda', label: 'Hakkında' },
 ]
 
@@ -29,6 +49,31 @@ export function Navbar() {
   const [institutionPanelVisible, setInstitutionPanelVisible] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
+  const wide = useWideStudy()
+  const academyArea = pathname === '/arena' || pathname === '/arena/calisma' || pathname === '/arena/kisisellestir' || pathname === '/oda' || pathname.startsWith('/oda/') || (wide && WIDE_ACADEMY_ROUTES.has(pathname))
+  const academyMarketingRoute = pathname === '/nasil-calisir' || pathname === '/hakkinda' || pathname === '/kurumlar'
+  const academyMarketingArea = wide && academyMarketingRoute
+  const academyVisualArea = pathname === '/' || academyArea || academyMarketingArea
+  const activeNavHref = pathname === '/arena/calisma'
+    ? '/arena/calisma'
+    : pathname === '/arena/siralama'
+      ? '/arena/siralama'
+      : pathname === '/arena' || pathname.startsWith('/arena/')
+        ? '/arena'
+        : pathname
+  const academyMarketingStyle = academyMarketingArea
+    ? ({
+        '--app-text': '#f6f8ff',
+        '--app-text-sub': '#9eafd0',
+        '--text': '#f6f8ff',
+        '--text-sub': '#bdc9e2',
+        '--text-muted': '#8fa0c0',
+        '--surface': '#091329',
+        '--card': 'rgba(22, 38, 76, 0.76)',
+        '--card-bg': 'rgba(22, 38, 76, 0.76)',
+        '--border': 'rgba(126, 157, 222, 0.24)',
+      } as CSSProperties)
+    : undefined
   const { user, profile, signOut } = useAuth()
   const userId = user?.id
 
@@ -79,26 +124,36 @@ export function Navbar() {
   return (
     <nav
       data-app-navbar
+      data-user-session={user ? '' : undefined}
+      data-academy-marketing-navbar={academyMarketingArea ? '' : undefined}
+      style={academyMarketingStyle}
       className={`fixed inset-x-0 top-0 z-50 transition-[background-color,backdrop-filter,border-color,box-shadow] duration-500 ${pathname === '/arena' ? 'max-lg:hidden' : ''} ${
-        scrolled || mobileOpen
+        academyMarketingArea
+          ? 'border-b border-white/10 bg-[#050b1b]/92 shadow-[0_14px_42px_rgba(0,0,0,0.22)] backdrop-blur-xl'
+          : scrolled || mobileOpen
           ? 'border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl shadow-sm'
           : 'bg-transparent backdrop-blur-none border-transparent'
       }`}
     >
-      <div className="mx-auto flex h-[var(--navbar-h)] max-w-[1200px] items-center justify-between px-6 lg:px-8">
+      <div className={`mx-auto flex h-[var(--navbar-h)] items-center justify-between px-6 lg:px-8 ${academyVisualArea ? 'max-w-[1440px]' : 'max-w-[1200px]'}`}>
         {/* Logo */}
-        <Logo size={36} />
+        {academyVisualArea ? <AcademyLogo /> : <Logo size={36} />}
 
         {/* Desktop nav links */}
-        <div className="hidden items-center gap-1 md:flex">
+        <div className="hidden items-center gap-0.5 xl:flex">
           {NAV_LINKS.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
-              className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors hover:bg-[var(--card)] hover:text-[var(--text)] ${
-                pathname === href
-                  ? 'text-[var(--focus)]'
-                  : 'text-[var(--text-sub)]'
+              aria-current={activeNavHref === href ? 'page' : undefined}
+              className={`rounded-lg px-3 py-2 text-[13px] font-semibold transition-colors ${
+                academyMarketingArea
+                  ? pathname === href
+                    ? 'bg-blue-500/15 text-blue-300'
+                    : 'text-slate-300 hover:bg-white/[0.07] hover:text-white'
+                  : activeNavHref === href
+                    ? 'text-[var(--focus)]'
+                    : 'text-[var(--text-sub)] hover:bg-[var(--card)] hover:text-[var(--text)]'
               }`}
             >
               {label}
@@ -108,7 +163,9 @@ export function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          <ThemeToggle />
+          <div data-navbar-theme className={pathname === '/' ? 'hidden' : academyVisualArea ? 'md:hidden' : undefined}>
+            <ThemeToggle />
+          </div>
 
           {user ? (
             <>
@@ -122,11 +179,9 @@ export function Navbar() {
                   🪙 {(profile.coin_balance ?? 0).toLocaleString('tr-TR')}
                 </Link>
               )}
-              <Link href="/arena" className="hidden sm:inline-flex">
-                <Button variant="primary" size="sm">
-                  <Zap size={14} />
-                  Oyna
-                </Button>
+              <Link href="/arena" className={buttonStyles('primary', 'sm', 'hidden sm:inline-flex')}>
+                <Zap size={14} />
+                Oyna
               </Link>
               <NotificationBell />
               {/* User dropdown */}
@@ -137,7 +192,7 @@ export function Navbar() {
                   aria-label="Kullanıcı menüsü"
                   aria-expanded={dropdownOpen}
                 >
-                  {pathname === '/arena' ? (
+                  {academyVisualArea ? (
                     <span data-arena-account-settings-icon className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--card)] text-[var(--text-sub)]">
                       <Settings size={19} strokeWidth={2.5} aria-hidden="true" />
                     </span>
@@ -271,16 +326,12 @@ export function Navbar() {
             </>
           ) : (
             <>
-              <Link href="/giris" className="hidden sm:inline-flex">
-                <Button variant="ghost" size="sm">
-                  Giriş Yap
-                </Button>
+              <Link href="/giris" className={buttonStyles('ghost', 'sm', 'hidden sm:inline-flex')}>
+                Giriş Yap
               </Link>
-              <Link href="/arena" className="hidden sm:inline-flex">
-                <Button variant="primary" size="sm">
-                  <Zap size={14} />
-                  Oyna
-                </Button>
+              <Link href="/arena" className={buttonStyles('primary', 'sm', 'hidden sm:inline-flex')}>
+                <Zap size={14} />
+                Oyna
               </Link>
             </>
           )}
@@ -288,7 +339,7 @@ export function Navbar() {
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] md:hidden"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] xl:hidden"
             aria-label={mobileOpen ? 'Menüyü kapat' : 'Menüyü aç'}
             aria-expanded={mobileOpen}
             aria-controls="mobile-navigation"
@@ -300,14 +351,14 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div id="mobile-navigation" key="mobile-menu" className="animate-slideDown border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl md:hidden">
+        <div id="mobile-navigation" key="mobile-menu" className="animate-slideDown border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl xl:hidden">
           <div className="flex flex-col gap-1 px-6 py-4">
             {NAV_LINKS.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
                 className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--card)] ${
-                  pathname === href
+                  activeNavHref === href
                     ? 'text-[var(--focus)] bg-[var(--focus-bg)]'
                     : 'text-[var(--text-sub)]'
                 }`}
@@ -329,19 +380,15 @@ export function Navbar() {
             <div className="mt-2 flex gap-2">
               {user ? (
                 <>
-                  <Link href="/arena/profil" className="flex-1">
-                    <Button variant="ghost" size="sm" className="w-full">
-                      <User size={14} />
-                      Profil
-                    </Button>
+                  <Link href="/arena/profil" className={buttonStyles('ghost', 'sm', 'flex-1')}>
+                    <User size={14} />
+                    Profil
                   </Link>
                   {profile?.role === 'admin' && (
                     /* AAL2 kapili yuzey — tam sayfa gezinme (bkz. masaustu menusu). */
-                    <a href="/admin" className="flex-1">
-                      <Button variant="ghost" size="sm" className="w-full text-[var(--reward)]">
-                        <Shield size={14} />
-                        Admin
-                      </Button>
+                    <a href="/admin" className={buttonStyles('ghost', 'sm', 'flex-1 text-[var(--reward)]')}>
+                      <Shield size={14} />
+                      Admin
                     </a>
                   )}
                   <Button variant="ghost" size="sm" className="flex-1 text-red-400" onClick={signOut}>
@@ -351,16 +398,12 @@ export function Navbar() {
                 </>
               ) : (
                 <>
-                  <Link href="/giris" className="flex-1">
-                    <Button variant="ghost" size="sm" className="w-full">
-                      Giriş Yap
-                    </Button>
+                  <Link href="/giris" className={buttonStyles('ghost', 'sm', 'flex-1')}>
+                    Giriş Yap
                   </Link>
-                  <Link href="/arena" className="flex-1">
-                    <Button variant="primary" size="sm" className="w-full">
-                      <Zap size={14} />
-                      Oyna
-                    </Button>
+                  <Link href="/arena" className={buttonStyles('primary', 'sm', 'flex-1')}>
+                    <Zap size={14} />
+                    Oyna
                   </Link>
                 </>
               )}

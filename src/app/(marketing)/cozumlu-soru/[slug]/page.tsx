@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { COZUMLU_SORU_LIST, COZUMLU_SORU_SLUGS, getCozumluSoru } from '@/lib/content/cozumlu-soru'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
+import { serializeJsonLd } from '@/lib/seo/serialize-json-ld'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
@@ -83,7 +84,7 @@ export default async function CozumluSoruDetailPage({
     <article className="mx-auto max-w-[760px] px-6 py-12 lg:px-8">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
 
       {/* Breadcrumb */}

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest'
 import type { QuestionRow } from '@/lib/utils/question-public'
 
 /** FSRS rollout kohortuna dahil kullanicinin route davranisi. */
@@ -8,7 +8,10 @@ vi.mock('@/lib/review/fsrs-rollout', () => ({
 }))
 
 const mockIssueVerifiedAttempt = vi.hoisted(() => vi.fn())
-vi.mock('@/lib/verified-attempts', () => ({
+const mockReadTytSocialLearningSnapshot = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/verified-attempts', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/verified-attempts')>(),
+  readTytSocialLearningSnapshot: mockReadTytSocialLearningSnapshot,
   issueVerifiedAttempt: mockIssueVerifiedAttempt,
   toPublicVerifiedQuestions: (snapshots: unknown[]) => snapshots,
 }))
@@ -119,8 +122,12 @@ function makeRequest(params: Record<string, string> = {}) {
 }
 
 describe('GET /api/questions/random — FSRS rollout kohortu', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     mockIssueVerifiedAttempt.mockImplementation(async (_admin: unknown, input: { game: string; questionIds: string[] }) => ({
       attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       expiresAt: '2099-01-01T00:00:00.000Z',
@@ -165,6 +172,61 @@ describe('GET /api/questions/random — FSRS rollout kohortu', () => {
     expect(body.reviewQuestions).toEqual([
       expect.objectContaining({ id: 'wq1', game: 'matematik', category: 'sayilar' }),
     ])
+    expect(mockReadTytSocialLearningSnapshot).not.toHaveBeenCalled()
+  })
+
+  it('filters FSRS-due TYT Social questions with the same snapshot epoch as the main pool', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({
+      data: [makeQuestionRow('common', { game: 'sosyal', category: 'tarih', exam_ref: 'TYT' })],
+      error: null,
+    })
+    const dueIds = ['review', 'forbidden-review']
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    sessionAnswersMock.push({ data: dueIds.map(question_id => ({ question_id })), error: null })
+    sessionAnswersMock.push({
+      data: dueIds.map(question_id => ({ question_id, is_correct: false, answered_at: thirtyDaysAgo })),
+      error: null,
+    })
+    questionsMock.push({
+      data: [
+        makeQuestionRow('review', { game: 'sosyal', category: 'felsefe', exam_ref: 'TYT' }),
+        makeQuestionRow('forbidden-review', { game: 'sosyal', category: 'din_kulturu', exam_ref: 'TYT' }),
+      ],
+      error: null,
+    })
+    const epoch = {
+      policyVersion: 'tyt-social-2026-v1',
+      selectionEventId: '30000000-0000-4000-8000-000000000001',
+    }
+    mockReadTytSocialLearningSnapshot.mockResolvedValue({
+      status: 'active',
+      context: {
+        ...epoch,
+        taxonomyVersion: 'ba-tyt-sosyal-v1',
+        variant: 'questions_21_25',
+        selectionEffectiveAt: '2026-09-08T00:00:00.000Z',
+        allowedCategories: ['tarih', 'cografya', 'felsefe', 'sosyoloji'],
+      },
+      states: [],
+      allowedQuestionIds: ['common', 'review'],
+    })
+
+    const response = await GET(makeRequest({ game: 'sosyal', examRef: 'TYT', includeReview: 'true' }) as never)
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.questions.map((item: { id: string }) => item.id)).toEqual(['common'])
+    expect(body.reviewQuestions.map((item: { id: string }) => item.id)).toEqual(['review'])
+    expect(mockReadTytSocialLearningSnapshot).toHaveBeenCalledTimes(1)
+    expect(mockReadTytSocialLearningSnapshot).toHaveBeenCalledWith(
+      expect.anything(), 'u1', ['common', 'review', 'forbidden-review'],
+    )
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledTimes(1)
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      questionIds: ['common', 'review'],
+      tytSocialEpoch: epoch,
+    }))
   })
 
   it('game-kapsamli due adaylari dueAt sirasinda ilk 20ye sinirlanir ve DB filtresi korunur', async () => {

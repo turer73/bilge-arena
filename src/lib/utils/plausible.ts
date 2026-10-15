@@ -6,7 +6,7 @@
  *   trackEvent('QuizComplete', { props: { game: 'matematik', score: 7, mode: 'classic' } })
  *
  * SSR-safe: server'da cagrilirsa sessizce atlar.
- * Fail-safe: plausible yuklenmemisse kuyruklar ve yuklenince gonderir (Plausible native davranis).
+ * Analytics izni yoksa olay kaydetmez. Izin varsa betik yuklenene dek kuyruklar.
  *
  * Analytics URL: https://analytics.panola.app (VPS self-hosted Plausible CE)
  */
@@ -45,7 +45,7 @@ export type EventName =
   | 'StreakMilestone'     // Streak 3/7/14/30 milestone
   | 'DailyLogin'          // Gunluk giris XP'si alindi
   | 'PremiumUpsell'       // Premium'a gec CTA'si tiklandi
-  | 'Day2Return'          // Kayit olan 2. gun geri geldi
+  | 'Day2Return'          // Kayit gununu izleyen TR takvim gununde geri geldi (D1)
   // Gun 2 — Guest signup escalation modal
   | 'PromptShown'         // Modal gosterildi (level 1/2/3)
   | 'PromptCtaClicked'    // Primary CTA tiklandi (signup) veya Level 3 exit_lobby
@@ -87,12 +87,17 @@ export function trackEvent(name: EventName, options?: PlausibleOptions): void {
   // SSR guard
   if (typeof window === 'undefined') return
   if (isCurrentBrowserPathSensitive()) return
+  if (getCookieConsent()?.analytics !== true) return
 
   try {
-    if (typeof window.plausible === 'function') {
-      window.plausible(name, options)
+    if (typeof window.plausible !== 'function') {
+      // Plausible's documented pre-load queue preserves fast interactions.
+      const queued: PlausibleQueue = (...args) => {
+        ;(queued.q ??= []).push(args)
+      }
+      window.plausible = queued
     }
-    // plausible yuklenmediyse native kuyruklama var (data-domain script otomatik)
+    window.plausible(name, options)
   } catch {
     // Analytics hatalari sessizce atla — kullanici deneyimini bozma
   }
@@ -103,3 +108,4 @@ export function trackEvent(name: EventName, options?: PlausibleOptions): void {
  */
 export const track = trackEvent
 import { isCurrentBrowserPathSensitive } from '@/lib/privacy/telemetry-policy'
+import { getCookieConsent } from '@/lib/consent'

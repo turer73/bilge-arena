@@ -201,6 +201,16 @@ async function stageToken(
 }
 
 describe('POST /api/coach/hint R2.2', () => {
+  afterEach(() => vi.unstubAllEnvs())
+  it('blocks coach hints during measurement before reading the attempt', async () => {
+    vi.stubEnv('MEASUREMENT_SCHEMA_READY', 'true')
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockRpc.mockResolvedValueOnce({ data: true, error: null })
+    const res = await POST(coachRequest('hint1'))
+    expect(res.status).toBe(409)
+    expect(mockAttemptResult).not.toHaveBeenCalled()
+    expect(mockStartResult).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllGlobals()

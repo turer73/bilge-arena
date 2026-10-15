@@ -40,6 +40,8 @@ export interface RunnerArgs {
   governanceReady: boolean
   /** İnsan-altın listedeki questionId + content SHA çiftlerini birebir seçer. */
   goldLabelsPath: string | null
+  /** Exact preregistered cohort selection, not gold labels or approval. */
+  targetScopePath: string | null
 }
 
 export function parseArgs(argv: readonly string[]): RunnerArgs {
@@ -57,6 +59,7 @@ export function parseArgs(argv: readonly string[]): RunnerArgs {
     revisionId: null,
     governanceReady: false,
     goldLabelsPath: null,
+    targetScopePath: null,
   }
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i]
@@ -72,7 +75,15 @@ export function parseArgs(argv: readonly string[]): RunnerArgs {
     else if (k === '--revision-id') a.revisionId = argv[++i]
     else if (k === '--governance-ready') a.governanceReady = true
     else if (k === '--gold-labels') a.goldLabelsPath = argv[++i]
+    else if (k === '--target-scope') {
+      const value = argv[++i]
+      if (!value || value.startsWith('--')) throw new Error('--target-scope <scope.json> ister')
+      a.targetScopePath = value
+    }
     else if (k === '--confirm') a.confirm = true
+  }
+  if (a.targetScopePath && argv.includes('--limit')) {
+    throw new Error('--target-scope tam kumeyi secer; --limit ile daraltilamaz')
   }
   return a
 }
@@ -93,6 +104,8 @@ export interface RunnerDeps {
   persistDecision?: (decision: ValidationDecisionRow) => Promise<void>
   /** Yetkili karar yazimi icin ayni execution identity'yi gecmis insan-altin rapor. */
   promotionEvidence?: unknown
+  /** Independently hashed frozen control artifact; never infer from evidence. */
+  controlSetSha256?: string
   loadCachedRun?: (draft: QuestionDraft, identity: AuditExecutionIdentity) => Promise<AuditRun | null>
   log?: (line: string) => void
   writeReport?: (path: string, report: CalibrationReport) => void
@@ -109,7 +122,7 @@ export async function main(argv: readonly string[], deps: RunnerDeps): Promise<C
 
   const rows = await deps.fetchRows(args)
   const { drafts, rejected, byReason, byWarning } = partitionRows(rows, {
-    strictExamOptionCount: args.governanceReady || args.revisionId !== null || args.goldLabelsPath !== null,
+    strictExamOptionCount: Boolean(deps.persistDecision) || args.governanceReady || args.revisionId !== null || args.goldLabelsPath !== null || args.targetScopePath !== null,
   })
 
   log(`Cekilen satir      : ${rows.length}`)
@@ -163,7 +176,21 @@ export async function main(argv: readonly string[], deps: RunnerDeps): Promise<C
   // Ham kosular benchmark oncesi saklanabilir; ancak yayin kapisini etkileyen
   // kararlar yalniz AYNI provider/model/prompt/ayar kimliginin insan-altin
   // terfi kanitiyla yazilir. Kontrol LLM cagrisindan once fail-closed calisir.
-  if (deps.persistDecision) assertPromotionEvidence(deps.promotionEvidence, identity)
+  if (deps.persistDecision) {
+    assertPromotionEvidence(deps.promotionEvidence, identity, {
+      controlSetSha256: deps.controlSetSha256 ?? '',
+      // Check the full fetched cohort, not the filtered drafts. A dropped or
+      // malformed row cannot silently narrow an authorized run.
+      targets: rows.map(row => ({
+        game: row.game,
+        examRef: row.exam_ref ?? '',
+        questionId: row.id,
+        revisionId: row.published_revision_id ?? '',
+        contentSha256: row.content_sha256 ?? '',
+      })),
+    })
+    if (rejected.length) throw new Error('yetkili karar kosusunda deterministik kapidan elenen hedef var')
+  }
   const categoryById = new Map(rows.map((r) => [r.id, r.category || r.game]))
 
   // Kismi sonuclari biriktir: uzun kosuda cokme olursa odenen cagrilar kaybolmasin.

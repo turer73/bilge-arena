@@ -17,20 +17,21 @@
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import type { PublicRoomCard } from '@/lib/rooms/server-fetch'
+import type { FetchPublicRoomsResult } from '@/lib/rooms/server-fetch'
 import { ROOM_CATEGORIES, slugToLabel } from '@/lib/rooms/categories'
 import { ArrowRight, Search, Users } from 'lucide-react'
 
 interface PublicRoomListProps {
-  rooms: PublicRoomCard[]
+  result: FetchPublicRoomsResult
   selectedCategory?: string
 }
 
 export function PublicRoomList({
-  rooms,
+  result,
   selectedCategory = '',
 }: PublicRoomListProps) {
   const router = useRouter()
+  const rooms = result.status === 'success' ? result.rooms : []
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const cat = e.target.value
@@ -63,7 +64,24 @@ export function PublicRoomList({
         </select>
       </div>
 
-      {rooms.length === 0 ? (
+      {result.status === 'error' ? (
+        <div
+          role="alert"
+          className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 text-center"
+        >
+          <h3 className="text-sm font-extrabold">Açık odalar şu anda yüklenemedi</h3>
+          <p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">
+            Bağlantıyı kontrol edip tekrar deneyebilirsin.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.refresh()}
+            className="btn-primary mt-4 min-h-11 px-4 text-sm"
+          >
+            Tekrar dene
+          </button>
+        </div>
+      ) : rooms.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--card)] p-7 text-center">
           <h3 className="text-sm font-extrabold">Şu anda katılabileceğin açık oda yok</h3>
           <p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">

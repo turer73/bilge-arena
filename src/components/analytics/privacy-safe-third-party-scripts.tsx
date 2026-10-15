@@ -2,7 +2,8 @@
 
 import Script from 'next/script'
 import { usePathname } from 'next/navigation'
-import { useLayoutEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useAdsConsent, useAnalyticsConsent } from '@/lib/hooks/use-ads-consent'
 import {
   isCurrentBrowserPathSensitive,
   isSensitiveWorkspacePath,
@@ -133,6 +134,9 @@ export function PrivacySafeThirdPartyScripts({
   const sensitive = isSensitiveWorkspacePath(pathname)
   const expectedBoundary: TelemetryDocumentBoundary = sensitive ? 'sensitive' : 'public'
   const [documentBoundaryReady, setDocumentBoundaryReady] = useState(false)
+  const adsAllowed = useAdsConsent()
+  const analyticsAllowed = useAnalyticsConsent()
+  const loadedPurposes = useRef({ ads: false, analytics: false })
   const currentBoundary = typeof document === 'undefined'
     ? undefined
     : document.documentElement.dataset[TELEMETRY_DOCUMENT_BOUNDARY]
@@ -161,6 +165,18 @@ export function PrivacySafeThirdPartyScripts({
     return installSensitiveNavigationBoundary({ currentSensitive: sensitive })
   }, [documentBoundaryMatches, documentBoundaryReady, sensitive])
 
+  useEffect(() => {
+    if (!sensitive && (
+      (loadedPurposes.current.ads && !adsAllowed)
+      || (loadedPurposes.current.analytics && !analyticsAllowed)
+    )) {
+      disableLoadedTelemetry()
+      reloadDocument()
+    }
+    if (adsAllowed) loadedPurposes.current.ads = true
+    if (analyticsAllowed) loadedPurposes.current.analytics = true
+  }, [adsAllowed, analyticsAllowed, reloadDocument, sensitive])
+
   // Scripts stay absent during hydration and any unexpected cross-boundary
   // render. The layout effect either establishes this document's boundary or
   // reloads before an afterInteractive third-party request can start.
@@ -168,19 +184,22 @@ export function PrivacySafeThirdPartyScripts({
 
   return (
     <>
-      <Script
-        defer
-        data-domain="bilgearena.com"
-        src="https://analytics.panola.app/js/script.js"
-        strategy="afterInteractive"
-      />
-      <GoogleAnalytics />
-      {process.env.NEXT_PUBLIC_ADSENSE_ID && (
+      {analyticsAllowed && (
+        <Script
+          defer
+          data-domain="bilgearena.com"
+          src="https://analytics.panola.app/js/script.js"
+          strategy="afterInteractive"
+        />
+      )}
+      <GoogleAnalytics enabled={analyticsAllowed} />
+      {adsAllowed && process.env.NEXT_PUBLIC_ADSENSE_ID && (
         <Script
           {...{
             src: `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`,
-            strategy: 'afterInteractive' as const,
+            strategy: 'lazyOnload' as const,
             crossOrigin: 'anonymous',
+            'data-privacy-treatments': 'disablePersonalization',
           }}
         />
       )}

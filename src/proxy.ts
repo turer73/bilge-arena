@@ -11,6 +11,12 @@ import {
   userHasAnyPlatformPermissionViaRest,
 } from '@/lib/supabase/platform-access'
 import { safeMfaReturnPath } from '@/lib/auth/aal2'
+import {
+  ISOLATED_TEST_ORIGIN,
+  isIsolatedAcademyPreviewBridge,
+  isIsolatedAcademyTest,
+  resolveAcademyServerSupabaseOrigin,
+} from '@/lib/auth/isolated-test'
 import { isSensitiveWorkspacePath } from '@/lib/privacy/telemetry-policy'
 import {
   buildSensitiveDocumentCsp,
@@ -19,7 +25,11 @@ import {
 } from '@/lib/security/csp'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
+const SUPABASE_SERVER_URL = resolveAcademyServerSupabaseOrigin(SUPABASE_URL)
+const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  || 'placeholder-anon-key'
 
 function preserveRefreshedCookies(source: NextResponse, target: NextResponse): NextResponse {
   for (const cookie of source.cookies.getAll()) target.cookies.set(cookie)
@@ -64,6 +74,13 @@ export async function proxy(request: NextRequest) {
   const isSensitiveDocument = !pathname.startsWith('/api/')
     && isSensitiveWorkspacePath(pathname)
   const requestHeaders = new Headers(request.headers)
+  // 3141 yeni arayuzu, 3137 sentetik API yiginiyla ayni kullanici oturumunu
+  // kullanir. Ilk CSRF karari daima gercek tarayici origin'iyle verilir;
+  // yalniz bu karardan sonra upstream izole uygulamanin origin'i aktarilir.
+  if (isIsolatedAcademyPreviewBridge() && CSRF_PROTECTED_METHODS.has(request.method)) {
+    requestHeaders.set('origin', ISOLATED_TEST_ORIGIN)
+    requestHeaders.set('referer', `${ISOLATED_TEST_ORIGIN}/`)
+  }
   const nonce = isSensitiveDocument ? createCspNonce() : null
   const sensitiveCsp = nonce
     ? buildSensitiveDocumentCsp(nonce, {
@@ -82,7 +99,7 @@ export async function proxy(request: NextRequest) {
   if (sensitiveCsp) response.headers.set(SENSITIVE_CSP_HEADER, sensitiveCsp)
 
   const supabase = createServerClient<Database>(
-    SUPABASE_URL,
+    SUPABASE_SERVER_URL,
     SUPABASE_ANON_KEY,
     {
       cookies: {
@@ -110,10 +127,10 @@ export async function proxy(request: NextRequest) {
   // also exempt because it performs the post-exchange tombstone check itself.
   const isAccountDeleteApi = pathname === '/api/account/delete'
   const isAuthCallback = pathname.startsWith('/auth/callback')
-  if (user && !isAccountDeleteApi && !isAuthCallback) {
+  if (user && !isAccountDeleteApi && !isAuthCallback && !isIsolatedAcademyTest()) {
     const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     const accountState = await getUserProfileAccessStateViaRest({
-      supabaseUrl: SUPABASE_URL,
+      supabaseUrl: SUPABASE_SERVER_URL,
       serviceKey,
       userId: user.id,
     })
@@ -188,7 +205,7 @@ export async function proxy(request: NextRequest) {
     const serviceKey =
       process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     const hasAdminAccess = await userHasAnyPlatformPermissionViaRest({
-      supabaseUrl: SUPABASE_URL,
+      supabaseUrl: SUPABASE_SERVER_URL,
       serviceKey,
       userId: user.id,
       permissions: PLATFORM_ADMIN_ENTRY_PERMISSIONS,
@@ -196,7 +213,7 @@ export async function proxy(request: NextRequest) {
 
     if (!hasAdminAccess) {
       const hasInstitutionAccess = await userHasAnyPlatformPermissionViaRest({
-        supabaseUrl: SUPABASE_URL,
+        supabaseUrl: SUPABASE_SERVER_URL,
         serviceKey,
         userId: user.id,
         permissions: [INSTITUTION_PILOT_ENTRY_PERMISSION],

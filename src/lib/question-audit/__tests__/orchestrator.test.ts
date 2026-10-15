@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_AUDIT_CONFIG, executeAudit, auditQuestion, type AuditProviders } from '../orchestrator'
 import { ProviderHttpError, type LlmProvider, type LlmRawResponse } from '../provider'
-import type { QuestionDraft } from '../types'
+import { fromValidationRunRows, toValidationRunRows } from '../persistence'
+import { deriveVerdict } from '../verdict'
+import type { SolutionVerifierWirePayload, QuestionDraft } from '../types'
 
 function draft(overrides: Partial<QuestionDraft> = {}): QuestionDraft {
   return {
@@ -20,20 +22,21 @@ function draft(overrides: Partial<QuestionDraft> = {}): QuestionDraft {
   }
 }
 
-/** Prompt'taki "N (X): metin" satirlarindan ekranda gosterilen sik listesini cikarir. */
+/** Current blind/verifier use text-only options; adversarial retains indexed findings. */
 function parseShownOptions(userPrompt: string): string[] {
-  const payload = JSON.parse(userPrompt.split('\n')[1]) as { options: Array<{ index: number; text: string }> }
-  return payload.options.sort((a, b) => a.index - b.index).map((option) => option.text)
+  const payload = JSON.parse(userPrompt.split('\n')[1]) as { options: Array<string | { index: number; text: string }> }
+  return payload.options.map((option) => typeof option === 'string' ? option : option.text)
 }
 
 interface FakeOptions {
-  /** Kor cozucu bu METNI secer; ekrandaki indeksini prompt'tan bulur. */
+  /** Kor cozucu bu METNI secer; indeks uretmez. */
   picksText?: string
   /** Hicbir sikla eslesmedigini bildirir. */
   picksNull?: boolean
   findings?: unknown[]
   concludesText?: string | null
   completeness?: 'adequate' | 'terse'
+  verifierPayload?: Partial<SolutionVerifierWirePayload>
   error?: Error
 }
 
@@ -56,7 +59,7 @@ function fakeProvider(id: string, opts: FakeOptions = {}) {
           : shown.indexOf(opts.picksText ?? '')
         body = {
           reasoning: 'cozdum',
-          predictedAnswerIndex: idx === -1 ? null : idx,
+          selectedOptionText: idx === -1 || idx === null ? null : shown[idx],
           computedValue: opts.picksText ?? null,
         }
       } else if (id === 'adversarial') {
@@ -65,8 +68,12 @@ function fakeProvider(id: string, opts: FakeOptions = {}) {
         const idx = opts.concludesText === null ? null : shown.indexOf(opts.concludesText ?? '')
         body = {
           reasoning: 'takip ettim',
-          solutionConcludesIndex: idx === -1 ? null : idx,
+          selectedOptionText: idx === -1 || idx === null ? null : shown[idx],
           solutionCompleteness: opts.completeness ?? 'adequate',
+          evidenceVersion: 'solution-evidence@4',
+          questionDemand: 'reasoning',
+          supportingUnitIds: opts.completeness === 'terse' ? [] : [JSON.parse(req.user.split('\n')[1]).authorEvidenceUnits[0].id],
+          ...opts.verifierPayload,
         }
       }
       return { text: JSON.stringify(body), finishReason: 'STOP', inputTokens: 100, outputTokens: 60 }
@@ -90,11 +97,26 @@ const fastConfig = { ...DEFAULT_AUDIT_CONFIG, maxAttempts: 1, timeoutMs: 1000 }
 
 /**
  * EN KRITIK TEST.
- * Kor cozucuye siklar PERMUTE gosteriliyor; model EKRAN indeksi donuyor.
+ * Kor cozucuye siklar PERMUTE gosteriliyor; model secenek metni donuyor.
  * Orkestrator bunu kanonige cevirmezse her kalibrasyon sayisi sessizce bozulur —
  * mutabakat orani rastgele gorunur ve dogru sorular WRONG_KEY sanilir.
  */
 describe('permutasyon gidis-donusu', () => {
+  it.each([4, 5])('metin secimi %i sikla orkestrasyondan kayda ve replaye korunur', async (count) => {
+    const input = draft({ examRef: count === 4 ? 'LGS' : 'TYT', options: draft().options.slice(0, count) })
+    const run = await executeAudit(input, providers(), fastConfig)
+    const rows = toValidationRunRows(run, 'option-text-roundtrip')
+    const restored = fromValidationRunRows(rows)
+    expect(restored.blind).toEqual(run.blind)
+    expect(restored.verifier).toEqual(run.verifier)
+    expect(deriveVerdict(restored)).toEqual(deriveVerdict(run))
+    expect(deriveVerdict(restored).verdict).toBe('APPROVED')
+    for (const row of rows.filter((r) => r.agent === 'blind_solver')) {
+      expect(JSON.parse(row.raw_output!)).toEqual({ reasoning: 'cozdum', selectedOptionText: '6', computedValue: '6' })
+      expect(row.parsed_output).toMatchObject({ predictedAnswerIndex: 2, selectionVersion: 'option-text@1' })
+    }
+  })
+
   it('ekran indeksi kanonige cevrilir; dogru metni secen model markedAnswerIndex ile uyusur', async () => {
     const p = providers({ blind: { picksText: '6' } })
     const run = await executeAudit(draft(), p, fastConfig)
@@ -228,7 +250,7 @@ describe('kismi ariza', () => {
 
 describe('4 sikli soru', () => {
   it('LGS sorusu uctan uca calisir', async () => {
-    const d = draft({ examRef: 'LGS', options: ['2', '4', '6', '8'], markedAnswerIndex: 3, solutionText: 'sonuc 8.' })
+    const d = draft({ examRef: 'LGS', questionText: '2x=16 ise x?', options: ['2', '4', '6', '8'], markedAnswerIndex: 3, solutionText: 'x=16/2=8.' })
     const { run, verdict } = await auditQuestion(
       d,
       providers({ blind: { picksText: '8' }, verifier: { concludesText: '8' } }),
@@ -237,5 +259,67 @@ describe('4 sikli soru', () => {
     expect(run.optionCount).toBe(4)
     expect(verdict.verdict).toBe('APPROVED')
     expect(verdict.blindConsensusIndex).toBe(3)
+  })
+})
+
+describe('yazar metnine bagli cozum denetimi', () => {
+  it('DNA sayim yardimi model uyusmazligini veya arizasini gizlemez', async () => {
+    const dna = draft({ examRef: 'LGS', subject: 'Fen', passage: null,
+      questionText: "DNA'nın aynı zincir bölümüne ait iki dizi aynı yönde yazılmıştır: önce AAAA, sonra AAGA. Yerleri soldan 1 ile numaralandırırsak, farklı harfin bulunduğu yer kaçtır? Ekleme veya silme olmadığı belirtilmiştir.",
+      options: ['1', '2', '3', '4'], markedAnswerIndex: 2, solutionText: 'Soldan üçüncü harf A iken G olmuştur.' })
+    const wrong = providers({ blind: { picksText: '4' }, verifier: { concludesText: '3' } })
+    const conflict = await auditQuestion(dna, wrong, fastConfig)
+    expect(wrong.blindPrompts.every((p) => JSON.parse(p.split('\n')[1]).sequenceEvidence.changedPosition === 3)).toBe(true)
+    expect(conflict.verdict.verdict).toBe('NEEDS_REVIEW')
+    expect(conflict.verdict.blindConsensusIndex).toBe(3) // raw model selected 4, not overwritten to 3
+    const failed = await auditQuestion(dna, providers({ blind: { error: new Error('offline') }, verifier: { concludesText: '3' } }), fastConfig)
+    expect(failed.verdict.verdict).toBe('INCONCLUSIVE')
+  })
+  const missing = draft({
+    examRef: 'LGS', questionText: '12+18-7 kactir?', options: ['23', '25', '27', '29'],
+    markedAnswerIndex: 0, solutionText: 'Yanıt 23.',
+  })
+
+  it.each([['question:0'], ['author:99']])('sahte dayanak ajan hatasi olarak kalir: %j', async (...ids) => {
+    const p = providers({ blind: { picksText: '23' }, verifier: {
+      concludesText: '23', verifierPayload: { supportingUnitIds: ids },
+    } })
+    const { run, verdict } = await auditQuestion(missing, p, fastConfig)
+    expect(run.verifier).toMatchObject({ status: 'failed', error: { kind: 'schema' } })
+    expect(verdict.verdict).toBe('INCONCLUSIVE')
+    expect(verdict.findings).toEqual([]) // model arizasi soru kusuru DEGIL
+    expect(run.blind.every((out) => out.status === 'ok')).toBe(true)
+    expect(run.adversarial.status).toBe('ok')
+  })
+
+  it.each([['author:0'], []])('gercek fakat yalniz cevap olan metin model iddiasini koruyarak incelemeye gider: %j', async (...ids) => {
+    const { run, verdict } = await auditQuestion(missing, providers({
+      blind: { picksText: '23' }, verifier: { concludesText: '23', verifierPayload: { supportingUnitIds: ids } },
+    }), fastConfig)
+    expect(run.verifier).toMatchObject({ status: 'ok', data: {
+      solutionCompleteness: 'adequate', supportAssessment: 'answer_only_for_reported_reasoning',
+    } })
+    expect(verdict.verdict).toBe('NEEDS_REVIEW')
+    expect(verdict.findings.map((f) => f.code)).toEqual(['INCOMPLETE_SOLUTION'])
+  })
+
+  it('gecerli eksik-dayanak karari INCOMPLETE_SOLUTION ile incelemeye gider', async () => {
+    const { run, verdict } = await auditQuestion(missing, providers({
+      blind: { picksText: '23' }, verifier: { concludesText: '23', completeness: 'terse' },
+    }), fastConfig)
+    expect(run.verifier.status).toBe('ok')
+    expect(verdict.verdict).toBe('NEEDS_REVIEW')
+    expect(verdict.findings.map((f) => f.code)).toEqual(['INCOMPLETE_SOLUTION'])
+  })
+
+  it('kisa ama gosterilmis hesap gecer; yeni kanit alanlari kaybolmaz', async () => {
+    const { run, verdict } = await auditQuestion({ ...missing, solutionText: '12+18-7=23' }, providers({
+      blind: { picksText: '23' }, verifier: { concludesText: '23' },
+    }), fastConfig)
+    expect(verdict.verdict).toBe('APPROVED')
+    expect(run.verifier).toMatchObject({ status: 'ok', data: {
+      evidenceVersion: 'solution-evidence@4', questionDemand: 'reasoning', supportingUnitIds: ['author:0'], supportingQuotes: ['12+18-7=23'], supportAssessment: 'not_established',
+    } })
+    expect(run.execution.promptVersions.verifier).toBe('solution-verifier@7')
   })
 })

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Crown, Sparkles, Trophy, Users } from 'lucide-react'
@@ -11,6 +12,8 @@ import { WeeklyLearningLeague } from '@/components/leaderboard/weekly-learning-l
 import { WeeklyLearningSpotlights } from '@/components/leaderboard/weekly-learning-spotlights'
 import { WeeklyTeamBoss } from '@/components/leaderboard/weekly-team-boss'
 import { LeaderboardVisibilitySettings } from '@/components/profile/leaderboard-visibility-settings'
+import { bilgeImage } from '@/lib/bilge/characters'
+import { useBilgeCharacter } from '@/lib/bilge/use-bilge-character'
 import {
   isLearningSpotlightsUiEnabled,
   isSocialLeagueUiEnabled,
@@ -36,6 +39,7 @@ interface ApiResponse {
 
 export default function SiralamaClient() {
   const { user, profile } = useAuthStore()
+  const { character } = useBilgeCharacter()
   const searchParams = useSearchParams()
   const requestedAllTime = searchParams.get('period') === 'all'
   const [entries, setEntries] = useState<
@@ -133,21 +137,24 @@ export default function SiralamaClient() {
       </header>
 
       <main className="mx-auto w-full max-w-[1180px] px-3 pt-3 md:px-5 lg:px-6 lg:pt-0">
-        <div data-ranking-overview className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
-        <section data-ranking-hero className="relative min-h-[176px] overflow-hidden rounded-[24px] bg-gradient-to-br from-[var(--app-warn-strong)] to-[var(--app-warn)] p-4 text-white shadow-[0_6px_0_var(--app-warn-border)] md:p-6 lg:min-h-[156px]">
+        <div data-ranking-overview className="grid gap-4 md:grid-cols-[minmax(0,1fr)_280px] md:items-stretch md:gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
+        <section data-ranking-hero className="relative min-h-[176px] overflow-hidden rounded-[24px] bg-gradient-to-br from-[var(--app-warn-strong)] to-[var(--app-warn)] p-4 text-white shadow-[0_6px_0_var(--app-warn-border)] md:min-h-[190px] md:border-2 md:border-[var(--app-border)] md:bg-[var(--app-card)] md:bg-none md:p-6 md:text-[var(--app-text)] md:shadow-[0_6px_0_var(--app-border)]">
+          <Image data-ranking-landscape src="/academy/academy-landscape.png" alt="" fill sizes="(min-width: 1024px) 70vw, 60vw" className="pointer-events-none hidden object-cover object-center opacity-45 md:block" />
+          <div className="pointer-events-none absolute inset-0 hidden bg-gradient-to-r from-[var(--app-card)] via-[var(--app-card)] to-[var(--app-card)]/30 md:block" />
           <div className="pointer-events-none absolute -right-8 -top-12 h-36 w-36 rounded-full border-[24px] border-white/10" />
-          <div className="relative z-10">
-            <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/75"><Sparkles size={14} /> {allTimeView ? 'Efsaneler tablosu' : 'Bu haftanın arenası'}</p>
+          <Image data-ranking-guide src={bilgeImage(character, 'kararli')} alt={(character === 'male' ? 'Erkek' : 'Kadın') + ' Bilge, lig rehberin'} width={220} height={220} sizes="190px" className="pointer-events-none absolute -bottom-5 right-2 z-[1] hidden h-[195px] w-auto object-contain drop-shadow-[0_12px_22px_rgba(0,0,0,0.35)] lg:block" />
+          <div className="relative z-10 lg:max-w-[64%]">
+            <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/75 md:text-[var(--app-accent-text)]"><Sparkles size={14} /> {allTimeView ? 'Efsaneler tablosu' : 'Bu haftanın arenası'}</p>
             <h2 className="mt-1.5 max-w-md text-xl font-black leading-6 md:text-2xl">{allTimeView ? 'Tüm zamanların liderleri' : showRelativeLeague ? 'Öğren, puan topla, yüksel' : 'Haftalık sıralamada yerini al'}</h2>
-            <p className="mt-1.5 max-w-lg text-xs font-semibold leading-5 text-white/80">{allTimeView ? 'Katılmayı seçen arenacıların genel XP sıralaması.' : showRelativeLeague ? 'XP tablosu isteğe bağlıdır; yakın rakip ligin ayrı hesaplanır.' : 'Katılım isteğe bağlıdır; her Pazartesi yeni bir yarış başlar.'}</p>
+            <p className="mt-1.5 max-w-lg text-xs font-semibold leading-5 text-white/80 md:text-[var(--app-text-sub)]">{allTimeView ? 'Katılmayı seçen arenacıların genel XP sıralaması.' : showRelativeLeague ? 'XP tablosu isteğe bağlıdır; yakın rakip ligin ayrı hesaplanır.' : 'Katılım isteğe bağlıdır; her Pazartesi yeni bir yarış başlar.'}</p>
             <div className="mt-3 flex gap-2 text-[10px] font-black">
-              <span className="rounded-lg bg-black/15 px-2.5 py-1.5">{viewerStatus}</span>
-              <span className="rounded-lg bg-black/15 px-2.5 py-1.5"><Users size={12} className="mr-1 inline" />{entries.length} katılımcı</span>
+              <span className="rounded-lg bg-black/15 px-2.5 py-1.5 md:border md:border-[var(--app-border)] md:bg-[var(--app-card)]">{viewerStatus}</span>
+              <span className="rounded-lg bg-black/15 px-2.5 py-1.5 md:border md:border-[var(--app-border)] md:bg-[var(--app-card)]"><Users size={12} className="mr-1 inline" />{entries.length} katılımcı</span>
             </div>
           </div>
         </section>
 
-        <aside data-ranking-status className="hidden min-h-[156px] flex-col justify-between rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-border)] lg:flex">
+        <aside data-ranking-status className="hidden min-h-[190px] flex-col justify-between rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-border)] md:flex">
           <div className="flex items-start gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><Crown size={22} strokeWidth={2.8} /></span>
             <div className="min-w-0">
@@ -160,8 +167,8 @@ export default function SiralamaClient() {
         </aside>
         </div>
 
-        <div data-ranking-layout className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
-        <aside className="order-1 min-w-0 space-y-4 lg:order-2 lg:sticky lg:top-[calc(var(--navbar-h)+1.5rem)]">
+        <div data-ranking-layout className="mt-4 grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_280px] md:gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
+        <aside className="order-1 min-w-0 space-y-4 md:order-2 lg:sticky lg:top-[calc(var(--navbar-h)+1.5rem)]">
           <nav aria-label="Sıralama dönemi" className="grid grid-cols-2 rounded-[18px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-1.5 shadow-[0_4px_0_var(--app-border)]">
             <Link href="/arena/siralama" aria-current={!requestedAllTime ? 'page' : undefined} className={`flex min-h-11 items-center justify-center rounded-[14px] text-xs font-black transition-colors ${!requestedAllTime ? 'bg-[var(--app-accent)] text-white shadow-[0_3px_0_var(--app-accent-strong)]' : 'text-[var(--app-text-sub)]'}`}>Bu hafta</Link>
             <Link href="/arena/siralama?period=all" aria-current={requestedAllTime ? 'page' : undefined} className={`flex min-h-11 items-center justify-center rounded-[14px] text-xs font-black transition-colors ${requestedAllTime ? 'bg-[var(--app-accent)] text-white shadow-[0_3px_0_var(--app-accent-strong)]' : 'text-[var(--app-text-sub)]'}`}>Tüm zamanlar</Link>
@@ -174,7 +181,7 @@ export default function SiralamaClient() {
           {user && <LeaderboardVisibilitySettings compact />}
         </aside>
 
-        <section aria-label="Lig sonuçları" className="order-2 min-w-0 space-y-4 lg:order-1">
+        <section aria-label="Lig sonuçları" className="order-2 min-w-0 space-y-4 md:order-1">
           {!requestedAllTime && showRelativeLeague && <WeeklyLearningLeague />}
           {!requestedAllTime && showLearningSpotlights && <WeeklyLearningSpotlights />}
           {!requestedAllTime && showTeamBoss && <WeeklyTeamBoss />}
@@ -184,13 +191,18 @@ export default function SiralamaClient() {
           <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-[var(--app-border)] border-t-[var(--app-accent)]" />
         </div>
       ) : entries.length === 0 ? (
-        <div className="rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] py-14 text-center shadow-[0_5px_0_var(--app-border)]">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-3xl">🏟️</div>
-          <p className="text-sm font-bold text-[var(--app-text-sub)]">
-            {privacyPending
-              ? 'Sıralama gizlilik ayarları hazırlanıyor.'
-              : 'Henüz açık sıralamaya katılan yok. Katılım her zaman isteğe bağlıdır.'}
-          </p>
+        <div className="rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] py-14 text-center shadow-[0_5px_0_var(--app-border)] md:flex md:min-h-[240px] md:items-center md:justify-center md:gap-6 md:px-8 md:text-left">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-3xl md:hidden">🏟️</div>
+          <Image data-ranking-empty-art src="/academy/daily-plan-trophy-v1.png" alt="" width={104} height={104} sizes="104px" className="hidden h-[104px] w-[104px] shrink-0 object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,0.3)] md:block" />
+          <div className="max-w-md">
+            <h3 className="mb-1 hidden text-lg font-black text-[var(--app-text)] md:block">Lig alanın hazır</h3>
+            <p className="text-sm font-bold leading-6 text-[var(--app-text-sub)]">
+              {privacyPending
+                ? 'Sıralama gizlilik ayarları hazırlanıyor.'
+                : 'Henüz açık sıralamaya katılan yok. Katılım her zaman isteğe bağlıdır.'}
+            </p>
+            <Link href="/arena" className="mt-4 hidden min-h-10 items-center justify-center rounded-xl bg-[var(--app-accent)] px-4 text-xs font-black text-white shadow-[0_4px_0_var(--app-accent-strong)] md:inline-flex">İlk XP’ni kazan</Link>
+          </div>
         </div>
       ) : (
         <LeaderboardTable

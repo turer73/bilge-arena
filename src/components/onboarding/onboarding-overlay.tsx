@@ -34,6 +34,22 @@ const FEATURES = [
   { icon: '🎯', label: '3700+ Soru', desc: 'YKS · LGS · AYT kapsamlı' },
 ]
 
+/**
+ * Kurum paneli ogrenci degil, kurum yoneticisi/ogretmen yuzeyidir. Ogrenci
+ * onboarding'i (sinif + oyun secimi) burada acilirsa kullaniciyi /arena'ya
+ * atip panelden dusuruyordu. Bu yuzeyde overlay hic kurulmaz; profil
+ * onboarding_completed=false kalir ve kullanici /arena'ya donunce normal
+ * akis devam eder.
+ */
+const ONBOARDING_EXEMPT_PREFIXES = ['/arena/kurum'] as const
+
+export function isOnboardingExemptPath(pathname: string | null | undefined): boolean {
+  if (!pathname) return false
+  return ONBOARDING_EXEMPT_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  )
+}
+
 export function OnboardingOverlay({
   navigateDocument = (path) => window.location.assign(path),
 }: {
@@ -52,6 +68,7 @@ export function OnboardingOverlay({
   const router = useRouter()
   const { profile } = useAuthStore()
   const onboardingOpen = Boolean(profile && !profile.onboarding_completed)
+    && !isOnboardingExemptPath(pathname)
 
   useEffect(() => {
     if (!onboardingOpen) return
@@ -67,7 +84,7 @@ export function OnboardingOverlay({
     }
   }, [onboardingOpen])
 
-  if (!profile || profile.onboarding_completed) return null
+  if (!onboardingOpen) return null
 
   const handleDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     // Escape = "Atla" ile aynı çıkış yolu. Klavyeyle çıkış olmadan

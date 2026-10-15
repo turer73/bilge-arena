@@ -5,6 +5,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { registerInstitutionProgramCompletionTests } from './institution-program-completion-postgres-cases.mjs'
+import { registerBasicPilotTests } from './institution-basic-pilot-postgres-cases.mjs'
 
 const url = process.env.INSTITUTION_PILOT_TEST_DATABASE_URL
 const parsedUrl = url ? new URL(url) : null
@@ -95,6 +96,9 @@ const freePilotReadinessEvidenceGateSql = readFileSync(
 const freePilotClosedGateReplaySql = readFileSync(
   join(migrationsDir, '168_free_pilot_closed_gate_replay.sql'),
   'utf8',
+)
+const basicPilotSql = readFileSync(
+  join(migrationsDir, '20261009200126_institution_basic_pilot_onboarding.sql'), 'utf8',
 )
 const institutionScopeAlignmentSql = readFileSync(
   join(migrationsDir, '182_institution_math_scope_registry_alignment.sql'),
@@ -544,6 +548,8 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
     await client.query(freePilotReadinessEvidenceGateSql)
     await client.query(freePilotClosedGateReplaySql)
     await client.query(freePilotClosedGateReplaySql)
+    await client.query(basicPilotSql)
+    await client.query(basicPilotSql)
     // Migration 178 owns this registry in the full schema. This institution-
     // focused fixture needs the row type so migrations 182-183 can compile and
     // replay against the real migration-159 wrapper contract.
@@ -4427,4 +4433,5 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
     () => ({client,platformAdmin,managerOne,managerTwo,institutionOne,rpc,authenticatedRpc,expectPgError,url}),
     () => readFileSync(join(migrationsDir,'211_institution_program_completion_integrity.sql'),'utf8'),
   )
+  registerBasicPilotTests(() => ({ client, platformAdmin, managerOne }), basicPilotSql)
 })

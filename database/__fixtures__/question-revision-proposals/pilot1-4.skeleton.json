@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "question-revision-proposals@1",
+  "batch": {
+    "title": "Pilot 1-4 kusurlu 16 soru",
+    "sourceRef": "secure/16-flawed-questions.json + secure/antigravity-pilot{,2,3,4}/expert-review-pass*.md (yerel, gitignore)"
+  },
+  "_notes": [
+    "Bu dosya bir ISKELETTIR: status=needs_patch ogeler betik tarafindan atlanir.",
+    "Her oge icin questionId'yi 16-flawed-questions.json'dan, patch'i ilgili expert-review-pass dosyasindan doldurun; sonra status alanini silin.",
+    "patch yalniz icerik alanlarini (question/options/answer/solution/...) tasir; zorluk, kategori ve kazanim degistirilmez (LLM zorluk degisikligi kabul edilmez).",
+    "Cevap anahtari degisiyorsa changeKind=correct_answer; icerik degisiyorsa edit; gorsel/oncul eksigi giderilemiyorsa retire (patch bos).",
+    "Antigravity'nin 214_fix_pilot_audited_questions.sql dosyasindaki UPDATE icerikleri buraya patch olarak AKTARILABILIR ama once insan okumali: P1-Q30 ve P4-Q16 gibi yorum meselesi bulgular yeniden yazilmamali."
+  ],
+  "proposals": [
+    { "ref": "P1-Q20", "status": "needs_patch", "questionId": "TODO", "finding": { "code": "TODO_FROM_EXPERT_REVIEW", "severity": "P1", "summary": "expert-review-pass1.md'den aktar" }, "evidence": [], "changeKind": "edit", "patch": {}, "rationale": "" },
+    { "ref": "P1-Q21", "status": "needs_patch", "questionId": "TODO (56045ee9-...)", "finding": { "code": "MISSING_FIGURE", "severity": "P0", "summary": "Kok sekle/ok yonune gonderme yapiyor, icerikte gorsel yok; 3 kor cozucu + adversarial inconclusive." }, "evidence": ["Pilot 1 Q21", "scan:question-text figure_reference_without_media"], "changeKind": "retire", "patch": {}, "rationale": "Gorsel eklenene kadar cevaplanamaz; retire taslagi. is_active dogrudan degistirilmez." },
+    { "ref": "P1-Q34", "status": "needs_patch", "questionId": "TODO", "finding": { "code": "TODO_FROM_EXPERT_REVIEW", "severity": "P1", "summary": "expert-review-pass1.md'den aktar" }, "evidence": [], "changeKind": "edit", "patch": {}, "rationale": "" },
+    { "ref": "P1-Q47", "status": "needs_patch", "questionId": "TODO", "finding": { "code": "TODO_FROM_EXPERT_REVIEW", "severity": "P1", "summary": "expert-review-pass1.md'den aktar" }, "evidence": [], "changeKind": "edit", "patch": {}, "rationale": "" },
+    { "ref": "P1-Q49", "status": "needs_patch", "questionId": "TODO", "finding": { "code": "TODO_FROM_EXPERT_REVIEW", "severity": "P1", "summary": "expert-review-pass1.md'den aktar" }, "evidence": [], "changeKind": "edit", "patch": {}, "rationale": "" },
+    { "ref": "P2-Q30", "status": "needs_patch", "questionId": "TODO", "finding": { "code": "TODO_FROM_EXPERT_REVIEW", "severity": "P1", "summary": "expert-review-pass2.md'den aktar" }, "evidence": [], "changeKind": "edit", "patch": {}, "rationale": "" },
+    { "ref": "P2-Q40", "status": "needs_patch", "questionId": "TODO", "finding": { "code": "TODO_FROM_EXPERT_REVIEW", "severity": "P1", "summary": "expert-review-pass2.md'den aktar" }, "evidence": [], "changeKind": "edit", "patch": {}, "rationale": "" },
+    { "ref": "P2-Q41", "status": "needs_patch", "questionId": "TODO", "finding": { "code": "TODO_FROM_EXPERT_REVIEW", "severity": "P1", "summary": "expert-review-pass2.md'den aktar" }, "evidence": [], "changeKind": "edit", "patch": {}, "rationale": "" },
+    { "ref": "P3-Q9", "status": "needs_patch", "questionId": "TODO", "finding": { "code": "TODO_FROM_EXPERT_REVIEW", "severity": "P1", "summary": "expert-review-pass3.md'den aktar" }, "evidence": [], "changeKind": "edit", "patch": {}, "rationale": "" },
+    { "ref": "P3-Q11", "status": "needs_patch", "questionId": "TODO", "finding": { "code": "TODO_FROM_EXPERT_REVIEW", "severity": "P1", "summary": "expert-review-pass3.md'den aktar" }, "evidence": [], "changeKind": "edit", "patch": {}, "rationale": "" },
+    { "ref": "P3-Q14", "status": "needs_patch", "questionId": "TODO", "finding": { "code": "TODO_FROM_EXPERT_REVIEW", "severity": "P1", "summary": "expert-review-pass3.md'den aktar" }, "evidence": [], "changeKind": "edit", "patch": {}, "rationale": "" },
+    { "ref": "P3-Q48", "status": "needs_patch", "questionId": "TODO", "finding": { "code": "TODO_FROM_EXPERT_REVIEW", "severity": "P1", "summary": "expert-review-pass3.md'den aktar" }, "evidence": [], "changeKind": "edit", "patch": {}, "rationale": "" },
+    { "ref": "P4-Q10", "status": "needs_patch", "questionId": "f836744c-2554-4a52-af4d-5023a1f4f37e", "finding": { "code": "STEM_MISSING_TOKEN", "severity": "P1", "summary": "Kok 'sicak' sozcugunun terim anlamini soruyor; anahtar secenekte 'sicaklik' var, hicbir secenekte 'sicak' terim anlamda degil." }, "evidence": ["Pilot 4 Q10", "memory discovery #1906", "3/3 kor cozucu uyumsuz"], "changeKind": "edit", "patch": {}, "rationale": "Olasi duzeltme: koku 'sicaklik' yapmak ya da anahtar secenegi 'sicak' terim anlamiyla kurmak; hangisi oldugunu insan secer." },
+    { "ref": "P4-Q14", "status": "needs_patch", "questionId": "3fec0905-ba72-4d97-a5b3-c1ddcb6a672b", "finding": { "code": "MULTIPLE_CORRECT", "severity": "P1", "summary": "'Hangisinde yanlislik yoktur?' kokunde 14.30'da, 1999-2000 ve 3'uncu TDK'ya uygun gorunuyor." }, "evidence": ["Pilot 4 Q14", "memory discovery #1907"], "changeKind": "edit", "patch": {}, "rationale": "DB'deki tam karakterleri (nokta/iki nokta, cizgi turu) kontrol etmeden karar verilmez; hata tipografik detayda saklanabilir." },
+    { "ref": "P4-Q16", "status": "needs_patch", "questionId": "3395068a-da0a-48e7-bfa6-24b47e475649", "finding": { "code": "AMBIGUOUS_ANTONYM", "severity": "P2", "summary": "'sicak-serin' ciftinin zit anlamli sayilip sayilmayacagi yorum meselesi." }, "evidence": ["Pilot 4 Q16", "memory discovery #1908"], "changeKind": "edit", "patch": {}, "rationale": "Bircok kaynak sicak-serin'i yakin zit kabul ediyor; yeniden yazma ONERILMEZ. Insan hakem 'degisiklik yok' diyebilir; o zaman bu oge silinir." },
+    { "ref": "P4-Q19", "status": "needs_patch", "questionId": "4fcca5db-31fc-485a-bcc6-a6c552b74777", "finding": { "code": "AMBIGUOUS_WORDING", "severity": "P2", "summary": "Lale mazmunu icin kokte baglam yok; 'guzelin yanagi/kadeh' ve 'Allah sevgisi/vahdet' ikisi de gecerli." }, "evidence": ["Pilot 4 Q19", "memory discovery #1909", "3/3 kor cozucu secenek 2, anahtar 4"], "changeKind": "edit", "patch": {}, "rationale": "Koke baglam eklemek (ornek beyit/donem) belirsizligi giderir; anahtar degismez." }
+  ]
+}

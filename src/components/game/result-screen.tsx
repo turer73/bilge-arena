@@ -11,6 +11,9 @@ import { SignupPromptModal } from './signup-prompt-modal'
 import { useGuestSession, computePromptLevel } from '@/lib/hooks/use-guest-session'
 import { BilgeChan } from '@/components/ui/bilge-chan'
 import type { SessionSaveStatus } from '@/lib/hooks/use-session-saver'
+import { useWideStudy } from '@/lib/hooks/use-wide-study'
+import { AcademyQuizPortrait } from './academy-quiz-portrait'
+import styles from './academy-quiz.module.css'
 
 interface ResultScreenProps {
   onRestart: () => void
@@ -34,6 +37,7 @@ export function ResultScreen({
   savedCorrectCount = null,
   savedWrongCount = null,
 }: ResultScreenProps) {
+  const wide = useWideStudy()
   const { score, questions, answers, xpEarned, maxStreak, lives, livesEnabled } = useQuizStore()
   const { user } = useAuthStore()
   const { incrementQuizCount } = useGuestSession()
@@ -114,7 +118,7 @@ export function ResultScreen({
   ]
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-[440px] flex-col justify-center gap-4 bg-[var(--app-bg)] px-4 py-5 text-[var(--app-accent-ink)] md:max-w-[720px] md:min-h-[calc(100dvh-5rem)]">
+    <div className={`${styles.result} mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-[440px] flex-col justify-center gap-4 bg-[var(--app-bg)] px-4 py-5 text-[var(--app-accent-ink)] md:max-w-[720px] md:min-h-[calc(100dvh-5rem)]`}>
       {/* Can bitti uyarisi */}
       {gameOver && (
         <div className="animate-fadeUp rounded-2xl border-2 border-[var(--app-danger-border)] bg-[var(--app-danger-tint)] px-5 py-3 text-center shadow-[0_4px_0_var(--app-danger-border)]">
@@ -125,13 +129,14 @@ export function ResultScreen({
         </div>
       )}
 
-      <div className="relative min-h-[210px] overflow-hidden rounded-[28px] border-2 border-[var(--app-accent-strong)] bg-gradient-to-br from-[var(--app-accent)] via-[var(--app-accent-strong)] to-[var(--app-accent-strong)] p-5 text-white shadow-[0_6px_0_var(--app-accent-strong)] animate-fadeUp">
+      <div data-quiz-result-hero className="relative min-h-[210px] overflow-hidden rounded-[28px] border-2 border-[var(--app-accent-strong)] bg-gradient-to-br from-[var(--app-accent)] via-[var(--app-accent-strong)] to-[var(--app-accent-strong)] p-5 text-white shadow-[0_6px_0_var(--app-accent-strong)] animate-fadeUp">
         <div className="relative z-10 max-w-[58%] pt-2">
           <div className="text-[11px] font-black uppercase tracking-[0.16em] text-white/75">
             Tur tamamlandı
           </div>
           <div
             className="mt-1 animate-rankReveal font-display text-[72px] font-black leading-none"
+            data-quiz-rank
             style={{ color: 'var(--app-warn-border)', textShadow: '0 3px 0 rgba(120,53,15,.35)' }}
           >
             {rank}
@@ -148,11 +153,11 @@ export function ResultScreen({
             {saveMessage}
           </p>
         </div>
-        <BilgeChan
+        {wide ? <AcademyQuizPortrait expression={gameOver || pct < 50 ? 'destekleyici' : 'kutlayan'} /> : <BilgeChan
           pose={gameOver ? 'sad' : 'victory'}
           height={168}
           className="absolute -bottom-2 -right-2 z-10 animate-fadeUp"
-        />
+        />}
         <div aria-hidden className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
       </div>
 

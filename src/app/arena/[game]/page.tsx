@@ -31,9 +31,9 @@ const GAME_META: Record<GameSlug, { title: string; description: string; keywords
     keywords: ['TYT Sosyal', 'LGS sosyal bilimler', 'tarih soruları', 'coğrafya soruları', 'felsefe soruları', 'din kültürü soruları'],
   },
   wordquest: {
-    title: 'İngilizce Soruları — YDT İngilizce',
-    description: 'Vocabulary, grammar ve reading soruları. YDT İngilizce sorularıyla kelime dağarcığını genişlet, sıralamada yüksel!',
-    keywords: ['YDT İngilizce', 'İngilizce soru çöz', 'vocabulary', 'grammar soruları', 'YKS İngilizce'],
+    title: 'WordQuest İngilizce Oyunu — Kelime · Dil Bilgisi · Okuma',
+    description: 'Vocabulary, grammar ve reading görevleriyle İngilizce pratiği yap, kelime dağarcığını genişlet ve sıralamada yüksel!',
+    keywords: ['İngilizce kelime oyunu', 'İngilizce soru çöz', 'vocabulary', 'grammar soruları', 'YDT İngilizce'],
   },
 }
 

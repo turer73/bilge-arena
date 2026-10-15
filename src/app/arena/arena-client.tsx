@@ -1,25 +1,32 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import dynamic from 'next/dynamic'
+import { useWideStudy } from '@/lib/hooks/use-wide-study'
+import type { GameSlug } from '@/lib/constants/games'
 import { MobileHomeDemo, type MobileSubjectId } from '@/app/mobil-demo/mobile-home-demo'
 import { DEFAULT_EXAM_REF, examRefsForType, gamesForExamType, type ExamType } from '@/lib/constants/exam-types'
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
 import { useAuthStore } from '@/stores/auth-store'
 import { useGameStore } from '@/stores/game-store'
 
-/**
- * Arena ana ekraninin tek, duyarli kabugu.
- *
- * Mobil, tablet ve masaustu artik ayni ogrenme yolu veri modelini ve ayni
- * eylemleri kullanir. Genis ekran icin ayri bir eski lobi render etmek yerine
- * MobileHomeDemo kendi breakpoint'lerinde iki sutunlu calisma alanina doner.
- */
+const DesktopGamesHome = dynamic(() => import('@/components/academy/desktop-games-home').then(module => module.DesktopGamesHome))
+
+/** Mobile keeps its existing learning entry; wide screens have a dedicated games hub. */
 export default function ArenaClient() {
+  const wide = useWideStudy()
+  return wide ? <DesktopGamesHome /> : <StudyHomeClient />
+}
+
+export function StudyHomeClient({ renderStudyTools }: { renderStudyTools?: (game: GameSlug, examRef: string | null) => ReactNode } = {}) {
   const { user, profile } = useAuthStore()
   const selectedExamRef = useGameStore((state) => state.selectedExamRef)
+  const selectedGame = useGameStore((state) => state.selectedGame)
+  const setGame = useGameStore((state) => state.setGame)
+  const setCategory = useGameStore((state) => state.setCategory)
   const setExamRef = useGameStore((state) => state.setExamRef)
-  const { quests } = useDailyQuests()
-  const [institutionVisible, setInstitutionVisible] = useState(false)
+  const { quests } = useDailyQuests(user?.id)
+  const [institutionAccess, setInstitutionAccess] = useState<{ userId: string; visible: boolean } | null>(null)
 
   const classroomEnabled = process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED === 'true'
   const institutionEnabled = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED === 'true'
@@ -38,28 +45,38 @@ export default function ArenaClient() {
   }, [effectiveExamRef, selectedExamRef, setExamRef])
 
   useEffect(() => {
-    if (!institutionEnabled) return
+    if (!institutionEnabled || !user?.id) return
+    const requestedUserId = user.id
     const controller = new AbortController()
     fetch('/api/institution/workspace', { cache: 'no-store', signal: controller.signal })
       .then((response) => {
-        if (!controller.signal.aborted) setInstitutionVisible(response.ok)
+        if (!controller.signal.aborted) setInstitutionAccess({ userId: requestedUserId, visible: response.ok })
       })
       .catch(() => {
-        if (!controller.signal.aborted) setInstitutionVisible(false)
+        if (!controller.signal.aborted) setInstitutionAccess({ userId: requestedUserId, visible: false })
       })
     return () => controller.abort()
   }, [institutionEnabled, user?.id])
 
   const availableSubjects = useMemo(
-    () => gamesForExamType(profile?.exam_type)
-      .filter((game) => !effectiveExamRef || game.examTags.includes(effectiveExamRef))
-      .map((game) => (game.slug === 'wordquest' ? 'ingilizce' : game.slug) as MobileSubjectId),
+    () => {
+      const subjects = gamesForExamType(profile?.exam_type)
+        .filter((game) => !effectiveExamRef || game.examTags.includes(effectiveExamRef))
+        .map((game) => (game.slug === 'wordquest' ? 'ingilizce' : game.slug) as MobileSubjectId)
+      // WordQuest is a standalone English game, not an exam-scoped lesson.
+      // Keep it discoverable regardless of the profile or retained exam scope.
+      if (!subjects.includes('ingilizce')) subjects.push('ingilizce')
+      return subjects
+    },
     [effectiveExamRef, profile?.exam_type],
   )
   const questionGoal = quests.find((quest) => quest.quest?.quest_type === 'correct_answers')
 
   return (
     <MobileHomeDemo
+      renderStudyTools={renderStudyTools}
+      selectedSubject={selectedGame === 'wordquest' ? 'ingilizce' : selectedGame ?? undefined}
+      onSubjectChange={(subject) => { setGame(subject === 'ingilizce' ? 'wordquest' : subject); setCategory(null) }}
       mode="live"
       examLabel={profile?.exam_type === 'lgs' ? 'LGS' : 'YKS'}
       examRef={displayedExamRef}
@@ -75,7 +92,7 @@ export default function ArenaClient() {
         target: questionGoal.quest.target_value,
       } : null}
       classroomEnabled={classroomEnabled}
-      institutionEnabled={institutionVisible}
+      institutionEnabled={institutionEnabled && !!user?.id && institutionAccess?.userId === user.id && institutionAccess.visible}
       communityQualityEnabled={communityQualityEnabled}
       showBottomNav={false}
       userId={user?.id ?? null}

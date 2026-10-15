@@ -8,11 +8,11 @@ interface ProfileActionsProps {
 }
 
 const actionClass =
-  'flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-xl border border-[var(--border)] px-1.5 text-center text-[11px] font-bold leading-none text-[var(--text-sub)] transition-colors hover:border-[var(--focus-border)] hover:bg-[var(--focus-bg)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] sm:min-h-11 sm:flex-row sm:gap-1.5 sm:px-2 sm:text-xs'
+  'flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-center text-[9px] font-black leading-none text-[var(--app-text-sub)] transition-all hover:-translate-y-0.5 hover:bg-[var(--app-accent-tint)] hover:text-[var(--app-accent-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-accent)] sm:min-h-[54px] sm:flex-row sm:gap-1.5 sm:px-2 sm:text-[11px]'
 
 export function ProfileActions({ onEdit }: ProfileActionsProps) {
   return (
-    <div role="group" aria-label="Profil işlemleri" className="grid grid-cols-2 gap-2 border-t border-[var(--border)] pt-3 sm:grid-cols-5">
+    <div data-profile-actions role="group" aria-label="Profil işlemleri" className="grid grid-cols-5 gap-1 rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] p-2 shadow-[0_4px_0_var(--app-border)] sm:gap-2">
       <Link href="/arena/yanlislarim" className={actionClass}>
         <RotateCcw aria-hidden size={17} strokeWidth={2.2} />
         <span>Yanlışlarım</span>
