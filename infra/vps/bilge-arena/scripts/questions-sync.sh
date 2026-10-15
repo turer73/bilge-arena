@@ -72,6 +72,28 @@ if [ ! -f "$DUMP" ]; then
   fail "Dump yok: $DUMP (gece backup'i kontrol et)"
 fi
 
+MAX_DUMP_AGE_SECONDS="${QUESTIONS_SYNC_MAX_DUMP_AGE_SECONDS:-7200}"
+case "$MAX_DUMP_AGE_SECONDS" in
+  ""|*[!0-9]*) fail "Gecersiz dump yas siniri: $MAX_DUMP_AGE_SECONDS" ;;
+esac
+if [ "$MAX_DUMP_AGE_SECONDS" -lt 300 ]; then
+  fail "Dump yas siniri cok kucuk: $MAX_DUMP_AGE_SECONDS saniye"
+fi
+
+NOW_EPOCH=$(date +%s)
+DUMP_MTIME_EPOCH=$(stat -Lc %Y -- "$DUMP") \
+  || fail "Dump mtime okunamadi: $DUMP"
+if [ "$DUMP_MTIME_EPOCH" -gt $((NOW_EPOCH + 300)) ]; then
+  fail "Dump zamani gelecekte: $DUMP_MTIME_EPOCH"
+fi
+DUMP_AGE_SECONDS=$((NOW_EPOCH - DUMP_MTIME_EPOCH))
+if [ "$DUMP_AGE_SECONDS" -gt "$MAX_DUMP_AGE_SECONDS" ]; then
+  fail "Dump bayat: ${DUMP_AGE_SECONDS}s > ${MAX_DUMP_AGE_SECONDS}s"
+fi
+if ! gzip -t -- "$DUMP"; then
+  fail "Dump gzip butunluk kontrolu basarisiz: $DUMP"
+fi
+
 START=$SECONDS
 log "questions-sync basliyor, kaynak: $DUMP"
 
@@ -118,6 +140,7 @@ sed 's/^COPY public\.questions /COPY questions_stage /' "$TMP_SQL" > "$TMP_STAGE
 {
   echo 'BEGIN;'
   echo 'CREATE TEMP TABLE questions_stage (LIKE public.questions) ON COMMIT DROP;'
+  cat /opt/bilge-arena/qs_extra_cols.sql 2>/dev/null || true
   cat "$TMP_STAGED"
   echo 'TRUNCATE public.questions CASCADE;'
   echo "INSERT INTO public.questions (id,external_id,game,category,subcategory,topic,difficulty,level_tag,content,is_active,is_boss,times_answered,times_correct,source,exam_ref,created_at,updated_at)"
@@ -126,12 +149,12 @@ sed 's/^COPY public\.questions /COPY questions_stage /' "$TMP_SQL" > "$TMP_STAGE
   echo 'FROM questions_stage'
   echo "ORDER BY game, category, (content->>'question'), is_active DESC, id DESC;"
   echo 'COMMIT;'
-} | docker exec -i panola-postgres psql -v ON_ERROR_STOP=on \
+} | docker exec -i bilge-arena-db psql -v ON_ERROR_STOP=on \
     -U bilge_arena_app -d bilge_arena_dev >> "$LOG_FILE" 2>&1 \
   || fail "psql restore basarisiz; ON_ERROR_STOP rollback'e cevirdi"
 rm -f "$TMP_STAGED"
 
-QC=$(docker exec -i panola-postgres psql -U bilge_arena_app -d bilge_arena_dev -t -c 'SELECT COUNT(*) FROM public.questions' | tr -d ' ')
+QC=$(docker exec -i bilge-arena-db psql -U bilge_arena_app -d bilge_arena_dev -t -c 'SELECT COUNT(*) FROM public.questions' | tr -d ' ')
 DURATION=$((SECONDS - START))
 
 log "OK: $QC soru, $LINES satir, ${DURATION}sn"
