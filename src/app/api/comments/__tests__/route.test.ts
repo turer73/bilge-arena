@@ -2,14 +2,18 @@
 
 const {
   mockGetUser,
+  mockCommentsSelect,
   mockCommentsList,
+  mockProfilesIn,
   mockLikesList,
   mockInsertComment,
   mockDedupCheck,
   mockRateLimitCheck,
 } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
+  mockCommentsSelect: vi.fn(),
   mockCommentsList: vi.fn(),
+  mockProfilesIn: vi.fn(),
   mockLikesList: vi.fn(),
   mockInsertComment: vi.fn(),
   mockDedupCheck: vi.fn(),
@@ -24,9 +28,13 @@ vi.mock('@/lib/supabase/server', () => ({
 
 /**
  * Servis-role mock: comments tablosu için 3 farklı zincir:
- *   1) GET liste: .select(long).eq.eq.order.limit.returns
+ *   1) GET liste: .select(long).eq.eq.order.limit
  *   2) POST dedup: .select('id').eq.eq.eq.eq.gte.limit.maybeSingle
  *   3) POST insert: .insert().select().single
+ * profiles: GET yazar profilleri .select().in('id', ids)
+ *
+ * Bu mock şemayı doğrulamaz; gömme/FK sözleşmesi route.postgrest.test.ts'te
+ * gerçek PostgreSQL + PostgREST üzerinde sınanır.
  */
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: vi.fn(() => ({
@@ -36,11 +44,12 @@ vi.mock('@/lib/supabase/service-role', () => ({
           select: vi.fn((cols: string) => {
             // GET listesi — uzun select string
             if (cols !== 'id') {
+              mockCommentsSelect(cols)
               return {
                 eq: vi.fn(() => ({
                   eq: vi.fn(() => ({
                     order: vi.fn(() => ({
-                      limit: vi.fn(() => ({ returns: mockCommentsList })),
+                      limit: mockCommentsList,
                     })),
                   })),
                 })),
@@ -67,6 +76,13 @@ vi.mock('@/lib/supabase/service-role', () => ({
         return {
           select: vi.fn(() => ({
             eq: mockLikesList,
+          })),
+        }
+      }
+      if (table === 'profiles') {
+        return {
+          select: vi.fn(() => ({
+            in: mockProfilesIn,
           })),
         }
       }
@@ -131,12 +147,12 @@ describe('GET /api/comments', () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
     mockCommentsList.mockResolvedValue({
       data: [
-        {
-          id: 'c1', content: 'hi', likes_count: 5, created_at: '2026-05-17',
-          user_id: 'other-user',
-          profiles: { username: 'ali', display_name: null, avatar_url: null, level_name: 'Cirak' },
-        },
+        { id: 'c1', content: 'hi', likes_count: 5, created_at: '2026-05-17', user_id: 'other-user' },
       ],
+      error: null,
+    })
+    mockProfilesIn.mockResolvedValue({
+      data: [{ id: 'other-user', username: 'ali', display_name: null, avatar_url: null, level_name: 'Cirak' }],
       error: null,
     })
 
@@ -146,22 +162,65 @@ describe('GET /api/comments', () => {
     expect(body.comments).toHaveLength(1)
     expect(body.comments[0].is_liked).toBe(false)
     expect(body.comments[0].is_own).toBe(false)
+    expect(body.comments[0].profile).toEqual({ username: 'ali', display_name: null, avatar_url: null, level_name: 'Cirak' })
+    // comments -> profiles FK yok; PostgREST gömmesi PGRST200 verir (17 Mayıs kırılması).
+    expect(mockCommentsSelect).toHaveBeenCalledWith('id, content, likes_count, created_at, user_id')
+  })
+
+  it('loads each author profile once and skips comments whose author has no profile', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+    mockCommentsList.mockResolvedValue({
+      data: [
+        { id: 'c1', content: 'bir', likes_count: 0, created_at: '2026-05-17', user_id: 'u-ali' },
+        { id: 'c2', content: 'iki', likes_count: 0, created_at: '2026-05-16', user_id: 'u-ali' },
+        { id: 'c3', content: 'yetim', likes_count: 0, created_at: '2026-05-15', user_id: 'u-no-profile' },
+      ],
+      error: null,
+    })
+    mockProfilesIn.mockResolvedValue({
+      data: [{ id: 'u-ali', username: 'ali', display_name: 'Ali', avatar_url: null, level_name: 'Acemi' }],
+      error: null,
+    })
+
+    const res = await GET(makeGet(VALID_UUID) as never)
+    const body = await res.json()
+    expect(mockProfilesIn).toHaveBeenCalledWith('id', ['u-ali', 'u-no-profile'])
+    expect(body.comments.map((c: { id: string }) => c.id)).toEqual(['c1', 'c2'])
+  })
+
+  it('does not query profiles when the question has no comments', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+    mockCommentsList.mockResolvedValue({ data: [], error: null })
+    const res = await GET(makeGet(VALID_UUID) as never)
+    expect(res.status).toBe(200)
+    expect((await res.json()).comments).toEqual([])
+    expect(mockProfilesIn).not.toHaveBeenCalled()
+  })
+
+  it('returns 500 on profiles query error', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+    mockCommentsList.mockResolvedValue({
+      data: [{ id: 'c1', content: 'hi', likes_count: 0, created_at: '2026-05-17', user_id: 'u-ali' }],
+      error: null,
+    })
+    mockProfilesIn.mockResolvedValue({ data: null, error: { code: '42703' } })
+    const res = await GET(makeGet(VALID_UUID) as never)
+    expect(res.status).toBe(500)
   })
 
   it('marks own comments and liked comments for auth user', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockCommentsList.mockResolvedValue({
       data: [
-        {
-          id: 'c1', content: 'mine', likes_count: 0, created_at: '2026-05-17',
-          user_id: 'u1',
-          profiles: { username: 'ben', display_name: null, avatar_url: null, level_name: 'Usta' },
-        },
-        {
-          id: 'c2', content: 'liked', likes_count: 3, created_at: '2026-05-17',
-          user_id: 'other-user',
-          profiles: { username: 'ali', display_name: null, avatar_url: null, level_name: 'Acemi' },
-        },
+        { id: 'c1', content: 'mine', likes_count: 0, created_at: '2026-05-17', user_id: 'u1' },
+        { id: 'c2', content: 'liked', likes_count: 3, created_at: '2026-05-17', user_id: 'other-user' },
+      ],
+      error: null,
+    })
+    mockProfilesIn.mockResolvedValue({
+      data: [
+        { id: 'u1', username: 'ben', display_name: null, avatar_url: null, level_name: 'Usta' },
+        { id: 'other-user', username: 'ali', display_name: null, avatar_url: null, level_name: 'Acemi' },
       ],
       error: null,
     })
