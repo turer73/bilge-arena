@@ -1,4 +1,4 @@
-import type { init } from '@sentry/nextjs'
+import type { Event, init } from '@sentry/nextjs'
 
 type SentryInitOptions = NonNullable<Parameters<typeof init>[0]>
 
@@ -34,3 +34,23 @@ export const SENTRY_PRIVACY_OPTIONS = {
   },
   traceLifecycle: 'static',
 } satisfies Pick<SentryInitOptions, 'dataCollection' | 'traceLifecycle'>
+
+/**
+ * Olaydaki kullaniciyi yalniz takma kimlige (id) indirger; e-posta,
+ * kullanici adi, IP ve diger alanlar dusurulur.
+ *
+ * dataCollection.userInfo=false yalniz Relay'in IP cikarimini (infer_ip)
+ * kapatir; Sentry.setUser ile scope'a konan alanlar olaya aynen yazilir.
+ * Kullanicilarin cogu resit olmayan ogrenci oldugu icin beforeSend ve
+ * beforeSendTransaction'da allowlist ile son bir kez temizlenir. Log ve
+ * metric zarflari bu kancalardan gecmez; onlari korumak icin scope'a da
+ * yalniz id konur (use-auth).
+ */
+export function stripEventUserPii<T extends Event>(event: T): T {
+  if (event.user) {
+    const { id } = event.user
+    if (id === undefined) delete event.user
+    else event.user = { id }
+  }
+  return event
+}
