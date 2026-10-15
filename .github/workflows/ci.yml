@@ -328,10 +328,13 @@ jobs:
             --reporter=default --reporter=json --outputFile.json="$RUNNER_TEMP/tyt-social-epoch-acceptance.json"
           node scripts/security/verify-tyt-social-epoch-ci-result.mjs "$RUNNER_TEMP/tyt-social-epoch-acceptance.json"
 
-  comments-postgrest-contract:
-    # Route testleri servis-role istemcisini mock'lar; PostgREST gömme ve FK
-    # sözleşmesini göremezler (/api/comments 17 Mayıs'tan beri PGRST200 verdi).
-    name: 💬 Comments PostgREST contract
+  postgrest-contract:
+    # Route testleri servis-role istemcisini mock'lar ve .returns<T>() tip
+    # denetimini susturur; PostgREST gömme ve FK sözleşmesini göremezler
+    # (/api/comments 17 Mayıs'tan beri PGRST200 verdi). Bu iş src/ altındaki
+    # her *.postgrest.test.ts dosyasını gerçek PostgreSQL 16 + PostgREST'e karşı
+    # koşar; dosyalar public şemasını sıfırladığı için sırayla çalışır.
+    name: 🔗 PostgREST contract
     runs-on: ubuntu-latest
     timeout-minutes: 10
     services:
@@ -340,20 +343,20 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: bilge_comments_test_ci
+          POSTGRES_DB: bilge_postgrest_contract_ci
         ports:
           - '127.0.0.1:5432:5432'
         options: >-
-          --health-cmd "pg_isready -U postgres -d bilge_comments_test_ci"
+          --health-cmd "pg_isready -U postgres -d bilge_postgrest_contract_ci"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
     env:
-      COMMENTS_POSTGREST_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/bilge_comments_test_ci
-      COMMENTS_POSTGREST_TEST_DATABASE_DISPOSABLE: '1'
-      COMMENTS_POSTGREST_TEST_URL: http://127.0.0.1:3300
+      POSTGREST_CONTRACT_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/bilge_postgrest_contract_ci
+      POSTGREST_CONTRACT_TEST_DATABASE_DISPOSABLE: '1'
+      POSTGREST_CONTRACT_TEST_URL: http://127.0.0.1:3300
       # Yalnız bu işin geçici PostgREST'i için; üretim anahtarı değildir.
-      COMMENTS_POSTGREST_TEST_JWT_SECRET: bilge-arena-comments-contract-ci-only-jwt-secret
+      POSTGREST_CONTRACT_TEST_JWT_SECRET: bilge-arena-postgrest-contract-ci-only-jwt-secret
     steps:
       - uses: actions/checkout@v6
 
@@ -369,7 +372,7 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import pg from 'pg'
-          const client = new pg.Client({ connectionString: process.env.COMMENTS_POSTGREST_TEST_DATABASE_URL })
+          const client = new pg.Client({ connectionString: process.env.POSTGREST_CONTRACT_TEST_DATABASE_URL })
           await client.connect()
           await client.query(`
             CREATE ROLE authenticator LOGIN PASSWORD 'authenticator' NOINHERIT;
@@ -385,10 +388,10 @@ jobs:
         shell: bash
         run: |
           docker run -d --name postgrest --network host \
-            -e PGRST_DB_URI=postgres://authenticator:authenticator@127.0.0.1:5432/bilge_comments_test_ci \
+            -e PGRST_DB_URI=postgres://authenticator:authenticator@127.0.0.1:5432/bilge_postgrest_contract_ci \
             -e PGRST_DB_SCHEMAS=public \
             -e PGRST_DB_ANON_ROLE=anon \
-            -e PGRST_JWT_SECRET="$COMMENTS_POSTGREST_TEST_JWT_SECRET" \
+            -e PGRST_JWT_SECRET="$POSTGREST_CONTRACT_TEST_JWT_SECRET" \
             -e PGRST_SERVER_PORT=3300 \
             -e PGRST_ADMIN_SERVER_PORT=3301 \
             postgrest/postgrest:v14.17
@@ -399,19 +402,12 @@ jobs:
           docker logs postgrest
           exit 1
 
-      - name: Run comments contract with no skipped tests
+      - name: Run every PostgREST contract file with no skipped tests
         shell: bash
         run: |
-          node node_modules/vitest/vitest.mjs run src/app/api/comments/__tests__/route.postgrest.test.ts \
-            --reporter=default --reporter=json --outputFile.json="$RUNNER_TEMP/comments-contract.json"
-          node -e "
-            const result = require(process.argv[1])
-            const statuses = result.testResults.flatMap((file) => file.assertionResults.map((test) => test.status))
-            if (statuses.length < 5 || statuses.some((status) => status !== 'passed')) {
-              console.error('Comments PostgREST contract skipped or failed:', statuses)
-              process.exit(1)
-            }
-          " "$RUNNER_TEMP/comments-contract.json"
+          node node_modules/vitest/vitest.mjs run --no-file-parallelism postgrest.test.ts \
+            --reporter=default --reporter=json --outputFile.json="$RUNNER_TEMP/postgrest-contract.json"
+          node scripts/security/verify-postgrest-contract-ci-result.mjs "$RUNNER_TEMP/postgrest-contract.json"
 
       - name: PostgREST logs
         if: ${{ failure() }}
@@ -420,7 +416,7 @@ jobs:
   build:
     name: 🏗️ Build
     runs-on: ubuntu-latest
-    needs: [lint, type-check, test, institution-pilot-postgres, question-quality-postgres, tyt-social-epoch-postgres, comments-postgrest-contract]
+    needs: [lint, type-check, test, institution-pilot-postgres, question-quality-postgres, tyt-social-epoch-postgres, postgrest-contract]
     # Explicitly fail Build when a required dependency did not execute.
     if: ${{ !cancelled() }}
     env:
