@@ -19,6 +19,20 @@ Sentry.init({
   // Development'ta Sentry'yi devre disi birak
   enabled: process.env.NODE_ENV === 'production',
 
+  // Session envelopes bypass event filters. Do not collect them on any route.
+  integrations: (defaults) => [
+    ...defaults.filter(({ name }) => name !== 'BrowserSession' && name !== 'BrowserTracing'),
+    Sentry.browserTracingIntegration({
+      shouldCreateSpanForRequest: (url) => !isCurrentBrowserPathSensitive() && !isSensitiveTelemetryUrl(url),
+    }),
+  ],
+  beforeBreadcrumb(breadcrumb) {
+    if (isCurrentBrowserPathSensitive() || ['url', 'from', 'to'].some(
+      (key) => typeof breadcrumb.data?.[key] === 'string' && isSensitiveTelemetryUrl(breadcrumb.data[key]),
+    )) return null
+    return breadcrumb
+  },
+
   // Bilinen gereksiz hatalari filtrele
   ignoreErrors: [
     'ResizeObserver loop',
@@ -49,6 +63,11 @@ Sentry.init({
     if (
       isCurrentBrowserPathSensitive()
       || isSensitiveTelemetryUrl(event.request?.url)
+      // Fail closed even for spans created manually or by another integration.
+      || event.spans?.some((span) => [
+        span.description?.replace(/^[A-Z]+\s+/, ''),
+        span.data?.['url.full'], span.data?.['http.url'], span.data?.url,
+      ].some((url) => typeof url === 'string' && isSensitiveTelemetryUrl(url)))
     ) {
       return null
     }

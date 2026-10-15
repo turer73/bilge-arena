@@ -23,6 +23,14 @@ const isolatedPreviewBridge = process.env.NODE_ENV === 'development'
   && process.env.BILGE_ACADEMY_PREVIEW_BRIDGE === 'true'
 const isolatedHttpSource = isolatedPreviewBridge ? ' http://localhost:3137' : ''
 
+// Use only the configured DSN origin, never its key, project path or a regional wildcard.
+const sentryIngestSource = (() => {
+  if (!process.env.NEXT_PUBLIC_SENTRY_DSN) return ''
+  const dsn = new URL(process.env.NEXT_PUBLIC_SENTRY_DSN)
+  if (dsn.protocol !== 'https:') throw new Error('Sentry DSN must use HTTPS')
+  return ` ${dsn.origin}`
+})()
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // `output: 'standalone'` SADECE Docker self-host (Dockerfile) icin gerekli.
@@ -149,7 +157,7 @@ const nextConfig = {
               // media-src: video temalar (background_assets) Supabase Storage'tan mp4/webm
               // ile gelir. Ayarlanmazsa default-src 'self' bloklar → videolar oynamaz.
               `media-src 'self' blob: data: https://*.supabase.co${isolatedHttpSource}`,
-              `connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://ws-dev.bilgearena.com https://ws-dev.bilgearena.com https://www.google-analytics.com https://www.googletagmanager.com https://plausible.io https://analytics.panola.app https://generativelanguage.googleapis.com https://*.ingest.de.sentry.io https://*.googlesyndication.com https://pagead2.googlesyndication.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://static.cloudflareinsights.com https://cloudflareinsights.com https://*.googleusercontent.com${isolatedHttpSource}`,
+              `connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://ws-dev.bilgearena.com https://ws-dev.bilgearena.com https://www.google-analytics.com https://www.googletagmanager.com https://plausible.io https://analytics.panola.app https://generativelanguage.googleapis.com${sentryIngestSource} https://*.googlesyndication.com https://pagead2.googlesyndication.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://static.cloudflareinsights.com https://cloudflareinsights.com https://*.googleusercontent.com${isolatedHttpSource}`,
               "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google",
               "frame-ancestors 'none'",
               "base-uri 'self'",

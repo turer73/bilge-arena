@@ -3,15 +3,20 @@ import { SENTRY_PRIVACY_OPTIONS } from '../sentry-options'
 
 const { initMock } = vi.hoisted(() => ({ initMock: vi.fn() }))
 
-vi.mock('@sentry/nextjs', () => ({ init: initMock, captureRouterTransitionStart: vi.fn() }))
+vi.mock('@sentry/nextjs', () => ({
+  init: initMock, captureRouterTransitionStart: vi.fn(),
+  browserTracingIntegration: (options: object) => ({ name: 'BrowserTracing', ...options }),
+}))
 
 type InitOptions = {
   replaysSessionSampleRate?: number
   replaysOnErrorSampleRate?: number
   beforeSend?: (event: { request?: { url?: string; headers?: Record<string, string> } }) => unknown
+  integrations?: (defaults: { name: string }[]) => { name: string; shouldCreateSpanForRequest?: (url: string) => boolean }[]
+  beforeBreadcrumb?: (breadcrumb: { data?: Record<string, string> }) => unknown
   dataCollection?: unknown
   traceLifecycle?: string
-  beforeSendTransaction?: (event: { request?: { url?: string } }) => unknown
+  beforeSendTransaction?: (event: { request?: { url?: string }; spans?: { description?: string; data?: Record<string, unknown> }[] }) => unknown
 }
 
 const CONFIGS = {
@@ -30,6 +35,26 @@ async function loadInitOptions(name: keyof typeof CONFIGS): Promise<InitOptions>
 
 describe('Sentry gizlilik tabani', () => {
   afterEach(() => vi.unstubAllGlobals())
+
+  it('session zarflarini ve hassas API spanlarini engeller', async () => {
+    const options = await loadInitOptions('client')
+    const integrations = options.integrations!([{ name: 'BrowserSession' }, { name: 'BrowserTracing' }, { name: 'GlobalHandlers' }])
+    expect(integrations.map(i => i.name)).toEqual(['GlobalHandlers', 'BrowserTracing'])
+    const allow = integrations.find(i => i.name === 'BrowserTracing')!.shouldCreateSpanForRequest!
+    vi.stubGlobal('window', { location: { pathname: '/arena' } })
+    expect(allow('/api/institution/workspace')).toBe(false)
+    expect(allow('/api/public')).toBe(true)
+    for (const span of [
+      { description: 'GET /api/institution/workspace' },
+      { data: { 'url.full': 'https://bilgearena.com/api/teacher/classes' } },
+      { data: { 'http.url': '/api/admin/questions' } },
+    ]) expect(options.beforeSendTransaction!({ request: { url: '/arena' }, spans: [span] })).toBeNull()
+    expect(options.beforeBreadcrumb!({ data: { url: '/api/institution/workspace' } })).toBeNull()
+    expect(options.beforeBreadcrumb!({ data: { from: '/admin', to: '/arena' } })).toBeNull()
+    vi.stubGlobal('window', { location: { pathname: '/arena/sinif' } })
+    expect(allow('/api/public')).toBe(false)
+    expect(options.beforeBreadcrumb!({})).toBeNull()
+  })
 
   it('client girisi replayi kapali tutar ve router hookunu aktarir', async () => {
     const options = await loadInitOptions('client')
