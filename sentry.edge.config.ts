@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/nextjs'
-import { SENTRY_PRIVACY_OPTIONS } from './src/lib/privacy/sentry-options'
+import { SENTRY_PRIVACY_OPTIONS, stripEventUserPii } from './src/lib/privacy/sentry-options'
 import { isSensitiveTelemetryUrl } from './src/lib/privacy/telemetry-policy'
 
 Sentry.init({
@@ -10,9 +10,9 @@ Sentry.init({
 
   enabled: process.env.NODE_ENV === 'production',
   beforeSend(event) {
-    return isSensitiveTelemetryUrl(event.request?.url) ? null : event
+    return isSensitiveTelemetryUrl(event.request?.url) ? null : stripEventUserPii(event)
   },
   beforeSendTransaction(event) {
-    return isSensitiveTelemetryUrl(event.request?.url) ? null : event
+    return isSensitiveTelemetryUrl(event.request?.url) ? null : stripEventUserPii(event)
   },
 })
