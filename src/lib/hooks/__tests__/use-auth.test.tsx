@@ -142,9 +142,21 @@ describe('useAuth', () => {
 
     await waitFor(() => expect(store.profileWrite).toHaveBeenCalled())
     expect(store.setUser).toHaveBeenCalledWith(AUTH_USER)
-    expect(sentry.setUser).toHaveBeenCalledWith({ id: 'u1', email: 'test@test.com' })
+    expect(sentry.setUser).toHaveBeenCalledWith({ id: 'u1' })
     const profileArg = store.profileWrite.mock.calls.at(-1)![0]
     expect(profileArg).toMatchObject({ id: 'u1', role: 'user' })
+  })
+
+  test('Sentry scope\'una e-posta gitmez: getUser ve auth-state yolu yalniz id verir', async () => {
+    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+    renderHook(() => useAuth())
+    await waitFor(() => expect(supa.authStateCb).not.toBeNull())
+    act(() => supa.authStateCb!('SIGNED_IN', { user: AUTH_USER }))
+    await waitFor(() => expect(sentry.setUser).toHaveBeenCalledTimes(2))
+
+    for (const [scopeUser] of sentry.setUser.mock.calls) {
+      expect(scopeUser).toEqual({ id: 'u1' })
+    }
   })
 
   test('oturum başına 1 sync: flag varsa sync atlanır, GET ile yüklenir', async () => {
