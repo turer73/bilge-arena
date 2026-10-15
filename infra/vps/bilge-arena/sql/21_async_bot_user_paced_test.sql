@@ -24,18 +24,20 @@ BEGIN;
 -- =============================================================================
 -- Setup: 5 question + async oda + 1 user + 2 bot
 -- =============================================================================
+-- answer canli formatta: 0 tabanli secenek indeksi (_shuffle_question_options
+-- ::INT cevirir; harf cevap start_room'u dusurur).
 INSERT INTO public.questions (external_id, game, category, difficulty, content, is_active)
 VALUES
   ('test-paced-q1', 'matematik', 'pacedtest', 2,
-   '{"question":"q1","options":["a","b","c","d"],"answer":"a"}'::jsonb, TRUE),
+   '{"question":"q1","options":["a","b","c","d"],"answer":0}'::jsonb, TRUE),
   ('test-paced-q2', 'matematik', 'pacedtest', 2,
-   '{"question":"q2","options":["a","b","c","d"],"answer":"b"}'::jsonb, TRUE),
+   '{"question":"q2","options":["a","b","c","d"],"answer":1}'::jsonb, TRUE),
   ('test-paced-q3', 'matematik', 'pacedtest', 2,
-   '{"question":"q3","options":["a","b","c","d"],"answer":"c"}'::jsonb, TRUE),
+   '{"question":"q3","options":["a","b","c","d"],"answer":2}'::jsonb, TRUE),
   ('test-paced-q4', 'matematik', 'pacedtest', 2,
-   '{"question":"q4","options":["a","b","c","d"],"answer":"d"}'::jsonb, TRUE),
+   '{"question":"q4","options":["a","b","c","d"],"answer":3}'::jsonb, TRUE),
   ('test-paced-q5', 'matematik', 'pacedtest', 2,
-   '{"question":"q5","options":["a","b","c","d"],"answer":"a"}'::jsonb, TRUE);
+   '{"question":"q5","options":["a","b","c","d"],"answer":0}'::jsonb, TRUE);
 
 -- Async oda 1 user + 2 bot
 INSERT INTO public.rooms

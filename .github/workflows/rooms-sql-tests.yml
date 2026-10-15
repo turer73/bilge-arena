@@ -1,0 +1,72 @@
+name: Rooms SQL tests
+
+# Oda DB'si (VPS bilge-arena-db) migration zinciri ve *_test.sql dosyalari.
+# Bu testler CI'da hic kosmadigi icin 20 testin 10'u fark edilmeden kirilmisti
+# (disc #2535): start_room, submit_answer*, replay vb. RPC'lerin regresyon
+# korumasi fiilen yoktu. Is bos bir postgres:16'ya canli rol setini kurar,
+# 0..26 migration'i sirayla uygular ve her testi ON_ERROR_STOP ile kosar.
+# Mantik infra/vps/bilge-arena/scripts/run-sql-tests.sh'te; yerelde de ayni
+# betik kosulur.
+
+on:
+  pull_request:
+    paths:
+      - 'infra/vps/bilge-arena/sql/**'
+      - 'infra/vps/bilge-arena/scripts/run-sql-tests.sh'
+      - '.github/workflows/rooms-sql-tests.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'infra/vps/bilge-arena/sql/**'
+      - 'infra/vps/bilge-arena/scripts/run-sql-tests.sh'
+      - '.github/workflows/rooms-sql-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rooms-sql-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+  rooms-sql:
+    name: Rooms SQL migrations + tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - '127.0.0.1:5432:5432'
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v6
+
+      # 25_realtime_publication wal_level=logical ister. Servis konteynerine
+      # komut satiri verilemedigi icin ALTER SYSTEM + yeniden baslatma.
+      - name: Enable wal_level=logical
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -d postgres -c "ALTER SYSTEM SET wal_level = logical"
+          docker restart "${{ job.services.postgres.id }}"
+          for _ in $(seq 1 60); do
+            pg_isready -q -d postgres && break
+            sleep 1
+          done
+          test "$(psql -X -tAc 'SHOW wal_level' -d postgres)" = logical
+
+      - name: Apply 0..26 and run every *_test.sql
+        run: bash infra/vps/bilge-arena/scripts/run-sql-tests.sh

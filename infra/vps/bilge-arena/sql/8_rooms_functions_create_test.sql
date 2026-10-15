@@ -170,15 +170,20 @@ END $$;
 -- =============================================================================
 -- Test 7: Privilege - authenticated EXECUTE OK, anon DENIED
 -- =============================================================================
+-- Imza 9_rooms_auto_advance (8 arg) ve 11_rooms_public_discovery (9 arg) ile
+-- genisledi; eski imzalar DROP edildi. Yetki guncel imza uzerinden olculur.
 DO $$
 BEGIN
+  IF to_regprocedure('public.create_room(text,text,smallint,smallint,smallint,smallint,text)') IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL Test 7: eski 7-arg create_room overload hala var';
+  END IF;
   IF NOT has_function_privilege('authenticated',
-      'public.create_room(text,text,smallint,smallint,smallint,smallint,text)',
+      'public.create_room(text,text,smallint,smallint,smallint,smallint,text,integer,boolean)',
       'EXECUTE') THEN
     RAISE EXCEPTION 'FAIL Test 7: authenticated EXECUTE missing';
   END IF;
   IF has_function_privilege('anon',
-      'public.create_room(text,text,smallint,smallint,smallint,smallint,text)',
+      'public.create_room(text,text,smallint,smallint,smallint,smallint,text,integer,boolean)',
       'EXECUTE') THEN
     RAISE EXCEPTION 'FAIL Test 7: anon EXECUTE granted (PUBLIC GRANT vulnerability)';
   END IF;
