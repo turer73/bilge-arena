@@ -76,6 +76,8 @@ describe('ProfilClient responsive kabuk', () => {
     expect(mainColumn?.contains(mobileTopics)).toBe(true)
     expect(sidebar).toHaveClass('lg:col-start-2', 'lg:row-start-1')
     expect(container.querySelector('[data-profile-actions]')).toHaveClass('grid-cols-5')
+    expect(screen.getByRole('button', { name: 'Hesabımı kalıcı sil' })).toBeInTheDocument()
+    expect(sidebar?.contains(container.querySelector('[data-profile-delete-account]'))).toBe(true)
   })
 
   test('tablet ve masaustunde hedef, Bilge ve gorunurlugu profil avatarindan ayirir', () => {

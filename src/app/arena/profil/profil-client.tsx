@@ -30,6 +30,7 @@ import { AvatarDecoration } from '@/components/profile/avatar-decoration'
 import { ContentQualityStatus } from '@/components/profile/content-quality-status'
 import { ProfileActions } from '@/components/profile/profile-actions'
 import { DesktopProfileContext } from '@/components/profile/desktop-profile-context'
+import { DeleteAccountSection } from '@/components/profile/delete-account-section'
 
 // Mod isimleri
 const MODE_LABELS: Record<string, string> = {
@@ -574,6 +575,7 @@ export default function ProfilClient() {
         <div className="grid gap-3">
           <DiscoverabilitySettings />
           <LeaderboardVisibilitySettings />
+          <DeleteAccountSection key={user.id} userId={user.id} />
         </div>
       </div>
 
