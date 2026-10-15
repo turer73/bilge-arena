@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/nextjs'
-import { SENTRY_PRIVACY_OPTIONS } from './lib/privacy/sentry-options'
+import { SENTRY_PRIVACY_OPTIONS, stripEventUserPii } from './lib/privacy/sentry-options'
 import {
   isCurrentBrowserPathSensitive,
   isSensitiveTelemetryUrl,
@@ -68,7 +68,7 @@ Sentry.init({
     if (/HeadlessChrome|bot|crawl|spider|Vercel/i.test(ua)) {
       return null
     }
-    return event
+    return stripEventUserPii(event)
   },
   beforeSendTransaction(event) {
     if (
@@ -82,7 +82,7 @@ Sentry.init({
     ) {
       return null
     }
-    return event
+    return stripEventUserPii(event)
   },
 })
 

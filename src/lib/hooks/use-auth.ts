@@ -203,7 +203,9 @@ export function useAuth() {
     supabase.auth.getUser().then(({ data: { user: authUser } }) => {
       setUser(authUser ?? null)
       if (authUser) {
-        Sentry.setUser({ id: authUser.id, email: authUser.email })
+        // Yalniz takma kimlik: kullanicilarin cogu resit olmayan ogrenci,
+        // e-posta Sentry'ye gitmez (dataCollection.userInfo bunu engellemez).
+        Sentry.setUser({ id: authUser.id })
         fetchProfileWithSync(authUser).catch((err) => {
           console.error('[useAuth] fetchProfile hatasi:', err)
         })
@@ -219,7 +221,7 @@ export function useAuth() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
-        Sentry.setUser({ id: session.user.id, email: session.user.email })
+        Sentry.setUser({ id: session.user.id })
         fetchProfileWithSync(session.user)
       } else {
         Sentry.setUser(null)
