@@ -115,11 +115,12 @@ export async function GET(request: NextRequest) {
   const profilesById = new Map((profilesRes.data ?? []).map(p => [p.id, p]))
   const likedIds = new Set((likesRes.data ?? []).map(l => l.comment_id))
 
-  // Eski !inner gommesiyle ayni sozlesme: profili olmayan yazarin yorumu listelenmez.
-  const comments: CommentDto[] = rows.flatMap(c => {
+  // Profili olmayan yazarin yorumu dusurulmez, profil alanlari bos doner
+  // (arayuz "Anonim" gosterir). Dusurmek limit(50)'den sonra calisacagi icin
+  // daha eski, profilli yorumlari da listeden atardi.
+  const comments: CommentDto[] = rows.map(c => {
     const profile = profilesById.get(c.user_id)
-    if (!profile) return []
-    return [{
+    return {
       id: c.id,
       content: c.content,
       likes_count: c.likes_count ?? 0,
@@ -129,12 +130,12 @@ export async function GET(request: NextRequest) {
       is_own: c.user_id === user?.id,
       is_liked: likedIds.has(c.id),
       profile: {
-        username: profile.username,
-        display_name: profile.display_name,
-        avatar_url: profile.avatar_url,
-        level_name: profile.level_name,
+        username: profile?.username ?? null,
+        display_name: profile?.display_name ?? null,
+        avatar_url: profile?.avatar_url ?? null,
+        level_name: profile?.level_name ?? null,
       },
-    }]
+    }
   })
 
   return NextResponse.json(

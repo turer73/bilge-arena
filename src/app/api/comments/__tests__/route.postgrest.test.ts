@@ -239,9 +239,11 @@ describePg('/api/comments on real PostgreSQL + PostgREST', () => {
     expect(res.status).toBe(200)
     const { comments } = await res.json()
 
-    // Silinmiş, başka soruya ait ve profili olmayan yazarın yorumları yok; yeni olan önce.
-    expect(comments.map((c: { id: string }) => c.id)).toEqual([ids.ayseNew, ids.aliOld])
-    expect(comments[0]).toMatchObject({
+    // Silinmiş ve başka soruya ait yorumlar yok; yeni olan önce. Profili olmayan
+    // yazarın yorumu boş profille döner (arayüz "Anonim" gösterir).
+    expect(comments.map((c: { id: string }) => c.id)).toEqual([ids.orphan, ids.ayseNew, ids.aliOld])
+    expect(comments[0].profile).toEqual({ username: null, display_name: null, avatar_url: null, level_name: null })
+    expect(comments[1]).toMatchObject({
       content: 'yeni yorum',
       likes_count: 1,
       user_id: ids.ayse,
@@ -249,7 +251,7 @@ describePg('/api/comments on real PostgreSQL + PostgREST', () => {
       is_liked: false,
       profile: { username: 'ayse', display_name: null, avatar_url: null, level_name: 'Acemi' },
     })
-    expect(comments[1].profile).toEqual({
+    expect(comments[2].profile).toEqual({
       username: 'ali',
       display_name: 'Ali Yılmaz',
       avatar_url: 'https://cdn.example/ali.png',
