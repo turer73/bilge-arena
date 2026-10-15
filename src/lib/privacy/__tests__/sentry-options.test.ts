@@ -1,14 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SENTRY_PRIVACY_OPTIONS } from '../sentry-options'
 
-const { initMock } = vi.hoisted(() => ({ initMock: vi.fn() }))
+const { initMock, sendMock } = vi.hoisted(() => ({ initMock: vi.fn(), sendMock: vi.fn(async () => ({})) }))
 
 vi.mock('@sentry/nextjs', () => ({
   init: initMock, captureRouterTransitionStart: vi.fn(),
   browserTracingIntegration: (options: object) => ({ name: 'BrowserTracing', ...options }),
+  makeFetchTransport: () => ({ send: sendMock, flush: vi.fn(async () => true) }),
 }))
 
 type InitOptions = {
+  transport?: (options: object) => { send: (envelope: unknown) => Promise<unknown> }
   replaysSessionSampleRate?: number
   replaysOnErrorSampleRate?: number
   beforeSend?: (event: { request?: { url?: string; headers?: Record<string, string> } }) => unknown
@@ -35,6 +37,18 @@ async function loadInitOptions(name: keyof typeof CONFIGS): Promise<InitOptions>
 
 describe('Sentry gizlilik tabani', () => {
   afterEach(() => vi.unstubAllGlobals())
+
+  it('hassas belge uzerinde client report dahil tum zarflari transportta durdurur', async () => {
+    const options = await loadInitOptions('client')
+    const transport = options.transport!({})
+    vi.stubGlobal('window', { location: { pathname: '/arena' } })
+    const envelope = [{}, [[{ type: 'client_report' }, {}]]]
+    await transport.send(envelope)
+    expect(sendMock).toHaveBeenCalledOnce()
+    vi.stubGlobal('window', { location: { pathname: '/admin' } })
+    await transport.send(envelope)
+    expect(sendMock).toHaveBeenCalledOnce()
+  })
 
   it('session zarflarini ve hassas API spanlarini engeller', async () => {
     const options = await loadInitOptions('client')

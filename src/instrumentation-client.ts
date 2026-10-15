@@ -19,6 +19,17 @@ Sentry.init({
   // Development'ta Sentry'yi devre disi birak
   enabled: process.env.NODE_ENV === 'production',
 
+  // Also cover non-event envelopes such as SDK client reports after navigation.
+  transport: (options: Parameters<typeof Sentry.makeFetchTransport>[0]) => {
+    const transport = Sentry.makeFetchTransport(options)
+    return {
+      ...transport,
+      send(envelope: Parameters<typeof transport.send>[0]) {
+        return isCurrentBrowserPathSensitive() ? Promise.resolve({}) : transport.send(envelope)
+      },
+    }
+  },
+
   // Session envelopes bypass event filters. Do not collect them on any route.
   integrations: (defaults) => [
     ...defaults.filter(({ name }) => name !== 'BrowserSession' && name !== 'BrowserTracing'),
