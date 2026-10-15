@@ -1,9 +1,9 @@
 import * as Sentry from '@sentry/nextjs'
-import { SENTRY_PRIVACY_OPTIONS } from './src/lib/privacy/sentry-options'
+import { SENTRY_PRIVACY_OPTIONS } from './lib/privacy/sentry-options'
 import {
   isCurrentBrowserPathSensitive,
   isSensitiveTelemetryUrl,
-} from './src/lib/privacy/telemetry-policy'
+} from './lib/privacy/telemetry-policy'
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -55,3 +55,5 @@ Sentry.init({
     return event
   },
 })
+
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart
