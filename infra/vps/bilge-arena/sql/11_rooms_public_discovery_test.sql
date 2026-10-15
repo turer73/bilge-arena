@@ -43,18 +43,24 @@ END $$;
 -- =============================================================================
 -- T2: max_players_cap reddedir 10 (is_public=true)
 -- =============================================================================
+-- Kod chk_rooms_code_format'a (Crockford-32: 0/1/I/O yok) uymali; yoksa
+-- check_violation yanlis kisittan gelir ve test yanlis sebeple gecer.
 DO $$
-DECLARE v_test_user UUID := gen_random_uuid();
+DECLARE v_test_user UUID := gen_random_uuid(); v_constraint TEXT;
 BEGIN
   BEGIN
     INSERT INTO public.rooms
       (code, host_id, title, category, difficulty, question_count,
        max_players, per_question_seconds, mode, state, is_public)
     VALUES
-      ('TST10A', v_test_user, 'T2 test', 'matematik', 2, 10,
+      ('TSTLZA', v_test_user, 'T2 test', 'matematik', 2, 10,
        10, 20, 'sync', 'lobby', TRUE);
     RAISE EXCEPTION 'T2 FAIL: 10 oyunculu public oda kabul edildi (max 6 olmali)';
   EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS v_constraint = CONSTRAINT_NAME;
+    IF v_constraint <> 'chk_rooms_public_max_players_cap' THEN
+      RAISE EXCEPTION 'T2 FAIL: yanlis kisit reddetti: %', v_constraint;
+    END IF;
     RAISE NOTICE 'OK: T2 chk_rooms_public_max_players_cap 10 reddetti';
   END;
 END $$;
@@ -69,7 +75,7 @@ BEGIN
     (code, host_id, title, category, difficulty, question_count,
      max_players, per_question_seconds, mode, state, is_public)
   VALUES
-    ('TST10B', v_test_user, 'T3 test', 'matematik', 2, 10,
+    ('TSTLZB', v_test_user, 'T3 test', 'matematik', 2, 10,
      6, 20, 'sync', 'lobby', TRUE);
   RAISE NOTICE 'OK: T3 chk_rooms_public_max_players_cap 6 kabul etti';
 END $$;
@@ -203,7 +209,7 @@ BEGIN
     (code, host_id, title, category, difficulty, question_count,
      max_players, per_question_seconds, mode, state)
   VALUES
-    ('TST10C', v_test_user, 'T10 trigger', 'matematik', 2, 10,
+    ('TSTLZC', v_test_user, 'T10 trigger', 'matematik', 2, 10,
      6, 20, 'sync', 'lobby')
   RETURNING id INTO v_room_id;
 

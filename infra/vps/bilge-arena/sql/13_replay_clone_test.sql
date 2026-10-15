@@ -59,14 +59,16 @@ DECLARE
   v_source RECORD;
   v_clone RECORD;
 BEGIN
-  -- Source oda olustur (state=completed, replay edilebilir)
+  -- Source oda olustur (state=completed, replay edilebilir). Kod Crockford-32
+  -- (chk_rooms_code_format: 0/1/I/O yok); public oda max 6 oyuncu
+  -- (11_rooms_public_discovery chk_rooms_public_max_players_cap).
   INSERT INTO public.rooms
     (code, host_id, title, category, difficulty, question_count,
      max_players, per_question_seconds, mode, state, auto_advance_seconds,
      is_public)
   VALUES
-    ('TST13A', v_test_user, 'Test Replay', 'matematik', 4, 15,
-     8, 25, 'sync', 'completed', 7, TRUE)
+    ('TSTL3A', v_test_user, 'Test Replay', 'matematik', 4, 15,
+     6, 25, 'sync', 'completed', 7, TRUE)
   RETURNING id INTO v_source_id;
 
   INSERT INTO public.room_members (room_id, user_id, role)
@@ -166,7 +168,7 @@ BEGIN
     (code, host_id, title, category, difficulty, question_count,
      max_players, per_question_seconds, mode, state)
   VALUES
-    ('TST13B', v_test_user, 'Anon Test', 'matematik', 2, 10,
+    ('TSTL3B', v_test_user, 'Anon Test', 'matematik', 2, 10,
      8, 20, 'sync', 'completed')
   RETURNING id INTO v_source_id;
 
@@ -194,7 +196,7 @@ BEGIN
     (code, host_id, title, category, difficulty, question_count,
      max_players, per_question_seconds, mode, state)
   VALUES
-    ('TST13C', v_host, 'Member Test', 'matematik', 2, 10,
+    ('TSTL3C', v_host, 'Member Test', 'matematik', 2, 10,
      8, 20, 'sync', 'completed')
   RETURNING id INTO v_source_id;
 
@@ -246,7 +248,7 @@ BEGIN
     (code, host_id, title, category, difficulty, question_count,
      max_players, per_question_seconds, mode, state)
   VALUES
-    ('TST13D', v_user, 'Lobby Test', 'matematik', 2, 10,
+    ('TSTL3D', v_user, 'Lobby Test', 'matematik', 2, 10,
      8, 20, 'sync', 'lobby')
   RETURNING id INTO v_source_id;
 
@@ -281,7 +283,7 @@ BEGIN
     (code, host_id, title, category, difficulty, question_count,
      max_players, per_question_seconds, mode, state)
   VALUES
-    ('TST13E', v_user, v_long_title, 'matematik', 2, 10,
+    ('TSTL3E', v_user, v_long_title, 'matematik', 2, 10,
      8, 20, 'sync', 'completed')
   RETURNING id INTO v_source_id;
 
@@ -303,7 +305,11 @@ BEGIN
   END IF;
   RAISE NOTICE 'OK: T9 title overflow handle (% chars, marker dahil)', char_length(v_clone_title);
 
-  -- T9b: Yeniden replay et — (Tekrar) zaten var, tekrar eklenmemeli
+  -- T9b: Yeniden replay et — (Tekrar) zaten var, tekrar eklenmemeli.
+  -- Klon lobby'de dogar; replay yalniz completed/archived kabul eder (T8,
+  -- plan-deviation #78). Klonun oynanip bittigini simule et.
+  UPDATE public.rooms SET state = 'completed', ended_at = NOW()
+   WHERE id = v_clone_id;
   v_clone_result := public.replay_room(v_clone_id);
   v_clone_id := (v_clone_result->>'id')::UUID;
   SELECT title INTO v_clone_title FROM public.rooms WHERE id = v_clone_id;
@@ -335,7 +341,7 @@ BEGIN
     (code, host_id, title, category, difficulty, question_count,
      max_players, per_question_seconds, mode, state)
   VALUES
-    ('TST13F', v_user, 'Audit Test', 'matematik', 2, 10,
+    ('TSTL3F', v_user, 'Audit Test', 'matematik', 2, 10,
      8, 20, 'sync', 'completed')
   RETURNING id INTO v_source_id;
 
