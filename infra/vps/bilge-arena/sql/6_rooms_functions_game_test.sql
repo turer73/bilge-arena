@@ -46,13 +46,17 @@ SELECT set_config('request.jwt.claim.sub',
 -- =============================================================================
 -- Setup: mock questions + room + members + start_room ile active state
 -- =============================================================================
+-- answer canli formatta: 0 tabanli secenek indeksi (JSON sayi). start_room ->
+-- _pre_create_rounds -> _shuffle_question_options bunu ::INT cevirir; harf
+-- ('a') "invalid input syntax for type integer" ile duser. Snapshot'taki
+-- answer karistirma sonrasi indeks metnidir ("2"); submit degerleri de oyle.
 INSERT INTO public.questions (external_id, game, category, difficulty, content, is_active)
 VALUES
-  ('test-q-g01', 'matematik', 'cebir', 2, '{"question":"q1","options":["a","b","c","d"],"answer":"a"}'::jsonb, TRUE),
-  ('test-q-g02', 'matematik', 'cebir', 2, '{"question":"q2","options":["a","b","c","d"],"answer":"b"}'::jsonb, TRUE),
-  ('test-q-g03', 'matematik', 'cebir', 2, '{"question":"q3","options":["a","b","c","d"],"answer":"c"}'::jsonb, TRUE),
-  ('test-q-g04', 'matematik', 'cebir', 2, '{"question":"q4","options":["a","b","c","d"],"answer":"d"}'::jsonb, TRUE),
-  ('test-q-g05', 'matematik', 'cebir', 2, '{"question":"q5","options":["a","b","c","d"],"answer":"a"}'::jsonb, TRUE);
+  ('test-q-g01', 'matematik', 'cebir', 2, '{"question":"q1","options":["a","b","c","d"],"answer":0}'::jsonb, TRUE),
+  ('test-q-g02', 'matematik', 'cebir', 2, '{"question":"q2","options":["a","b","c","d"],"answer":1}'::jsonb, TRUE),
+  ('test-q-g03', 'matematik', 'cebir', 2, '{"question":"q3","options":["a","b","c","d"],"answer":2}'::jsonb, TRUE),
+  ('test-q-g04', 'matematik', 'cebir', 2, '{"question":"q4","options":["a","b","c","d"],"answer":3}'::jsonb, TRUE),
+  ('test-q-g05', 'matematik', 'cebir', 2, '{"question":"q5","options":["a","b","c","d"],"answer":0}'::jsonb, TRUE);
 
 INSERT INTO public.rooms
   (id, code, host_id, title, category, difficulty, question_count,
@@ -141,7 +145,7 @@ DO $$
 BEGIN
   PERFORM public.submit_answer(
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
-    'a'::text
+    '0'::text
   );
   RAISE EXCEPTION 'FAIL Test 2.1: auth-yok submit basarili';
 EXCEPTION
@@ -156,12 +160,13 @@ SELECT set_config('request.jwt.claim.sub',
                   '33333333-3333-3333-3333-333333333333', FALSE);
 DO $$
 BEGIN
-  -- round 1'in answer'i question content'inden — 5 mock'tan random secildi.
-  -- Burda 'a' cevabi veriyoruz, %20 ihtimalle correct olur. Test ne olursa
+  -- round 1'in answer'i question content'inden — 5 mock'tan random secildi
+  -- ve secenekler karistirildi (23). Burda '0' (ilk secenek) veriyoruz,
+  -- ~%25 ihtimalle correct olur. Test ne olursa
   -- olsun submit basarili olmali (correctness reveal'da hesaplanir).
   PERFORM public.submit_answer(
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
-    'a'::text
+    '0'::text
   );
   RAISE NOTICE 'OK Test 2.2: player2 submit basarili';
 END $$;
@@ -189,7 +194,7 @@ DO $$
 BEGIN
   PERFORM public.submit_answer(
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
-    'b'::text
+    '1'::text
   );
   RAISE EXCEPTION 'FAIL Test 2.4: duplicate submit basarili';
 EXCEPTION
@@ -206,7 +211,7 @@ DO $$
 BEGIN
   PERFORM public.submit_answer(
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
-    'a'::text
+    '0'::text
   );
   RAISE EXCEPTION 'FAIL Test 2.5: non-member submit basarili';
 EXCEPTION
@@ -223,7 +228,7 @@ DO $$
 BEGIN
   PERFORM public.submit_answer(
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
-    'b'::text
+    '1'::text
   );
   RAISE NOTICE 'OK Test 2.6: player3 submit basarili';
 END $$;
@@ -335,7 +340,7 @@ DO $$
 BEGIN
   PERFORM public.submit_answer(
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
-    'c'::text
+    '2'::text
   );
   RAISE EXCEPTION 'FAIL Test 3.8: reveal state submit basarili';
 EXCEPTION
@@ -475,7 +480,7 @@ INSERT INTO public.room_rounds
    started_at, ends_at, revealed_at)
 VALUES
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 1, gen_random_uuid(),
-   '{"question":"q","options":["a","b"],"answer":"a"}'::jsonb,
+   '{"question":"q","options":["a","b"],"answer":"0"}'::jsonb,
    NOW() - INTERVAL '5 seconds', NOW() + INTERVAL '30 seconds',
    NOW() - INTERVAL '1 second');  -- revealed_at SET = race fix tetikleyici
 
@@ -486,7 +491,7 @@ DO $$
 BEGIN
   PERFORM public.submit_answer(
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
-    'a'::text
+    '0'::text
   );
   RAISE EXCEPTION 'FAIL Test 4.9: race-fix bypass — late submit basarili';
 EXCEPTION

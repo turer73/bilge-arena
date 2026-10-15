@@ -210,7 +210,8 @@ BEGIN
   v_result := public.quick_play_room('tarih', 3::SMALLINT, 15::SMALLINT);
   v_room_id := (v_result->>'id')::UUID;
 
-  SELECT COUNT(*), MIN(payload) INTO v_audit_count, v_payload
+  -- jsonb icin min() yok; satir sayisi zaten 1 ile dogrulaniyor.
+  SELECT COUNT(*), (array_agg(payload))[1] INTO v_audit_count, v_payload
   FROM public.room_audit_log
   WHERE room_id = v_room_id
     AND actor_id = v_test_user

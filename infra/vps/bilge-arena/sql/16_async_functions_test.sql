@@ -28,18 +28,20 @@ BEGIN;
 -- =============================================================================
 -- Setup: questions + 1 async oda + 1 sync oda + 3 async member + 3 sync member
 -- =============================================================================
+-- answer canli formatta: 0 tabanli secenek indeksi (_shuffle_question_options
+-- ::INT cevirir; harf cevap start_room'u dusurur).
 INSERT INTO public.questions (external_id, game, category, difficulty, content, is_active)
 VALUES
   ('test-async-q1', 'matematik', 'gometri', 2,
-   '{"question":"q1","options":["a","b","c","d"],"answer":"a","explanation":"a dogru cunku..."}'::jsonb, TRUE),
+   '{"question":"q1","options":["a","b","c","d"],"answer":0,"explanation":"a dogru cunku..."}'::jsonb, TRUE),
   ('test-async-q2', 'matematik', 'gometri', 2,
-   '{"question":"q2","options":["a","b","c","d"],"answer":"b","explanation":"b dogru cunku..."}'::jsonb, TRUE),
+   '{"question":"q2","options":["a","b","c","d"],"answer":1,"explanation":"b dogru cunku..."}'::jsonb, TRUE),
   ('test-async-q3', 'matematik', 'gometri', 2,
-   '{"question":"q3","options":["a","b","c","d"],"answer":"c","explanation":"c dogru cunku..."}'::jsonb, TRUE),
+   '{"question":"q3","options":["a","b","c","d"],"answer":2,"explanation":"c dogru cunku..."}'::jsonb, TRUE),
   ('test-async-q4', 'matematik', 'gometri', 2,
-   '{"question":"q4","options":["a","b","c","d"],"answer":"d","explanation":"d dogru..."}'::jsonb, TRUE),
+   '{"question":"q4","options":["a","b","c","d"],"answer":3,"explanation":"d dogru..."}'::jsonb, TRUE),
   ('test-async-q5', 'matematik', 'gometri', 2,
-   '{"question":"q5","options":["a","b","c","d"],"answer":"a","explanation":"a dogru..."}'::jsonb, TRUE);
+   '{"question":"q5","options":["a","b","c","d"],"answer":0,"explanation":"a dogru..."}'::jsonb, TRUE);
 
 -- Async oda (host + 2 player) — question_count=5 (DB CHECK min)
 INSERT INTO public.rooms
@@ -196,8 +198,9 @@ BEGIN
   SELECT question_content_snapshot->>'answer' INTO v_correct
   FROM public.room_rounds
   WHERE room_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' AND round_index = 1;
-  -- Yanlis cevap: a/b/c/d arasindan v_correct disindaki ilki
-  v_wrong := CASE WHEN v_correct = 'a' THEN 'b' ELSE 'a' END;
+  -- Yanlis cevap: snapshot answer'i karistirilmis secenek indeksi ("0".."3");
+  -- v_correct disindaki ilk indeks
+  v_wrong := CASE WHEN v_correct = '0' THEN '1' ELSE '0' END;
 
   v_result := public.submit_answer_async(
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
@@ -227,7 +230,7 @@ BEGIN
   SELECT question_content_snapshot->>'answer' INTO v_correct
   FROM public.room_rounds
   WHERE room_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' AND round_index = 1;
-  v_wrong := CASE WHEN v_correct = 'a' THEN 'b' ELSE 'a' END;
+  v_wrong := CASE WHEN v_correct = '0' THEN '1' ELSE '0' END;
 
   v_result := public.submit_answer_async(
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
@@ -273,7 +276,7 @@ DO $$
 BEGIN
   PERFORM public.submit_answer_async(
     'cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid,
-    'a'::text
+    '0'::text
   );
   RAISE EXCEPTION 'FAIL Test 3.1: sync oda submit_async basarili';
 EXCEPTION
@@ -292,7 +295,7 @@ DO $$
 BEGIN
   PERFORM public.submit_answer(
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
-    'a'::text
+    '0'::text
   );
   RAISE EXCEPTION 'FAIL Test 4.1: async oda sync submit basarili';
 EXCEPTION
@@ -443,7 +446,7 @@ DO $$
 BEGIN
   PERFORM public.submit_answer_async(
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
-    'a'::text
+    '0'::text
   );
   RAISE EXCEPTION 'FAIL Test 5.7: bitmis uye submit basarili';
 EXCEPTION
