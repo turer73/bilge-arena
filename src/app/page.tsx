@@ -191,7 +191,7 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(siteJsonLd) }}
       />
-      <Navbar />
+      <Navbar variant="home" />
       <main>
         <AcademyHome sections={sections} elements={elements} gameCounts={gameCounts} featuredResources={featuredResources} institutionPartnership={institutionPartnership} />
       </main>

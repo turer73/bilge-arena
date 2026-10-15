@@ -29,6 +29,7 @@
     "test:ci": "vitest run --reporter=default --reporter=junit --outputFile=test-results.xml",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:prod": "playwright test --config playwright.production.config.ts",
     "test:db": "vitest run --config vitest.database.config.ts",
     "test:verified-attempts:pg": "vitest run --config vitest.database.config.ts database/__tests__/verified-attempts-postgres.integration.test.mjs",
     "test:reward-integrity:pg": "vitest run --config vitest.database.config.ts database/__tests__/reward-integrity-postgres.integration.test.mjs",
