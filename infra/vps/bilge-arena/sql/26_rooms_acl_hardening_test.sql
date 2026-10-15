@@ -217,6 +217,24 @@ BEGIN
   RAISE NOTICE 'OK Test 1.6: RPC EXECUTE anon kapali, helper''lar DEFINER/bilge_arena_app';
 END $$;
 
+-- Test 1.7: yeni fonksiyonlar PUBLIC'e (dolayisiyla anon'a) acik dogmuyor
+-- (Codex P2, PR #630): hem bilge_arena_app hem migration'i kosan superuser icin
+SET LOCAL ROLE bilge_arena_app;
+CREATE FUNCTION public.t26_probe_app() RETURNS INT LANGUAGE sql AS 'SELECT 1';
+RESET ROLE;
+CREATE FUNCTION public.t26_probe_super() RETURNS INT LANGUAGE sql AS 'SELECT 1';
+DO $$
+DECLARE v_fn TEXT;
+BEGIN
+  FOREACH v_fn IN ARRAY ARRAY['public.t26_probe_app()', 'public.t26_probe_super()'] LOOP
+    IF has_function_privilege('anon', v_fn, 'EXECUTE')
+       OR has_function_privilege('authenticated', v_fn, 'EXECUTE') THEN
+      RAISE EXCEPTION 'ASSERT FAILED Test 1.7: yeni fonksiyon % varsayilan olarak calistirilabilir', v_fn;
+    END IF;
+  END LOOP;
+  RAISE NOTICE 'OK Test 1.7: yeni fonksiyonlar PUBLIC/anon/authenticated''a kapali doguyor';
+END $$;
+
 -- =============================================================================
 -- Fixture (superuser; FORCE RLS superuser'i baglamaz). Tumu ROLLBACK edilir.
 --   H = host, P = oyuncu, O = disaridan
@@ -244,7 +262,9 @@ VALUES
   ('26000000-0000-4000-8000-000000000052', 'Z26ASY',
    '26000000-0000-4000-8000-00000000000a', 'T26 Async', 't26-acl', 2, 5, 4, 20, 'async', 'lobby'),
   ('26000000-0000-4000-8000-000000000053', 'Z26LBY',
-   '26000000-0000-4000-8000-00000000000a', 'T26 Lobby', 't26-acl', 2, 5, 4, 20, 'sync', 'lobby');
+   '26000000-0000-4000-8000-00000000000a', 'T26 Lobby', 't26-acl', 2, 5, 4, 20, 'sync', 'lobby'),
+  ('26000000-0000-4000-8000-000000000054', 'Z26CNL',
+   '26000000-0000-4000-8000-00000000000a', 'T26 Cancel', 't26-acl', 2, 5, 4, 20, 'sync', 'lobby');
 
 INSERT INTO public.room_members (room_id, user_id, role, is_active)
 VALUES
@@ -252,7 +272,9 @@ VALUES
   ('26000000-0000-4000-8000-000000000051', '26000000-0000-4000-8000-00000000000b', 'player', TRUE),
   ('26000000-0000-4000-8000-000000000052', '26000000-0000-4000-8000-00000000000a', 'host', TRUE),
   ('26000000-0000-4000-8000-000000000052', '26000000-0000-4000-8000-00000000000b', 'player', TRUE),
-  ('26000000-0000-4000-8000-000000000053', '26000000-0000-4000-8000-00000000000a', 'host', TRUE);
+  ('26000000-0000-4000-8000-000000000053', '26000000-0000-4000-8000-00000000000a', 'host', TRUE),
+  ('26000000-0000-4000-8000-000000000054', '26000000-0000-4000-8000-00000000000a', 'host', TRUE),
+  ('26000000-0000-4000-8000-000000000054', '26000000-0000-4000-8000-00000000000b', 'player', TRUE);
 
 -- =============================================================================
 -- Section 2: Sync oda
@@ -620,22 +642,92 @@ BEGIN
 END $$;
 
 -- =============================================================================
--- Section 4: Oda bitince tum turlar ve cevaplar uyelere acik (SonucView/replay)
+-- Section 4: Oda bitisi (Codex P1, PR #630). cancel_room da odayi 'completed'
+-- yapar; dogal bitiste tum turlar + cevaplar acik, iptalde yalniz oynanmis
+-- (sync: reveal edilmis, async: caller'in cevapladigi) turlar.
 -- =============================================================================
+
+-- Test 4.1: S dogal yoldan biter (H: advance + reveal x4, son advance -> completed)
+SELECT set_config('request.jwt.claim.sub', '26000000-0000-4000-8000-00000000000a', true);
+DO $$
+DECLARE i INT; v_state TEXT;
+BEGIN
+  FOR i IN 2..5 LOOP
+    PERFORM public.advance_round('26000000-0000-4000-8000-000000000051'::uuid);
+    PERFORM public.reveal_round('26000000-0000-4000-8000-000000000051'::uuid);
+  END LOOP;
+  PERFORM public.advance_round('26000000-0000-4000-8000-000000000051'::uuid);
+  SELECT state INTO v_state FROM public.rooms WHERE id = '26000000-0000-4000-8000-000000000051';
+  IF v_state IS DISTINCT FROM 'completed' THEN
+    RAISE EXCEPTION 'ASSERT FAILED Test 4.1: dogal bitis state=%', v_state;
+  END IF;
+END $$;
+SELECT set_config('request.jwt.claim.sub', '26000000-0000-4000-8000-00000000000b', true);
+DO $$
+DECLARE v_n INT; v_ans INT; v_exp INT;
+BEGIN
+  SELECT count(*), count(correct_answer), count(explanation) INTO v_n, v_ans, v_exp
+    FROM public.room_round_question_view WHERE room_id = '26000000-0000-4000-8000-000000000051';
+  IF v_n <> 5 OR v_ans <> 5 OR v_exp <> 5 THEN
+    RAISE EXCEPTION 'ASSERT FAILED Test 4.1: dogal bitiste % tur, % cevap, % aciklama (5/5/5 beklendi)', v_n, v_ans, v_exp;
+  END IF;
+  RAISE NOTICE 'OK Test 4.1: dogal bitiste 5 tur, 5 cevap, 5 aciklama acik';
+END $$;
+
+-- Test 4.2: sync oda round 1'de iptal -> kalan 4 turun sorusu/cevabi kapali
+SELECT set_config('request.jwt.claim.sub', '26000000-0000-4000-8000-00000000000a', true);
+DO $$
+BEGIN
+  PERFORM public.start_room('26000000-0000-4000-8000-000000000054'::uuid);
+  PERFORM public.advance_round('26000000-0000-4000-8000-000000000054'::uuid);
+  PERFORM public.cancel_room('26000000-0000-4000-8000-000000000054'::uuid, 't26 iptal');
+END $$;
 RESET ROLE;
-UPDATE public.rooms SET state = 'completed', ended_at = NOW()
-  WHERE id = '26000000-0000-4000-8000-000000000051';
+SELECT set_config('t26.c_round5',
+  (SELECT id::text FROM public.room_rounds WHERE room_id = '26000000-0000-4000-8000-000000000054' AND round_index = 5), true);
 SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '26000000-0000-4000-8000-00000000000b', true);
+DO $$
+DECLARE v_state TEXT; v_t INT; v_n INT; v_ans INT; v_exp INT; v_rpc INT;
+BEGIN
+  SELECT state INTO v_state FROM public.rooms WHERE id = '26000000-0000-4000-8000-000000000054';
+  IF v_state IS DISTINCT FROM 'completed' THEN
+    RAISE EXCEPTION 'ASSERT FAILED Test 4.2: iptal sonrasi state=% (completed beklendi)', v_state;
+  END IF;
+  SELECT count(*) INTO v_t FROM public.room_rounds WHERE room_id = '26000000-0000-4000-8000-000000000054';
+  SELECT count(*), count(correct_answer), count(explanation) INTO v_n, v_ans, v_exp
+    FROM public.room_round_question_view WHERE room_id = '26000000-0000-4000-8000-000000000054';
+  SELECT count(*) INTO v_rpc
+    FROM public.room_round_visible_content(current_setting('t26.c_round5')::uuid);
+  IF v_t <> 1 OR v_n <> 1 OR v_ans <> 0 OR v_exp <> 0 OR v_rpc <> 0 THEN
+    RAISE EXCEPTION 'ASSERT FAILED Test 4.2: iptal edilen odada tablo=% view=% cevap=% aciklama=% rpc(round5)=% (1/1/0/0/0 beklendi)',
+      v_t, v_n, v_ans, v_exp, v_rpc;
+  END IF;
+  RAISE NOTICE 'OK Test 4.2: iptal edilen sync odada yalniz oynanan tur, cevapsiz';
+END $$;
+
+-- Test 4.3: async oda iptal -> her uye yalniz kendi ilerlemesini ve cevapladigini gorur
+SELECT set_config('request.jwt.claim.sub', '26000000-0000-4000-8000-00000000000a', true);
+DO $$ BEGIN PERFORM public.cancel_room('26000000-0000-4000-8000-000000000052'::uuid, 't26 iptal'); END $$;
+DO $$
+DECLARE v_n INT; v_ans INT;
+BEGIN
+  SELECT count(*), count(correct_answer) INTO v_n, v_ans
+    FROM public.room_round_question_view WHERE room_id = '26000000-0000-4000-8000-000000000052';
+  IF v_n <> 1 OR v_ans <> 0 THEN
+    RAISE EXCEPTION 'ASSERT FAILED Test 4.3: H (round 1, cevapsiz) % tur % cevap goruyor (1/0 beklendi)', v_n, v_ans;
+  END IF;
+END $$;
 SELECT set_config('request.jwt.claim.sub', '26000000-0000-4000-8000-00000000000b', true);
 DO $$
 DECLARE v_n INT; v_ans INT;
 BEGIN
-  SELECT count(*), count(correct_answer) INTO v_n, v_ans FROM public.room_round_question_view
-    WHERE room_id = '26000000-0000-4000-8000-000000000051';
-  IF v_n <> 5 OR v_ans <> 5 THEN
-    RAISE EXCEPTION 'ASSERT FAILED Test 4.1: completed odada % tur, % cevap (5/5 beklendi)', v_n, v_ans;
+  SELECT count(*), count(correct_answer) INTO v_n, v_ans
+    FROM public.room_round_question_view WHERE room_id = '26000000-0000-4000-8000-000000000052';
+  IF v_n <> 2 OR v_ans <> 1 THEN
+    RAISE EXCEPTION 'ASSERT FAILED Test 4.3: P (round 2, 1 cevap) % tur % cevap goruyor (2/1 beklendi)', v_n, v_ans;
   END IF;
-  RAISE NOTICE 'OK Test 4.1: completed odada tum turlar ve cevaplar acik';
+  RAISE NOTICE 'OK Test 4.3: iptal edilen async odada uye bazli ilerleme korunuyor';
 END $$;
 
 -- =============================================================================

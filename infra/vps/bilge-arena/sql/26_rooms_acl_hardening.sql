@@ -50,15 +50,27 @@
 --        sync : round_index <= rooms.current_round_index
 --        async: round_index <= room_members.current_round_index (caller) veya
 --               caller bitirdiyse tumu
---        completed/archived: tumu
+--      completed/archived icin istisna YOK: cancel_room da odayi 'completed'
+--      yapar ve start_room tum turlari bastan yaratir; istisna olsaydi host +
+--      bir uye baslat-iptal dongusuyle soru bankasini kaziyabilirdi (Codex P1,
+--      PR #630). Dogal bitiste tum turlar zaten oynanmis olur: sync'te
+--      current_round_index = question_count ve her tur reveal edilmis
+--      (advance_round/auto_relay_tick yalniz 'reveal' state'ten bitirir), async'te
+--      finished_at yalniz tum turlari cevaplayinca set edilir.
 --   5) room_round_question_view yeniden kurulur: security_invoker=true, sahibi
 --      bilge_arena_app, yalniz SELECT. Soru/secenekler SECURITY DEFINER
 --      room_round_visible_content'ten gelir; correct_answer ve explanation
---      (aciklama cogu zaman cevabi soyluyor) yalniz reveal sonrasi, async'te
---      caller o turu cevapladiktan sonra veya oda bittikten sonra doner.
+--      (aciklama cogu zaman cevabi soyluyor) yalniz reveal sonrasi (sync) veya
+--      caller o turu cevapladiktan sonra (async) doner.
 --   6) Auth isteyen RPC'ler ve trigger fonksiyonlari PUBLIC/anon EXECUTE'dan
 --      cikarilir (hepsi auth.uid() NULL ise zaten reddediyordu; follow-
 --      privileges OpenAPI'de anon'a gorunmesinler).
+--   7) Yeni fonksiyonlarin yerlesik PUBLIC EXECUTE varsayilani bilge_arena_app
+--      ve migration'i kosan superuser icin global olarak kaldirilir (Codex P2,
+--      PR #630). Per-schema default ACL yerlesik PUBLIC grant'ini geri alamaz;
+--      PostgreSQL bunu yalniz global ALTER DEFAULT PRIVILEGES ile yapar. Bundan
+--      sonra her yeni RPC acikca GRANT EXECUTE ... TO authenticated ister
+--      (#53 deseni zaten bunu yapiyor).
 --
 -- Plan-deviations:
 --   #140 Cevabi ayri servis tablosuna tasimak yerine sutun bazli SELECT secildi:
@@ -143,6 +155,22 @@ BEGIN
   END LOOP;
 END $$;
 
+-- Yerlesik PUBLIC EXECUTE varsayilani pg_default_acl'de gorunmez; yukaridaki
+-- tarama onu yakalamaz. Fonksiyon yaratan iki rol icin global olarak kaldir
+-- (IN SCHEMA ile yapilamaz). Not: bu rollerin ilerde kuracagi bir extension'in
+-- fonksiyonlari da PUBLIC'e kapali dogar; gerekirse acik GRANT verilir.
+DO $$
+DECLARE v_role TEXT;
+BEGIN
+  FOREACH v_role IN ARRAY ARRAY['bilge_arena_app', current_user] LOOP
+    EXECUTE format(
+      'ALTER DEFAULT PRIVILEGES FOR ROLE %I REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC',
+      v_role
+    );
+    RAISE NOTICE 'yeni fonksiyon PUBLIC EXECUTE varsayilani kaldirildi: %', v_role;
+  END LOOP;
+END $$;
+
 -- =============================================================================
 -- 2) Eski view'i dusur (canli sahibi ba_admin, sadece superuser dusurebilir)
 -- =============================================================================
@@ -172,9 +200,9 @@ AS $$
      AND m.user_id = auth.uid()
      AND m.is_active = TRUE
     WHERE r.id = p_room_id
+      -- completed/archived istisnasi bilerek yok (cancel_room -> 'completed').
       AND (
-        r.state IN ('completed', 'archived')
-        OR (r.mode = 'sync'  AND p_round_index <= r.current_round_index)
+        (r.mode = 'sync'  AND p_round_index <= r.current_round_index)
         OR (r.mode = 'async' AND (m.finished_at IS NOT NULL
                                   OR p_round_index <= m.current_round_index))
       )
@@ -205,8 +233,9 @@ AS $$
   JOIN public.rooms r ON r.id = rr.room_id
   CROSS JOIN LATERAL (
     SELECT (
+      -- sync: reveal edilmis tur; async: caller'in cevapladigi tur.
+      -- Oda state'i (completed/archived) tek basina cevap acmaz.
       rr.revealed_at IS NOT NULL
-      OR r.state IN ('completed', 'archived')
       OR (r.mode = 'async' AND EXISTS (
             SELECT 1 FROM public.room_answers a
             WHERE a.round_id = rr.id
@@ -425,6 +454,19 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'ASSERT FAILED: public varsayilan yetkileri hala authenticated/anon iceriyor';
   END IF;
+
+  FOREACH v_owner IN ARRAY ARRAY['bilge_arena_app', current_user] LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_default_acl d
+      WHERE d.defaclrole = v_owner::regrole
+        AND d.defaclnamespace = 0
+        AND d.defaclobjtype = 'f'
+        AND NOT EXISTS (SELECT 1 FROM aclexplode(d.defaclacl) a
+                        WHERE a.grantee = 0 AND a.privilege_type = 'EXECUTE')
+    ) THEN
+      RAISE EXCEPTION 'ASSERT FAILED: % icin yeni fonksiyon PUBLIC EXECUTE varsayilani duruyor', v_owner;
+    END IF;
+  END LOOP;
 
   RAISE NOTICE 'OK: 26_rooms_acl_hardening dogrulandi';
 END $$;
