@@ -106,12 +106,12 @@ describe('TYT social epoch CI result contract', () => {
     expect(build).toBeTruthy()
     expect(build).toMatch(/if:\s*\$\{\{\s*!cancelled\(\)\s*\}\}/)
     expect(build).toMatch(/- name: Require successful CI dependencies[\s\S]*?shell:\s*bash[\s\S]*?DEPENDENCY_RESULTS:\s*\$\{\{\s*join\(needs\.\*\.result,\s*['"]?,['"]?\s*\)\s*\}\}/i)
-    expect(build).toMatch(/if \[ "\$DEPENDENCY_RESULTS" != "success,success,success,success,success,success" \]/)
+    expect(build).toMatch(/if \[ "\$DEPENDENCY_RESULTS" != "success,success,success,success,success,success,success" \]/)
     const needs = build.match(/needs:\s*\[([^\]]+)\]/i)?.[1]
       ?.split(',').map((value) => value.trim()).filter(Boolean).sort()
     expect(needs).toEqual([
-      'institution-pilot-postgres', 'lint', 'question-quality-postgres',
-      'test', 'type-check', 'tyt-social-epoch-postgres',
+      'institution-pilot-postgres', 'lint', 'postgrest-contract',
+      'question-quality-postgres', 'test', 'type-check', 'tyt-social-epoch-postgres',
     ])
 
     const bashPath = process.platform === 'win32'
@@ -124,7 +124,7 @@ describe('TYT social epoch CI result contract', () => {
       ?.split('\n').map((line) => line.replace(/^          /, '')).join('\n')
     expect(guard).toBeTruthy()
     for (const value of [
-      'success,success,success,success,success,success',
+      'success,success,success,success,success,success,success',
     ]) {
       expect(spawnSync(bashPath, ['--noprofile', '--norc', '-e', '-s'], {
         input: guard,
@@ -135,13 +135,13 @@ describe('TYT social epoch CI result contract', () => {
       }).status).toBe(0)
     }
     for (const value of [
-      'success,success,success,success,success,skipped',
-      'success,success,success,success,success,failure',
-      'success,success,success,success,success,cancelled',
-      'success,success,success,success,success',
+      'success,success,success,success,success,success,skipped',
+      'success,success,success,success,success,success,failure',
+      'success,success,success,success,success,success,cancelled',
+      'success,success,success,success,success,success',
       '',
-      'success,success,success,success,success,unknown',
-      'success,failure,success,success,success,success',
+      'success,success,success,success,success,success,unknown',
+      'success,failure,success,success,success,success,success',
     ]) {
       expect(spawnSync(bashPath, ['--noprofile', '--norc', '-e', '-s'], {
         input: guard,

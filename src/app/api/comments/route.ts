@@ -11,20 +11,6 @@ const listUserLimiter = createRateLimiter('comments-list-user', 60, 60_000)
 const createIpLimiter = createRateLimiter('comments-create-ip', 30, 60_000)
 const createUserLimiter = createRateLimiter('comments-create-user', 10, 60_000)
 
-interface CommentRow {
-  id: string
-  content: string
-  likes_count: number
-  created_at: string
-  user_id: string
-  profiles: {
-    username: string | null
-    display_name: string | null
-    avatar_url: string | null
-    level_name: string | null
-  } | null
-}
-
 interface CommentDto {
   id: string
   content: string
@@ -87,17 +73,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'questionId gecersiz' }, { status: 400 })
   }
 
-  // 4) Service-role: yorumlar + (auth ise) user likes paralel
+  // 4) Service-role: yorumlar + (auth ise) user likes paralel.
+  // comments.user_id auth.users'a bagli; profiles'a FK yok. PostgREST gommesi
+  // (profiles!inner) bu yuzden PGRST200 verir, profiller ayri sorguyla gelir.
   const admin = createServiceRoleClient()
   const [commentsRes, likesRes] = await Promise.all([
     admin
       .from('comments')
-      .select('id, content, likes_count, created_at, user_id, profiles!inner(username, display_name, avatar_url, level_name)')
+      .select('id, content, likes_count, created_at, user_id')
       .eq('question_id', questionId)
       .eq('is_deleted', false)
       .order('created_at', { ascending: false })
-      .limit(50)
-      .returns<CommentRow[]>(),
+      .limit(50),
     user
       ? admin
           .from('comment_likes')
@@ -111,23 +98,45 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
   }
 
+  const rows = commentsRes.data ?? []
+  const authorIds = [...new Set(rows.map(c => c.user_id))]
+  const profilesRes = authorIds.length > 0
+    ? await admin
+        .from('profiles')
+        .select('id, username, display_name, avatar_url, level_name')
+        .in('id', authorIds)
+    : { data: [], error: null }
+
+  if (profilesRes.error) {
+    console.error('[/api/comments GET] profiles error:', profilesRes.error.code)
+    return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
+  }
+
+  const profilesById = new Map((profilesRes.data ?? []).map(p => [p.id, p]))
   const likedIds = new Set((likesRes.data ?? []).map(l => l.comment_id))
 
-  const comments: CommentDto[] = (commentsRes.data ?? []).map(c => ({
-    id: c.id,
-    content: c.content,
-    likes_count: c.likes_count ?? 0,
-    created_at: c.created_at,
-    user_id: c.user_id,
-    is_own: c.user_id === user?.id,
-    is_liked: likedIds.has(c.id),
-    profile: {
-      username: c.profiles?.username ?? null,
-      display_name: c.profiles?.display_name ?? null,
-      avatar_url: c.profiles?.avatar_url ?? null,
-      level_name: c.profiles?.level_name ?? null,
-    },
-  }))
+  // Profili olmayan yazarin yorumu dusurulmez, profil alanlari bos doner
+  // (arayuz "Anonim" gosterir). Dusurmek limit(50)'den sonra calisacagi icin
+  // daha eski, profilli yorumlari da listeden atardi.
+  const comments: CommentDto[] = rows.map(c => {
+    const profile = profilesById.get(c.user_id)
+    return {
+      id: c.id,
+      content: c.content,
+      likes_count: c.likes_count ?? 0,
+      // DEFAULT now(); uretilen tip yine de nullable.
+      created_at: c.created_at ?? '',
+      user_id: c.user_id,
+      is_own: c.user_id === user?.id,
+      is_liked: likedIds.has(c.id),
+      profile: {
+        username: profile?.username ?? null,
+        display_name: profile?.display_name ?? null,
+        avatar_url: profile?.avatar_url ?? null,
+        level_name: profile?.level_name ?? null,
+      },
+    }
+  })
 
   return NextResponse.json(
     { comments },

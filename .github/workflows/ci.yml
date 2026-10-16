@@ -328,10 +328,95 @@ jobs:
             --reporter=default --reporter=json --outputFile.json="$RUNNER_TEMP/tyt-social-epoch-acceptance.json"
           node scripts/security/verify-tyt-social-epoch-ci-result.mjs "$RUNNER_TEMP/tyt-social-epoch-acceptance.json"
 
+  postgrest-contract:
+    # Route testleri servis-role istemcisini mock'lar ve .returns<T>() tip
+    # denetimini susturur; PostgREST gömme ve FK sözleşmesini göremezler
+    # (/api/comments 17 Mayıs'tan beri PGRST200 verdi). Bu iş src/ altındaki
+    # her *.postgrest.test.ts dosyasını gerçek PostgreSQL 16 + PostgREST'e karşı
+    # koşar; dosyalar public şemasını sıfırladığı için sırayla çalışır.
+    name: 🔗 PostgREST contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bilge_postgrest_contract_ci
+        ports:
+          - '127.0.0.1:5432:5432'
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bilge_postgrest_contract_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      POSTGREST_CONTRACT_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/bilge_postgrest_contract_ci
+      POSTGREST_CONTRACT_TEST_DATABASE_DISPOSABLE: '1'
+      POSTGREST_CONTRACT_TEST_URL: http://127.0.0.1:3300
+      # Yalnız bu işin geçici PostgREST'i için; üretim anahtarı değildir.
+      POSTGREST_CONTRACT_TEST_JWT_SECRET: bilge-arena-postgrest-contract-ci-only-jwt-secret
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Create Supabase Data API roles
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import pg from 'pg'
+          const client = new pg.Client({ connectionString: process.env.POSTGREST_CONTRACT_TEST_DATABASE_URL })
+          await client.connect()
+          await client.query(`
+            CREATE ROLE authenticator LOGIN PASSWORD 'authenticator' NOINHERIT;
+            CREATE ROLE anon NOLOGIN;
+            CREATE ROLE authenticated NOLOGIN;
+            CREATE ROLE service_role NOLOGIN BYPASSRLS;
+            GRANT anon, authenticated, service_role TO authenticator;
+          `)
+          await client.end()
+          NODE
+
+      - name: Start PostgREST
+        shell: bash
+        run: |
+          docker run -d --name postgrest --network host \
+            -e PGRST_DB_URI=postgres://authenticator:authenticator@127.0.0.1:5432/bilge_postgrest_contract_ci \
+            -e PGRST_DB_SCHEMAS=public \
+            -e PGRST_DB_ANON_ROLE=anon \
+            -e PGRST_JWT_SECRET="$POSTGREST_CONTRACT_TEST_JWT_SECRET" \
+            -e PGRST_SERVER_PORT=3300 \
+            -e PGRST_ADMIN_SERVER_PORT=3301 \
+            postgrest/postgrest:v14.17
+          for attempt in $(seq 1 30); do
+            curl -sf http://127.0.0.1:3301/ready >/dev/null && exit 0
+            sleep 1
+          done
+          docker logs postgrest
+          exit 1
+
+      - name: Run every PostgREST contract file with no skipped tests
+        shell: bash
+        run: |
+          node node_modules/vitest/vitest.mjs run --no-file-parallelism postgrest.test.ts \
+            --reporter=default --reporter=json --outputFile.json="$RUNNER_TEMP/postgrest-contract.json"
+          node scripts/security/verify-postgrest-contract-ci-result.mjs "$RUNNER_TEMP/postgrest-contract.json"
+
+      - name: PostgREST logs
+        if: ${{ failure() }}
+        run: docker logs postgrest
+
   build:
     name: 🏗️ Build
     runs-on: ubuntu-latest
-    needs: [lint, type-check, test, institution-pilot-postgres, question-quality-postgres, tyt-social-epoch-postgres]
+    needs: [lint, type-check, test, institution-pilot-postgres, question-quality-postgres, tyt-social-epoch-postgres, postgrest-contract]
     # Explicitly fail Build when a required dependency did not execute.
     if: ${{ !cancelled() }}
     env:
@@ -347,7 +432,7 @@ jobs:
         env:
           DEPENDENCY_RESULTS: ${{ join(needs.*.result, ',') }}
         run: |
-          if [ "$DEPENDENCY_RESULTS" != "success,success,success,success,success,success" ]; then
+          if [ "$DEPENDENCY_RESULTS" != "success,success,success,success,success,success,success" ]; then
             echo "::error::Required CI dependency failed or did not execute"
             exit 1
           fi
