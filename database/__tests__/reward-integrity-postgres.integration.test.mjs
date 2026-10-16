@@ -187,6 +187,14 @@ describePostgres('reward integrity on actual PostgreSQL migrations', () => {
     // Guards above run before this reset; roles are cluster-wide and recreated idempotently.
     await client.query('DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; CREATE SCHEMA auth;');
     await client.query(fixtureSql);
+    // Supabase grants every new public table and function to its API roles by
+    // default; the migrations' REVOKEs (e.g. reward_ledger append-only) exist
+    // to undo exactly that. Without these defaults a missing REVOKE would pass.
+    await client.query(`
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
+    `);
     for (const migration of ['081_atomic_complete_game_session.sql', '091_verified_attempts.sql', '092_complete_verified_game_session.sql', '093_reward_integrity.sql', '172_trusted_state_and_consent_dml_lockdown.sql']) {
       await client.query(migrationSql(migration));
     }
@@ -448,6 +456,110 @@ describePostgres('reward integrity on actual PostgreSQL migrations', () => {
       WHERE source_type = 'daily_quest_claim' AND source_id = $1 ORDER BY reward_type
     `, [claimUserQuestId]);
     expect(ledger.rows).toEqual([{ reward_type: 'coin', amount: 8 }, { reward_type: 'xp', amount: 40 }]);
+  });
+
+  // The claim paths below were only checked as SQL text (reward-integrity-sql
+  // and trusted-state-and-consent-dml-lockdown-sql). Each one pays or refuses
+  // XP and coins, so they run here against the 172 definition.
+  async function newProfile() {
+    const id = randomUUID();
+    await client.query('INSERT INTO public.profiles (id) VALUES ($1)', [id]);
+    return id;
+  }
+
+  // A completed quest with verified-session evidence, as 093/129 would record it.
+  async function evidencedQuest(userId, { xpReward = 40, isActive = true, dayOffset = 0, currentValue = 1 } = {}) {
+    const quest = await client.query(`
+      INSERT INTO public.daily_quests (slug, quest_type, target_value, xp_reward, is_active)
+      VALUES ($1, 'play_sessions', 1, $2, $3) RETURNING id
+    `, [`gap-${randomUUID()}`, xpReward, isActive]);
+    const userQuest = await client.query(`
+      INSERT INTO public.user_daily_quests (user_id, quest_id, date, current_value, is_completed, completed_at)
+      VALUES ($1, $2, (clock_timestamp() AT TIME ZONE 'Europe/Istanbul')::date + $3::integer, $4, true, clock_timestamp())
+      RETURNING id
+    `, [userId, quest.rows[0].id, dayOffset, currentValue]);
+    await client.query(`
+      INSERT INTO public.reward_ledger (user_id, source_type, source_id, reward_type, reward_key, amount, metadata)
+      VALUES ($1, 'daily_quest_completion', $2, 'progress', 'completed', 0, '{}'::jsonb)
+    `, [userId, userQuest.rows[0].id]);
+    return userQuest.rows[0].id;
+  }
+
+  const claimQuest = (userId, userQuestId) => withServiceRole(client, async () => (
+    await client.query('SELECT public.claim_daily_quest_reward($1, $2) AS result', [userId, userQuestId])
+  ).rows[0].result);
+
+  async function claimState(userQuestId) {
+    const result = await client.query(`
+      SELECT udq.xp_claimed,
+        (SELECT count(*)::int FROM public.reward_ledger WHERE source_type = 'daily_quest_claim' AND source_id = udq.id) AS claim_rows
+      FROM public.user_daily_quests udq WHERE udq.id = $1
+    `, [userQuestId]);
+    return result.rows[0];
+  }
+
+  it('refuses to pay one user for another user\'s evidenced quest, then still pays the owner', async () => {
+    const owner = await newProfile();
+    const other = await newProfile();
+    const userQuestId = await evidencedQuest(owner);
+    await expect(claimQuest(other, userQuestId)).rejects.toMatchObject({ code: '42501' });
+    expect(await profileState(client, other)).toEqual({ total_xp: 0, coin_balance: 0 });
+    expect(await profileState(client, owner)).toEqual({ total_xp: 0, coin_balance: 0 });
+    expect(await claimState(userQuestId)).toEqual({ xp_claimed: false, claim_rows: 0 });
+
+    expect(await claimQuest(owner, userQuestId)).toEqual({ xpEarned: 40, coinsEarned: 8, alreadyProcessed: false });
+    expect(await profileState(client, owner)).toEqual({ total_xp: 40, coin_balance: 8 });
+  });
+
+  // coins = max(5, min(25, round(xp_reward * 0.2)))
+  it.each([
+    [10, 5], [24, 5], [27, 5], [28, 6], [60, 12], [124, 25], [126, 25], [500, 25],
+  ])('pays %i XP with %i coins at the clamp edges', async (xpReward, coins) => {
+    const user = await newProfile();
+    const userQuestId = await evidencedQuest(user, { xpReward });
+    expect(await claimQuest(user, userQuestId)).toEqual({ xpEarned: xpReward, coinsEarned: coins, alreadyProcessed: false });
+    expect(await profileState(client, user)).toEqual({ total_xp: xpReward, coin_balance: coins });
+    const ledger = await client.query(`
+      SELECT reward_type, amount FROM public.reward_ledger
+      WHERE source_type = 'daily_quest_claim' AND source_id = $1 ORDER BY reward_type
+    `, [userQuestId]);
+    expect(ledger.rows).toEqual([{ reward_type: 'coin', amount: coins }, { reward_type: 'xp', amount: xpReward }]);
+  });
+
+  it.each([
+    ['an inactive quest', { isActive: false }],
+    ['a quest from the previous Istanbul day', { dayOffset: -1 }],
+    ['a quest dated tomorrow', { dayOffset: 1 }],
+    ['a quest below its target', { currentValue: 0 }],
+    ['a quest with no positive reward', { xpReward: 0 }],
+  ])('refuses %s with 22023 and pays nothing', async (_label, options) => {
+    const user = await newProfile();
+    const userQuestId = await evidencedQuest(user, options);
+    await expect(claimQuest(user, userQuestId)).rejects.toMatchObject({ code: '22023' });
+    expect(await profileState(client, user)).toEqual({ total_xp: 0, coin_balance: 0 });
+    expect(await claimState(userQuestId)).toEqual({ xp_claimed: false, claim_rows: 0 });
+  });
+
+  it('reports an unknown quest with P0002', async () => {
+    await expect(claimQuest(await newProfile(), randomUUID())).rejects.toMatchObject({ code: 'P0002' });
+  });
+
+  it('keeps the reward ledger append-only for service_role too', async () => {
+    const before = await client.query('SELECT count(*)::int AS n, coalesce(sum(amount), 0)::int AS total FROM public.reward_ledger');
+    await client.query('SET ROLE service_role');
+    try {
+      for (const statement of [
+        'UPDATE public.reward_ledger SET amount = amount + 1',
+        'DELETE FROM public.reward_ledger',
+        'TRUNCATE public.reward_ledger',
+      ]) {
+        await expect(client.query(statement), statement).rejects.toMatchObject({ code: '42501' });
+      }
+    } finally {
+      await client.query('RESET ROLE');
+    }
+    expect((await client.query('SELECT count(*)::int AS n, coalesce(sum(amount), 0)::int AS total FROM public.reward_ledger')).rows[0])
+      .toEqual(before.rows[0]);
   });
 });
 
