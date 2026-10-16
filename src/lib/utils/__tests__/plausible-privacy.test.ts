@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// .ts testleri varsayilan olarak node ortaminda kosar; bu dosya window, localStorage ve history ile calisir.
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { trackEvent } from '../plausible'
 

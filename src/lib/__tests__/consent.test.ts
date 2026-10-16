@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// .ts testleri varsayilan olarak node ortaminda kosar; bu dosya window olaylari, location ve localStorage ile calisir.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   COOKIE_CONSENT_CHANGED_EVENT,

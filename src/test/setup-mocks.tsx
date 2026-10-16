@@ -1,13 +1,6 @@
-import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
-import { afterEach, vi } from 'vitest'
+import { vi } from 'vitest'
 
-// Her test sonrası React DOM temizliği
-afterEach(() => {
-  cleanup()
-})
-
-// ---------- Global Mock'lar ----------
+// ---------- Global Mock'lar (node ve jsdom projeleri) ----------
 
 // next/navigation mock
 vi.mock('next/navigation', () => ({
