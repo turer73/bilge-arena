@@ -2,7 +2,7 @@
 
 ## Sınıflandırma
 
-Durum: **kimlik bilgisi riski kapandı (2026-10-16): parola döndürüldü, yedek yeni bilgiyle geçti; rotasyon sonrası geri yükleme tatbikatı bekliyor**. Ayrıntı: aşağıdaki kapanış notu.
+Durum: **kapandı (2026-10-16): parola döndürüldü, yedek yeni bilgiyle geçti, rotasyon sonrası geri yükleme tatbikatı geçti**. Ayrıntı: aşağıdaki kapanış notu. Ücretli kurum onboarding'inin açılması veri sorumlusunun kararıdır.
 
 Kurumsal restore tatbikatı sırasında eski VPS yedekleme komutunun Supabase
 veritabanı bağlantı URI'sini host süreç argümanında tuttuğu görüldü. Bu, aynı
@@ -78,16 +78,46 @@ salt-okuma doğrulandı).
   224 tablo.
 - Gzip bütünlük kontrolü geçti. `latest` bağlantısı yeni dosyayı gösteriyor.
 
-**Kalan: geri yükleme tatbikatı.**
+- Not: bu yedek koşusu normal servis olarak elle başlatıldı; bildirim
+  kapatılmadı. Başarı bildirimi Telegram'a gitmiş olabilir.
 
-- Yukarıdaki "Kalan zorunlu adım" bildirim kapalı **yedek + geri yükleme**
-  denemesini şart koşuyor. Bunun yalnız yedek yarısı tamamlandı.
-- Bu servis `pg_dump`, gzip bütünlüğü ve satır/tablo sayımı yapar; geri yükleme
-  adımı içermez. VPS'te bu yedek zinciri için zamanlanmış bir geri yükleme testi
-  de yoktur (zamanlayıcı ve cron listesi kontrol edildi).
-- Rotasyondan sonra geri yükleme denemesi yapılmadı.
+**Geri yükleme tatbikatı geçti (2026-10-16).**
 
-Kimlik bilgisinin açığa çıkması riski kapanmıştır. Olay, geri yükleme denemesi
-geçene kadar belgenin kendi ölçütüne göre "tam kapalı" sayılmaz. Ücretli kurum
-onboarding'inin açılması, KVKK kapsamındaki nihai değerlendirmeyle birlikte veri
-sorumlusunun kararıdır.
+- Kaynak döküm: `/opt/backup/data/2026-10-16/bilge-arena.sql.gz`, sha256
+  `429d03f580914f71a409896152ec8a4ed448de895681877b7315d90cb781b290`.
+- Yöntem: 2026-09-19 tatbikat betiğinin yalıtımı korundu.
+  - Betik: `/root/bilge-vps-hardening/20261016-restore-smoke/run-restore-smoke.sh`.
+  - Sabitlenmiş Supabase Postgres imajı (17.6).
+  - Ağsız konteyner (`--network none`), açık port yok.
+  - Döküm salt okunur bağlandı; parola rastgele üretildi.
+  - Geri yükleme tek transaction'da, `ON_ERROR_STOP` ile yapıldı.
+  - Tatbikatın bildirim yolu yok.
+- Sonuç: geri yükleme 10 saniyede hatasız tamamlandı.
+  - Dökümdeki 224 tablonun tamamı geri geldi.
+  - Tablo başına satır sayısı dökümdeki COPY bloklarıyla birebir aynı: toplam
+    189.983 satır, uyuşmayan tablo 0.
+  - Geri yüklenen veritabanında dökümde bulunmayan, 0 satırlı bir tablo daha var.
+    İmajın uzantı kurulumundan geldiği değerlendirildi; veri kaybı göstergesi
+    değildir.
+  - Ayrıca: `public` şemasında 180 tablo, `questions` 4.478 satır. Migration
+    defterinde aynı günün `20261016190000` kaydı mevcut; döküm rotasyondan ve
+    o migration'dan sonra alınmış.
+- Gizlilik: hiçbir veri satırı yazdırılmadı; yalnız tablo adları ve sayılar
+  karşılaştırıldı.
+- Temizlik:
+  - Konteyner volume'leriyle birlikte silindi.
+  - Geçici sayım dosyaları silindi.
+  - Kalan tatbikat konteyneri ve askıda volume sayısı 0.
+  - Dizinde yalnız betik ve özet günlükler kaldı.
+- Not: ilk koşuda geri yükleme geçti, ancak karşılaştırma adımındaki bir kalıp
+  hatası döküm tarafının sayımını boş bıraktı ve koşu "count_mismatch" ile
+  düştü. Hata düzeltildi, tatbikat baştan koşuldu. Yukarıdaki sonuçlar ikinci
+  koşuya aittir.
+
+Belgenin kendi ölçütüne göre olay kapalıdır:
+- parola döndürüldü,
+- yedek yeni bağlantı bilgisiyle geçti,
+- rotasyon sonrası geri yükleme tatbikatı geçti.
+
+Ücretli kurum onboarding'inin açılması, KVKK kapsamındaki nihai değerlendirmeyle
+birlikte veri sorumlusunun kararıdır.
