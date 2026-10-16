@@ -22,6 +22,7 @@ vi.mock('@/lib/supabase/server', () => ({
 const ids = {
   returning: randomUUID(),
   newcomer: randomUUID(),
+  racer: randomUUID(),
   play: randomUUID(),
   correct: randomUUID(),
   streak: randomUUID(),
@@ -37,8 +38,11 @@ describePostgrest('/api/quests on real PostgreSQL + PostgREST', () => {
   beforeAll(async () => {
     contract = await startPostgrestContract()
     const { db } = contract
-    await db.query('INSERT INTO auth.users(id) VALUES ($1), ($2)', [ids.returning, ids.newcomer])
-    await db.query(`INSERT INTO public.profiles(id, username) VALUES ($1, 'eski'), ($2, 'yeni')`, [ids.returning, ids.newcomer])
+    await db.query('INSERT INTO auth.users(id) VALUES ($1), ($2), ($3)', [ids.returning, ids.newcomer, ids.racer])
+    await db.query(
+      `INSERT INTO public.profiles(id, username) VALUES ($1, 'eski'), ($2, 'yeni'), ($3, 'yarisci')`,
+      [ids.returning, ids.newcomer, ids.racer],
+    )
     await db.query(
       `INSERT INTO public.daily_quests(id, slug, title, quest_type, target_value, xp_reward, is_active) VALUES
         ($1, 'play-3', '3 oyun oyna', 'play_sessions', 3, 50, true),
@@ -93,5 +97,22 @@ describePostgrest('/api/quests on real PostgreSQL + PostgREST', () => {
 
     const { rows } = await contract.db.query('SELECT count(*)::int AS n FROM public.user_daily_quests WHERE user_id = $1', [ids.newcomer])
     expect(rows[0]).toEqual({ n: 3 })
+  })
+
+  it('12 paralel ilk istekte bile günü tam 3 görevle açar (atama yarışı)', async () => {
+    // Derin inceleme 2026-10-15 §4.2: 30 paralel istek günü 6 görevle açabiliyordu.
+    session.user = { id: ids.racer }
+    const responses = await Promise.all(Array.from({ length: 12 }, () => route.GET()))
+    for (const res of responses) {
+      expect(res.status).toBe(200)
+      const { quests } = await res.json()
+      expect(quests).toHaveLength(3)
+    }
+
+    const { rows } = await contract.db.query(
+      'SELECT count(*)::int AS n, count(DISTINCT quest_id)::int AS distinct_quests FROM public.user_daily_quests WHERE user_id = $1',
+      [ids.racer],
+    )
+    expect(rows[0]).toEqual({ n: 3, distinct_quests: 3 })
   })
 })
