@@ -1,3 +1,5 @@
+// @vitest-environment node
+// Sunucu bileseni; DOM olmadan cagrilir (olculdu: jsdom ve node ayni sonuc).
 import { expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({ connection: vi.fn() }))
 vi.mock('next/server', () => ({ connection: mocks.connection }))

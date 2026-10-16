@@ -1,3 +1,5 @@
+// @vitest-environment node
+// Sunucu bileseni; DOM olmadan cagrilir (olculdu: jsdom ve node ayni sonuc).
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../game-client', () => ({ default: () => null }))

@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// .ts testleri varsayilan olarak node ortaminda kosar; bu dosya toast-store sounds.ts uzerinden window ve localStorage okur; node ortaminda da gecer ama baska dali sinar.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useToastStore, toast } from '../toast-store'
 

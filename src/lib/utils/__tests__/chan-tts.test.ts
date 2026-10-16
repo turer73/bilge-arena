@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// .ts testleri varsayilan olarak node ortaminda kosar; bu dosya window.speechSynthesis ile calisir.
 /**
  * Bilge Arena: chan-tts — Web Speech TTS sarmalayıcısı.
  * Destek tespiti, mute saygısı, emoji temizliği, TR ses seçimi, cancel.

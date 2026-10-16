@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// .ts testleri varsayilan olarak node ortaminda kosar; bu dosya sounds.ts window ve localStorage okur.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { toggleSound, getSoundEnabled } from '../sounds'
 
