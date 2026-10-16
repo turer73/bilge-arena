@@ -2,7 +2,7 @@
 
 ## Sınıflandırma
 
-Durum: **teknik olarak çevrelendi; parola rotasyonu bekliyor**.
+Durum: **kimlik bilgisi riski kapandı (2026-10-16): parola döndürüldü, yedek yeni bilgiyle geçti; rotasyon sonrası geri yükleme tatbikatı bekliyor**. Ayrıntı: aşağıdaki kapanış notu.
 
 Kurumsal restore tatbikatı sırasında eski VPS yedekleme komutunun Supabase
 veritabanı bağlantı URI'sini host süreç argümanında tuttuğu görüldü. Bu, aynı
@@ -35,7 +35,7 @@ yerine geçmez; veri sorumlusu ve hukukçu log/erişim kapsamını ayrıca değe
 - Yeni betikle bildirim kapalı manuel yedek ve ACL korumalı restore başarıyla
   tamamlandı; günlük 02:00 cron yolu aktif betiğe işaret ediyor.
 
-## Kalan zorunlu adım
+## Kalan zorunlu adım (2026-08-25 itibarıyla — durum için kapanış notuna bakın)
 
 Supabase veritabanı parolası proje sahibi tarafından panelden döndürülmeli;
 ardından VPS'teki `/opt/backup/bilge-arena/.env` yeni bağlantı bilgisiyle güvenli
@@ -45,3 +45,49 @@ olmadığı için rotasyon yetkili hesap sahibi olmadan yapılamadı.
 
 Rotasyon ve tekrar tatbikatı tamamlanana kadar olay “tam kapalı” sayılmaz; ücretli
 kurum onboarding'i kapalı kalır.
+
+## Kapanış notu — 2026-10-16
+
+Bu not bağlantı bilgisini ve parolayı içermez. Kaynak: Klipper görev kaydı #3206 ve
+VPS'teki `bilge-arena-backup.service` günlüğü (Klipper tarafından 2026-10-16'da
+salt-okuma doğrulandı).
+
+**Rotasyon tamamlandı.**
+
+- Proje sahibi Supabase veritabanı parolasını panelden sıfırladı (2026-10-16).
+  Eski parolanın artık reddedildiği doğrulandı.
+- Tetikleyici: aynı gün bir migration uygulamasında `docker --env-file` tırnaklı
+  bir değeri bozdu. Ardından gelen `psql` hatası, 2026-08-25'ten beri rotasyon
+  bekleyen yedek parolasını bir çalışma oturumunun çıktısına bastı. Parola
+  döndürüldüğü için o çıktıdaki değer artık geçersizdir.
+- VPS'teki `/opt/backup/bilge-arena/.env`, sır içermeyen
+  `/root/rotate-bilge-supabase-credential.sh` ile güncellendi:
+  - yeni değer TTY'den gizli okunur ve URL-encode edilir;
+  - yeni bağlantı başarıyla sınanmadan dosya değiştirilmez;
+  - hata sınıfı ham çıktı basılmadan bildirilir.
+- İlk iki deneme dosyayı değiştirmeden durdu: biri boş giriş, diğeri bağlantı
+  hatası (sıfırlama henüz yayılmamış ya da değer yanlış yapıştırılmıştı).
+  Üçüncü deneme başarılı oldu.
+- Bu bağlantı bilgisini kullanan başka tüketici bulunmadı. VPS, Klipper ve yerel
+  `.env` dosyaları tarandı.
+
+**Yedek yeni bilgiyle geçti.**
+
+- `bilge-arena-backup.service` 2026-10-16 22:07–22:08 arasında başarılı çalıştı.
+- Çıktı: `/opt/backup/data/2026-10-16/bilge-arena.sql.gz`, 33 MB, 244.431 satır,
+  224 tablo.
+- Gzip bütünlük kontrolü geçti. `latest` bağlantısı yeni dosyayı gösteriyor.
+
+**Kalan: geri yükleme tatbikatı.**
+
+- Yukarıdaki "Kalan zorunlu adım" bildirim kapalı **yedek + geri yükleme**
+  denemesini şart koşuyor. Bunun yalnız yedek yarısı tamamlandı.
+- Bu servis `pg_dump`, gzip bütünlüğü ve satır/tablo sayımı yapar; geri yükleme
+  adımı içermez. VPS'te bu yedek zinciri için zamanlanmış bir geri yükleme testi
+  de yoktur (zamanlayıcı ve cron listesi kontrol edildi).
+- Rotasyondan sonra geri yükleme denemesi yapılmadı.
+
+Kimlik bilgisinin açığa çıkması riski kapanmıştır. Olay, geri yükleme denemesi
+geçene kadar belgenin kendi ölçütüne göre "tam kapalı" sayılmaz. Ücretli kurum
+onboarding'inin açılması, KVKK kapsamındaki nihai değerlendirmeyle birlikte veri
+sorumlusunun kararıdır.
