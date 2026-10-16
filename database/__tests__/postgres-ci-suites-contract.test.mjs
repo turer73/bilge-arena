@@ -238,6 +238,33 @@ describe('node:test PostgreSQL CI report gate', () => {
     }
   })
 
+  it('accepts only an exact file + title allowed skip, never a skipped describe', () => {
+    const allowedSkips = [{ file: files[1], title: 'needs a private package' }]
+    const withSkip = (overrides) => {
+      const report = validNodeTestReport()
+      report.tests.push({ file: join(root, files[1]), name: 'needs a private package', nesting: 1, kind: 'test', status: 'skipped', ...overrides })
+      return report
+    }
+    expect(verifyNodeTestCiReport(withSkip({}), files, { root, allowedSkips })).toEqual({ files: 2, passed: 2, skipped: 1 })
+    expect(() => verifyNodeTestCiReport(withSkip({}), files, { root })).toThrow(/skipped test/)
+    expect(() => verifyNodeTestCiReport(withSkip({ name: 'another test' }), files, { root, allowedSkips })).toThrow(/skipped test/)
+    expect(() => verifyNodeTestCiReport(withSkip({ file: join(root, files[0]) }), files, { root, allowedSkips })).toThrow(/skipped test/)
+    expect(() => verifyNodeTestCiReport(withSkip({ kind: 'suite' }), files, { root, allowedSkips })).toThrow(/skipped test/)
+  })
+
+  it('keeps manifest allowed skips narrow: node-test only, real title, justified', () => {
+    for (const [id, suite] of Object.entries(POSTGRES_CI_SUITES)) {
+      if (!suite.allowedSkips) continue
+      expect(suite.runner, id).toBe('node-test')
+      for (const entry of suite.allowedSkips) {
+        expect(suite.files, id).toContain(entry.file)
+        expect(readFileSync(join(root, entry.file), 'utf8')).toContain(`? it : it.skip)('${entry.title}'`)
+        expect(entry.reason.length).toBeGreaterThan(40)
+      }
+    }
+    expect(Object.values(POSTGRES_CI_SUITES).flatMap((suite) => suite.allowedSkips ?? [])).toHaveLength(1)
+  })
+
   it('dispatches by the manifest runner', () => {
     expect(() => verifyPostgresCiSuiteReport('canonical-identity', validVitestReport(), root)).toThrow(/malformed report/)
     expect(() => verifyPostgresCiSuiteReport('learning-reward', validNodeTestReport(), root)).toThrow(REJECTION)

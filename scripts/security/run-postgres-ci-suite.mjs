@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { postgresCiSuite } from './postgres-ci-suites.mjs'
-import { PostgresCiReportError, verifyPostgresCiSuiteReport } from './verify-postgres-ci-result.mjs'
+import { PostgresCiReportError, describeSkipped, verifyPostgresCiSuiteReport } from './verify-postgres-ci-result.mjs'
 
 // Bir PostgreSQL CI takimini postgres-ci-suites.mjs'teki dosya listesiyle kosar,
 // makine-okunur raporu her seferinde yeni bir dizine yazar (bayat rapor
@@ -53,7 +53,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       process.exit(1)
     }
     const result = verifyPostgresCiSuiteReport(suiteId, JSON.parse(readFileSync(reportPath, 'utf8')))
-    console.log(`PostgreSQL CI suite ${suiteId}: ${result.files} files, ${result.passed} tests passed; zero skipped`)
+    console.log(`PostgreSQL CI suite ${suiteId}: ${result.files} files, ${result.passed} tests passed; ${describeSkipped(result.skipped)}`)
   } catch (error) {
     console.error(error instanceof PostgresCiReportError
       ? `PostgreSQL CI suite ${suiteId}: ${error.message}`

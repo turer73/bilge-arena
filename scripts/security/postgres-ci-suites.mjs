@@ -8,7 +8,9 @@
 // runner: 'vitest' -> vitest.database.config.ts; 'node-test' -> node --test.
 // sequential: dosyalar ayni veritabaninda public semasini sifirladigi icin
 // sirayla kosar (--no-file-parallelism). expectedTests: takimin tam test
-// sayisi sabitse (yoksa her dosyada en az bir gecen test yeter).
+// sayisi sabitse (yoksa her dosyada en az bir gecen test yeter). allowedSkips:
+// yalniz node-test takimlarinda, depoda olmayan bir girdiye bagli tek test icin
+// dosya + tam baslik + gerekce; describe duzeyinde atlama izinli degildir.
 const t = (name) => `database/__tests__/${name}`
 
 export const POSTGRES_CI_SUITES = Object.freeze({
@@ -89,6 +91,12 @@ export const POSTGRES_CI_SUITES = Object.freeze({
     job: 'question-quality-postgres',
     runner: 'node-test',
     files: [t('canonical-curriculum.test.mjs'), t('canonical-curriculum-postgres.integration.test.mjs')],
+    allowedSkips: [{
+      file: t('canonical-curriculum-postgres.integration.test.mjs'),
+      title: 'rehearses the hash-pinned real package with fixture UUIDs, without source acceptance',
+      reason: 'CANONICAL_REVIEW_PACKAGE ozel inceleme paketini ister; paket bilerek depoda degil '
+        + '(docs/content-quality/lgs-canonical-catalog.md). Ayni dosyanin diger PG testleri CI icinde kosar.',
+    }],
   },
   'formal-tyt-social-scope': {
     job: 'question-quality-postgres',

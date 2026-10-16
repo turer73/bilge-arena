@@ -78,19 +78,27 @@ export function verifyVitestCiReport(report, files, { expectedTests, root = repo
 // node --test raporu node-test-json-reporter.mjs'in yazdigi bicimdir:
 // { runner: 'node-test', tests: [{ file, name, nesting, kind, status }] }.
 // Atlanan bir describe yalnizca kendi olayini uretir (cocuklari raporlanmaz),
-// bu yuzden suite olaylari da atlama icin denetlenir.
-export function verifyNodeTestCiReport(report, files, { expectedTests, root = repositoryRoot } = {}) {
+// bu yuzden suite olaylari da atlama icin denetlenir. allowedSkips yalnizca
+// depoda bulunamayan bir girdiye bagli tek tek testler icindir (dosya + tam
+// baslik); describe duzeyinde atlama hicbir zaman izinli degildir.
+export function verifyNodeTestCiReport(report, files, { expectedTests, allowedSkips = [], root = repositoryRoot } = {}) {
   const expected = expectedFileMap(files, root)
   if (!isObject(report) || report.runner !== 'node-test' || !Array.isArray(report.tests)) reject('malformed report')
   if (report.complete !== true) reject('reporter did not finish')
+  const allowed = new Set(allowedSkips.map((entry) => JSON.stringify([path.resolve(root, entry.file), entry.title])))
 
   const perFile = new Map()
   let passed = 0
+  let skipped = 0
   for (const entry of report.tests) {
     if (!isObject(entry) || typeof entry.file !== 'string' || typeof entry.name !== 'string') reject('malformed test entry')
     const resolved = path.resolve(entry.file)
     const file = expected.get(resolved)
     if (!file) reject('test file outside suite')
+    if (entry.status === 'skipped' && entry.kind === 'test' && allowed.has(JSON.stringify([resolved, entry.name]))) {
+      skipped++
+      continue
+    }
     if (entry.status === 'skipped') reject('skipped test', file)
     if (entry.status === 'todo') reject('todo test', file)
     if (entry.status !== 'passed') reject('test did not pass', file)
@@ -100,23 +108,28 @@ export function verifyNodeTestCiReport(report, files, { expectedTests, root = re
   }
   for (const [resolved, file] of expected) if (!perFile.get(resolved)) reject('suite file ran no tests', file)
   if (expectedTests !== undefined && passed !== expectedTests) reject(`expected exactly ${expectedTests} tests`)
-  return { files: perFile.size, passed, skipped: 0 }
+  return { files: perFile.size, passed, skipped }
 }
 
 export function verifyPostgresCiSuiteReport(suiteId, report, root = repositoryRoot) {
   const suite = postgresCiSuite(suiteId)
   const options = { expectedTests: suite.expectedTests, root }
-  if (suite.runner === 'vitest') return verifyVitestCiReport(report, suite.files, options)
-  if (suite.runner === 'node-test') return verifyNodeTestCiReport(report, suite.files, options)
+  if (suite.runner === 'vitest') {
+    if (suite.allowedSkips?.length) reject('allowed skips are only supported for node-test suites')
+    return verifyVitestCiReport(report, suite.files, options)
+  }
+  if (suite.runner === 'node-test') return verifyNodeTestCiReport(report, suite.files, { ...options, allowedSkips: suite.allowedSkips })
   return reject('unknown runner')
 }
+
+export const describeSkipped = (skipped) => (skipped ? `${skipped} allowlisted skip(s), no other skipped` : 'zero skipped')
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     if (process.argv.length !== 4) throw new Error('Exactly one suite id and one report path required')
     const [suiteId, reportPath] = process.argv.slice(2)
     const result = verifyPostgresCiSuiteReport(suiteId, JSON.parse(readFileSync(reportPath, 'utf8')))
-    console.log(`PostgreSQL CI suite ${suiteId}: ${result.files} files, ${result.passed} tests passed; zero skipped`)
+    console.log(`PostgreSQL CI suite ${suiteId}: ${result.files} files, ${result.passed} tests passed; ${describeSkipped(result.skipped)}`)
   } catch (error) {
     // Bilinen gerekceyi yaz; okuma/ayristirma hatasinda rapor icerigini yazma.
     console.error(error instanceof PostgresCiReportError
