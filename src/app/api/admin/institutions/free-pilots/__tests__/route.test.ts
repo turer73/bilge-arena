@@ -154,49 +154,35 @@ describe('admin invitation-only free institution pilot route', () => {
     expect(mocks.sendEmail).not.toHaveBeenCalled()
   })
 
-  it('checks database eligibility before sending the document', async () => {
-    mocks.from.mockImplementation((table: string) => {
-      const result = table === 'pilot_institutions'
-        ? { data: { id: INSTITUTION_ID }, error: null }
-        : table === 'institution_pilot_controls'
-          ? { data: { enabled: true }, error: null }
-          : { data: null, error: null }
-      const chain: Record<string, unknown> = {}
-      for (const method of ['select', 'eq', 'in', 'limit']) chain[method] = vi.fn(() => chain)
-      chain.maybeSingle = vi.fn(async () => result)
-      return chain
-    })
+  it('leaves eligibility to the RPC and sends nothing when it rejects the request', async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: '23505' } })
     const response = await POST(post(input))
     expect(response.status).toBe(409)
     expect(mocks.sendEmail).not.toHaveBeenCalled()
-    expect(mocks.rpc).not.toHaveBeenCalled()
+    expect(mocks.logAdminAction).not.toHaveBeenCalled()
+    // service_role has no grants on the pilot tables; any pre-read is a 503.
+    expect(mocks.from).not.toHaveBeenCalled()
   })
 
-  it('lets a committed request id reach the authoritative replay before eligibility checks', async () => {
-    const legacyApprovalReference = 'PILOT-2026-LEGACY'
-    const storedResult = {
-      ...result,
-      institution: { ...result.institution, approvalReference: legacyApprovalReference },
-    }
-    mocks.from.mockImplementation((table: string) => {
-      const result = table === 'pilot_institution_requests'
-        ? { data: { request_id: REQUEST_ID, result: storedResult }, error: null }
-        : { data: null, error: null }
-      const chain: Record<string, unknown> = {}
-      for (const method of ['select', 'eq', 'in', 'limit']) chain[method] = vi.fn(() => chain)
-      chain.maybeSingle = vi.fn(async () => result)
-      return chain
-    })
-    mocks.rpc.mockResolvedValue({ data: { ...storedResult, replayed: true }, error: null })
-    const response = await POST(post({ ...input, approvalReference: legacyApprovalReference }))
+  it('replays a committed request id through the RPC and redelivers under the same key', async () => {
+    mocks.rpc.mockResolvedValue({ data: { ...result, replayed: true }, error: null })
+    const response = await POST(post({ ...input, approvalReference: 'PILOT-2026-LEGACY' }))
     expect(response.status).toBe(200)
-    expect((await response.json()).replayed).toBe(true)
+    expect(await response.json()).toEqual({
+      ...result,
+      replayed: true,
+      documentDelivery: { sent: true, version: '1.0' },
+    })
+    // A stale tab's approvalReference is ignored; the reference is derived.
     expect(mocks.rpc).toHaveBeenCalledWith(
       'provision_free_pilot_institution',
-      expect.objectContaining({ p_approval_ref: legacyApprovalReference }),
+      expect.objectContaining({ p_approval_ref: APPROVAL_REFERENCE }),
     )
-    expect(mocks.sendEmail).not.toHaveBeenCalled()
-    expect(mocks.getUserById).not.toHaveBeenCalled()
+    expect(mocks.sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+      idempotencyKey: 'institution-pilot-package-' + REQUEST_ID,
+    }))
+    expect(mocks.logAdminAction).not.toHaveBeenCalled()
+    expect(mocks.from).not.toHaveBeenCalled()
   })
 
   it('rejects malformed JSON before RPC execution', async () => {
@@ -240,20 +226,48 @@ describe('admin invitation-only free institution pilot route', () => {
         approvalReference: APPROVAL_REFERENCE,
         studentLimit: 30,
         staffLimit: 2,
+        documentEmailId: 'email-1',
+        documentDelivered: true,
       }),
     }))
+    // The document is sent only after the RPC committed the institution.
+    expect(mocks.rpc.mock.invocationCallOrder[0])
+      .toBeLessThan(mocks.sendEmail.mock.invocationCallOrder[0])
+    expect(mocks.from).not.toHaveBeenCalled()
     expect(response.headers.get('Cache-Control')).toBe('private, no-store')
     expect(response.headers.get('Referrer-Policy')).toBe('no-referrer')
   })
 
-  it('does not create the institution when mandatory document delivery fails', async () => {
+  it('keeps the committed pilot and asks for an unchanged resubmission when delivery fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     mocks.sendEmail.mockResolvedValue({ ok: false, error: 'SMTP down' })
     const response = await POST(post(input))
     expect(response.status).toBe(503)
     expect(await response.json()).toEqual({
-      error: 'Kurum belgesi e-posta ile gönderilemedi; kurum oluşturulmadı',
+      error: 'Kurum oluşturuldu ancak zorunlu belge e-postası gönderilemedi; formu değiştirmeden yeniden gönderin',
+      institution: result.institution,
+      documentDelivery: { sent: false, version: '1.0' },
     })
-    expect(mocks.rpc).not.toHaveBeenCalled()
+    expect(mocks.rpc).toHaveBeenCalledOnce()
+    expect(mocks.logAdminAction).toHaveBeenCalledWith(expect.objectContaining({
+      details: expect.objectContaining({ documentEmailId: null, documentDelivered: false }),
+    }))
+    expect(consoleError).toHaveBeenCalledWith(
+      '[Institution Free Pilot] zorunlu belge e-postası gönderilemedi:',
+      'SMTP down',
+    )
+    consoleError.mockRestore()
+  })
+
+  it('reports a failed redelivery on replay without writing a second admin log', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    mocks.rpc.mockResolvedValue({ data: { ...result, replayed: true }, error: null })
+    mocks.sendEmail.mockResolvedValue({ ok: false, error: 'SMTP down' })
+    const response = await POST(post(input))
+    expect(response.status).toBe(503)
+    expect((await response.json()).documentDelivery).toEqual({ sent: false, version: '1.0' })
+    expect(mocks.logAdminAction).not.toHaveBeenCalled()
+    consoleError.mockRestore()
   })
 
   it('rejects a manager without a confirmed email before delivery or RPC', async () => {
@@ -304,6 +318,7 @@ describe('admin invitation-only free institution pilot route', () => {
 
     expect(response.status).toBe(500)
     expect(mocks.logAdminAction).not.toHaveBeenCalled()
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
   })
 
   it('does not report a committed pilot as failed when the secondary admin log fails', async () => {
