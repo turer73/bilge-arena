@@ -1,5 +1,6 @@
+import { BrowserClient, Scope, createTransport, defaultStackParser } from '@sentry/browser'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SENTRY_PRIVACY_OPTIONS } from '../sentry-options'
+import { SENTRY_PRIVACY_OPTIONS, stripEventUserPii } from '../sentry-options'
 
 const { initMock, sendMock } = vi.hoisted(() => ({ initMock: vi.fn(), sendMock: vi.fn(async () => ({})) }))
 
@@ -13,12 +14,38 @@ type InitOptions = {
   transport?: (options: object) => { send: (envelope: unknown) => Promise<unknown> }
   replaysSessionSampleRate?: number
   replaysOnErrorSampleRate?: number
-  beforeSend?: (event: { request?: { url?: string; headers?: Record<string, string> } }) => unknown
+  beforeSend?: (event: { request?: { url?: string; headers?: Record<string, string> }; user?: Record<string, unknown> }) => unknown
   integrations?: (defaults: { name: string }[]) => { name: string; shouldCreateSpanForRequest?: (url: string) => boolean }[]
   beforeBreadcrumb?: (breadcrumb: { data?: Record<string, string> }) => unknown
   dataCollection?: unknown
   traceLifecycle?: string
-  beforeSendTransaction?: (event: { request?: { url?: string }; spans?: { description?: string; data?: Record<string, unknown> }[] }) => unknown
+  beforeSendTransaction?: (event: { request?: { url?: string }; user?: Record<string, unknown>; spans?: { description?: string; data?: Record<string, unknown> }[] }) => unknown
+}
+
+const PII_USER = { id: 'u1', email: 'ogrenci@example.com', username: 'ogrenci', ip_address: '10.0.0.7', name: 'Ali Veli' }
+
+/** Gercek SDK hattindan (scope -> olay -> beforeSend -> zarf) gecip transporta ulasan govdeler. */
+async function sendThroughSdk(beforeSend: InitOptions['beforeSend']): Promise<string> {
+  const bodies: string[] = []
+  const client = new BrowserClient({
+    ...SENTRY_PRIVACY_OPTIONS,
+    dsn: 'https://public@o0.ingest.sentry.io/0',
+    integrations: [],
+    stackParser: defaultStackParser,
+    sendClientReports: false,
+    beforeSend: beforeSend as ConstructorParameters<typeof BrowserClient>[0]['beforeSend'],
+    transport: (options) => createTransport(options, async (request) => {
+      bodies.push(typeof request.body === 'string' ? request.body : new TextDecoder().decode(request.body))
+      return {}
+    }),
+  })
+  const scope = new Scope()
+  scope.setClient(client)
+  client.init()
+  scope.setUser(PII_USER)
+  scope.captureException(new Error('olay'))
+  await client.flush(1000)
+  return bodies.join('\n')
 }
 
 const CONFIGS = {
@@ -119,6 +146,39 @@ describe('Sentry gizlilik tabani', () => {
       expect(options.beforeSendTransaction).toEqual(expect.any(Function))
     },
   )
+
+  it.each(Object.keys(CONFIGS) as (keyof typeof CONFIGS)[])(
+    '%s config olay ve transaction kullanicisini yalniz id\'ye indirger',
+    async (name) => {
+      const options = await loadInitOptions(name)
+      vi.stubGlobal('window', { location: { pathname: '/arena' } })
+      for (const send of [options.beforeSend!, options.beforeSendTransaction!]) {
+        const request = { url: 'https://bilgearena.com/arena' }
+        expect(send({ request, user: { ...PII_USER } })).toEqual({ request, user: { id: 'u1' } })
+      }
+    },
+  )
+
+  it('id\'siz kullanici olaydan tamamen dusurulur', () => {
+    expect(stripEventUserPii({ message: 'x', user: { email: PII_USER.email } })).toEqual({ message: 'x' })
+  })
+
+  it('userInfo:false e-postayi tek basina durdurmaz; config beforeSend\'i durdurur', async () => {
+    vi.stubGlobal('window', { location: { pathname: '/arena' } })
+    // Kontrol: dataCollection.userInfo=false yalniz infer_ip'i yonetir,
+    // scope'taki e-posta temizlenmezse zarfa aynen yazilir.
+    expect(await sendThroughSdk((event) => event)).toContain(PII_USER.email)
+
+    for (const name of Object.keys(CONFIGS) as (keyof typeof CONFIGS)[]) {
+      const { beforeSend } = await loadInitOptions(name)
+      vi.stubGlobal('window', { location: { pathname: '/arena' } })
+      const body = await sendThroughSdk(beforeSend)
+      expect(body).toContain('"id":"u1"') // olay gercekten gitti
+      for (const value of [PII_USER.email, PII_USER.username, PII_USER.ip_address, PII_USER.name]) {
+        expect(body).not.toContain(value)
+      }
+    }
+  })
 
   it.each(['server', 'edge'] as const)(
     '%s config hassas rota transaction\'ini dusurur',
