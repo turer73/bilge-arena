@@ -22,6 +22,8 @@ interface ResultScreenProps {
    * sonuc ekrani acildiktan SONRA tamamlandigi icin ilk render'da null gelir ve
    * rozet o an gizlidir. null = bilinmiyor/misafir, 0 = gunluk tavan dolu. */
   coinsEarned?: number | null
+  /** Gunluk oturum XP tavani bu oturumun XP'sini kesti. */
+  xpCapped?: boolean
   saveStatus?: SessionSaveStatus
   savedTotalXP?: number | null
   savedCorrectCount?: number | null
@@ -32,6 +34,7 @@ export function ResultScreen({
   onRestart,
   onExit,
   coinsEarned = null,
+  xpCapped = false,
   saveStatus = 'not_applicable',
   savedTotalXP = null,
   savedCorrectCount = null,
@@ -185,6 +188,18 @@ export function ResultScreen({
       {/* Kazanilan altin — oturum kaydi tamamlaninca gorunur. Altin XP'den ayri
           bir para birimi: XP seviye ilerlemesi, altin magaza alimi. Kullanici
           kazandigini burada gormezse magazaya yonelmiyor. */}
+      {saveStatus === 'saved' && xpCapped && (
+        <div
+          data-xp-cap-notice
+          className="rounded-2xl border-2 border-[var(--app-warn-border)] bg-[var(--app-warn-tint)] px-4 py-3 text-center shadow-[0_4px_0_var(--app-warn-border)] animate-fadeUp"
+          style={{ animationDelay: '0.55s', animationFillMode: 'both' }}
+        >
+          <span className="text-[13px] font-semibold text-[var(--app-text-sub)]">
+            ⭐ Bugünlük XP sınırına ulaştın; bu oturumun XP&apos;sinin bir kısmı yazılmadı. Yarın devam!
+          </span>
+        </div>
+      )}
+
       {saveStatus === 'saved' && coinsEarned !== null && (
         <div
           className="rounded-2xl border-2 border-[var(--app-warn-border)] bg-[var(--app-warn-tint)] px-4 py-3 text-center shadow-[0_4px_0_var(--app-warn-border)] animate-fadeUp"

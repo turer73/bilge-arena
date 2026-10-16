@@ -10,6 +10,7 @@ const mockSessionCountGte = vi.fn()
 const mockRpc = vi.fn()
 const mockAchievementSourceEq = vi.fn()
 const mockCoinLedgerMaybeSingle = vi.fn()
+const mockSessionRowMaybeSingle = vi.fn()
 const featureState = vi.hoisted(() => ({ QUIZ_LIMIT: false }))
 const mockGetFirstAttempt = vi.hoisted(() => vi.fn())
 const mockReadSnapshots = vi.hoisted(() => vi.fn())
@@ -53,7 +54,9 @@ const mockFrom = vi.fn((table: string) => {
     // gunluk-limit gate (COUNT): .select('id',{count}).eq(...).gte(...) -> mockSessionCountGte
     // Session insert/answers/coin/XP/topic-progress artik complete_game_session
     // RPC'sinde (migration 081) — bu chain'e dokunulmuyor.
+    // Replay'de odenen XP satirdan okunur: .select('*').eq().eq().maybeSingle()
     const chain = makeChain({ gte: mockSessionCountGte })
+    chain.maybeSingle = mockSessionRowMaybeSingle
     return chain
   }
   if (table === 'profiles') {
@@ -188,6 +191,7 @@ describe('POST /api/sessions', () => {
     }))
     mockAchievementSourceEq.mockResolvedValue({ data: [], error: null })
     mockCoinLedgerMaybeSingle.mockResolvedValue({ data: { amount: 40 }, error: null })
+    mockSessionRowMaybeSingle.mockResolvedValue({ data: null, error: null })
     // Gate defaults: free (non-premium) kullanici, bugun 0 oturum -> gate gecer
     mockProfilesSingle.mockResolvedValue({ data: { is_premium: false, premium_until: null }, error: null })
     mockSessionCountGte.mockResolvedValue({ count: 0, error: null })
@@ -328,6 +332,39 @@ describe('POST /api/sessions', () => {
     expect(mockRpc).toHaveBeenCalledWith('complete_verified_game_session', expect.objectContaining({
       p_answers: [expect.objectContaining({ selected_option: 0, is_correct: false })],
     }))
+  })
+
+  it('günlük XP tavanı kestiyse ödenen XP miktarını döndürür ve xpCapped bildirir', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValueOnce({
+      data: { sessionId: 'session-1', totalXP: 20, xpAwarded: 5, correctCount: 1, wrongCount: 1, alreadyProcessed: false },
+      error: null,
+    })
+    const json = await (await POST(makeRequest(validBody))).json()
+    expect(json).toMatchObject({ totalXP: 5, xpCapped: true })
+    expect(mockSessionRowMaybeSingle).not.toHaveBeenCalled()
+  })
+
+  it('replay sırasında ödenen XP miktarını oturum satırından okur', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValueOnce({
+      data: { sessionId: 'session-1', totalXP: 20, correctCount: 1, wrongCount: 1, alreadyProcessed: true },
+      error: null,
+    })
+    mockSessionRowMaybeSingle.mockResolvedValueOnce({ data: { id: 'session-1', total_xp: 20, xp_awarded: 0 }, error: null })
+    const json = await (await POST(makeRequest(validBody))).json()
+    expect(json).toMatchObject({ totalXP: 0, xpCapped: true })
+  })
+
+  it('xp_awarded olmayan (tavandan önceki) replay nominal XP miktarını korur', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValueOnce({
+      data: { sessionId: 'session-1', totalXP: 20, correctCount: 1, wrongCount: 1, alreadyProcessed: true },
+      error: null,
+    })
+    mockSessionRowMaybeSingle.mockResolvedValueOnce({ data: { id: 'session-1', total_xp: 20, xp_awarded: null }, error: null })
+    const json = await (await POST(makeRequest(validBody))).json()
+    expect(json).toMatchObject({ totalXP: 20, xpCapped: false })
   })
 
   it('notlanmış ama gönderilmemiş yanlış cevabı ilk seçimiyle oturuma katar', async () => {
