@@ -232,7 +232,9 @@ export function BilgeChanCompanion({
   const handleYes = () => {
     progressTokenRef.current = null
     onHelpToggle?.(true)
-    setHelpMsg('Önce kendi ilk denemeni işaretle; bu seçim normal cevabını göndermez.')
+    // Koç'un ilk denemesi sunucuda bu sorunun ilk cevabı olarak kilitlenir;
+    // ipuçlarından sonra verilen cevap puanı değiştirmez.
+    setHelpMsg('Önce kendi ilk denemeni işaretle; bu seçim bu sorudaki cevabın olarak sayılır.')
     setPhase('attempt')
   }
   const handleNo = () => {

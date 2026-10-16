@@ -215,6 +215,9 @@ export async function POST(request: Request) {
       isCorrect: acceptedOption === correctOption,
       correctOption,
       solution,
+      // Sayılan seçim bu istekteki seçim olmayabilir: ilk seçim kilitlidir (ör.
+      // Koç'ta işaretlenen ilk deneme). İstemci sonucu bu seçimle gösterir.
+      acceptedOption,
     },
     { headers: { 'Cache-Control': 'no-store' } },
   )

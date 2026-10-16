@@ -39,6 +39,24 @@ describe('gradeQuestion', () => {
     }))
   })
 
+  test('sunucunun saydığı ilk seçimi taşır, aralık dışını reddeder', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({
+      isCorrect: false,
+      correctOption: 2,
+      solution: null,
+      acceptedOption: 0,
+    }), { status: 200 }))
+    await expect(gradeQuestion('q-1', 2)).resolves.toMatchObject({ isCorrect: false, acceptedOption: 0 })
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({
+      isCorrect: false,
+      correctOption: 2,
+      solution: null,
+      acceptedOption: 7,
+    }), { status: 200 }))
+    await expect(gradeQuestion('q-1', 2)).rejects.toThrow('invalid_grade_response')
+  })
+
   test('HTTP hatasını ve bozuk yanıtı reddeder', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(null, { status: 429 }))
     await expect(gradeQuestion('q-1', 2)).rejects.toThrow('grade_failed')

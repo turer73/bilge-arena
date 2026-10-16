@@ -550,14 +550,21 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         const correctOption = shuffleMap ? shuffleMap.indexOf(grade.correctOption) : grade.correctOption
         if (correctOption < 0) throw new Error('invalid_grade_mapping')
 
+        // Sunucu kilitli ilk seçimi sayar (ör. Koç'ta işaretlenen ilk deneme);
+        // ekran tıklanan şıkkı değil, sayılan seçimi gösterir.
+        const acceptedCanonical = grade.acceptedOption ?? canonicalIndex
+        const acceptedDisplay = acceptedCanonical < 0
+          ? -1
+          : shuffleMap ? shuffleMap.indexOf(acceptedCanonical) : acceptedCanonical
+
         const newStreak = grade.isCorrect ? current.streak + 1 : 0
         const xpResult = calculateXP(question.difficulty, timeRemaining, newStreak, question.base_points)
         current.answerQuestion(
-          optionIndex,
+          acceptedDisplay,
           grade.isCorrect,
           timeTaken,
           xpResult,
-          canonicalIndex,
+          acceptedCanonical,
           correctOption,
           grade.solution,
         )
