@@ -556,12 +556,28 @@ describePostgres('challenge submit integrity on actual PostgreSQL migrations', (
     expect(outsider.rows[0].r).toMatchObject({ ok: false, error: 'not_participant' });
   });
 
-  it('rejects scores that do not cover exactly the challenge question set', async () => {
+  it('rejects score shapes outside the challenge question count', async () => {
     const challengeId = await createChallenge(users.a, users.b);
-    for (const score of [{ correct: 50, total: 50 }, { correct: 1, total: 1 }, { correct: 3, total: 2 }, { correct: -1, total: 2 }, { total: 2 }, { correct: '2', total: 2 }]) {
+    for (const score of [{ correct: 50, total: 50 }, { correct: 3, total: 3 }, { correct: 0, total: 0 }, { correct: 3, total: 2 }, { correct: -1, total: 2 }, { total: 2 }, { correct: '2', total: 2 }]) {
       expect(await submit(client, challengeId, users.a, score)).toMatchObject({ ok: false, error: 'invalid_score' });
     }
     expect((await challengeRow(challengeId)).challenger_score).toBeNull();
+    // Route GET ile ayni oynanabilir kumeyi notlar; silinmis soru kumeden duserse toplam kuculur.
+    expect(await submit(client, challengeId, users.a, { correct: 1, total: 1 })).toMatchObject({ ok: true, result: 'waiting_opponent' });
+  });
+
+  it('marks an expired challenge before questions are served, but keeps the finish grace for an early start', async () => {
+    const expired = await createChallenge(users.a, users.b, { expiresAt: new Date(Date.now() - 60_000).toISOString() });
+    const late = await client.query('SELECT public.start_challenge_attempt($1, $2) AS r', [expired, users.b]);
+    expect(late.rows[0].r).toMatchObject({ ok: false, error: 'expired' });
+    expect((await challengeRow(expired)).status).toBe('expired');
+    expect((await challengeRow(expired)).opponent_started_at).toBeNull();
+
+    const graced = await createChallenge(users.a, users.b, { expiresAt: new Date(Date.now() - 10 * 60_000).toISOString() });
+    await client.query("UPDATE public.challenges SET challenger_started_at = clock_timestamp() - interval '20 minutes' WHERE id = $1", [graced]);
+    const reload = await client.query('SELECT public.start_challenge_attempt($1, $2) AS r', [graced, users.a]);
+    expect(reload.rows[0].r).toMatchObject({ ok: true, started: false });
+    expect((await challengeRow(graced)).status).toBe('accepted');
   });
 
   it('measures time on the server and ignores client time', async () => {

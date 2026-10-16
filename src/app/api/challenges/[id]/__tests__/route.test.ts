@@ -160,6 +160,7 @@ describe('GET /api/challenges/[id]', () => {
       opponent_id: 'ffffffff-bbbb-cccc-dddd-eeeeeeeeeeee',
       challenger_score: null,
       opponent_score: null,
+      expires_at: new Date(Date.now() + 86_400_000).toISOString(),
     }
 
     beforeEach(() => {
@@ -191,6 +192,43 @@ describe('GET /api/challenges/[id]', () => {
       mockChallengeQuery.mockResolvedValue({ data: { ...openChallenge, status: 'completed' }, error: null })
       await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))
       expect(mockRpc).not.toHaveBeenCalled()
+    })
+
+    it('soru yuklemesi basarisizsa saati baslatmaz', async () => {
+      mockChallengeQuery.mockResolvedValue({ data: openChallenge, error: null })
+      mockQuestionsQuery.mockResolvedValue({ data: null, error: { code: '08006' } })
+      const res = await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))
+      expect(res.status).toBe(500)
+      expect(mockRpc).not.toHaveBeenCalled()
+    })
+
+    it('oynanabilir soru yoksa saati baslatmaz', async () => {
+      mockChallengeQuery.mockResolvedValue({ data: openChallenge, error: null })
+      mockQuestionsQuery.mockResolvedValue({ data: [], error: null })
+      const res = await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))
+      expect(res.status).toBe(200)
+      expect(mockRpc).not.toHaveBeenCalled()
+    })
+
+    it('suresi dolmus duelloda sorulari vermez', async () => {
+      mockChallengeQuery.mockResolvedValue({ data: openChallenge, error: null })
+      mockRpc.mockResolvedValueOnce({ data: { ok: false, error: 'expired' } as never, error: null })
+      const res = await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))
+      expect(res.status).toBe(400)
+      const json = await res.json()
+      expect(json.error).toContain('suresi dolmus')
+      expect(json.questions).toBeUndefined()
+    })
+
+    it('RPC yoksa ve sure gecmisse sorulari vermez', async () => {
+      mockChallengeQuery.mockResolvedValue({
+        data: { ...openChallenge, expires_at: new Date(Date.now() - 60_000).toISOString() },
+        error: null,
+      })
+      mockRpc.mockResolvedValueOnce({ data: null as never, error: { code: 'PGRST202' } })
+      const res = await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))
+      expect(res.status).toBe(400)
+      expect((await res.json()).questions).toBeUndefined()
     })
 
     it('RPC henuz yoksa (migration oncesi) duello yine yuklenir', async () => {

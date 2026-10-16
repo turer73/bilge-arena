@@ -81,10 +81,15 @@ export interface Challenge {
   category: string | null
   status: 'pending' | 'accepted' | 'completed' | 'expired' | 'declined'
   question_ids: string[]
-  challenger_score: { correct: number; total: number; time_sec: number; xp: number } | null
-  opponent_score: { correct: number; total: number; time_sec: number; xp: number } | null
+  // time_sec: sunucuda olculur; migration 20261016190000 oncesi skorlarda istemci degeri, sunucu saati yoksa null
+  challenger_score: { correct: number; total: number; time_sec: number | null; xp: number } | null
+  opponent_score: { correct: number; total: number; time_sec: number | null; xp: number } | null
   winner_id: string | null
   xp_reward: number
+  // Kazanana gercekten verilen XP (gunluk/rakip tavani sonrasi). completed_at
+  // yoksa duello migration 20261016190000 oncesi sonuclanmistir; o zaman xp_reward verilmistir.
+  xp_awarded?: number
+  completed_at?: string | null
   created_at: string
   expires_at: string
   // JOIN fields (optional)

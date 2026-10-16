@@ -60,6 +60,17 @@ const CHALLENGE_ID = '20000000-0000-4000-8000-000000000001'
 const USER_ID = 'user-1'
 const OPPONENT_ID = 'user-2'
 
+// Ayristiricidan (parseQuestionRows) gecen tam soru satiri.
+function questionRow(id: string, answer: number) {
+  return {
+    id, external_id: null, game: 'matematik', category: 'sayilar', subcategory: null, topic: null,
+    difficulty: 2, level_tag: null,
+    content: { question: `Soru ${id}`, options: ['A', 'B', 'C', 'D'], answer },
+    base_points: 20, is_active: true, is_boss: false, times_answered: 0, times_correct: 0,
+    source: null, exam_ref: null, published_revision_id: null, created_at: null, updated_at: null,
+  }
+}
+
 function makeRequest(body: Record<string, unknown>, id = CHALLENGE_ID) {
   return new NextRequest(`http://localhost/api/challenges/${id}/submit`, {
     method: 'POST',
@@ -99,10 +110,7 @@ describe('POST /api/challenges/[id]/submit', () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
     mockChallengeSingle.mockResolvedValue({ data: openChallenge, error: null })
     mockQuestionsIn.mockResolvedValue({
-      data: [
-        { id: Q1, content: { answer: 1 } },
-        { id: Q2, content: { answer: 2 } },
-      ],
+      data: [questionRow(Q1, 1), questionRow(Q2, 2)],
       error: null,
     })
   })
@@ -177,7 +185,6 @@ describe('POST /api/challenges/[id]/submit', () => {
       }), params())
       expect(res.status).toBe(400)
       expect(mockRpc).not.toHaveBeenCalled()
-      expect(mockQuestionsIn).not.toHaveBeenCalled()
     })
 
     it('eksik cevapli (alt kume) gonderimi reddeder', async () => {
@@ -211,13 +218,38 @@ describe('POST /api/challenges/[id]/submit', () => {
       expect(mockRpc).not.toHaveBeenCalled()
     })
 
-    it('bankadan kaldirilmis soruyu yanlis sayar, toplami degistirmez', async () => {
-      mockQuestionsIn.mockResolvedValue({ data: [{ id: Q1, content: { answer: 1 } }], error: null })
-      const res = await POST(makeRequest({ answers: validAnswers }), params())
+    it('bankadan kaldirilmis soru GET gibi kumeden duser; oyuncu gormedigi soruya cevap vermez', async () => {
+      mockQuestionsIn.mockResolvedValue({ data: [questionRow(Q1, 1)], error: null })
+      const res = await POST(makeRequest({ answers: [{ questionId: Q1, selectedOption: 1 }] }), params())
       expect(res.status).toBe(200)
       const json = await res.json()
       expect(json.score.correct).toBe(1)
-      expect(json.score.total).toBe(2)
+      expect(json.score.total).toBe(1)
+      expect(submitArgs()?.p_score).toEqual({ correct: 1, total: 1, xp: 20 })
+    })
+
+    it('kaldirilmis soruya da cevap gonderen istegi reddeder', async () => {
+      mockQuestionsIn.mockResolvedValue({ data: [questionRow(Q1, 1)], error: null })
+      const res = await POST(makeRequest({ answers: validAnswers }), params())
+      expect(res.status).toBe(400)
+      expect(mockRpc).not.toHaveBeenCalled()
+    })
+
+    it('icerigi gecersiz soruyu GET ile ayni bicimde kumeden dusurur', async () => {
+      mockQuestionsIn.mockResolvedValue({
+        data: [questionRow(Q1, 1), { ...questionRow(Q2, 2), content: { question: 'bozuk' } }],
+        error: null,
+      })
+      const res = await POST(makeRequest({ answers: [{ questionId: Q1, selectedOption: 0 }] }), params())
+      expect(res.status).toBe(200)
+      expect((await res.json()).score).toMatchObject({ correct: 0, total: 1 })
+    })
+
+    it('soru sorgusu hata verirse 500 doner ve RPC cagirmaz', async () => {
+      mockQuestionsIn.mockResolvedValue({ data: null, error: { code: '08006' } })
+      const res = await POST(makeRequest({ answers: validAnswers }), params())
+      expect(res.status).toBe(500)
+      expect(mockRpc).not.toHaveBeenCalled()
     })
   })
 

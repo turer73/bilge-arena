@@ -5,6 +5,7 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { challengeSubmitSchema } from '@/lib/validations/schemas'
 import { dbErrorResponse } from '@/lib/utils/api-error'
 import { isValidUuid } from '@/lib/utils/uuid'
+import { loadPlayableChallengeQuestions } from '@/lib/challenges/playable-questions'
 
 const submitLimiter = createRateLimiter('challenge-submit', 5, 60_000)
 
@@ -31,9 +32,10 @@ interface SubmitRpcResult {
  * Body: { answers: [{ questionId, selectedOption }] }
  *
  * Butunluk (disc #2530):
- * - Cevaplar duellonun soru kumesini birebir karsilamali; eksik, fazla,
- *   tekrar eden veya yabanci soru 400 doner. Skor yalniz duellonun
- *   sorularindan, sunucudaki cevap anahtariyla hesaplanir.
+ * - Cevaplar duellonun oynanabilir soru kumesini (GET ile ayni:
+ *   loadPlayableChallengeQuestions) birebir karsilamali; eksik, fazla,
+ *   tekrar eden veya yabanci soru 400 doner. Skor yalniz bu sorulardan,
+ *   sunucudaki cevap anahtariyla hesaplanir.
  * - Istemcinin gonderdigi sure ve isCorrect yok sayilir. Sureyi
  *   submit_challenge_answer, katilimcinin sorulari ilk actigi andan olcer.
  * - Sure dolumu, eszamanli gonderim ve XP tavani RPC icinde, duello satiri
@@ -91,14 +93,22 @@ export async function POST(
     return NextResponse.json({ error: 'Zaten cevap gonderilmis' }, { status: 400 })
   }
 
-  // Cevap kumesi duellonun soru kumesiyle birebir ayni olmali.
+  // Oynanabilir soru kumesi GET ile ayni yardimcidan gelir: bankada hala
+  // bulunan ve icerigi gecerli sorular. Oyuncu gormedigi soruya cevap vermez.
   const challengeQuestionIds: string[] = Array.isArray(challenge.question_ids) ? challenge.question_ids : []
-  const expected = new Set(challengeQuestionIds)
+  const playable = await loadPlayableChallengeQuestions(svc, challengeQuestionIds)
+  if (playable.error) {
+    console.error('[/api/challenges/[id]/submit POST] questions query error:', playable.error.code)
+    return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
+  }
+
+  // Cevap kumesi oynanabilir soru kumesiyle birebir ayni olmali.
+  const answerKey = new Map(playable.questions.map((q) => [q.id, q.content.answer] as const))
   const answered = new Set(answers.map((a) => a.questionId))
-  const exactSet = expected.size > 0
+  const exactSet = answerKey.size > 0
     && answered.size === answers.length
-    && answered.size === expected.size
-    && answers.every((a) => expected.has(a.questionId))
+    && answered.size === answerKey.size
+    && answers.every((a) => answerKey.has(a.questionId))
   if (!exactSet) {
     return NextResponse.json(
       { error: 'Cevaplar duellonun sorulariyla eslesmiyor' },
@@ -106,22 +116,6 @@ export async function POST(
     )
   }
 
-  const { data: questions, error: qErr } = await svc
-    .from('questions')
-    .select('id, content')
-    .in('id', challengeQuestionIds)
-
-  if (qErr) {
-    console.error('[/api/challenges/[id]/submit POST] questions query error:', qErr.code)
-    return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
-  }
-
-  const answerKey = new Map((questions || []).map((q) => {
-    const content = q.content as { answer?: number; correct?: number } | null
-    return [q.id, content?.answer ?? content?.correct] as const
-  }))
-
-  // Bankadan kaldirilmis bir soru iki taraf icin de yanlis sayilir; toplam degismez.
   const correct = answers.reduce(
     (sum, a) => sum + (answerKey.get(a.questionId) === a.selectedOption ? 1 : 0),
     0,
@@ -129,7 +123,7 @@ export async function POST(
 
   const score = {
     correct,
-    total: expected.size,
+    total: answerKey.size,
     xp: correct * 20,
   }
 

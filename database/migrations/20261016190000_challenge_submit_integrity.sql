@@ -9,8 +9,10 @@
 -- Bu migration:
 --   1. Katilimcinin sorulari ilk actigi ani sunucuda kaydeder
 --      (start_challenge_attempt). Sure bu andan olculur; istemci suresi yok sayilir.
+--      Suresi dolmus duelloyu sorular verilmeden once 'expired' yapar.
 --   2. submit_challenge_answer'i ayni imzayla yeniden tanimlar:
---      - p_score.total soru kumesinin boyutuna esit olmali, 0 <= correct <= total;
+--      - 1 <= p_score.total <= duellonun soru sayisi, 0 <= correct <= total
+--        (oynanabilir kumeyi route, GET ile ayni yardimciyla birebir dogrular);
 --      - suresi dolmus duello reddedilir ve 'expired' olarak isaretlenir
 --        (sure dolmadan baslayan oyuncuya 60 dk tamamlama payi);
 --      - time_sec sunucuda hesaplanir; iki tarafin da sunucu suresi yoksa
@@ -46,6 +48,7 @@ DECLARE
   v_ch public.challenges%ROWTYPE;
   v_is_challenger boolean;
   v_started_at timestamptz;
+  v_deadline timestamptz;
 BEGIN
   SELECT * INTO v_ch FROM public.challenges WHERE id = p_challenge_id FOR UPDATE;
   IF NOT FOUND THEN
@@ -58,13 +61,26 @@ BEGIN
   v_is_challenger := (v_ch.challenger_id = p_user_id);
   v_started_at := CASE WHEN v_is_challenger THEN v_ch.challenger_started_at ELSE v_ch.opponent_started_at END;
 
-  -- Zaten baslamis, cevaplamis, sonuclanmis ya da suresi dolmus duelloda saat
-  -- yeniden kurulmaz; ilk acilis ani korunur.
-  IF v_started_at IS NOT NULL
-     OR v_ch.status NOT IN ('pending', 'accepted')
+  -- Sonuclanmis duelloda ya da cevabini gondermis katilimcida saat kurulmaz.
+  IF v_ch.status NOT IN ('pending', 'accepted')
      OR (v_is_challenger AND v_ch.challenger_score IS NOT NULL)
-     OR (NOT v_is_challenger AND v_ch.opponent_score IS NOT NULL)
-     OR clock_timestamp() > v_ch.expires_at THEN
+     OR (NOT v_is_challenger AND v_ch.opponent_score IS NOT NULL) THEN
+    RETURN jsonb_build_object('ok', true, 'started', false, 'startedAt', v_started_at);
+  END IF;
+
+  -- Sure dolumu sorular verilmeden once uygulanir ve kalici yazilir. Sure
+  -- dolmadan baslayan oyuncu submit ile ayni 60 dk payla devam edebilir.
+  v_deadline := v_ch.expires_at;
+  IF v_started_at IS NOT NULL AND v_started_at <= v_ch.expires_at THEN
+    v_deadline := GREATEST(v_ch.expires_at, v_started_at + interval '60 minutes');
+  END IF;
+  IF clock_timestamp() > v_deadline THEN
+    UPDATE public.challenges SET status = 'expired' WHERE id = p_challenge_id;
+    RETURN jsonb_build_object('ok', false, 'error', 'expired');
+  END IF;
+
+  -- Tekrar yukleme saati sifirlamaz; ilk acilis ani korunur.
+  IF v_started_at IS NOT NULL THEN
     RETURN jsonb_build_object('ok', true, 'started', false, 'startedAt', v_started_at);
   END IF;
 
@@ -144,8 +160,10 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'error', 'expired');
   END IF;
 
-  -- Skor sekli: route soru kumesinin tamamini notlar; burada savunma olarak
-  -- yeniden dogrulanir.
+  -- Skor sekli: oynanabilir soru kumesini (bankada bulunan ve icerigi gecerli
+  -- sorular; GET ayni kumeyi sunar) route belirler ve birebir dogrular. RPC
+  -- savunma olarak toplamin duellonun soru sayisini asmadigini dogrular;
+  -- yabanci sorularla puan toplama (50 cevap) burada da reddedilir.
   v_question_count := COALESCE(cardinality(v_ch.question_ids), 0);
   IF jsonb_typeof(p_score -> 'total') IS DISTINCT FROM 'number'
      OR jsonb_typeof(p_score -> 'correct') IS DISTINCT FROM 'number' THEN
@@ -153,7 +171,7 @@ BEGIN
   END IF;
   v_total := (p_score ->> 'total')::numeric::integer;
   v_correct := (p_score ->> 'correct')::numeric::integer;
-  IF v_question_count = 0 OR v_total <> v_question_count OR v_correct < 0 OR v_correct > v_total THEN
+  IF v_total < 1 OR v_total > v_question_count OR v_correct < 0 OR v_correct > v_total THEN
     RETURN jsonb_build_object('ok', false, 'error', 'invalid_score');
   END IF;
 
