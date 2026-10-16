@@ -241,8 +241,10 @@ export const challengeSubmitSchema = z.object({
     // vestigial: sunucu skoru questions tablosundan hesaplar, client isCorrect'i YOK SAYILIR
     // (duello cevap sizintisi fix — client artik dogru cevabi bilmiyor)
     isCorrect: z.boolean().optional(),
-    timeTaken: z.number().min(0).max(300),
-  })).min(1).max(50),
+    // vestigial: sure sunucuda, sorularin ilk acildigi andan olculur (disc #2530).
+    // Eski istemciler gondermeye devam edebilsin diye kabul edilir, kullanilmaz.
+    timeTaken: z.number().min(0).max(300).optional(),
+  })).min(1).max(20),
 })
 
 // ============================================================

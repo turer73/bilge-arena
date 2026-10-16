@@ -5,7 +5,7 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { challengeActionSchema } from '@/lib/validations/schemas'
 import { isValidUuid } from '@/lib/utils/uuid'
-import { parseQuestionRows } from '@/lib/utils/question-public'
+import { loadPlayableChallengeQuestions } from '@/lib/challenges/playable-questions'
 
 const getIpLimiter = createRateLimiter('challenge-get-ip', 60, 60_000)
 const getUserLimiter = createRateLimiter('challenge-get-user', 30, 60_000)
@@ -85,44 +85,52 @@ export async function GET(
     return NextResponse.json({ error: 'Duello bulunamadi' }, { status: 404 })
   }
 
-  // 6) Sorulari cek (challenge.question_ids ile)
+  // 6) Oynanabilir sorulari cek (submit ile ayni kume; bkz. loadPlayableChallengeQuestions)
   const questionIds: string[] = Array.isArray(challenge.question_ids) ? challenge.question_ids : []
-  if (questionIds.length === 0) {
-    return NextResponse.json(
-      { challenge, questions: [] },
-      { headers: { 'Cache-Control': 'no-store' } },
-    )
-  }
-
-  const { data: qs, error: qErr } = await admin
-    .from('questions')
-    .select('*')
-    .in('id', questionIds)
-
-  if (qErr) {
-    console.error('[/api/challenges/[id] GET] questions query error:', qErr.code)
+  const playable = await loadPlayableChallengeQuestions(admin, questionIds)
+  if (playable.error) {
+    console.error('[/api/challenges/[id] GET] questions query error:', playable.error.code)
     return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
   }
 
-  // 7) question_ids sirasini koru + cevap alanlarini STRIP et.
+  // 7) Cevap alanlarini STRIP et.
   //    GUVENLIK (duello cevap sizintisi): answer/solution/explanation/hint
   //    client'a GONDERILMEZ. Dogru cevap yalniz submit endpoint'inde
   //    sunucu tarafinda questions tablosundan okunur. Whitelist = default-deny:
   //    content'e ileride eklenen yeni hassas alan da otomatik sizmaz.
-  const qMap = new Map(parseQuestionRows(qs).map(q => [q.id, q] as const))
-  const orderedQuestions = questionIds
-    .map(qid => qMap.get(qid))
-    .filter((q): q is NonNullable<typeof q> => Boolean(q))
-    .map(q => ({
-      ...q,
-      content: {
-        question: q.content.question,
-        options: q.content.options,
-        sentence: q.content.sentence,
-        context: q.content.context,
-        type: q.content.type,
-      },
-    }))
+  const orderedQuestions = playable.questions.map(q => ({
+    ...q,
+    content: {
+      question: q.content.question,
+      options: q.content.options,
+      sentence: q.content.sentence,
+      context: q.content.context,
+      type: q.content.type,
+    },
+  }))
+
+  // 8) Oyun saati ve sure dolumu (disc #2530). Sorular basariyla yuklendikten
+  //    sonra, oyuncuya verilmeden once calisir: yukleme hatasi oyuncunun
+  //    suresinden yemez, suresi dolmus duellonun sorulari verilmez. RPC ilk
+  //    acilis anini korur; tekrar yukleme saati sifirlamaz.
+  const ownScore = challenge.challenger_id === user.id ? challenge.challenger_score : challenge.opponent_score
+  if (!ownScore && orderedQuestions.length > 0 && (challenge.status === 'pending' || challenge.status === 'accepted')) {
+    const { data: started, error: startErr } = await admin.rpc('start_challenge_attempt', {
+      p_challenge_id: id,
+      p_user_id: user.id,
+    })
+    const startResult = started as { ok?: boolean; error?: string } | null
+    if (startErr) {
+      // Migration oncesi RPC yoktur (PGRST202): sure dolumu yine uygulanir,
+      // esitlik bozmada sure kullanilmaz.
+      console.error('[/api/challenges/[id] GET] start attempt failed:', startErr.code)
+      if (new Date(challenge.expires_at) < new Date()) {
+        return NextResponse.json({ error: 'Duellonun suresi dolmus' }, { status: 400 })
+      }
+    } else if (startResult?.ok === false && startResult.error === 'expired') {
+      return NextResponse.json({ error: 'Duellonun suresi dolmus' }, { status: 400 })
+    }
+  }
 
   return NextResponse.json(
     { challenge, questions: orderedQuestions },

@@ -8,7 +8,10 @@ bir dersane denenebilir. Kapsamlı hazırlık tabloları ve kontrolleri korunur.
 
 1. Platform yöneticisi `/admin/kurumlar` ekranını açar.
 2. Kurum adını, dersanenin doğrulanmış hesabını ve paketi seçer.
-3. Paket koşullarını kabul eder. Belge e-postası başarıyla gönderilmeden kurum oluşturulmaz.
+3. Paket koşullarını kabul eder. Kurum veritabanında oluşturulduktan sonra paket
+   belgesi e-postayla gönderilir. Gönderim başarısız olursa ekran bunu söyler;
+   form değiştirilmeden yeniden gönderilince aynı kurum tekrar oynatılır ve yalnız
+   belge yeniden denenir (ikinci kurum açılmaz).
 4. Mevcut 30/60 günlük paket, öğrenci/personel kapasitesi ve tek açık ücretsiz pilot sınırları geçerlidir.
 
 Platform yöneticisi ile kurum yöneticisi farklı hesaplardır. Kurum yöneticisi
@@ -47,3 +50,20 @@ kanıt yerine geçmez. Yeni mod, yalnızca sonraki kurum oluşturmalarına uygul
 - Gerçek PostgreSQL: 45 test; yönetim sayfası/API: 36 test başarılı.
 - Yeni kurum oluşturulmadı; gerçek e-posta teslimi ve kullanıcı oturumuyla form
   gönderimi bu kaydın kapsamında doğrulanmış değildir.
+
+## 16 Ekim 2026 düzeltme kaydı
+
+- Canlı salt-okuma ölçümü: `pilot_institution_requests`,
+  `institution_pilot_controls`, `pilot_institutions` ve
+  `pilot_institution_memberships` tablolarında `service_role` SELECT yetkisi
+  yoktu (112 ve 158'in `REVOKE ALL` kararı). Route bu tabloları servis anahtarıyla
+  önceden okuduğu için her yeni istek, RPC'ye ve e-postaya varmadan 42501 alıp
+  503 dönerdi. `free_provisioning=true` (basic) açıktı; hiç `invitation_free`
+  kurum ve `provision_free_pilot` isteği yoktu (denenip denenmediği bu ölçümden
+  anlaşılmaz).
+- Düzeltme migration gerektirmez: tekrar, kapı, yönetici ve tek açık slot
+  denetimleri zaten `provision_free_pilot_institution` RPC'sinin içindeydi; route
+  artık yalnız RPC'yi çağırır ve belgeyi commit'ten sonra gönderir.
+- Gerçek PostgreSQL + PostgREST testi:
+  `src/app/api/admin/institutions/free-pilots/__tests__/route.postgrest.test.ts`.
+  Eski route bu testte 7 denemenin 5'inde 503 verir.
