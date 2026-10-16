@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomUUID } from 'node:crypto'
 import pg from 'pg'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const url = process.env.TYT_SOCIAL_EPOCH_TEST_DATABASE_URL
 const enabled = Boolean(
@@ -210,6 +211,7 @@ describePg('TYT Social selection epoch on disposable PostgreSQL 16', () => {
   beforeAll(async () => {
     client = await connect('tyt-social-epoch-main')
     await client.query(readFileSync(fixturePath, 'utf8'))
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     for (const name of MIGRATIONS) {
       try {
         await client.query(migration(name))

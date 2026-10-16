@@ -13,6 +13,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_URL;
@@ -236,6 +237,7 @@ describePostgres('migration 129 session coin scale on actual PostgreSQL migratio
     // Guards above run before this reset; roles are cluster-wide and recreated idempotently.
     await client.query('DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; CREATE SCHEMA auth;');
     await client.query(fixtureSql);
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL);
     for (const migration of [
       '081_atomic_complete_game_session.sql',
       '091_verified_attempts.sql',

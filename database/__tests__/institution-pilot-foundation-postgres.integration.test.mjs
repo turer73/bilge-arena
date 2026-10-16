@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { registerInstitutionProgramCompletionTests } from './institution-program-completion-postgres-cases.mjs'
 import { registerBasicPilotTests } from './institution-basic-pilot-postgres-cases.mjs'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const url = process.env.INSTITUTION_PILOT_TEST_DATABASE_URL
 const parsedUrl = url ? new URL(url) : null
@@ -411,6 +412,7 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
       CREATE TABLE public.achievements(id uuid PRIMARY KEY);
       CREATE TABLE public.weekly_learning_league_contributions(id uuid PRIMARY KEY);
     `)
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     await client.query(classroomSql)
 
     // Migration 112 must stop before inventing a tenant for any legacy row.

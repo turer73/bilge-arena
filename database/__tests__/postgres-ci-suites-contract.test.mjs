@@ -81,6 +81,40 @@ describe('PostgreSQL CI suite manifest', () => {
     expect(postgresFiles.filter((file) => !covered.has(file))).toEqual([])
   })
 
+  // disc #2570: without Supabase's default grants a missing REVOKE ... FROM
+  // anon/authenticated/service_role still passes. Every suite file that connects
+  // to a test database by URL must apply them before its migrations. Files that
+  // start their own loopback cluster (*_PG_BIN) are still pending; this list may
+  // only shrink.
+  const LOOPBACK_CLUSTER_FILES_WITHOUT_DEFAULTS = [
+    'canonical-curriculum-postgres.integration.test.mjs', 'controlled-measurement.test.mjs',
+    'formal-tyt-social-scope-postgres.integration.test.mjs', 'governed-math-outcome-projection.test.mjs',
+    'governed-social-outcome-projection.test.mjs', 'question-basic-guard-postgres.test.mjs',
+    'question-source-review-wasm.test.mjs', 'revision-bound-fen-quality-policy.test.mjs',
+    'social-calibration-readiness.test.mjs', 'tyt-social-preparation-learner-flow.test.mjs',
+    'tyt-social-reviewed-pool-postgres.integration.test.mjs', 'tyt-social-reviewed-preparation-pool.test.mjs',
+  ]
+
+  it('applies Supabase default privileges in every suite file that connects by URL', () => {
+    const missing = []
+    for (const file of postgresCiSuiteFiles()) {
+      const source = readFileSync(join(root, file), 'utf8')
+      const applies = /from '\.\/supabase-default-privileges\.mjs'/.test(source)
+        && /\.query\(SUPABASE_DEFAULT_PRIVILEGES_SQL\)/.test(source)
+      if (/_TEST_DATABASE_URL/.test(source) && !applies) missing.push(file)
+    }
+    expect(missing).toEqual([])
+  })
+
+  it('keeps the loopback-cluster files without the defaults on an explicit, shrinking list', () => {
+    const pending = postgresCiSuiteFiles()
+      .filter((file) => !/\.query\(SUPABASE_DEFAULT_PRIVILEGES_SQL\)/.test(readFileSync(join(root, file), 'utf8')))
+      .filter((file) => /_PG_BIN/.test(readFileSync(join(root, file), 'utf8')))
+      .map((file) => file.replace('database/__tests__/', ''))
+      .sort()
+    expect(pending).toEqual([...LOOPBACK_CLUSTER_FILES_WITHOUT_DEFAULTS].sort())
+  })
+
   it('runs the learning, reward and grading files, including the 13 no job ran before and the money RPC tests', () => {
     expect(POSTGRES_CI_SUITES['learning-reward']).toMatchObject({ job: 'learning-reward-postgres', runner: 'vitest', sequential: true })
     expect(POSTGRES_CI_SUITES['learning-reward'].files.map((file) => file.replace(/^database\/__tests__\/|-postgres\.integration\.test\.mjs$/g, '')).sort()).toEqual([

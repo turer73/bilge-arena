@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const url = process.env.CANONICAL_CATEGORY_TEST_DATABASE_URL
 if (url && process.env.CANONICAL_CATEGORY_TEST_DATABASE_DISPOSABLE !== '1') {
@@ -217,6 +218,7 @@ suite('109 canonical category disposable PostgreSQL acceptance', () => {
         EXECUTE FUNCTION public.tg_question_content_direct_mutation_guard();
     `)
 
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     await client.query(migration)
   })
 

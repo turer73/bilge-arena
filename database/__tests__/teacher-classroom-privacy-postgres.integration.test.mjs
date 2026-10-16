@@ -4,6 +4,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const url = process.env.TEACHER_CLASSROOM_TEST_DATABASE_URL
 if (url && process.env.TEACHER_CLASSROOM_TEST_DATABASE_DISPOSABLE !== '1') {
@@ -150,6 +151,7 @@ suite('105 teacher classroom privacy real PostgreSQL acceptance', () => {
       CREATE TABLE public.achievements(id uuid PRIMARY KEY);
       CREATE TABLE public.weekly_learning_league_contributions(id uuid PRIMARY KEY);
     `)
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     await client.query(migrationSql)
 
     teacher = randomUUID()

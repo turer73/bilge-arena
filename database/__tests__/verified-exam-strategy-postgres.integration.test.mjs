@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const { Client } = pg
 const url = process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_URL
@@ -42,7 +43,7 @@ describePg('100 verified exam strategy migrations', () => {
   beforeAll(async () => {
     client = new Client({ connectionString: url }); await client.connect()
     await client.query('DROP SCHEMA IF EXISTS public CASCADE; DROP SCHEMA IF EXISTS auth CASCADE; CREATE SCHEMA public; CREATE SCHEMA auth;')
-    await client.query(fixture); await client.query(migration('081_atomic_complete_game_session.sql')); await client.query(migration('091_verified_attempts.sql')); await client.query(migration('092_complete_verified_game_session.sql')); await client.query(migration('100_verified_exam_strategy_experiments.sql'))
+    await client.query(fixture); await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL); await client.query(migration('081_atomic_complete_game_session.sql')); await client.query(migration('091_verified_attempts.sql')); await client.query(migration('092_complete_verified_game_session.sql')); await client.query(migration('100_verified_exam_strategy_experiments.sql'))
     userId=randomUUID(); otherUserId=randomUUID(); await client.query('INSERT INTO public.profiles(id) VALUES($1),($2)',[userId,otherUserId]); questions=Array.from({length:40},()=>randomUUID());
     for (const id of questions) await client.query('INSERT INTO public.questions(id,game,is_active,exam_ref,category) VALUES($1,$2,true,$3,$4)',[id,'matematik','TYT','fixture'])
     const draftIssue=await service(()=>client.query('SELECT public.issue_verified_exam_attempt($1,$2,$3,$4,$5::jsonb,$6,$7,$8) result',[otherUserId,'matematik','TYT','pilot-v1',JSON.stringify(items(questions)),600,120,randomUUID()]))

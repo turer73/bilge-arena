@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_URL;
@@ -92,14 +93,7 @@ describePostgres('migration 130 purchase ledger on actual PostgreSQL', () => {
     await client.connect();
     await client.query('DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; CREATE SCHEMA auth;');
     await client.query(fixtureSql);
-    // Supabase grants every new public table and function to its API roles by
-    // default; 130's REVOKEs (append-only ledger, service-only RPCs) exist to
-    // undo exactly that. Without these defaults a missing REVOKE would pass.
-    await client.query(`
-      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
-      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
-      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
-    `);
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL);
 
     buyer = randomUUID(); broke = randomUUID(); legacy = randomUUID();
     await client.query('INSERT INTO public.profiles (id, coin_balance) VALUES ($1, 5000), ($2, 10)', [buyer, broke]);

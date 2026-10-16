@@ -12,6 +12,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const url = process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_URL
 const enabled = Boolean(url && process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE === '1')
@@ -311,6 +312,7 @@ describePg('178-192 curriculum scope release real PostgreSQL', () => {
       historicalUser, socialPreparer, socialReviewerOne, socialReviewerTwo,
     ])
 
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     for (const sql of foundationMigrations) await client.query(sql)
     // Migration 187's permanent question_outcomes guard executes this exact
     // 164 helper during release sync, so the release fixture uses the real

@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const url = process.env.CONTENT_GOVERNANCE_TEST_DATABASE_URL
 if (url && process.env.CONTENT_GOVERNANCE_TEST_DATABASE_DISPOSABLE !== '1') throw new Error('Set CONTENT_GOVERNANCE_TEST_DATABASE_DISPOSABLE=1')
@@ -145,6 +146,7 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
       [...parityQuestions,turkishQuestion,spellingTopicQuestion,toolQuestion],outcome,
     ])
     await client.query("INSERT INTO public.error_reports(id,user_id,question_id,report_type,description,status,created_at) VALUES($1,$2,$3,'typo','Eski yazım bildirimi','pending','2026-07-01T10:00:00Z')",[randomUUID(),legacyLearner,question])
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     await client.query(migration)
     await client.query(coachContractMigration)
     await client.query(validationPipelineMigration)

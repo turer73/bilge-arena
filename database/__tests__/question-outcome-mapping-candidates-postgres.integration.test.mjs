@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const hasDedicatedDatabase = Boolean(process.env.OUTCOME_CANDIDATES_TEST_DATABASE_URL)
 const url = process.env.OUTCOME_CANDIDATES_TEST_DATABASE_URL
@@ -329,6 +330,7 @@ suite('166 question outcome candidate queue disposable PostgreSQL acceptance', (
        VALUES($1,$2,$3,'matematik','sayilar','TYT',$4,'draft',$5)`,
       [partialDraft, partialQuestion, published.get(partialQuestion), '3'.repeat(64), actor],
     )
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     await client.query(migration)
   })
 

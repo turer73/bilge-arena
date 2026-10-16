@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const url = process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_URL
 const enabled = Boolean(url && process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE === '1')
@@ -128,6 +129,7 @@ describePg('adaptive diagnostic real PostgreSQL', () => {
     await client.query(`INSERT INTO public.questions(
       id,game,category,difficulty,exam_ref,is_active
     ) VALUES($1,'turkce','denklemler',2,'TYT',false)`, [outOfScopeManualQuestion])
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     for (const migration of ['086_outcome_mastery_pilot.sql', '096_curriculum_graph_v1.sql', '098_adaptive_diagnostic.sql']) {
       await client.query(read(migration))
     }

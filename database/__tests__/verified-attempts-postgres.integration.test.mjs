@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_URL;
@@ -237,6 +238,7 @@ describePostgres('verified attempts real PostgreSQL integration', () => {
       CREATE SCHEMA auth;
     `);
     await client.query(fixtureSql);
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL);
     await client.query(migrationSql('081_atomic_complete_game_session.sql'));
     await client.query(migrationSql('091_verified_attempts.sql'));
     await client.query(migrationSql('092_complete_verified_game_session.sql'));
