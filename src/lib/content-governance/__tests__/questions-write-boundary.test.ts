@@ -7,6 +7,9 @@ import { describe, expect, it } from 'vitest'
 // firtinasinda 48 sn olculdu. Okumalar paralel; bekleme kosulu olmadigi icin uzun sinir
 // yalniz G/C cekismesini karsilar, gercek bir ihlali gecikmeden raporlar.
 const SCAN_TIMEOUT_MS = 60_000
+// Tum dosyalari ayni anda acmak 1024 dosya tanitici sinirli makinelerde EMFILE verir;
+// okumalar bu genislikte gruplar halinde yapilir.
+const READ_BATCH_SIZE = 64
 
 async function sourceFiles(root: string): Promise<string[]> {
   const entries = await readdir(root, { withFileTypes: true })
@@ -23,9 +26,14 @@ describe('questions write boundary', () => {
     const root = join(process.cwd(), 'src')
     const directMutation = /\.from\(\s*['"]questions['"]\s*\)[\s\S]{0,500}?\.(?:insert|update|upsert|delete)\s*\(/
     const files = await sourceFiles(root)
-    const offenders = (await Promise.all(files.map(async (path) => (
-      directMutation.test(await readFile(path, 'utf8')) ? [relative(root, path)] : []
-    )))).flat()
+    const offenders: string[] = []
+    for (let start = 0; start < files.length; start += READ_BATCH_SIZE) {
+      const batch = files.slice(start, start + READ_BATCH_SIZE)
+      const contents = await Promise.all(batch.map((path) => readFile(path, 'utf8')))
+      contents.forEach((content, index) => {
+        if (directMutation.test(content)) offenders.push(relative(root, batch[index]))
+      })
+    }
 
     expect(files.length).toBeGreaterThan(1000)
     expect(offenders).toEqual([])
