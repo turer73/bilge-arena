@@ -579,45 +579,57 @@ export type Database = {
           category: string | null
           challenger_id: string
           challenger_score: Json | null
+          challenger_started_at: string | null
+          completed_at: string | null
           created_at: string
           expires_at: string
           game: string
           id: string
           opponent_id: string
           opponent_score: Json | null
+          opponent_started_at: string | null
           question_ids: string[]
           status: string
           winner_id: string | null
+          xp_awarded: number
           xp_reward: number
         }
         Insert: {
           category?: string | null
           challenger_id: string
           challenger_score?: Json | null
+          challenger_started_at?: string | null
+          completed_at?: string | null
           created_at?: string
           expires_at?: string
           game: string
           id?: string
           opponent_id: string
           opponent_score?: Json | null
+          opponent_started_at?: string | null
           question_ids: string[]
           status?: string
           winner_id?: string | null
+          xp_awarded?: number
           xp_reward?: number
         }
         Update: {
           category?: string | null
           challenger_id?: string
           challenger_score?: Json | null
+          challenger_started_at?: string | null
+          completed_at?: string | null
           created_at?: string
           expires_at?: string
           game?: string
           id?: string
           opponent_id?: string
           opponent_score?: Json | null
+          opponent_started_at?: string | null
           question_ids?: string[]
           status?: string
           winner_id?: string | null
+          xp_awarded?: number
           xp_reward?: number
         }
         Relationships: [
@@ -9603,6 +9615,10 @@ export type Database = {
           p_session_id: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      start_challenge_attempt: {
+        Args: { p_challenge_id: string; p_user_id: string }
         Returns: Json
       }
       start_my_institution_study_program_item: {

@@ -450,3 +450,216 @@ describePostgres('reward integrity on actual PostgreSQL migrations', () => {
     expect(ledger.rows).toEqual([{ reward_type: 'coin', amount: 8 }, { reward_type: 'xp', amount: 40 }]);
   });
 });
+
+// Duello gonderim butunlugu (disc #2530): 077 + 20261016190000 gercek PostgreSQL'de.
+const challengeFixtureSql = `
+  CREATE TABLE public.challenges (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    challenger_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    opponent_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    game varchar(20) NOT NULL DEFAULT 'matematik',
+    category varchar(30),
+    status varchar(20) NOT NULL DEFAULT 'pending'
+      CHECK (status IN ('pending','accepted','completed','expired','declined')),
+    question_ids uuid[] NOT NULL,
+    challenger_score jsonb,
+    opponent_score jsonb,
+    winner_id uuid REFERENCES public.profiles(id),
+    xp_reward int NOT NULL DEFAULT 50,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    expires_at timestamptz NOT NULL DEFAULT (now() + interval '24 hours'),
+    CONSTRAINT chk_not_self CHECK (challenger_id != opponent_id)
+  );
+  ALTER TABLE public.challenges ENABLE ROW LEVEL SECURITY;
+`;
+
+describePostgres('challenge submit integrity on actual PostgreSQL migrations', () => {
+  let client;
+  const users = {};
+
+  async function createChallenge(challengerId, opponentId, overrides = {}) {
+    const result = await client.query(
+      `INSERT INTO public.challenges (challenger_id, opponent_id, status, question_ids, expires_at)
+       VALUES ($1, $2, $3, $4::uuid[], COALESCE($5::timestamptz, now() + interval '24 hours')) RETURNING id`,
+      [challengerId, opponentId, overrides.status ?? 'accepted', [randomUUID(), randomUUID()], overrides.expiresAt ?? null],
+    );
+    return result.rows[0].id;
+  }
+
+  async function submit(connection, challengeId, userId, score) {
+    const result = await connection.query(
+      'SELECT public.submit_challenge_answer($1, $2, $3::jsonb) AS result',
+      [challengeId, userId, JSON.stringify(score)],
+    );
+    return result.rows[0].result;
+  }
+
+  async function challengeRow(challengeId) {
+    const result = await client.query('SELECT * FROM public.challenges WHERE id = $1', [challengeId]);
+    return result.rows[0];
+  }
+
+  async function xpOf(userId) {
+    const result = await client.query('SELECT total_xp FROM public.profiles WHERE id = $1', [userId]);
+    return Number(result.rows[0].total_xp);
+  }
+
+  // Rakip once gonderir; kazanacak oyuncunun gonderimi duelloyu sonuclandirir.
+  async function playToWin(winnerId, loserId) {
+    const challengeId = await createChallenge(winnerId, loserId);
+    expect(await submit(client, challengeId, loserId, { correct: 0, total: 2 })).toMatchObject({ ok: true, result: 'waiting_opponent' });
+    return submit(client, challengeId, winnerId, { correct: 2, total: 2 });
+  }
+
+  beforeAll(async () => {
+    client = new Client({ connectionString: databaseUrl });
+    await client.connect();
+    await client.query('DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; CREATE SCHEMA auth;');
+    await client.query(fixtureSql);
+    await client.query(challengeFixtureSql);
+    for (const migration of ['077_challenge_submit_atomic.sql', '20261016190000_challenge_submit_integrity.sql']) {
+      await client.query(migrationSql(migration));
+    }
+    // Tekrar uygulanabilirlik: ayni migration ikinci kez hatasiz gecmeli.
+    await client.query(migrationSql('20261016190000_challenge_submit_integrity.sql'));
+    for (const name of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'p', 'q']) {
+      users[name] = randomUUID();
+      await client.query('INSERT INTO public.profiles (id) VALUES ($1)', [users[name]]);
+    }
+  });
+
+  afterAll(async () => { await client?.end(); });
+
+  it('keeps challenge RPCs service-role only with a fixed pg_catalog search path', async () => {
+    const acl = await client.query(`
+      SELECT
+        has_function_privilege('authenticated', 'public.submit_challenge_answer(uuid,uuid,jsonb)', 'EXECUTE') AS auth_submit,
+        has_function_privilege('anon', 'public.start_challenge_attempt(uuid,uuid)', 'EXECUTE') AS anon_start,
+        has_function_privilege('authenticated', 'public.start_challenge_attempt(uuid,uuid)', 'EXECUTE') AS auth_start,
+        has_function_privilege('service_role', 'public.submit_challenge_answer(uuid,uuid,jsonb)', 'EXECUTE') AS svc_submit,
+        has_function_privilege('service_role', 'public.start_challenge_attempt(uuid,uuid)', 'EXECUTE') AS svc_start,
+        (SELECT proconfig FROM pg_proc WHERE oid = 'public.submit_challenge_answer(uuid,uuid,jsonb)'::regprocedure) AS submit_config
+    `);
+    expect(acl.rows[0]).toMatchObject({ auth_submit: false, anon_start: false, auth_start: false, svc_submit: true, svc_start: true });
+    expect(acl.rows[0].submit_config).toEqual(['search_path=pg_catalog']);
+  });
+
+  it('records the first start time once and ignores reloads', async () => {
+    const challengeId = await createChallenge(users.a, users.b);
+    const first = await withServiceRole(client, () => client.query('SELECT public.start_challenge_attempt($1, $2) AS r', [challengeId, users.a]));
+    expect(first.rows[0].r).toMatchObject({ ok: true, started: true });
+    const before = (await challengeRow(challengeId)).challenger_started_at;
+    const second = await client.query('SELECT public.start_challenge_attempt($1, $2) AS r', [challengeId, users.a]);
+    expect(second.rows[0].r).toMatchObject({ ok: true, started: false });
+    expect((await challengeRow(challengeId)).challenger_started_at).toEqual(before);
+    const outsider = await client.query('SELECT public.start_challenge_attempt($1, $2) AS r', [challengeId, users.c]);
+    expect(outsider.rows[0].r).toMatchObject({ ok: false, error: 'not_participant' });
+  });
+
+  it('rejects score shapes outside the challenge question count', async () => {
+    const challengeId = await createChallenge(users.a, users.b);
+    for (const score of [{ correct: 50, total: 50 }, { correct: 3, total: 3 }, { correct: 0, total: 0 }, { correct: 3, total: 2 }, { correct: -1, total: 2 }, { total: 2 }, { correct: '2', total: 2 }]) {
+      expect(await submit(client, challengeId, users.a, score)).toMatchObject({ ok: false, error: 'invalid_score' });
+    }
+    expect((await challengeRow(challengeId)).challenger_score).toBeNull();
+    // Route GET ile ayni oynanabilir kumeyi notlar; silinmis soru kumeden duserse toplam kuculur.
+    expect(await submit(client, challengeId, users.a, { correct: 1, total: 1 })).toMatchObject({ ok: true, result: 'waiting_opponent' });
+  });
+
+  it('marks an expired challenge before questions are served, but keeps the finish grace for an early start', async () => {
+    const expired = await createChallenge(users.a, users.b, { expiresAt: new Date(Date.now() - 60_000).toISOString() });
+    const late = await client.query('SELECT public.start_challenge_attempt($1, $2) AS r', [expired, users.b]);
+    expect(late.rows[0].r).toMatchObject({ ok: false, error: 'expired' });
+    expect((await challengeRow(expired)).status).toBe('expired');
+    expect((await challengeRow(expired)).opponent_started_at).toBeNull();
+
+    const graced = await createChallenge(users.a, users.b, { expiresAt: new Date(Date.now() - 10 * 60_000).toISOString() });
+    await client.query("UPDATE public.challenges SET challenger_started_at = clock_timestamp() - interval '20 minutes' WHERE id = $1", [graced]);
+    const reload = await client.query('SELECT public.start_challenge_attempt($1, $2) AS r', [graced, users.a]);
+    expect(reload.rows[0].r).toMatchObject({ ok: true, started: false });
+    expect((await challengeRow(graced)).status).toBe('accepted');
+  });
+
+  it('measures time on the server and ignores client time', async () => {
+    const challengeId = await createChallenge(users.a, users.b);
+    await client.query("UPDATE public.challenges SET challenger_started_at = clock_timestamp() - interval '30 seconds' WHERE id = $1", [challengeId]);
+    const result = await submit(client, challengeId, users.a, { correct: 1, total: 2, time_sec: 1 });
+    expect(result).toMatchObject({ ok: true, result: 'waiting_opponent' });
+    expect(result.score.time_sec).toBeGreaterThanOrEqual(29);
+    expect(result.score.time_sec).toBeLessThanOrEqual(35);
+    expect((await challengeRow(challengeId)).challenger_score.time_sec).toBe(result.score.time_sec);
+  });
+
+  it('rejects an expired challenge and marks it expired, but lets a player who started in time finish', async () => {
+    const expired = await createChallenge(users.a, users.b, { expiresAt: new Date(Date.now() - 60_000).toISOString() });
+    expect(await submit(client, expired, users.a, { correct: 2, total: 2 })).toMatchObject({ ok: false, error: 'expired' });
+    expect((await challengeRow(expired)).status).toBe('expired');
+
+    const graced = await createChallenge(users.a, users.b, { expiresAt: new Date(Date.now() - 10 * 60_000).toISOString() });
+    await client.query("UPDATE public.challenges SET challenger_started_at = clock_timestamp() - interval '20 minutes' WHERE id = $1", [graced]);
+    expect(await submit(client, graced, users.a, { correct: 2, total: 2 })).toMatchObject({ ok: true, result: 'waiting_opponent' });
+  });
+
+  it('breaks ties by server time only when both sides have a server clock', async () => {
+    const timed = await createChallenge(users.c, users.d);
+    await client.query(`UPDATE public.challenges
+      SET challenger_started_at = clock_timestamp() - interval '90 seconds',
+          opponent_started_at = clock_timestamp() - interval '20 seconds' WHERE id = $1`, [timed]);
+    await submit(client, timed, users.c, { correct: 1, total: 2, time_sec: 0 });
+    const timedResult = await submit(client, timed, users.d, { correct: 1, total: 2, time_sec: 999 });
+    expect(timedResult).toMatchObject({ ok: true, result: 'completed', winnerId: users.d });
+
+    const legacy = await createChallenge(users.e, users.f);
+    await client.query(
+      'UPDATE public.challenges SET challenger_score = $2::jsonb, opponent_started_at = clock_timestamp() - interval \'5 seconds\' WHERE id = $1',
+      [legacy, JSON.stringify({ correct: 1, total: 2, time_sec: 1 })],
+    );
+    const legacyResult = await submit(client, legacy, users.f, { correct: 1, total: 2 });
+    expect(legacyResult).toMatchObject({ ok: true, result: 'completed', winnerId: null, xpAwarded: 0 });
+  });
+
+  it('awards XP once per opponent per day and at most three rewarded wins per day', async () => {
+    const start = await xpOf(users.g);
+    const firstWin = await playToWin(users.g, users.a);
+    expect(firstWin).toMatchObject({ ok: true, result: 'completed', winnerId: users.g, xpAwarded: 50 });
+    const sameOpponent = await playToWin(users.g, users.a);
+    expect(sameOpponent).toMatchObject({ winnerId: users.g, xpAwarded: 0 });
+    expect(await playToWin(users.g, users.b)).toMatchObject({ xpAwarded: 50 });
+    expect(await playToWin(users.g, users.c)).toMatchObject({ xpAwarded: 50 });
+    expect(await playToWin(users.g, users.d)).toMatchObject({ winnerId: users.g, xpAwarded: 0 });
+    expect(await xpOf(users.g) - start).toBe(150);
+    const rewarded = await client.query(
+      'SELECT count(*)::int AS n FROM public.challenges WHERE winner_id = $1 AND xp_awarded > 0 AND completed_at IS NOT NULL', [users.g],
+    );
+    expect(rewarded.rows[0].n).toBe(3);
+    const log = await client.query("SELECT count(*)::int AS n FROM public.xp_log WHERE user_id = $1 AND reason = 'challenge_win'", [users.g]);
+    expect(log.rows[0].n).toBe(3);
+  });
+
+  it('serializes concurrent completions for one winner so the daily cap holds', async () => {
+    expect(await playToWin(users.h, users.a)).toMatchObject({ xpAwarded: 50 });
+    expect(await playToWin(users.h, users.b)).toMatchObject({ xpAwarded: 50 });
+    const pending = [];
+    for (const loser of [users.p, users.q]) {
+      const challengeId = await createChallenge(users.h, loser);
+      await submit(client, challengeId, loser, { correct: 0, total: 2 });
+      pending.push(challengeId);
+    }
+    const first = new Client({ connectionString: databaseUrl });
+    const second = new Client({ connectionString: databaseUrl });
+    await Promise.all([first.connect(), second.connect()]);
+    let results;
+    try {
+      results = await Promise.all([first, second].map((connection, index) => withServiceRole(connection, () =>
+        submit(connection, pending[index], users.h, { correct: 2, total: 2 }))));
+    } finally { await Promise.all([first.end(), second.end()]); }
+    expect(results.map((result) => result.xpAwarded).sort()).toEqual([0, 50]);
+    expect(await xpOf(users.h)).toBe(150);
+  });
+
+  it('rejects a second submission from the same side under the row lock', async () => {
+    const challengeId = await createChallenge(users.a, users.c);
+    expect(await submit(client, challengeId, users.a, { correct: 1, total: 2 })).toMatchObject({ ok: true });
+    expect(await submit(client, challengeId, users.a, { correct: 2, total: 2 })).toMatchObject({ ok: false, error: 'already_submitted' });
+  });
+});
