@@ -225,7 +225,8 @@ export default function DuelloPage() {
                 {completed.map((challenge) => {
                   const won = challenge.winner_id === user.id
                   const draw = !challenge.winner_id
-                  const resultLabel = won ? `Kazandın · +${challenge.xp_reward} XP` : draw ? 'Berabere' : 'Bu kez rakibin kazandı'
+                  const awardedXp = challenge.completed_at ? (challenge.xp_awarded ?? 0) : challenge.xp_reward
+                  const resultLabel = won ? (awardedXp > 0 ? `Kazandın · +${awardedXp} XP` : 'Kazandın · günlük XP sınırı') : draw ? 'Berabere' : 'Bu kez rakibin kazandı'
                   return (
                     <article key={challenge.id} className="flex items-center gap-3 rounded-[18px] border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] p-3.5">
                       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${won ? 'bg-[var(--app-success-tint)] text-[var(--app-success-ink)]' : draw ? 'bg-[var(--app-hover)] text-[var(--app-text-muted)]' : 'bg-[var(--app-danger-tint)] text-[var(--app-danger-ink)]'}`}><Trophy size={19} /></span>

@@ -68,7 +68,7 @@ export default function DuelloGamePage() {
   const [state, setState] = useState<'loading' | 'playing' | 'answered' | 'result' | 'error'>('loading')
   const [selectedOption, setSelectedOption] = useState(-1)
   const [startTime, setStartTime] = useState(Date.now())
-  const [submitResult, setSubmitResult] = useState<{ score: { correct: number; total: number }; result: string; winnerId?: string } | null>(null)
+  const [submitResult, setSubmitResult] = useState<{ score: { correct: number; total: number }; result: string; winnerId?: string | null; xpAwarded?: number | null } | null>(null)
 
   // Shuffle mapping: shuffledIndex → originalIndex (sunucuya orijinal index göndermek için)
   const shuffleMapRef = useRef<Map<string, number[]>>(new Map())
@@ -133,13 +133,20 @@ export default function DuelloGamePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ answers: finalAnswers }),
       })
-      if (!response.ok) throw new Error('Sonuç gönderilemedi')
-      const data = await response.json()
+      const data = await response.json().catch(() => null) as
+        | { score: { correct: number; total: number }; result: string; winnerId?: string | null; xpAwarded?: number | null; error?: string }
+        | null
+      if (!response.ok || !data) {
+        toast.error(data?.error === 'Duellonun suresi dolmus' ? 'Düellonun süresi dolmuş.' : 'Sonuç gönderilemedi')
+        return
+      }
       setSubmitResult(data)
 
       if (data.result === 'completed' && data.winnerId === user?.id) {
         playSound('level_up')
-        toast.success(`Düelloyu kazandın! +${challenge?.xp_reward || 50} XP`)
+        // xpAwarded null: sunucu henuz tavanli RPC'ye gecmedi, duellonun odulu verildi.
+        const xp = data.xpAwarded ?? challenge?.xp_reward ?? 50
+        toast.success(xp > 0 ? `Düelloyu kazandın! +${xp} XP` : 'Düelloyu kazandın! Bugünkü düello XP sınırına ulaştın.')
       } else if (data.result === 'completed') {
         playSound('game_over')
       }
@@ -223,7 +230,7 @@ export default function DuelloGamePage() {
 
           <div className="mx-auto mt-7 grid max-w-xl grid-cols-2 gap-3">
             <div className="rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] p-4"><p className="text-[9px] font-black uppercase tracking-[0.15em] text-[var(--app-text-muted)]">Doğru cevap</p><strong className="mt-1 block font-display text-3xl font-black text-[var(--app-accent-text)]">{correct ?? '…'}<span className="text-base text-[var(--app-text-muted)]">/{questions.length}</span></strong></div>
-            <div className="rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] p-4"><p className="text-[9px] font-black uppercase tracking-[0.15em] text-[var(--app-text-muted)]">Ödül</p><strong className="mt-1 flex items-center justify-center gap-1.5 font-display text-3xl font-black text-[var(--app-warn-ink)]"><Zap size={21} fill="currentColor" />{won ? challenge?.xp_reward || 50 : 0}<span className="text-xs">XP</span></strong></div>
+            <div className="rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] p-4"><p className="text-[9px] font-black uppercase tracking-[0.15em] text-[var(--app-text-muted)]">Ödül</p><strong className="mt-1 flex items-center justify-center gap-1.5 font-display text-3xl font-black text-[var(--app-warn-ink)]"><Zap size={21} fill="currentColor" />{won ? submitResult?.xpAwarded ?? challenge?.xp_reward ?? 50 : 0}<span className="text-xs">XP</span></strong></div>
           </div>
 
           <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
