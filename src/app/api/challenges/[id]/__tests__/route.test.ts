@@ -5,12 +5,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { QuestionRow } from '@/lib/utils/question-public'
 
-const { mockGetUser, mockChallengeQuery, mockChallengeUpdate, mockQuestionsQuery, mockRateLimitCheck } = vi.hoisted(() => ({
+const { mockGetUser, mockChallengeQuery, mockChallengeUpdate, mockQuestionsQuery, mockRateLimitCheck, mockRpc } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockChallengeQuery: vi.fn(),
   mockChallengeUpdate: vi.fn(async () => ({ error: null })),
   mockQuestionsQuery: vi.fn(),
   mockRateLimitCheck: vi.fn(async () => ({ success: true })),
+  mockRpc: vi.fn(async (_fn: string, _args: Record<string, unknown>) => ({ data: { ok: true, started: true }, error: null as { code: string } | null })),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({ auth: { getUser: mockGetUser } })) }))
@@ -32,6 +33,7 @@ vi.mock('@/lib/supabase/service-role', () => ({
       if (table === 'questions') return { select: vi.fn(() => ({ in: mockQuestionsQuery })) }
       return {}
     }),
+    rpc: mockRpc,
   })),
 }))
 
@@ -147,6 +149,57 @@ describe('GET /api/challenges/[id]', () => {
     expect(q.content.answer).toBeUndefined()
     expect(q.content.solution).toBeUndefined()
     expect(q.content.explanation).toBeUndefined()
+  })
+
+  describe('sunucu oyun saati (disc #2530)', () => {
+    const openChallenge = {
+      id: VALID_ID,
+      question_ids: ['q1'],
+      status: 'accepted',
+      challenger_id: USER_ID,
+      opponent_id: 'ffffffff-bbbb-cccc-dddd-eeeeeeeeeeee',
+      challenger_score: null,
+      opponent_score: null,
+    }
+
+    beforeEach(() => {
+      mockRpc.mockClear()
+      mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+      mockQuestionsQuery.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
+    })
+
+    it('katilimci sorulari actiginda saati sunucuda baslatir', async () => {
+      mockChallengeQuery.mockResolvedValue({ data: openChallenge, error: null })
+      const res = await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))
+      expect(res.status).toBe(200)
+      expect(mockRpc).toHaveBeenCalledWith('start_challenge_attempt', {
+        p_challenge_id: VALID_ID,
+        p_user_id: USER_ID,
+      })
+    })
+
+    it('cevabini gondermis katilimcinin saatine dokunmaz', async () => {
+      mockChallengeQuery.mockResolvedValue({
+        data: { ...openChallenge, challenger_score: { correct: 1, total: 1, time_sec: 4 } },
+        error: null,
+      })
+      await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))
+      expect(mockRpc).not.toHaveBeenCalled()
+    })
+
+    it('sonuclanmis duelloda saati baslatmaz', async () => {
+      mockChallengeQuery.mockResolvedValue({ data: { ...openChallenge, status: 'completed' }, error: null })
+      await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))
+      expect(mockRpc).not.toHaveBeenCalled()
+    })
+
+    it('RPC henuz yoksa (migration oncesi) duello yine yuklenir', async () => {
+      mockChallengeQuery.mockResolvedValue({ data: openChallenge, error: null })
+      mockRpc.mockResolvedValueOnce({ data: null as never, error: { code: 'PGRST202' } })
+      const res = await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))
+      expect(res.status).toBe(200)
+      expect((await res.json()).questions).toHaveLength(1)
+    })
   })
 })
 

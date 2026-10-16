@@ -85,6 +85,22 @@ export async function GET(
     return NextResponse.json({ error: 'Duello bulunamadi' }, { status: 404 })
   }
 
+  // 5b) Oyun saati: katilimci sorulari ilk actiginda sunucu zamani kaydedilir.
+  //     Gonderimdeki sure bu andan olculur; istemci suresi yok sayilir (disc #2530).
+  //     RPC ilk acilis anini korur, tekrar yukleme saati sifirlamaz.
+  const ownScore = challenge.challenger_id === user.id ? challenge.challenger_score : challenge.opponent_score
+  if (!ownScore && (challenge.status === 'pending' || challenge.status === 'accepted')) {
+    const { error: startErr } = await admin.rpc('start_challenge_attempt', {
+      p_challenge_id: id,
+      p_user_id: user.id,
+    })
+    if (startErr) {
+      // Migration uygulanmadan once RPC yoktur (PGRST202); duello yine oynanir,
+      // esitlik bozmada sure kullanilmaz.
+      console.error('[/api/challenges/[id] GET] start attempt failed:', startErr.code)
+    }
+  }
+
   // 6) Sorulari cek (challenge.question_ids ile)
   const questionIds: string[] = Array.isArray(challenge.question_ids) ? challenge.question_ids : []
   if (questionIds.length === 0) {

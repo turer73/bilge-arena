@@ -4,13 +4,40 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { challengeSubmitSchema } from '@/lib/validations/schemas'
 import { dbErrorResponse } from '@/lib/utils/api-error'
-import type { TablesUpdate } from '@/types/database.generated'
+import { isValidUuid } from '@/lib/utils/uuid'
 
 const submitLimiter = createRateLimiter('challenge-submit', 5, 60_000)
 
+const RPC_ERROR_RESPONSES: Record<string, { status: number; message: string }> = {
+  not_found: { status: 404, message: 'Duello bulunamadi' },
+  not_participant: { status: 403, message: 'Bu duelloya katilimci degilsiniz' },
+  already_completed: { status: 400, message: 'Duello zaten tamamlanmis' },
+  already_submitted: { status: 400, message: 'Zaten cevap gonderilmis' },
+  expired: { status: 400, message: 'Duellonun suresi dolmus' },
+  invalid_score: { status: 400, message: 'Cevaplar duellonun sorulariyla eslesmiyor' },
+}
+
+interface SubmitRpcResult {
+  ok: boolean
+  error?: string
+  result?: 'waiting_opponent' | 'completed'
+  winnerId?: string | null
+  xpAwarded?: number
+  score?: { correct: number; total: number; time_sec: number | null; xp: number }
+}
+
 /**
  * POST /api/challenges/[id]/submit — Duello cevaplarini gonder
- * Body: { answers: [{ questionId, selectedOption, isCorrect, timeTaken }] }
+ * Body: { answers: [{ questionId, selectedOption }] }
+ *
+ * Butunluk (disc #2530):
+ * - Cevaplar duellonun soru kumesini birebir karsilamali; eksik, fazla,
+ *   tekrar eden veya yabanci soru 400 doner. Skor yalniz duellonun
+ *   sorularindan, sunucudaki cevap anahtariyla hesaplanir.
+ * - Istemcinin gonderdigi sure ve isCorrect yok sayilir. Sureyi
+ *   submit_challenge_answer, katilimcinin sorulari ilk actigi andan olcer.
+ * - Sure dolumu, eszamanli gonderim ve XP tavani RPC icinde, duello satiri
+ *   kilitliyken uygulanir.
  */
 export async function POST(
   req: NextRequest,
@@ -24,7 +51,11 @@ export async function POST(
   if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
 
   const { id } = await params
-  const body = await req.json()
+  if (!id || !isValidUuid(id)) {
+    return NextResponse.json({ error: 'id gecersiz' }, { status: 400 })
+  }
+
+  const body = await req.json().catch(() => null)
   const parsed = challengeSubmitSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: 'Cevaplar gerekli' }, { status: 400 })
@@ -54,101 +85,81 @@ export async function POST(
     return NextResponse.json({ error: 'Duello zaten tamamlanmis' }, { status: 400 })
   }
 
-  // Skor hesapla
   const isChallenger = challenge.challenger_id === user.id
   const existingScore = isChallenger ? challenge.challenger_score : challenge.opponent_score
-
   if (existingScore) {
     return NextResponse.json({ error: 'Zaten cevap gonderilmis' }, { status: 400 })
   }
 
-  // Server-side dogrulama. Dedup: ayni questionId birden fazla gonderilerek
-  // skor sisirmeyi onle (sessions P0 ile ayni sinif) — soru basi 1 cevap.
-  const uniqueAnswers = [...new Map(
-    (answers as { questionId: string; selectedOption: number; timeTaken: number }[])
-      .map((a) => [a.questionId, a]),
-  ).values()]
-  const questionIds = uniqueAnswers.map((a) => a.questionId)
-  const { data: questions } = await svc
-    .from('questions')
-    .select('id, content, difficulty')
-    .in('id', questionIds)
-
-  const questionMap = new Map((questions || []).map(q => [q.id, q]))
-
-  let correct = 0
-  let totalTime = 0
-
-  for (const a of uniqueAnswers) {
-    const q = questionMap.get(a.questionId)
-    if (!q) continue
-    const content = q.content as { answer?: number; correct?: number }
-    const correctIndex = content.answer ?? content.correct
-    if (correctIndex === a.selectedOption) correct++
-    totalTime += a.timeTaken || 0
+  // Cevap kumesi duellonun soru kumesiyle birebir ayni olmali.
+  const challengeQuestionIds: string[] = Array.isArray(challenge.question_ids) ? challenge.question_ids : []
+  const expected = new Set(challengeQuestionIds)
+  const answered = new Set(answers.map((a) => a.questionId))
+  const exactSet = expected.size > 0
+    && answered.size === answers.length
+    && answered.size === expected.size
+    && answers.every((a) => expected.has(a.questionId))
+  if (!exactSet) {
+    return NextResponse.json(
+      { error: 'Cevaplar duellonun sorulariyla eslesmiyor' },
+      { status: 400 },
+    )
   }
+
+  const { data: questions, error: qErr } = await svc
+    .from('questions')
+    .select('id, content')
+    .in('id', challengeQuestionIds)
+
+  if (qErr) {
+    console.error('[/api/challenges/[id]/submit POST] questions query error:', qErr.code)
+    return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
+  }
+
+  const answerKey = new Map((questions || []).map((q) => {
+    const content = q.content as { answer?: number; correct?: number } | null
+    return [q.id, content?.answer ?? content?.correct] as const
+  }))
+
+  // Bankadan kaldirilmis bir soru iki taraf icin de yanlis sayilir; toplam degismez.
+  const correct = answers.reduce(
+    (sum, a) => sum + (answerKey.get(a.questionId) === a.selectedOption ? 1 : 0),
+    0,
+  )
 
   const score = {
     correct,
-    total: uniqueAnswers.length,
-    time_sec: Math.round(totalTime),
-    xp: correct * 20, // Basit XP hesaplama
+    total: expected.size,
+    xp: correct * 20,
   }
 
-  // Atomik submit (mig 077): skor-yaz + kazanan-belirle + XP tek transaction,
-  // challenge satiri FOR UPDATE kilitli -> eszamanli-submit race kok-cozumu.
+  // Atomik submit: skor yazma + kazanan + XP tavani tek transaction'da,
+  // duello satiri FOR UPDATE kilitli. Sure sunucuda hesaplanir.
   const { data: rpcData, error: rpcError } = await svc.rpc('submit_challenge_answer', {
     p_challenge_id: id,
     p_user_id: user.id,
     p_score: score,
   })
 
-  // Deploy-sirasi guvenligi: mig 077 henuz uygulanmadiysa (RPC yok) eski
-  // non-atomik yola dus — merge-before-migration'da duello kirilmasin. Migration
-  // gelince atomik yol otomatik devreye girer.
-  if (rpcError && (rpcError.code === 'PGRST202' || rpcError.code === '42883')) {
-    // Computed key ({ [updateField]: score }) TS'te index-signature'a genisliyor
-    // ve supabase-js'in update tipi bunu reddediyor; iki ayri literal daha dar.
-    const scorePatch: TablesUpdate<'challenges'> = isChallenger
-      ? { challenger_score: score }
-      : { opponent_score: score }
-    await svc.from('challenges').update(scorePatch).eq('id', id)
-
-    const otherScore = isChallenger ? challenge.opponent_score : challenge.challenger_score
-    if (otherScore) {
-      const theirScore = otherScore as { correct: number; time_sec: number }
-      let winnerId: string | null = null
-      if (score.correct > theirScore.correct) {
-        winnerId = user.id
-      } else if (score.correct < theirScore.correct) {
-        winnerId = isChallenger ? challenge.opponent_id : challenge.challenger_id
-      } else {
-        winnerId = score.time_sec < theirScore.time_sec ? user.id :
-          (score.time_sec > theirScore.time_sec ? (isChallenger ? challenge.opponent_id : challenge.challenger_id) : null)
-      }
-      await svc.from('challenges').update({ status: 'completed', winner_id: winnerId }).eq('id', id)
-      if (winnerId) {
-        await svc.rpc('increment_xp', { p_user_id: winnerId, p_amount: challenge.xp_reward, p_reason: 'challenge_win', p_reference_id: id })
-      }
-      return NextResponse.json({ score, result: 'completed', winnerId })
-    }
-    return NextResponse.json({ score, result: 'waiting_opponent' })
-  }
-
   if (rpcError) {
     return dbErrorResponse('challenges/[id]/submit rpc', rpcError)
   }
 
-  const result = rpcData as { ok: boolean; error?: string; result?: string; winnerId?: string | null }
+  const result = rpcData as SubmitRpcResult | null
   if (!result?.ok) {
-    const statusMap: Record<string, number> = {
-      not_found: 404, not_participant: 403, already_completed: 400, already_submitted: 400,
-    }
+    const mapped = RPC_ERROR_RESPONSES[result?.error ?? '']
     return NextResponse.json(
-      { error: result?.error ?? 'submit_failed' },
-      { status: statusMap[result?.error ?? ''] ?? 400 },
+      { error: mapped?.message ?? 'Cevaplar kaydedilemedi' },
+      { status: mapped?.status ?? 400 },
     )
   }
 
-  return NextResponse.json({ score, result: result.result, winnerId: result.winnerId ?? null })
+  return NextResponse.json({
+    score: result.score ?? { ...score, time_sec: null },
+    result: result.result,
+    winnerId: result.winnerId ?? null,
+    // Migration 20261016190000 oncesi RPC xpAwarded dondurmez; istemci o durumda
+    // duellonun xp_reward degerine duser.
+    xpAwarded: typeof result.xpAwarded === 'number' ? result.xpAwarded : null,
+  })
 }
