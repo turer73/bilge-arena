@@ -297,8 +297,14 @@ describe('test:db skip coverage gate', () => {
     ['another skip in an allowlisted file', ['database/__tests__/bank.test.mjs', ['skipped', 'skipped']]],
     ['an allowlisted file skipped as a whole', ['database/__tests__/bank.test.mjs', ['skipped'], 'skipped']],
   ])('rejects %s and names it', (_label, entry) => {
-    expect(() => verifyDbSkipCoverage(report(entry), { root, covered, allowlist }))
-      .toThrow(new RegExp(`no PostgreSQL CI job runs[\\s\\S]*${entry[0].replace(/[.]/g, '\\.')}`))
+    let message = ''
+    try {
+      verifyDbSkipCoverage(report(entry), { root, covered, allowlist })
+    } catch (error) {
+      message = error.message
+    }
+    expect(message).toContain('no PostgreSQL CI job runs')
+    expect(message.split('\n').map((line) => line.trim())).toContain(entry[0])
   })
 
   it('does not echo report paths outside database/__tests__', () => {
