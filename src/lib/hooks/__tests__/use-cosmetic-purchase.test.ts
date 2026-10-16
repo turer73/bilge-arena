@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// .ts testleri varsayilan olarak node ortaminda kosar; bu dosya renderHook.
 /**
  * Bilge Arena: useCosmeticPurchase — beş kozmetik kategorisi için ortak satın alma.
  *

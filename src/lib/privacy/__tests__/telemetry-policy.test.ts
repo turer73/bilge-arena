@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// .ts testleri varsayilan olarak node ortaminda kosar; bu dosya window.location ve history ile calisir.
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import {
   isCurrentBrowserPathSensitive,
