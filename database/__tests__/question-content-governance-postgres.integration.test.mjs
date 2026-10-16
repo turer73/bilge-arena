@@ -214,6 +214,9 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     expect(await rpc('public.finalize_legacy_question_appeal_transition($1,$2,$3)',[publisher,transitionAppeal,250])).toEqual(expect.objectContaining({ legacy:true, awarded:true, replayed:false, coins:250, userId:learner }))
     expect((await client.query('SELECT coins FROM public.profiles WHERE id=$1',[learner])).rows[0].coins).toBe(250)
     expect(await rpc('public.finalize_legacy_question_appeal_transition($1,$2,$3)',[publisher,transitionAppeal,250])).toEqual(expect.objectContaining({ legacy:true, awarded:false, replayed:true, coins:250 }))
+    // 144: the legacy payment is bounded to 1..300 and needs content.appeals.manage, checked before the appeal is read.
+    for (const coins of [0, 301, null]) await err(() => rpc('public.finalize_legacy_question_appeal_transition($1,$2,$3)',[publisher,transitionAppeal,coins]),'22023')
+    await err(() => rpc('public.finalize_legacy_question_appeal_transition($1,$2,$3)',[learner,transitionAppeal,250]),'42501')
     expect((await client.query('SELECT coins FROM public.profiles WHERE id=$1',[learner])).rows[0].coins).toBe(250)
     expect((await rpc('public.set_content_governance_enforcement($1,$2,$3)',[publisher,true,enforcementRequest])).replayed).toBe(true)
     await err(() => rpc('public.set_content_governance_enforcement($1,$2,$3)',[learner,false,randomUUID()]), '42501')
@@ -426,6 +429,10 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
   })
   it('keeps appeals owner-scoped, SLA-idempotent, and new governance tables private', async () => {
     const appeal = await rpc('public.submit_question_appeal($1,$2,$3,$4,$5,$6)',[learner,question,null,'ambiguous','',randomUUID()]); expect(appeal.status).toBe('submitted'); const privateAppeals = await rpc('public.get_my_question_appeals($1)',[learner]); expect(privateAppeals.appeals[0]).toEqual(expect.objectContaining({ status:'submitted', publicMessage:'Your appeal was received.' })); expect(JSON.stringify(privateAppeals)).not.toMatch(/appealId|questionId|reason|internal/i)
+    // 144: an appeal that did not come from a legacy error report is never paid through the legacy transition.
+    const coinsBeforeNonLegacy = (await client.query('SELECT coins FROM public.profiles WHERE id=$1',[learner])).rows[0].coins
+    expect(await rpc('public.finalize_legacy_question_appeal_transition($1,$2,$3)',[publisher,appeal.appealId,250])).toEqual({ legacy:false, awarded:false, replayed:false, coins:0, userId:null })
+    expect((await client.query('SELECT coins FROM public.profiles WHERE id=$1',[learner])).rows[0].coins).toBe(coinsBeforeNonLegacy)
     const adminQueue = await rpc('public.get_question_appeal_queue($1,$2::text,$3,$4::text)',[publisher,'submitted',50,'']); expect(adminQueue.items[0]).toEqual(expect.objectContaining({ appealId:appeal.appealId, questionId:question, reasonCode:'ambiguous', status:'submitted', hasSessionEvidence:false })); expect(JSON.stringify(adminQueue)).not.toMatch(/userId|sessionAnswerId/)
     await err(() => rpc('public.get_question_appeal_queue($1,$2::text,$3,$4::text)',[learner,null,50,'']), '42501')
     expect((await rpc('public.resolve_question_appeal($1,$2,$3,$4,$5,$6)',[publisher,appeal.appealId,'acknowledged','İnceleme başladı.','Kanıtlar kontrol edilecek.',randomUUID()])).status).toBe('acknowledged')
@@ -1346,4 +1353,54 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
       await client.query('UPDATE public.question_validation_runtime SET enforce_publish_gate=$1,required_policy_version=$2 WHERE singleton',[previous.enforce_publish_gate,previous.required_policy_version])
     }
   })
+
+  it('146/213: never lets a confirmed case push a reporter past 300 coins of quality rewards in one Istanbul day', async () => {
+    const target = (await client.query(`SELECT q.id AS question_id,r.id AS revision_id,r.content_sha256,r.game
+      FROM public.questions q JOIN public.question_content_revisions r ON r.id=q.published_revision_id
+      WHERE q.is_active AND NOT EXISTS (SELECT 1 FROM public.question_quality_cases c WHERE c.revision_id=r.id)
+      ORDER BY q.id LIMIT 1`)).rows[0]
+    expect(target).toBeDefined()
+    const capCase = (await client.query('INSERT INTO public.question_quality_cases(question_id,revision_id,content_sha256) VALUES($1,$2,$3) RETURNING id',[target.question_id,target.revision_id,target.content_sha256])).rows[0].id
+    const reporters = Array.from({ length: 5 }, () => randomUUID())
+    await client.query('INSERT INTO public.profiles SELECT unnest($1::uuid[])',[reporters])
+    // Quality rewards already earned today. The rule skips a reward that would
+    // exceed 300; it does not truncate it, and exactly 300 is allowed.
+    const earlierToday = [100, 290, 291, 300, 0]
+    for (const [index, reporter] of reporters.entries()) {
+      if (earlierToday[index] > 0) {
+        await client.query(`INSERT INTO public.reward_ledger(user_id,source_type,source_id,reward_type,reward_key,amount,metadata)
+          VALUES($1,'question_quality_claim',$2,'coin','confirmed_corroboration',$3,'{}'::jsonb)`,[reporter,randomUUID(),earlierToday[index]])
+      }
+      await client.query(`INSERT INTO public.question_quality_worker_profiles(user_id,domain,resolved_total,flawed_controls,flawed_controls_correct,clean_controls,clean_controls_correct,correction_checks,correction_checks_correct,trust_state) VALUES($1,$2,40,20,20,20,20,20,20,'trusted')`,[reporter,target.game])
+      const independenceKey = (index + 201).toString(16).padStart(64,'0')
+      const mission = (await client.query(`INSERT INTO public.question_quality_missions(user_id,case_id,question_id,revision_id,content_sha256,source,status,independence_key,locked_answer_index,locked_at,submitted_at)
+        VALUES($1,$2,$3,$4,$5,'assigned_review','submitted',$6,1,clock_timestamp(),clock_timestamp()) RETURNING id`,[reporter,capCase,target.question_id,target.revision_id,target.content_sha256,independenceKey])).rows[0].id
+      // Inserted in order: reporters[0] is the first claim (discovery 75 + accepted correction 125).
+      await client.query(`INSERT INTO public.question_quality_claims(mission_id,case_id,user_id,revision_id,solved_answer_index,verdict,reason_code,proposed_answer_index,correction_fingerprint,explanation,confidence,independence_key)
+        VALUES($1,$2,$3,$4,1,'flawed','wrong_key',1,$5,'Bağımsız çözüm işaretli anahtarla uyuşmuyor.',95,$6)`,[mission,capCase,reporter,target.revision_id,'d'.repeat(64),independenceKey])
+    }
+    const coinsBefore = async () => (await client.query('SELECT id,coins FROM public.profiles WHERE id=ANY($1::uuid[])',[reporters])).rows
+      .reduce((map,row) => ({ ...map, [row.id]: row.coins }), {})
+    const before = await coinsBefore()
+
+    expect(await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,capCase,'community-quality@2',randomUUID()])).toEqual(expect.objectContaining({ state:'quarantined' }))
+    await rpc('public.record_question_quality_external_proof($1,$2,$3,$4,$5::jsonb,$6)',[publisher,capCase,'deterministic','supports_flaw',JSON.stringify({ rule:'independent proof for the daily cap case',version:1 }),randomUUID()])
+    expect(await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,capCase,'community-quality@2',randomUUID()])).toEqual(expect.objectContaining({ state:'confirmed',replayed:false }))
+
+    const after = await coinsBefore()
+    // 100+75=175 and 175+125=300 both fit; 290+10=300 fits; 291+10 and 300+10 do not; 0+10 fits.
+    expect(reporters.map((reporter) => after[reporter] - before[reporter])).toEqual([200, 10, 0, 0, 10])
+    const today = (await client.query(`SELECT user_id,sum(amount)::int AS total FROM public.reward_ledger
+      WHERE user_id=ANY($1::uuid[]) AND source_type='question_quality_claim' AND reward_type='coin'
+        AND (created_at AT TIME ZONE 'Europe/Istanbul')::date=(clock_timestamp() AT TIME ZONE 'Europe/Istanbul')::date
+      GROUP BY user_id`,[reporters])).rows
+    expect(today.every((row) => row.total <= 300)).toBe(true)
+    expect((await client.query(`SELECT reward_key,amount FROM public.reward_ledger WHERE source_type='question_quality_claim' AND metadata->>'caseId'=$1 ORDER BY amount,reward_key`,[capCase])).rows)
+      .toEqual([
+        { reward_key:'confirmed_corroboration', amount:10 },
+        { reward_key:'confirmed_corroboration', amount:10 },
+        { reward_key:'confirmed_discovery', amount:75 },
+        { reward_key:'accepted_correction', amount:125 },
+      ])
+  }, 15_000)
 })

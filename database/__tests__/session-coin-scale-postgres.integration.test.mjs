@@ -398,6 +398,57 @@ describePostgres('migration 129 session coin scale on actual PostgreSQL migratio
       .toEqual([{ amount: DAILY_CAP - 70, firstToday: false, correct: 4 }]);
   });
 
+  // Badge thresholds of apply_verified_session_rewards (129). Each badge pays XP,
+  // and only first_game/first_correct/daily_first were executed before.
+  async function badgesAfterOneSession(counters) {
+    const user = randomUUID();
+    await client.query(`
+      INSERT INTO public.profiles (id, total_sessions, correct_answers, current_streak, longest_streak, rooms_completed, multiplayer_firsts)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `, [user, counters.sessions, counters.correct, counters.streak, counters.longestStreak, counters.rooms, counters.firsts]);
+    // The fixture trigger adds this session and its one correct answer to the
+    // counters before the reward helper reads them, as the real profile trigger does.
+    const session = await playSession(client, user, { questionCount: 1, correct: 1 });
+    const result = await client.query(`
+      SELECT
+        (SELECT coalesce(array_agg(achievement_id ORDER BY achievement_id), '{}') FROM public.user_achievements WHERE user_id = $1) AS badges,
+        (SELECT coalesce(sum(amount), 0)::int FROM public.reward_ledger WHERE user_id = $1 AND source_type = 'badge' AND source_id = $2) AS ledger_xp,
+        (SELECT coalesce(sum(amount), 0)::int FROM public.xp_log WHERE user_id = $1 AND reason = 'badge_earned') AS paid_xp
+    `, [user, session.sessionId]);
+    return result.rows[0];
+  }
+
+  const BADGE_XP = {
+    first_game: 50, ten_games: 100, fifty_games: 250, hundred_games: 500,
+    first_correct: 25, hundred_correct: 200, thousand_correct: 1000,
+    streak_5: 75, streak_10: 200, streak_20: 500,
+    login_7: 150, login_30: 750, login_100: 3000,
+    mp_first_room: 50, mp_ten_rooms: 200, mp_first_win: 150, mp_five_firsts: 500,
+  };
+  const xpOf = (codes) => codes.reduce((sum, code) => sum + BADGE_XP[code], 0);
+
+  it('awards the top badges exactly at their thresholds and pays their XP once', async () => {
+    // After this session: 100 sessions, 1000 correct, login streak 100,
+    // 5 multiplayer firsts; 9 rooms stays one short of mp_ten_rooms.
+    const result = await badgesAfterOneSession({ sessions: 99, correct: 999, streak: 100, longestStreak: 19, rooms: 9, firsts: 5 });
+    const expected = [
+      'fifty_games', 'first_correct', 'first_game', 'hundred_correct', 'hundred_games',
+      'login_100', 'login_30', 'login_7', 'mp_first_room', 'mp_first_win', 'mp_five_firsts',
+      'streak_10', 'streak_20', 'streak_5', 'ten_games', 'thousand_correct',
+    ];
+    expect(result).toEqual({ badges: expected, ledger_xp: xpOf(expected), paid_xp: xpOf(expected) });
+  });
+
+  it('withholds each top badge one step below its threshold', async () => {
+    const result = await badgesAfterOneSession({ sessions: 98, correct: 998, streak: 99, longestStreak: 19, rooms: 9, firsts: 4 });
+    const expected = [
+      'fifty_games', 'first_correct', 'first_game', 'hundred_correct',
+      'login_30', 'login_7', 'mp_first_room', 'mp_first_win',
+      'streak_10', 'streak_20', 'streak_5', 'ten_games',
+    ];
+    expect(result).toEqual({ badges: expected, ledger_xp: xpOf(expected), paid_xp: xpOf(expected) });
+  });
+
   it('pays no coins for an unverified session completed through complete_game_session', async () => {
     // Deliberate tightening: coins now belong to the verified path only.
     const questionIds = await freshQuestions(client, 5);

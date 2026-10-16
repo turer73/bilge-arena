@@ -98,6 +98,14 @@ describePostgres('claim_activation_reward (111) on actual PostgreSQL', () => {
     await client.connect();
     await client.query('DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; CREATE SCHEMA auth;');
     await client.query(fixtureSql);
+    // Supabase grants every new public table and function to its API roles by
+    // default; the migrations' REVOKEs exist to undo exactly that. Without these
+    // defaults a missing REVOKE ... FROM anon, authenticated would still pass.
+    await client.query(`
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
+    `);
     for (const migration of ['071_xp_ledger_level_security_fix.sql', '111_activation_reward_claims.sql']) {
       await client.query(migrationSql(migration));
     }
