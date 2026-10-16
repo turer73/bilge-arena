@@ -33,8 +33,13 @@ const fixtureSql = `
   DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
   DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
   DO $$ BEGIN CREATE ROLE service_role NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-  GRANT USAGE ON SCHEMA public, auth TO anon, authenticated, service_role;
-  CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULL::uuid $$;
+  DO $$ BEGIN CREATE ROLE money_rpc_probe NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  GRANT USAGE ON SCHEMA public, auth TO anon, authenticated, service_role, money_rpc_probe;
+  -- Supabase-style: auth.uid() is the JWT subject, so RLS can be exercised.
+  CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
+    SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+  $$;
+  GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated, service_role;
 
   CREATE TABLE public.profiles (
     id uuid PRIMARY KEY,
@@ -180,11 +185,69 @@ describePostgres('migration 130 purchase ledger on actual PostgreSQL', () => {
     expect(await ledgerRows(client, buyer)).toHaveLength(rowsBefore.length);
   });
 
-  it('rejects a negative price before touching anything', async () => {
+  it.each(CATEGORIES)('%s rejects a negative price before touching anything', async (rpc) => {
+    // A negative price would credit the buyer; every RPC has its own guard.
     const before = await balance(client, buyer);
-    await expect(purchase(client, 'purchase_background', buyer, 'negatif', -5))
-      .rejects.toThrow(/Gecersiz fiyat/);
+    const rowsBefore = await ledgerRows(client, buyer);
+    await expect(purchase(client, rpc, buyer, 'negatif', -5)).rejects.toThrow(/Gecersiz fiyat/);
     expect(await balance(client, buyer)).toBe(before);
+    expect(await ledgerRows(client, buyer)).toHaveLength(rowsBefore.length);
+  });
+
+  it.each(CATEGORIES)('%s can be executed by service_role only', async (rpc) => {
+    // If authenticated could call it, a client could buy anything with p_cost = 0.
+    const signature = `public.${rpc}(uuid,text,integer)`;
+    const result = await client.query(`
+      SELECT
+        has_function_privilege('service_role', $1, 'EXECUTE') AS service_role,
+        has_function_privilege('authenticated', $1, 'EXECUTE') AS authenticated,
+        has_function_privilege('anon', $1, 'EXECUTE') AS anon,
+        has_function_privilege('money_rpc_probe', $1, 'EXECUTE') AS public_default
+    `, [signature]);
+    expect(result.rows[0]).toEqual({ service_role: true, authenticated: false, anon: false, public_default: false });
+
+    await client.query('SET ROLE authenticated');
+    try {
+      await expect(client.query(`SELECT * FROM public.${rpc}($1::uuid, 'bedava', 0)`, [buyer]))
+        .rejects.toMatchObject({ code: '42501' });
+    } finally {
+      await client.query('RESET ROLE');
+    }
+  });
+
+  it('keeps the ledger append-only for service_role too', async () => {
+    const rowsBefore = await ledgerRows(client, buyer);
+    await client.query('SET ROLE service_role');
+    try {
+      for (const statement of [
+        'UPDATE public.purchase_ledger SET cost = 0',
+        'DELETE FROM public.purchase_ledger',
+        'TRUNCATE public.purchase_ledger',
+      ]) {
+        await expect(client.query(statement), statement).rejects.toMatchObject({ code: '42501' });
+      }
+    } finally {
+      await client.query('RESET ROLE');
+    }
+    expect(await ledgerRows(client, buyer)).toEqual(rowsBefore);
+  });
+
+  it('lets a signed-in user read only their own ledger rows, and anon none', async () => {
+    const visibleAs = async (role, sub) => {
+      await client.query('BEGIN');
+      try {
+        await client.query(`SET LOCAL ROLE ${role}`);
+        await client.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [sub ?? '']);
+        const result = await client.query('SELECT DISTINCT user_id FROM public.purchase_ledger ORDER BY user_id');
+        return result.rows.map((row) => row.user_id);
+      } finally {
+        await client.query('ROLLBACK');
+      }
+    };
+    expect(await visibleAs('authenticated', buyer)).toEqual([buyer]);
+    expect(await visibleAs('authenticated', legacy)).toEqual([legacy]);
+    expect(await visibleAs('authenticated', broke)).toEqual([]);
+    await expect(visibleAs('anon', null)).rejects.toMatchObject({ code: '42501' });
   });
 
   it('answers the question that motivated the ledger: purchases in a time window', async () => {

@@ -81,12 +81,13 @@ describe('PostgreSQL CI suite manifest', () => {
     expect(postgresFiles.filter((file) => !covered.has(file))).toEqual([])
   })
 
-  it('runs the 13 learning, reward and grading files that no job ran before', () => {
+  it('runs the learning, reward and grading files, including the 13 no job ran before and the money RPC tests', () => {
     expect(POSTGRES_CI_SUITES['learning-reward']).toMatchObject({ job: 'learning-reward-postgres', runner: 'vitest', sequential: true })
     expect(POSTGRES_CI_SUITES['learning-reward'].files.map((file) => file.replace(/^database\/__tests__\/|-postgres\.integration\.test\.mjs$/g, '')).sort()).toEqual([
-      'canonical-category-remap', 'cohort-team-boss', 'curriculum-graph-v1', 'daily-plan-items-v2', 'paper-study-packs',
-      'persistent-fsrs', 'positive-learning-spotlights', 'purchase-ledger', 'relative-weekly-leagues', 'session-coin-scale',
-      'verified-attempts', 'verified-coach-flow', 'verified-exam-strategy',
+      'activation-reward-claims', 'award-badges', 'canonical-category-remap', 'cohort-team-boss', 'curriculum-graph-v1',
+      'daily-plan-items-v2', 'error-report-rewards', 'paper-study-packs', 'persistent-fsrs', 'positive-learning-spotlights',
+      'purchase-ledger', 'relative-weekly-leagues', 'session-coin-scale', 'verified-attempts', 'verified-coach-flow',
+      'verified-exam-strategy',
     ])
   })
 
