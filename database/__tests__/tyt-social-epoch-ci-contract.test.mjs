@@ -110,7 +110,7 @@ describe('TYT social epoch CI result contract', () => {
     const needs = build.match(/needs:\s*\[([^\]]+)\]/i)?.[1]
       ?.split(',').map((value) => value.trim()).filter(Boolean).sort()
     expect(needs).toEqual([
-      'comments-postgrest-contract', 'institution-pilot-postgres', 'lint',
+      'institution-pilot-postgres', 'lint', 'postgrest-contract',
       'question-quality-postgres', 'test', 'type-check', 'tyt-social-epoch-postgres',
     ])
 
