@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomUUID } from 'node:crypto'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const databaseUrl = process.env.LEADERBOARD_PRIVACY_TEST_DATABASE_URL
 if (databaseUrl && process.env.LEADERBOARD_PRIVACY_TEST_DATABASE_DISPOSABLE !== '1') {
@@ -122,6 +123,7 @@ suite('177 private leaderboard real PostgreSQL', () => {
       [randomUUID(), hiddenUser, week, randomUUID(), visibleUser],
     )
 
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     await client.query(migration)
   })
 

@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const url = process.env.RETENTION_ERASURE_TEST_DATABASE_URL
 const enabled = Boolean(url && process.env.RETENTION_ERASURE_TEST_DATABASE_DISPOSABLE === '1')
@@ -109,6 +110,7 @@ describePg('203 expired-account retention safety preview on real PostgreSQL', ()
     await client.query('INSERT INTO public.game_sessions(id,user_id) VALUES($1,$2)', [sessionId, practiceReferenced])
     await client.query('INSERT INTO public.session_answers(id,session_id,user_id) VALUES($1,$2,$3)', [randomUUID(), sessionId, practiceReferenced])
 
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     await client.query(migration)
     await client.query(migration) // Reapplying the migration must remain safe.
     await client.query(requestGateMigration)

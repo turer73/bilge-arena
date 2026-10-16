@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs';
 
 const databaseUrl = process.env.TEAM_BOSS_TEST_DATABASE_URL;
 if (databaseUrl && process.env.TEAM_BOSS_TEST_DATABASE_DISPOSABLE !== '1') throw new Error('Set TEAM_BOSS_TEST_DATABASE_DISPOSABLE=1 for disposable team-boss DB');
@@ -32,6 +33,7 @@ suite('103 cohort team boss real PostgreSQL', () => {
       CREATE TABLE public.questions(id uuid PRIMARY KEY,game text NOT NULL,is_active boolean NOT NULL DEFAULT true);
       CREATE TABLE public.game_sessions(id uuid PRIMARY KEY,user_id uuid NOT NULL REFERENCES public.profiles(id),status text NOT NULL,correct_count integer NOT NULL,total_questions integer NOT NULL,completed_at timestamptz);
       CREATE TABLE public.friendships(user_id uuid NOT NULL,friend_id uuid NOT NULL,status text NOT NULL,PRIMARY KEY(user_id,friend_id));`);
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL);
     for (const name of ['091_verified_attempts.sql','101_relative_weekly_learning_leagues.sql','103_cohort_team_boss.sql']) await client.query(migration(name));
     question=randomUUID(); await client.query("INSERT INTO public.questions(id,game) VALUES($1,'wordquest')",[question]);
     week=String((await client.query('SELECT public.weekly_learning_league_week_start(clock_timestamp())::text AS week')).rows[0].week);

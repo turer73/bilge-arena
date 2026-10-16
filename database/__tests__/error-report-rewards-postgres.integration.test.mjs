@@ -17,6 +17,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_URL;
@@ -114,14 +115,7 @@ describePostgres('award_error_report_reward (128) on actual PostgreSQL', () => {
     await client.connect();
     await client.query('DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; CREATE SCHEMA auth;');
     await client.query(fixtureSql);
-    // Supabase grants every new public table and function to its API roles by
-    // default; the migrations' REVOKEs exist to undo exactly that. Without these
-    // defaults a missing REVOKE ... FROM anon, authenticated would still pass.
-    await client.query(`
-      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
-      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
-      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
-    `);
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL);
     for (const migration of ['003_add_error_reports.sql', '055_coin_balance.sql', '064_coin_rpc_lockdown.sql']) {
       await client.query(migrationSql(migration));
     }

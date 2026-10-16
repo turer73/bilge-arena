@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const url = process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_URL
 const enabled = Boolean(url && process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE === '1')
@@ -60,6 +61,7 @@ describePg('096 curriculum graph v1 real PostgreSQL', () => {
        VALUES ${Object.keys(questions).map((_, index) => `($${index + 1},'matematik',$${index + 7},'TYT',true)`).join(',')}`,
       [...Object.values(questions), ...Object.keys(questions)],
     )
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     await client.query(pilotMigration)
     await client.query(migration)
   })

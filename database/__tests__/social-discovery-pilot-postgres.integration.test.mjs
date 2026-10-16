@@ -9,6 +9,7 @@ import { createRequire, Module } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL, SUPABASE_DEFAULT_PRIVILEGES_RESET_SQL } from './supabase-default-privileges.mjs'
 
 const testing = process.env.VITEST ? await import('vitest') : await import('node:test')
 const before = testing.beforeAll ?? testing.before
@@ -137,6 +138,8 @@ suite('four-domain discovery on real disposable PostgreSQL', () => {
     const existing = (await owner.query("SELECT tablename FROM pg_tables WHERE schemaname='public'")).rows
     assert(existing.every(row => fixtureTables.includes(row.tablename)), 'unknown tables: disposable fixture refused')
     // Only the enumerated fixture tables in the verified dedicated local DB.
+    // The public schema survives between runs here; clear earlier defaults before the fixture.
+    await owner.query(SUPABASE_DEFAULT_PRIVILEGES_RESET_SQL)
     await owner.query(`DROP TABLE IF EXISTS ${fixtureTables.map(name => `public.${name}`).join(',')} CASCADE`)
     await owner.query(`
       CREATE SCHEMA IF NOT EXISTS extensions;
@@ -160,6 +163,7 @@ suite('four-domain discovery on real disposable PostgreSQL', () => {
       CREATE TABLE public.user_diagnostic_outcome_state(user_id uuid PRIMARY KEY,score numeric);
       INSERT INTO public.user_diagnostic_outcome_state VALUES(gen_random_uuid(),77);
     `)
+    await owner.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     await owner.query(sql)
     await left.connect(); await right.connect()
     await left.query('SET ROLE service_role'); await right.query('SET ROLE service_role')

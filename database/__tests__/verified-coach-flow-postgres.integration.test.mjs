@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const url = process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_URL
 const enabled = Boolean(url && process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE === '1')
@@ -69,6 +70,7 @@ describePg('099 verified coach flow real PostgreSQL', () => {
     await client.query(`INSERT INTO public.questions(id,game,category,difficulty,exam_ref,is_active,content)
       VALUES($1,'matematik','sayilar',3,'TYT',true,$2),($3,'matematik','sayilar',3,'TYT',true,$4),($5,'matematik','sayilar',3,'TYT',true,$6)`,
     [original, originalContent, transfer, transferContent, laterTransfer, laterContent])
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     for (const migration of [
       '086_outcome_mastery_pilot.sql', '091_verified_attempts.sql', '096_curriculum_graph_v1.sql', '099_verified_coach_flow.sql',
     ]) await client.query(read(migration))

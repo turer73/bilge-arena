@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs';
 
 const databaseUrl = process.env.WLL_TEST_DATABASE_URL;
 if (databaseUrl && process.env.WLL_TEST_DATABASE_DISPOSABLE !== '1') {
@@ -77,6 +78,7 @@ suite('101 relative weekly leagues real PostgreSQL', () => {
     client = new Client({ connectionString: databaseUrl }); await client.connect();
     await client.query('DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; CREATE SCHEMA auth;');
     await client.query(fixture);
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL);
     await client.query(migration('091_verified_attempts.sql'));
     await client.query(migration('101_relative_weekly_learning_leagues.sql'));
     question = randomUUID(); await client.query("INSERT INTO public.questions (id,game) VALUES ($1,'wordquest')", [question]);

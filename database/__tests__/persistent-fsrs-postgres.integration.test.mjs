@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { fsrs, createEmptyCard, generatorParameters, Rating } from 'ts-fsrs'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const url = process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_URL
 const enabled = Boolean(url && process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE === '1')
@@ -43,6 +44,7 @@ describePg('094 persistent FSRS real PostgreSQL', () => {
       DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$; DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$; DO $$ BEGIN CREATE ROLE service_role NOLOGIN BYPASSRLS; EXCEPTION WHEN duplicate_object THEN NULL; END $$; ALTER ROLE service_role BYPASSRLS; REVOKE CREATE ON SCHEMA public FROM PUBLIC, anon, authenticated, service_role; GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
       CREATE TABLE public.profiles(id uuid PRIMARY KEY); CREATE TABLE public.questions(id uuid PRIMARY KEY); CREATE TABLE public.game_sessions(id uuid PRIMARY KEY,user_id uuid NOT NULL REFERENCES public.profiles(id),status text NOT NULL);
       CREATE TABLE public.session_answers(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),session_id uuid NOT NULL REFERENCES public.game_sessions(id),question_id uuid NOT NULL REFERENCES public.questions(id),user_id uuid NOT NULL REFERENCES public.profiles(id),is_correct boolean NOT NULL,is_skipped boolean,answered_at timestamptz NOT NULL DEFAULT clock_timestamp());`)
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     await client.query(migration)
     user=randomUUID(); question=randomUUID(); session=randomUUID()
     await client.query('INSERT INTO public.profiles VALUES($1)',[user])

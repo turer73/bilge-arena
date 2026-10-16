@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import pg from 'pg'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const dedicated = Boolean(process.env.HOMEPAGE_GOVERNANCE_TEST_DATABASE_URL)
 const url = process.env.HOMEPAGE_GOVERNANCE_TEST_DATABASE_URL
@@ -117,6 +118,7 @@ suite('169 admin homepage mutation governance disposable PostgreSQL acceptance',
       `INSERT INTO public.homepage_sections(section_key)
        SELECT unnest(ARRAY['hero','stats','games','how_it_works','cta','leaderboard','footer'])`,
     )
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     await client.query(migration)
   })
 

@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const url = process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_URL
 const enabled = Boolean(url && process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE === '1')
@@ -31,6 +32,7 @@ describePg('097 mastery evidence v2 real PostgreSQL', () => {
     user=randomUUID(); other=randomUUID(); upgradeUser=randomUUID(); question=randomUUID(); question2=randomUUID(); attempt=randomUUID(); session=randomUUID(); answer=randomUUID(); answer2=randomUUID()
     await client.query('INSERT INTO public.profiles VALUES($1),($2),($3)',[user,other,upgradeUser])
     await client.query("INSERT INTO public.questions VALUES($1,'matematik','sayilar',4,'TYT',true),($2,'matematik','sayilar',4,'TYT',true)",[question,question2])
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     for (const migration of ['086_outcome_mastery_pilot.sql','091_verified_attempts.sql','094_persistent_fsrs.sql','096_curriculum_graph_v1.sql']) await client.query(read(migration))
     historicalQuestion1=randomUUID(); historicalQuestion2=randomUUID(); historicalAttempt1=randomUUID(); historicalAttempt2=randomUUID(); historicalAnswer1=randomUUID(); historicalAnswer2=randomUUID()
     const hs1=randomUUID(); const hs2=randomUUID()

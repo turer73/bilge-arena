@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
 
 const url = process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_URL
 const enabled = Boolean(url && process.env.VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE === '1')
@@ -27,6 +28,7 @@ describePg('095 daily-plan items V2 real PostgreSQL', () => {
       DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$; DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$; DO $$ BEGIN CREATE ROLE service_role NOLOGIN BYPASSRLS; EXCEPTION WHEN duplicate_object THEN NULL; END $$; ALTER ROLE service_role BYPASSRLS; REVOKE CREATE ON SCHEMA public FROM PUBLIC, anon, authenticated, service_role; GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
       CREATE TABLE public.profiles(id uuid PRIMARY KEY); CREATE TABLE public.questions(id uuid PRIMARY KEY, game text NOT NULL, exam_ref text); CREATE TABLE public.daily_plan(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,game varchar(20) NOT NULL,plan_date date NOT NULL,question_ids uuid[] NOT NULL,completed_ids uuid[] NOT NULL DEFAULT '{}',created_at timestamptz NOT NULL DEFAULT clock_timestamp(),exam_ref varchar(10));
       CREATE UNIQUE INDEX idx_daily_plan_user_game_date_exam ON public.daily_plan(user_id,game,plan_date,exam_ref) NULLS NOT DISTINCT;`)
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     await client.query(migration)
     user=randomUUID(); other=randomUUID()
     await client.query('INSERT INTO public.profiles(id) VALUES($1),($2)',[user,other])

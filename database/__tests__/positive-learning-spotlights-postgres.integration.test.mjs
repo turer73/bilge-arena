@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs';
 
 const databaseUrl = process.env.SPOTLIGHTS_TEST_DATABASE_URL;
 if (databaseUrl && process.env.SPOTLIGHTS_TEST_DATABASE_DISPOSABLE !== '1') throw new Error('Set SPOTLIGHTS_TEST_DATABASE_DISPOSABLE=1 for the disposable spotlight DB');
@@ -34,6 +35,7 @@ suite('102 positive learning spotlights real PostgreSQL', () => {
       CREATE TABLE public.questions(id uuid PRIMARY KEY,game text NOT NULL,is_active boolean NOT NULL DEFAULT true);
       CREATE TABLE public.game_sessions(id uuid PRIMARY KEY,user_id uuid NOT NULL REFERENCES public.profiles(id),status text NOT NULL,correct_count integer NOT NULL,total_questions integer NOT NULL,completed_at timestamptz);
       CREATE TABLE public.friendships(user_id uuid NOT NULL,friend_id uuid NOT NULL,status text NOT NULL,PRIMARY KEY(user_id,friend_id));`);
+    await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     for (const name of ['091_verified_attempts.sql','101_relative_weekly_learning_leagues.sql','102_positive_learning_spotlights.sql']) {
       try {
         await client.query(migration(name));
