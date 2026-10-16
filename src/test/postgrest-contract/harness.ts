@@ -27,10 +27,11 @@ export function readRepoFile(relativePath: string) {
   return readFileSync(path.join(repoRoot, relativePath), 'utf8')
 }
 
-/** Bir migration'daki `CREATE OR REPLACE FUNCTION <name>(` tanimini aynen dondurur. */
+/** Bir migration'daki `CREATE [OR REPLACE] FUNCTION <name>(` tanimini aynen dondurur. */
 export function readMigrationFunction(migrationPath: string, functionName: string) {
   const sql = readRepoFile(migrationPath)
-  const start = sql.indexOf(`CREATE OR REPLACE FUNCTION ${functionName}(`)
+  const escaped = functionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const start = sql.search(new RegExp(`CREATE (?:OR REPLACE )?FUNCTION ${escaped}\\(`))
   const tag = start < 0 ? undefined : sql.slice(start).match(/\bAS\s+(\$[a-z_]*\$)/i)?.[1]
   if (start < 0 || !tag) throw new Error(`${functionName} not found in ${migrationPath}`)
   const bodyStart = sql.indexOf(tag, start) + tag.length
@@ -126,7 +127,8 @@ export interface PostgrestContract {
   serviceClient(): SupabaseClient
   /**
    * `@/lib/supabase/server` yerine: oturum `currentUser`'dan okunur, sorgular
-   * gercek PostgREST'e gider. Servis rolunu kullanir; RLS bu kontratin konusu
+   * gercek PostgREST'e gider ve oturum kullanicisi JWT `sub`'i olur (auth.uid()
+   * kullanan RPC'ler onu gorur). Servis rolunu kullanir; RLS bu kontratin konusu
    * degildir (uretimde cerez istemcisi authenticated rolundedir).
    */
   cookieClient(currentUser: () => SessionUser | null): SupabaseClient
@@ -177,9 +179,11 @@ export async function startPostgrestContract(extraSql: string[] = []): Promise<P
     process.env.NEXT_PUBLIC_SUPABASE_URL = restOrigin
     process.env.SUPABASE_SERVICE_KEY = serviceKey
 
-    const serviceClient = () => createClient(restOrigin, serviceKey, {
+    const makeClient = (fetchImpl?: typeof fetch) => createClient(restOrigin, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
+      ...(fetchImpl ? { global: { fetch: fetchImpl } } : {}),
     })
+    const serviceClient = () => makeClient()
     const runningProxy = proxy
     return {
       db,
@@ -187,7 +191,12 @@ export async function startPostgrestContract(extraSql: string[] = []): Promise<P
       serviceKey,
       serviceClient,
       cookieClient(currentUser) {
-        const client = serviceClient()
+        const client = makeClient((input, init) => {
+          const user = currentUser()
+          const headers = new Headers(init?.headers)
+          if (user) headers.set('Authorization', `Bearer ${signJwt(jwtSecret!, { role: 'service_role', sub: user.id })}`)
+          return fetch(input, { ...init, headers })
+        })
         Object.assign(client.auth, {
           getUser: async () => ({ data: { user: currentUser() }, error: null }),
         })

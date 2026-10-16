@@ -12,17 +12,28 @@
 -- harness.ts:assertFixtureMirrorsGeneratedSchema bu kurallari her dosyada denetler.
 
 CREATE TABLE auth.users (id uuid PRIMARY KEY);
-CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS
-  $fn$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $fn$;
+-- Supabase auth.uid(): PostgREST 10+ JWT'yi request.jwt.claims (JSON) olarak verir.
+CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $fn$
+  SELECT coalesce(
+    nullif(current_setting('request.jwt.claim.sub', true), ''),
+    (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')
+  )::uuid
+$fn$;
 
--- schema.sql + 023 (profiles_id_fkey RESTRICT) + referral (referred_by).
+-- schema.sql + 004 (role) + 015 (referred_by) + 023 (profiles_id_fkey RESTRICT,
+-- deleted_at) + 061 (exam_type). Tipler search_profiles_admin donus tipine uyar.
 CREATE TABLE public.profiles (
   id uuid PRIMARY KEY,
   username varchar(32) UNIQUE NOT NULL,
   display_name varchar(64),
   avatar_url text,
+  level smallint DEFAULT 1,
   level_name varchar(20) DEFAULT 'Acemi',
   total_xp integer DEFAULT 0,
+  current_streak smallint DEFAULT 0,
+  total_questions integer DEFAULT 0,
+  correct_answers integer DEFAULT 0,
+  role text DEFAULT 'user',
   exam_type text,
   referred_by uuid REFERENCES public.profiles(id),
   deleted_at timestamptz,
@@ -158,24 +169,132 @@ CREATE TABLE public.review_error_annotations (
     FOREIGN KEY (review_log_id, user_id) REFERENCES public.review_logs(id, user_id) ON DELETE CASCADE
 );
 
+-- 091. question_ids CHECK'i (verified_attempts_question_ids_valid) fikstür disi.
+CREATE TABLE public.verified_attempts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  game text NOT NULL,
+  mode text NOT NULL,
+  question_ids uuid[] NOT NULL,
+  duration_sec integer NOT NULL CHECK (duration_sec BETWEEN 5 AND 7200),
+  started_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  expires_at timestamptz NOT NULL CHECK (expires_at > started_at),
+  completed_at timestamptz,
+  session_id uuid UNIQUE REFERENCES public.game_sessions(id),
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  CONSTRAINT verified_attempts_completion_consistency CHECK (
+    (completed_at IS NULL AND session_id IS NULL)
+    OR (completed_at IS NOT NULL AND session_id IS NOT NULL)
+  )
+);
+
+-- 086 + 096 (node_id, taxonomy_version; node_id FK'si fikstür disi curriculum_nodes'a).
+CREATE TABLE public.curriculum_outcomes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code varchar(40) NOT NULL UNIQUE,
+  game varchar(20) NOT NULL,
+  category varchar(30) NOT NULL,
+  title varchar(160) NOT NULL,
+  description text,
+  exam_ref varchar(20),
+  sort_order integer NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true,
+  node_id uuid,
+  taxonomy_version text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- 086 + 096 (mapping_source). PK (question_id, outcome_id): questions <->
+-- curriculum_outcomes icin gercek junction; coach/hint ise iki adimda gomer.
+CREATE TABLE public.question_outcomes (
+  question_id uuid NOT NULL REFERENCES public.questions(id) ON DELETE CASCADE,
+  outcome_id uuid NOT NULL REFERENCES public.curriculum_outcomes(id) ON DELETE CASCADE,
+  weight numeric(6,3) NOT NULL DEFAULT 1 CHECK (weight > 0),
+  is_primary boolean NOT NULL DEFAULT false,
+  mapping_source text NOT NULL DEFAULT 'manual' CHECK (mapping_source IN ('manual','taxonomy_auto')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (question_id, outcome_id)
+);
+
 -- 097: session_answers <-> questions junction adayi; PK (answer_id, outcome_id)
--- question_id'yi icermez. outcome_id/attempt_id FK'leri fikstür disi tablolara.
+-- question_id'yi icermez.
 CREATE TABLE public.mastery_outcome_evidence (
   answer_id uuid NOT NULL REFERENCES public.session_answers(id) ON DELETE RESTRICT,
-  outcome_id uuid NOT NULL,
+  outcome_id uuid NOT NULL REFERENCES public.curriculum_outcomes(id) ON DELETE RESTRICT,
   user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   question_id uuid NOT NULL REFERENCES public.questions(id) ON DELETE RESTRICT,
   session_id uuid NOT NULL REFERENCES public.game_sessions(id) ON DELETE CASCADE,
+  attempt_id uuid NOT NULL REFERENCES public.verified_attempts(id) ON DELETE RESTRICT,
   PRIMARY KEY (answer_id, outcome_id)
 );
 
--- 106: session_answers <-> questions junction adayi; PK yalniz id.
+-- 106 + 139 (attempt_id): session_answers <-> questions junction adayi; PK yalniz id.
 CREATE TABLE public.question_appeals (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
   question_id uuid NOT NULL REFERENCES public.questions(id) ON DELETE RESTRICT,
   session_answer_id uuid REFERENCES public.session_answers(id) ON DELETE RESTRICT,
-  revision_id uuid REFERENCES public.question_content_revisions(id) ON DELETE RESTRICT
+  revision_id uuid REFERENCES public.question_content_revisions(id) ON DELETE RESTRICT,
+  attempt_id uuid REFERENCES public.verified_attempts(id) ON DELETE RESTRICT
+);
+
+-- 062: profiles'a iki FK (user_id, reviewed_by); route kisit adiyla secer.
+CREATE TABLE public.question_submissions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  game text NOT NULL,
+  category text NOT NULL,
+  difficulty integer NOT NULL CHECK (difficulty BETWEEN 1 AND 5),
+  content jsonb NOT NULL,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  review_note text,
+  reviewed_by uuid REFERENCES public.profiles(id),
+  reviewed_at timestamptz,
+  question_id uuid REFERENCES public.questions(id),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- schema.sql
+CREATE TABLE public.daily_quests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug varchar(50) UNIQUE NOT NULL,
+  title varchar(100) NOT NULL,
+  description text,
+  icon varchar(10),
+  quest_type varchar(20),
+  target_value integer NOT NULL,
+  target_game varchar(20),
+  xp_reward smallint DEFAULT 50,
+  is_active boolean DEFAULT true
+);
+CREATE TABLE public.user_daily_quests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  quest_id uuid NOT NULL REFERENCES public.daily_quests(id),
+  date date NOT NULL DEFAULT CURRENT_DATE,
+  current_value integer DEFAULT 0,
+  is_completed boolean DEFAULT false,
+  completed_at timestamptz,
+  xp_claimed boolean DEFAULT false,
+  UNIQUE (user_id, quest_id, date)
+);
+
+-- 020: profiles'a uc FK (challenger_id, opponent_id, winner_id); route sutunla secer.
+CREATE TABLE public.challenges (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  challenger_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  opponent_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  game varchar(20) NOT NULL,
+  category varchar(30),
+  status varchar(20) NOT NULL DEFAULT 'pending',
+  question_ids uuid[] NOT NULL,
+  challenger_score jsonb,
+  opponent_score jsonb,
+  winner_id uuid REFERENCES public.profiles(id),
+  xp_reward int NOT NULL DEFAULT 50,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL DEFAULT (now() + interval '24 hours'),
+  CONSTRAINT chk_not_self CHECK (challenger_id != opponent_id)
 );
 
 -- 016
