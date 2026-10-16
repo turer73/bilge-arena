@@ -136,6 +136,7 @@ export const POSTGRES_CI_SUITES = Object.freeze({
       t('award-badges-postgres.integration.test.mjs'),
       t('activation-reward-claims-postgres.integration.test.mjs'),
       t('error-report-rewards-postgres.integration.test.mjs'),
+      t('economy-integrity-postgres.integration.test.mjs'),
     ],
   },
 })
