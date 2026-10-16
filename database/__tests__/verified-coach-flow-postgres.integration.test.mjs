@@ -1,4 +1,5 @@
-// Opt-in disposable PostgreSQL coverage for 086 -> 091 -> 096 -> 099.
+// Opt-in disposable PostgreSQL coverage for 086 -> 091 -> 096 -> 099 ->
+// 20261017100200 (transfer never comes from the source question's own attempt).
 // Requires VERIFIED_ATTEMPTS_TEST_DATABASE_URL=.../bilge_r02_test_* and
 // VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE=1. Normal CI intentionally skips it.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -73,6 +74,7 @@ describePg('099 verified coach flow real PostgreSQL', () => {
     await client.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     for (const migration of [
       '086_outcome_mastery_pilot.sql', '091_verified_attempts.sql', '096_curriculum_graph_v1.sql', '099_verified_coach_flow.sql',
+      '20261017100200_coach_transfer_excludes_attempt_questions.sql',
     ]) await client.query(read(migration))
     await client.query(`INSERT INTO public.verified_attempts(
       id,user_id,game,mode,question_ids,duration_sec,started_at,expires_at
@@ -212,6 +214,47 @@ describePg('099 verified coach flow real PostgreSQL', () => {
     expect((await client.query(`SELECT transfer_selected_option,transfer_is_correct,transfer_completed_at IS NOT NULL completed
       FROM public.verified_coach_sessions WHERE id=$1`, [coachSessionId])).rows[0])
       .toEqual({ transfer_selected_option: 0, transfer_is_correct: true, completed: true })
+  })
+
+  it('never binds a transfer from the source question’s own attempt; picks the next eligible candidate instead', async () => {
+    // The transfer answer reveals its correct option. If the transfer were a
+    // question of the same attempt, its answer would be known before grading
+    // (derin inceleme 2026-10-15 §4.2). laterTransfer is the deterministic
+    // first candidate above; here it is part of the attempt.
+    const sameAttempt = randomUUID()
+    const fallback = '40000000-0000-4000-8000-000000000001'
+    await client.query(`INSERT INTO public.verified_attempts(
+      id,user_id,game,mode,question_ids,duration_sec,started_at,expires_at
+    ) VALUES($1,$2,'matematik','classic',$3,600,clock_timestamp(),clock_timestamp()+interval '1 hour')`,
+    [sameAttempt, user, [original, laterTransfer]])
+    const session = await start(client, { attemptId: sameAttempt })
+    const step = (stage, responseText, source) => client.query(
+      'SELECT public.advance_verified_coach_stage($1,$2,$3::smallint,$4,$5,$6,$7,$8,$9) result',
+      [session.sessionId, user, stage, randomUUID(), responseText, source, true, 'coach-v1', hash(String(stage))],
+    ).then((result) => result.rows[0].result)
+    await step(1, 'Önce verilenleri ayır.', 'authored')
+    await step(2, 'Bağıntıyı kur.', 'ai')
+    await step(3, 'İşlemi kontrol et.', 'fallback')
+
+    // laterTransfer is excluded and no other candidate exists yet.
+    await expect(step(4, null, 'solution')).rejects.toMatchObject({ code: '23514' })
+    expect((await client.query('SELECT stage, transfer_question_id FROM public.verified_coach_sessions WHERE id=$1', [session.sessionId])).rows[0])
+      .toEqual({ stage: 3, transfer_question_id: null })
+
+    const outcome = (await client.query(
+      'SELECT outcome_id FROM public.question_outcomes WHERE question_id=$1 AND is_primary', [original],
+    )).rows[0].outcome_id
+    await client.query(`INSERT INTO public.questions(id,game,category,difficulty,exam_ref,is_active,content)
+      VALUES($1,'matematik','sayilar',3,'TYT',true,$2)`,
+    [fallback, { question: 'Yedek transfer', options: ['0', '1'], answer: 1, solution: 'Yedek çözüm.' }])
+    // 086 maps a new question to its category outcome on insert; keep it explicit.
+    await client.query(`INSERT INTO public.question_outcomes(question_id,outcome_id,weight,is_primary,mapping_source)
+      VALUES($1,$2,1,true,'manual') ON CONFLICT DO NOTHING`, [fallback, outcome])
+
+    expect(await step(4, null, 'solution')).toMatchObject({ stage: 4, transferQuestionId: fallback, replayed: false })
+    // The original attempt still gets the lowest-id candidate: only the own attempt is excluded.
+    expect((await client.query('SELECT transfer_question_id FROM public.verified_coach_sessions WHERE id=$1', [coachSessionId])).rows[0])
+      .toEqual({ transfer_question_id: laterTransfer })
   })
 
   it('rejects expired attempts and keeps private tables/RPCs closed except for service-role execution', async () => {
