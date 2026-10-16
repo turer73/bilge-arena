@@ -204,6 +204,28 @@ async function sessionCoinLedger(client, userId) {
   }));
 }
 
+// Start of the current Istanbul day as an instant, computed here rather than with
+// the migration's own SQL expression so the boundary is checked independently.
+// Turkey has stayed on UTC+3 all year since 2016; the guard fails loudly if the
+// server's tz database ever disagrees instead of testing the wrong boundary.
+async function istanbulMidnight(client) {
+  const result = await client.query(`
+    SELECT now() AS now,
+      extract(epoch FROM (now() AT TIME ZONE 'Europe/Istanbul') - (now() AT TIME ZONE 'UTC'))::int AS offset_seconds
+  `);
+  expect(result.rows[0].offset_seconds).toBe(3 * 3600);
+  const local = new Date(result.rows[0].now.getTime() + 3 * 3600 * 1000);
+  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) - 3 * 3600 * 1000);
+}
+
+// A session coin row written at a chosen instant, as an earlier session would have.
+async function priorSessionCoins(client, userId, amount, createdAt) {
+  await client.query(`
+    INSERT INTO public.reward_ledger (user_id, source_type, source_id, reward_type, reward_key, amount, metadata, created_at)
+    VALUES ($1, 'session', $2, 'coin', 'correct_answers', $3, '{}'::jsonb, $4)
+  `, [userId, randomUUID(), amount, createdAt]);
+}
+
 describePostgres('migration 129 session coin scale on actual PostgreSQL migrations', () => {
   let client;
   const users = {};
@@ -225,7 +247,7 @@ describePostgres('migration 129 session coin scale on actual PostgreSQL migratio
     }
     // One user per behaviour: the daily cap is per user, so shared users would
     // leak state between cases.
-    for (const key of ['scale', 'cap', 'replay', 'direct']) {
+    for (const key of ['scale', 'cap', 'replay', 'direct', 'beforeMidnight', 'afterMidnight']) {
       users[key] = randomUUID();
       await client.query('INSERT INTO public.profiles (id) VALUES ($1)', [users[key]]);
     }
@@ -341,6 +363,39 @@ describePostgres('migration 129 session coin scale on actual PostgreSQL migratio
     expect(await sessionCoinLedger(client, users.replay)).toEqual([
       { amount: expected, firstToday: true, correct: 4 },
     ]);
+  });
+
+  it('starts the day at Istanbul midnight: coins earned 30 minutes before it do not count today', async () => {
+    // A student who hit the cap at 23:30 Istanbul time gets a full first session
+    // after midnight. A UTC day boundary would still count these coins whenever
+    // the server clock is past 21:00 UTC.
+    const midnight = await istanbulMidnight(client);
+    await priorSessionCoins(client, users.beforeMidnight, DAILY_CAP, new Date(midnight.getTime() - 30 * 60 * 1000));
+    const before = await profileState(client, users.beforeMidnight);
+    await playSession(client, users.beforeMidnight, { questionCount: 5, correct: 4 });
+
+    const expected = 4 * COIN_PER_CORRECT + SESSION_BONUS + FIRST_SESSION_BONUS; // 37
+    const after = await profileState(client, users.beforeMidnight);
+    expect(after.coin_balance - before.coin_balance).toBe(expected);
+    // The seeded row has no session metadata; only the played session is checked.
+    expect((await sessionCoinLedger(client, users.beforeMidnight)).filter((row) => row.correct !== null))
+      .toEqual([{ amount: expected, firstToday: true, correct: 4 }]);
+  });
+
+  it('counts coins earned 30 minutes after Istanbul midnight as today, though UTC is still on the previous day', async () => {
+    // 00:30 Istanbul is 21:30 UTC of the previous day: no first-of-day bonus
+    // again, and the cap leaves only 10 of the 22 this session would earn.
+    const midnight = await istanbulMidnight(client);
+    await priorSessionCoins(client, users.afterMidnight, 70, new Date(midnight.getTime() + 30 * 60 * 1000));
+    const before = await profileState(client, users.afterMidnight);
+    await playSession(client, users.afterMidnight, { questionCount: 5, correct: 4 });
+
+    const after = await profileState(client, users.afterMidnight);
+    expect(after.coin_balance - before.coin_balance).toBe(DAILY_CAP - 70);
+    // Between 00:00 and 00:30 the seeded row lies in the future and sorts last,
+    // so pick the played session by its metadata rather than by position.
+    expect((await sessionCoinLedger(client, users.afterMidnight)).filter((row) => row.correct !== null))
+      .toEqual([{ amount: DAILY_CAP - 70, firstToday: false, correct: 4 }]);
   });
 
   it('pays no coins for an unverified session completed through complete_game_session', async () => {
