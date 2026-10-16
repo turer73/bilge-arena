@@ -5,10 +5,15 @@ import { test, expect, type Page } from '@playwright/test'
 // Dev sunucusu hydration uyumsuzluğunu farklı raporlar; bu kapı yalnız
 // kullanıcının gördüğü minified üretim paketini ölçer (React #418, bulgu §3.1).
 
+// Vercel preview'larına platformun eklediği yorum araç çubuğu (vercel.live)
+// CSP'ye takılır. Üretim alan adında yoktur, uygulama kodu değildir.
+const VERCEL_PREVIEW_TOOLBAR_CSP = /^Loading the script 'https:\/\/vercel\.live\/_next-live\/feedback\//
+
 function collectPageErrors(page: Page) {
   const errors: string[] = []
   page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(`console: ${message.text()}`)
+    if (message.type() !== 'error' || VERCEL_PREVIEW_TOOLBAR_CSP.test(message.text())) return
+    errors.push(`console: ${message.text()}`)
   })
   page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`))
   return errors
