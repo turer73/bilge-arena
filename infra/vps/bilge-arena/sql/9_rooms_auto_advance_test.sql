@@ -47,19 +47,25 @@ END $$;
 -- =============================================================================
 -- T2: CHECK reddedir 31 (max 30)
 -- =============================================================================
+-- Kod chk_rooms_code_format'a (Crockford-32: 0/1/I/O yok) uymali; yoksa
+-- check_violation yanlis kisittan gelir ve test yanlis sebeple gecer.
 DO $$
-DECLARE v_test_user UUID := gen_random_uuid();
+DECLARE v_test_user UUID := gen_random_uuid(); v_constraint TEXT;
 BEGIN
   BEGIN
     INSERT INTO public.rooms
       (code, host_id, title, category, difficulty, question_count,
        max_players, per_question_seconds, mode, state, auto_advance_seconds)
     VALUES
-      ('TST001', v_test_user, 'T2 test', 'matematik', 2, 10,
+      ('TSTZZL', v_test_user, 'T2 test', 'matematik', 2, 10,
        8, 20, 'sync', 'lobby', 31);
 
     RAISE EXCEPTION 'T2 FAIL: 31 sn auto_advance_seconds kabul edildi (max 30 olmali)';
   EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS v_constraint = CONSTRAINT_NAME;
+    IF v_constraint <> 'chk_rooms_auto_advance_range' THEN
+      RAISE EXCEPTION 'T2 FAIL: yanlis kisit reddetti: %', v_constraint;
+    END IF;
     RAISE NOTICE 'OK: T2 chk_rooms_auto_advance_range 31 reddetti';
   END;
 END $$;
@@ -68,43 +74,55 @@ END $$;
 -- T3: CHECK reddedir -1 (min 0)
 -- =============================================================================
 DO $$
-DECLARE v_test_user UUID := gen_random_uuid();
+DECLARE v_test_user UUID := gen_random_uuid(); v_constraint TEXT;
 BEGIN
   BEGIN
     INSERT INTO public.rooms
       (code, host_id, title, category, difficulty, question_count,
        max_players, per_question_seconds, mode, state, auto_advance_seconds)
     VALUES
-      ('TST002', v_test_user, 'T3 test', 'matematik', 2, 10,
+      ('TSTZZ2', v_test_user, 'T3 test', 'matematik', 2, 10,
        8, 20, 'sync', 'lobby', -1);
 
     RAISE EXCEPTION 'T3 FAIL: -1 auto_advance_seconds kabul edildi (min 0 olmali)';
   EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS v_constraint = CONSTRAINT_NAME;
+    IF v_constraint <> 'chk_rooms_auto_advance_range' THEN
+      RAISE EXCEPTION 'T3 FAIL: yanlis kisit reddetti: %', v_constraint;
+    END IF;
     RAISE NOTICE 'OK: T3 chk_rooms_auto_advance_range -1 reddetti';
   END;
 END $$;
 
 -- =============================================================================
--- T4: create_room imzasi 8 parametre (yeni)
+-- T4: create_room p_auto_advance_seconds parametresini tasir (tek overload)
 -- =============================================================================
+-- 9 imzayi 8 parametreye cikardi; 11_rooms_public_discovery p_is_public ile
+-- 9'a cikardi. Sabit sayi yerine bu migration'in ekledigi parametre olculur.
 DO $$
 DECLARE
-  v_arg_count INT;
+  v_overloads INT;
+  v_has_param BOOLEAN;
 BEGIN
-  SELECT pronargs INTO v_arg_count
+  SELECT count(*), bool_or('p_auto_advance_seconds' = ANY (proargnames))
+    INTO v_overloads, v_has_param
   FROM pg_proc
   WHERE proname = 'create_room'
     AND pronamespace = 'public'::regnamespace;
 
-  IF v_arg_count IS NULL THEN
+  IF v_overloads = 0 THEN
     RAISE EXCEPTION 'T4 FAIL: create_room fonksiyonu bulunamadi';
   END IF;
 
-  IF v_arg_count <> 8 THEN
-    RAISE EXCEPTION 'T4 FAIL: create_room arg sayisi 8 olmali, mevcut: %', v_arg_count;
+  IF v_overloads <> 1 THEN
+    RAISE EXCEPTION 'T4 FAIL: create_room tek overload olmali, mevcut: %', v_overloads;
   END IF;
 
-  RAISE NOTICE 'OK: T4 create_room 8 parametre';
+  IF NOT v_has_param THEN
+    RAISE EXCEPTION 'T4 FAIL: create_room p_auto_advance_seconds parametresi yok';
+  END IF;
+
+  RAISE NOTICE 'OK: T4 create_room p_auto_advance_seconds parametresi var';
 END $$;
 
 -- =============================================================================
@@ -126,7 +144,7 @@ BEGIN
      max_players, per_question_seconds, mode, state, current_round_index,
      auto_advance_seconds)
   VALUES
-    ('TST005', v_test_user, 'T5 manual', 'matematik', 2, 10,
+    ('TSTZZ5', v_test_user, 'T5 manual', 'matematik', 2, 10,
      8, 20, 'sync', 'reveal', 1, 0)
   RETURNING id INTO v_room_id;
 

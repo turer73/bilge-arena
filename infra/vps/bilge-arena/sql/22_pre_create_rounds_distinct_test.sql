@@ -24,17 +24,22 @@ BEGIN;
 -- Yeterli pool icin paragraf kullanmak yerine kontrollu mock pool olusturalim
 INSERT INTO public.questions (external_id, game, category, difficulty, content, is_active)
 VALUES
-  -- 5 essiz icerik, ama her biri 2-3 duplicate var (production paterni simule)
-  ('22test-q1a', 'matematik', '22-test-cat', 2, '{"question":"q1","options":["a","b","c","d"],"answer":"a"}'::jsonb, TRUE),
-  ('22test-q1b', 'matematik', '22-test-cat', 2, '{"question":"q1","options":["a","b","c","d"],"answer":"a"}'::jsonb, TRUE),
-  ('22test-q1c', 'matematik', '22-test-cat', 2, '{"question":"q1","options":["a","b","c","d"],"answer":"a"}'::jsonb, TRUE),
-  ('22test-q2a', 'matematik', '22-test-cat', 2, '{"question":"q2","options":["a","b","c","d"],"answer":"b"}'::jsonb, TRUE),
-  ('22test-q2b', 'matematik', '22-test-cat', 2, '{"question":"q2","options":["a","b","c","d"],"answer":"b"}'::jsonb, TRUE),
-  ('22test-q3a', 'matematik', '22-test-cat', 2, '{"question":"q3","options":["a","b","c","d"],"answer":"c"}'::jsonb, TRUE),
-  ('22test-q3b', 'matematik', '22-test-cat', 2, '{"question":"q3","options":["a","b","c","d"],"answer":"c"}'::jsonb, TRUE),
-  ('22test-q4',  'matematik', '22-test-cat', 2, '{"question":"q4","options":["a","b","c","d"],"answer":"d"}'::jsonb, TRUE),
-  ('22test-q5a', 'matematik', '22-test-cat', 2, '{"question":"q5","options":["a","b","c","d"],"answer":"a"}'::jsonb, TRUE),
-  ('22test-q5b', 'matematik', '22-test-cat', 2, '{"question":"q5","options":["a","b","c","d"],"answer":"a"}'::jsonb, TRUE);
+  -- 5 essiz icerik, ama her biri 2-3 duplicate var (production paterni simule).
+  -- 24_questions_duplicate_cleanup aktif sorularda (game, category, question)
+  -- tekilligini zorunlu kildi; ayni kategoride ayni metin artik yalniz farkli
+  -- game ile var olabilir. DISTINCT ON (content->>'question') game'e bakmadigi
+  -- icin bu kopyalari ayiklamak hala onun isi. answer canli formatta: 0 tabanli
+  -- secenek indeksi (_shuffle_question_options ::INT cevirir).
+  ('22test-q1a', 'matematik', '22-test-cat', 2, '{"question":"q1","options":["a","b","c","d"],"answer":0}'::jsonb, TRUE),
+  ('22test-q1b', 'fen', '22-test-cat', 2, '{"question":"q1","options":["a","b","c","d"],"answer":0}'::jsonb, TRUE),
+  ('22test-q1c', 'sosyal', '22-test-cat', 2, '{"question":"q1","options":["a","b","c","d"],"answer":0}'::jsonb, TRUE),
+  ('22test-q2a', 'matematik', '22-test-cat', 2, '{"question":"q2","options":["a","b","c","d"],"answer":1}'::jsonb, TRUE),
+  ('22test-q2b', 'fen', '22-test-cat', 2, '{"question":"q2","options":["a","b","c","d"],"answer":1}'::jsonb, TRUE),
+  ('22test-q3a', 'matematik', '22-test-cat', 2, '{"question":"q3","options":["a","b","c","d"],"answer":2}'::jsonb, TRUE),
+  ('22test-q3b', 'fen', '22-test-cat', 2, '{"question":"q3","options":["a","b","c","d"],"answer":2}'::jsonb, TRUE),
+  ('22test-q4',  'matematik', '22-test-cat', 2, '{"question":"q4","options":["a","b","c","d"],"answer":3}'::jsonb, TRUE),
+  ('22test-q5a', 'matematik', '22-test-cat', 2, '{"question":"q5","options":["a","b","c","d"],"answer":0}'::jsonb, TRUE),
+  ('22test-q5b', 'fen', '22-test-cat', 2, '{"question":"q5","options":["a","b","c","d"],"answer":0}'::jsonb, TRUE);
 -- Total 10 satir, 5 essiz icerik (q1-q5)
 
 -- Test oda

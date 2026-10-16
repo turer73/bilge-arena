@@ -89,9 +89,15 @@ BEGIN
 END $$;
 
 -- 3) Toplam policy sayisi >=12 (6 tablo, ortalama 2 policy/tablo)
+-- 26_rooms_acl_hardening sonrasi yazma politikalari bilerek kaldirilir
+-- (yazma yalniz RPC); esik 7'ye iner. 26'nin isareti can_view_room_round.
 DO $$
 DECLARE
   total_policies INT;
+  min_expected INT := CASE
+    WHEN to_regprocedure('public.can_view_room_round(uuid,smallint)') IS NOT NULL THEN 7
+    ELSE 12
+  END;
 BEGIN
   SELECT count(*) INTO total_policies
   FROM pg_policies
@@ -100,10 +106,10 @@ BEGIN
       'rooms', 'room_members', 'room_rounds',
       'room_answers', 'room_reactions', 'room_audit_log'
     );
-  IF total_policies < 12 THEN
-    RAISE EXCEPTION 'ASSERT FAILED: only % policies on oda tables, expected >=12', total_policies;
+  IF total_policies < min_expected THEN
+    RAISE EXCEPTION 'ASSERT FAILED: only % policies on oda tables, expected >=%', total_policies, min_expected;
   END IF;
-  RAISE NOTICE 'OK: % total policies on oda tables', total_policies;
+  RAISE NOTICE 'OK: % total policies on oda tables (>=%)', total_policies, min_expected;
 END $$;
 
 -- 4) Critical anti-cheat policy: room_answers SELECT predicate icinde
@@ -129,15 +135,31 @@ END $$;
 
 -- 5) INSERT policies user_id = auth.uid() pattern'i (kullanici kendi adina
 -- yazabilir, baskasi adina yazamaz)
+-- 26_rooms_acl_hardening sonrasi room_members/room_answers'a dogrudan INSERT
+-- yok (join_room / submit_answer*); onlar icin politika VE yetki yoklugu
+-- dogrulanir, room_reactions eski kurala tabi kalir.
 DO $$
 DECLARE
   tbl TEXT;
   has_insert_policy BOOLEAN;
   with_check_text TEXT;
+  v_hardened BOOLEAN := to_regprocedure('public.can_view_room_round(uuid,smallint)') IS NOT NULL;
 BEGIN
-  FOR tbl IN SELECT unnest(ARRAY[
-    'room_members', 'room_answers', 'room_reactions'
-  ])
+  IF v_hardened THEN
+    FOR tbl IN SELECT unnest(ARRAY['room_members', 'room_answers']) LOOP
+      IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+                 AND tablename = tbl AND cmd IN ('INSERT', 'ALL'))
+         OR has_any_column_privilege('authenticated', 'public.' || tbl, 'INSERT') THEN
+        RAISE EXCEPTION 'ASSERT FAILED: public.% dogrudan INSERT acik (26 sonrasi yalniz RPC)', tbl;
+      END IF;
+      RAISE NOTICE 'OK: public.% dogrudan INSERT kapali (26, yalniz RPC)', tbl;
+    END LOOP;
+  END IF;
+
+  FOR tbl IN SELECT unnest(
+    CASE WHEN v_hardened THEN ARRAY['room_reactions']
+         ELSE ARRAY['room_members', 'room_answers', 'room_reactions'] END
+  )
   LOOP
     SELECT count(*) > 0, MAX(with_check) INTO has_insert_policy, with_check_text
     FROM pg_policies
