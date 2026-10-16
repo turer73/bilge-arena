@@ -18,7 +18,16 @@ vi.mock('@/lib/constants/premium', () => ({
   FEATURES: featureState,
   FREE_DAILY_LIMIT: 5,
 }))
-vi.mock('@/lib/questions/attempt-store', () => ({ getFirstQuestionAttempt: mockGetFirstAttempt }))
+// The route reads every snapshot question's first grade in one MGET; tests set
+// the per-question answer through mockGetFirstAttempt.
+vi.mock('@/lib/questions/attempt-store', () => ({
+  getFirstQuestionAttempts: async (actorKey: string, questionIds: readonly string[]) => new Map(
+    await Promise.all(questionIds.map(async (questionId) => [
+      questionId,
+      (await mockGetFirstAttempt(actorKey, questionId)) ?? null,
+    ] as const)),
+  ),
+}))
 vi.mock('@/lib/verified-attempts', () => ({
   readVerifiedAttemptQuestionSnapshots: mockReadSnapshots,
 }))
@@ -304,7 +313,7 @@ describe('POST /api/sessions', () => {
 
   it('session payload ilk grade seçimini değiştiremez', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockGetFirstAttempt.mockResolvedValue(0)
+    mockGetFirstAttempt.mockImplementation(async (_actor: string, id: string) => id === Q1 ? 0 : null)
 
     const res = await POST(makeRequest({
       attemptId: ATTEMPT_ID,
@@ -318,6 +327,64 @@ describe('POST /api/sessions', () => {
     expect((await res.json()).totalXP).toBe(0)
     expect(mockRpc).toHaveBeenCalledWith('complete_verified_game_session', expect.objectContaining({
       p_answers: [expect.objectContaining({ selected_option: 0, is_correct: false })],
+    }))
+  })
+
+  it('notlanmış ama gönderilmemiş yanlış cevabı ilk seçimiyle oturuma katar', async () => {
+    // Q1 doğru (1), Q2 yanlış (0) notlandı; istemci yalnız Q1'i gönderiyor.
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const res = await POST(makeRequest({ ...validBody, answers: [validBody.answers[0]] }))
+
+    expect(res.status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('complete_verified_game_session', expect.objectContaining({
+      p_correct_count: 1,
+      p_wrong_count: 1,
+      p_total_xp: 20,
+      p_answers: [
+        expect.objectContaining({ question_id: Q1, selected_option: 1, is_correct: true }),
+        expect.objectContaining({
+          question_id: Q2, selected_option: 0, is_correct: false, is_skipped: false,
+          time_taken_sec: 0, is_fast: false, xp_earned: 0, question_order: 1,
+        }),
+      ],
+    }))
+  })
+
+  it('yanlışı göndermeyen istemci seri bonusu kazanamaz', async () => {
+    // 6 soru, 3. yanlış. Yanlışı atlayan gönderimde 5'lik seri ve +10 bonus
+    // oluşurdu; ilk seçimler sunucuda okunduğu için seri 3. soruda kırılır.
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const snapshots = Array.from({ length: 6 }, (_, index) => ({
+      position: index + 1,
+      questionId: `10000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      correctOption: 1,
+      metadata: { game: 'matematik', category: 'cebir', difficulty: 2, basePoints: 20 },
+    }))
+    mockReadSnapshots.mockResolvedValue(snapshots)
+    mockGetFirstAttempt.mockImplementation(async (_actor: string, id: string) => id === snapshots[2].questionId ? 0 : 1)
+
+    await POST(makeRequest({
+      ...validBody,
+      answers: snapshots
+        .filter((_, index) => index !== 2)
+        .map(s => ({ questionId: s.questionId, selectedOption: 1, isCorrect: true, timeTaken: 5 })),
+    }))
+
+    expect(mockRpc).toHaveBeenCalledWith('complete_verified_game_session', expect.objectContaining({
+      p_total_xp: 100, p_correct_count: 5, p_wrong_count: 1,
+    }))
+  })
+
+  it('notlanmamış ve gönderilmemiş soruyu oturuma katmaz (erken bitiş)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockGetFirstAttempt.mockImplementation(async (_actor: string, id: string) => id === Q1 ? 1 : null)
+
+    await POST(makeRequest({ ...validBody, answers: [validBody.answers[0]] }))
+
+    expect(mockRpc).toHaveBeenCalledWith('complete_verified_game_session', expect.objectContaining({
+      p_correct_count: 1,
+      p_wrong_count: 0,
+      p_answers: [expect.objectContaining({ question_id: Q1 })],
     }))
   })
 
@@ -410,6 +477,7 @@ describe('POST /api/sessions', () => {
 
   it('deneme gerçek soru süresini korur ve süre bonusu üretmez', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockGetFirstAttempt.mockImplementation(async (_actor: string, id: string) => id === Q1 ? 1 : null)
     const res = await POST(makeRequest({
       attemptId: ATTEMPT_ID,
       game: 'matematik',
