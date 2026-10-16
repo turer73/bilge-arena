@@ -135,7 +135,10 @@ describe('TeacherClassroomPanel', () => {
     const user = userEvent.setup()
     render(<TeacherClassroomPanel />)
 
-    expect(await screen.findByRole('heading', { name: '12-A Matematik' })).toBeInTheDocument()
+    // Baslik iki ardisik yuklemeden sonra gelir (sinif listesi -> secili sinifin ozeti),
+    // her biri ayri bir render turu. Bosta ~0,2 sn; tam paket yukunde RTL'nin 1 sn
+    // varsayilanini asti, bu yuzden bu bekleme test butcesi icinde genisletildi.
+    expect(await screen.findByRole('heading', { name: '12-A Matematik' }, { timeout: 4_000 })).toBeInTheDocument()
     expect(screen.getAllByText('Öğrenci 7').length).toBeGreaterThan(0)
     expect(screen.getByText('2 yanıt · 1 doğru')).toBeInTheDocument()
     expect(screen.getByText(/1 geçmiş\/gizli üyelik kimliği/i)).toBeInTheDocument()
@@ -154,7 +157,9 @@ describe('TeacherClassroomPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Davet oluştur' }))
     expect(await screen.findByText(new RegExp(TOKEN))).toBeInTheDocument()
 
-    await user.type(screen.getByLabelText('Ödev başlığı'), 'Yeni kesir ödevi')
+    // Tus tus yazma her tusta paneli yeniden cizer (testin ~%45'i); yapistirma ayni onChange'i tetikler.
+    await user.click(screen.getByLabelText('Ödev başlığı'))
+    await user.paste('Yeni kesir ödevi')
     await user.click(screen.getByRole('button', { name: 'Aktif öğrencilere yayımla' }))
     await waitFor(() => expect(clientMocks.publishAssignment).toHaveBeenCalledTimes(1))
 
