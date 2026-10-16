@@ -31,6 +31,8 @@ npm run test:db             # ayrı veritabanı sözleşme testleri
 npm run build
 ```
 
+`npm run test:db` PostgreSQL gerektiren dosyaları atlar. Bu dosyalar CI'da gerçek PostgreSQL 16'ya karşı, [scripts/security/postgres-ci-suites.mjs](scripts/security/postgres-ci-suites.mjs) içindeki takımlar hâlinde koşar; `node scripts/security/run-postgres-ci-suite.mjs <takım>` atlanan, eksik ya da boş dosya içeren raporu reddeder. Yeni bir PostgreSQL test dosyasını bir takıma eklemeden Test işi geçmez (`verify-db-skip-coverage.mjs`). Yerelde bir takımı koşmak için ilgili `*_TEST_DATABASE_URL` ve `*_TEST_DATABASE_DISPOSABLE=1` değişkenlerini **tek kullanımlık** bir veritabanına yöneltin; testler public şemasını siler.
+
 Tarayıcı smoke testleri için önce `npx playwright install chromium` çalıştırın ve `.env.local` içinde geçerli Supabase public değerlerini sağlayın. CI, service-role gerektirmeyen senaryolarla sınırlı şu komutu çalıştırır:
 
 ```bash

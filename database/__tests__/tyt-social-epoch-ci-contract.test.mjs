@@ -4,13 +4,14 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { spawnSync } from 'node:child_process'
-import {
-  EXPECTED_TYT_SOCIAL_EPOCH_TESTS,
-  TYT_SOCIAL_EPOCH_TEST_FILE,
-  verifyTytSocialEpochCiReport,
-} from '../../scripts/security/verify-tyt-social-epoch-ci-result.mjs'
+import { POSTGRES_CI_SUITES } from '../../scripts/security/postgres-ci-suites.mjs'
+import { verifyPostgresCiSuiteReport } from '../../scripts/security/verify-postgres-ci-result.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
+// TYT epoch kapisi artik genel PostgreSQL CI kapisinin bir takimidir.
+const TYT_SOCIAL_EPOCH_TEST_FILE = 'database/__tests__/tyt-social-selection-epoch-postgres.integration.test.mjs'
+const verifyTytSocialEpochCiReport = (report) => verifyPostgresCiSuiteReport('tyt-social-epoch', report, root)
+const verifierCli = join(root, 'scripts', 'security', 'verify-postgres-ci-result.mjs')
 const workflow = readFileSync(join(root, '.github', 'workflows', 'ci.yml'), 'utf8').replace(/\r\n/g, '\n')
 
 const assertion = (index, overrides = {}) => ({
@@ -42,8 +43,8 @@ const validReport = () => ({
 
 describe('TYT social epoch CI result contract', () => {
   it('accepts the real-shape 18/18 report and returns the bounded summary', () => {
-    expect(EXPECTED_TYT_SOCIAL_EPOCH_TESTS).toBe(18)
-    expect(verifyTytSocialEpochCiReport(validReport())).toEqual({ passed: 18, skipped: 0 })
+    expect(POSTGRES_CI_SUITES['tyt-social-epoch'].expectedTests).toBe(18)
+    expect(verifyTytSocialEpochCiReport(validReport())).toEqual({ files: 1, passed: 18, skipped: 0 })
   })
 
   it.each([
@@ -80,9 +81,23 @@ describe('TYT social epoch CI result contract', () => {
     expect(() => verifyTytSocialEpochCiReport(report)).toThrow(/failed|incomplete|skipped/i)
   })
 
+  it('rejects 17 or 19 passing tests because the suite pins exactly 18', () => {
+    for (const count of [17, 19]) {
+      const report = validReport()
+      report.numTotalTests = count
+      report.numPassedTests = count
+      report.testResults[0].assertionResults = Array.from({ length: count }, (_, index) => assertion(index))
+      expect(() => verifyTytSocialEpochCiReport(report)).toThrow(/failed|incomplete|skipped/i)
+    }
+  })
+
   it('keeps the verifier bound to the exact integration test file', () => {
-    expect(TYT_SOCIAL_EPOCH_TEST_FILE)
-      .toBe('database/__tests__/tyt-social-selection-epoch-postgres.integration.test.mjs')
+    expect(POSTGRES_CI_SUITES['tyt-social-epoch']).toMatchObject({
+      job: 'tyt-social-epoch-postgres',
+      runner: 'vitest',
+      maxWorkers: 1,
+      files: [TYT_SOCIAL_EPOCH_TEST_FILE],
+    })
   })
 
   it('requires an enabled, non-optional CI job and a build dependency', () => {
@@ -96,8 +111,7 @@ describe('TYT social epoch CI result contract', () => {
     expect(job).toMatch(/baseUrl\s*=\s*['"]postgresql:\/\/postgres:postgres@127\.0\.0\.1:\d+\//i)
     expect(job).toMatch(/server_version_num[\s\S]*?version < 160000[\s\S]*?version >= 170000/i)
     expect(job).toMatch(/appendFileSync\(process\.env\.GITHUB_ENV,\s*`TYT_SOCIAL_EPOCH_TEST_DATABASE_URL=\$\{baseUrl\}\$\{database\}\\n`\)/i)
-    expect(job).toMatch(/node node_modules\/vitest\/vitest\.mjs run[\s\S]*?tyt-social-selection-epoch-postgres\.integration\.test\.mjs/i)
-    expect(job).toMatch(/verify-tyt-social-epoch-ci-result\.mjs\s+"\$RUNNER_TEMP\/tyt-social-epoch-acceptance\.json"/i)
+    expect(job).toMatch(/run:\s*node scripts\/security\/run-postgres-ci-suite\.mjs tyt-social-epoch\n/)
     expect(workflow).toMatch(/build:\n[\s\S]*?needs:\s*\[[^\]]*tyt-social-epoch-postgres[^\]]*\]/i)
   })
 
@@ -106,11 +120,11 @@ describe('TYT social epoch CI result contract', () => {
     expect(build).toBeTruthy()
     expect(build).toMatch(/if:\s*\$\{\{\s*!cancelled\(\)\s*\}\}/)
     expect(build).toMatch(/- name: Require successful CI dependencies[\s\S]*?shell:\s*bash[\s\S]*?DEPENDENCY_RESULTS:\s*\$\{\{\s*join\(needs\.\*\.result,\s*['"]?,['"]?\s*\)\s*\}\}/i)
-    expect(build).toMatch(/if \[ "\$DEPENDENCY_RESULTS" != "success,success,success,success,success,success,success" \]/)
+    expect(build).toMatch(/if \[ "\$DEPENDENCY_RESULTS" != "success,success,success,success,success,success,success,success" \]/)
     const needs = build.match(/needs:\s*\[([^\]]+)\]/i)?.[1]
       ?.split(',').map((value) => value.trim()).filter(Boolean).sort()
     expect(needs).toEqual([
-      'institution-pilot-postgres', 'lint', 'postgrest-contract',
+      'institution-pilot-postgres', 'learning-reward-postgres', 'lint', 'postgrest-contract',
       'question-quality-postgres', 'test', 'type-check', 'tyt-social-epoch-postgres',
     ])
 
@@ -124,7 +138,7 @@ describe('TYT social epoch CI result contract', () => {
       ?.split('\n').map((line) => line.replace(/^          /, '')).join('\n')
     expect(guard).toBeTruthy()
     for (const value of [
-      'success,success,success,success,success,success,success',
+      'success,success,success,success,success,success,success,success',
     ]) {
       expect(spawnSync(bashPath, ['--noprofile', '--norc', '-e', '-s'], {
         input: guard,
@@ -135,13 +149,13 @@ describe('TYT social epoch CI result contract', () => {
       }).status).toBe(0)
     }
     for (const value of [
-      'success,success,success,success,success,success,skipped',
-      'success,success,success,success,success,success,failure',
-      'success,success,success,success,success,success,cancelled',
-      'success,success,success,success,success,success',
+      'success,success,success,success,success,success,success,skipped',
+      'success,success,success,success,success,success,success,failure',
+      'success,success,success,success,success,success,success,cancelled',
+      'success,success,success,success,success,success,success',
       '',
-      'success,success,success,success,success,success,unknown',
-      'success,failure,success,success,success,success,success',
+      'success,success,success,success,success,success,success,unknown',
+      'success,failure,success,success,success,success,success,success',
     ]) {
       expect(spawnSync(bashPath, ['--noprofile', '--norc', '-e', '-s'], {
         input: guard,
@@ -160,22 +174,17 @@ describe('TYT social epoch CI result contract', () => {
     const directory = mkdtempSync(join(tmpdir(), 'tyt-social-epoch-contract-'))
     const reportPath = join(directory, 'report.json')
     if (contents !== undefined) writeFileSync(reportPath, contents, 'utf8')
-    const result = spawnSync(process.execPath, [
-      join(root, 'scripts', 'security', 'verify-tyt-social-epoch-ci-result.mjs'),
-      reportPath,
-    ], { encoding: 'utf8' })
+    const result = spawnSync(process.execPath, [verifierCli, 'tyt-social-epoch', reportPath], { encoding: 'utf8' })
     if (contents !== undefined) rmSync(reportPath, { force: true })
     expect(result.status).toBe(1)
   })
 
   it.each([
     ['zero arguments', []],
-    ['nonexistent report path', ['does-not-exist.json']],
+    ['nonexistent report path', ['tyt-social-epoch', 'does-not-exist.json']],
+    ['unknown suite id', ['not-a-suite', 'does-not-exist.json']],
   ])('CLI exits 1 for %s', (_label, args) => {
-    const result = spawnSync(process.execPath, [
-      join(root, 'scripts', 'security', 'verify-tyt-social-epoch-ci-result.mjs'),
-      ...args,
-    ], { encoding: 'utf8' })
+    const result = spawnSync(process.execPath, [verifierCli, ...args], { encoding: 'utf8' })
     expect(result.status).toBe(1)
   })
 
@@ -183,10 +192,7 @@ describe('TYT social epoch CI result contract', () => {
     const directory = mkdtempSync(join(tmpdir(), 'tyt-social-epoch-contract-'))
     const reportPath = join(directory, 'report.json')
     writeFileSync(reportPath, JSON.stringify(validReport()), 'utf8')
-    const result = spawnSync(process.execPath, [
-      join(root, 'scripts', 'security', 'verify-tyt-social-epoch-ci-result.mjs'),
-      reportPath,
-    ], { encoding: 'utf8' })
+    const result = spawnSync(process.execPath, [verifierCli, 'tyt-social-epoch', reportPath], { encoding: 'utf8' })
     rmSync(reportPath, { force: true })
     expect(result.status).toBe(0)
   })
