@@ -101,13 +101,16 @@ describe('DeleteAccountSection', () => {
   it('sends the guarded payload once and reports partial data-erasure truthfully', async () => {
     render(<DeleteAccountSection userId="user-1" />)
     openDialog(); confirm(); fireEvent.click(deleteButton())
-    await screen.findByRole('heading', { name: 'Hesabın kapatıldı' })
+    const heading = await screen.findByRole('heading', { name: 'Hesabın kapatıldı' })
     expect(fetchMock).toHaveBeenCalledExactlyOnceWith('/api/account/delete', expect.objectContaining({
       method: 'POST', credentials: 'same-origin', cache: 'no-store',
       body: JSON.stringify({ confirmation: ACCOUNT_DELETION_CONFIRMATION, acknowledged: true, expectedUserId: 'user-1' }),
     }))
     expect(screen.getByRole('status')).toHaveTextContent('tüm verilerinin silinmesi henüz tamamlanmış değildir')
-    expect(screen.getByRole('heading', { name: 'Hesabın kapatıldı' })).toHaveFocus()
+    // Odak basliga pasif efektte tasinir; findBy basligi commit aninda bulur, efekt sonraki
+    // zamanlayici turunda kosar. Surec >=1 ms bekletilirse (yuk) RTL'nin setTimeout(0)
+    // bosaltmasi efektten once doner ve odak body'de gorunur. Beklenen sinyal odagin kendisi.
+    await waitFor(() => expect(heading).toHaveFocus())
     expect(screen.getByRole('link', { name: 'iletisim@bilgearena.com' })).toHaveAttribute('href', 'mailto:iletisim@bilgearena.com')
     expect(screen.getByRole('link', { name: 'Giriş sayfasına dön' })).toHaveAttribute('href', '/giris?deleted=1')
     fireEvent(screen.getByRole('dialog'), new Event('cancel', { cancelable: true }))

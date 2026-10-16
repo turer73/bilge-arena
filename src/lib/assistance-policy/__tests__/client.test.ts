@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// .ts testleri varsayilan olarak node ortaminda kosar; bu dosya renderHook.
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 
