@@ -22,6 +22,9 @@ vi.mock('@/components/study/today-plan-focus', () => ({
   },
 }))
 
+// Genis ekran gorunumu next/dynamic ile tembel yuklenir. Modul agaci dosya toplanirken
+// yuklenmezse ilk donusum/yukleme maliyeti, yuk altinda findBy'nin 1 sn penceresine duser.
+import '@/components/academy/desktop-study-home'
 import { MobileHomeDemo } from '../mobile-home-demo'
 
 beforeEach(() => {

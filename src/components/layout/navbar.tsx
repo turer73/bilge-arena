@@ -42,13 +42,23 @@ const NAV_LINKS = [
   { href: '/hakkinda', label: 'Hakkında' },
 ]
 
-export function Navbar() {
+interface NavbarProps {
+  /**
+   * Ana sayfa varyantı sayfadan gelir, usePathname'den çıkarılmaz: ISR
+   * yeniden üretimi kök sayfayı `/index` yoluyla çizer, istemci ise `/`
+   * görür. Yol tabanlı her dal sunucu ile istemcide ayrışır (React #418).
+   */
+  variant?: 'home'
+}
+
+export function Navbar({ variant }: NavbarProps = {}) {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [institutionPanelVisible, setInstitutionPanelVisible] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const pathname = usePathname()
+  const routerPathname = usePathname()
+  const pathname = variant === 'home' ? '/' : routerPathname
   const wide = useWideStudy()
   const academyArea = pathname === '/arena' || pathname === '/arena/calisma' || pathname === '/arena/kisisellestir' || pathname === '/oda' || pathname.startsWith('/oda/') || (wide && WIDE_ACADEMY_ROUTES.has(pathname))
   const academyMarketingRoute = pathname === '/nasil-calisir' || pathname === '/hakkinda' || pathname === '/kurumlar'
@@ -87,7 +97,7 @@ export function Navbar() {
   useEffect(() => {
     setMobileOpen(false)
     setDropdownOpen(false)
-  }, [pathname])
+  }, [routerPathname])
 
   useEffect(() => {
     const controller = new AbortController()

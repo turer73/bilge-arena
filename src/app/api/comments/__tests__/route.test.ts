@@ -167,7 +167,7 @@ describe('GET /api/comments', () => {
     expect(mockCommentsSelect).toHaveBeenCalledWith('id, content, likes_count, created_at, user_id')
   })
 
-  it('loads each author profile once and skips comments whose author has no profile', async () => {
+  it('loads each author profile once and keeps profile-less authors as anonymous', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
     mockCommentsList.mockResolvedValue({
       data: [
@@ -185,7 +185,9 @@ describe('GET /api/comments', () => {
     const res = await GET(makeGet(VALID_UUID) as never)
     const body = await res.json()
     expect(mockProfilesIn).toHaveBeenCalledWith('id', ['u-ali', 'u-no-profile'])
-    expect(body.comments.map((c: { id: string }) => c.id)).toEqual(['c1', 'c2'])
+    // Düşürmek limit(50)'den sonra çalışırdı; eski, profilli yorumları da listeden atardı.
+    expect(body.comments.map((c: { id: string }) => c.id)).toEqual(['c1', 'c2', 'c3'])
+    expect(body.comments[2].profile).toEqual({ username: null, display_name: null, avatar_url: null, level_name: null })
   })
 
   it('does not query profiles when the question has no comments', async () => {

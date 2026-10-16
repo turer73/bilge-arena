@@ -122,7 +122,7 @@ START=$SECONDS
 log "rooms-retention basliyor"
 
 # psql -t (tuples-only) -A (unaligned) -> sadece sayinin kendisi cikar
-ROWS=$(printf '%s' "$SQL" | docker exec -i panola-postgres psql \
+ROWS=$(printf '%s' "$SQL" | docker exec -i bilge-arena-db psql \
     -v ON_ERROR_STOP=on \
     -U bilge_arena_app -d bilge_arena_dev \
     -t -A 2>>"$LOG_FILE") \

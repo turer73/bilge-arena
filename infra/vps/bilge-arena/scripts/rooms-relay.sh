@@ -62,14 +62,14 @@ START_TS=$(date +%s)
 log "auto_relay_tick basladi"
 
 # Container kontrol
-if ! docker ps --format '{{.Names}}' | grep -q '^panola-postgres$'; then
-  fail "panola-postgres container calismiyor"
+if ! docker ps --format '{{.Names}}' | grep -q '^bilge-arena-db$'; then
+  fail "bilge-arena-db container calismiyor"
 fi
 
 # Function call - returns count of operations
 SQL='SELECT public.auto_relay_tick() AS ops_count;'
 
-COUNT=$(printf '%s' "$SQL" | docker exec -i panola-postgres psql \
+COUNT=$(printf '%s' "$SQL" | docker exec -i bilge-arena-db psql \
     -v ON_ERROR_STOP=on \
     -U bilge_arena_app -d bilge_arena_dev \
     -t -A 2>>"$LOG_FILE") \
