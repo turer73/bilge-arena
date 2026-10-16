@@ -87,7 +87,7 @@ describe('PostgREST contract CI result contract', () => {
 
   it('discovers the contract files that live in src', () => {
     const found = findPostgrestContractFiles(root)
-    expect(found.length).toBeGreaterThanOrEqual(8)
+    expect(found.length).toBeGreaterThanOrEqual(13)
     expect(found.every((file) => file.startsWith('src/') && file.endsWith(POSTGREST_CONTRACT_SUFFIX))).toBe(true)
     expect(found).toContain('src/app/api/comments/__tests__/route.postgrest.test.ts')
     for (const file of found) {
