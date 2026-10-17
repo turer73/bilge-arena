@@ -29,6 +29,23 @@ describe('cozumlu soru kontrati', () => {
     expect(getCozumluSoru('boyle-bir-soru-yok')).toBeUndefined()
   })
 
+  it('hiz problemi formulleri ve ornekleri sayisal olarak tutarli', () => {
+    const s = getCozumluSoru('tyt-matematik-hiz-problemi-karsilasma')
+    expect(s?.correctAnswer).toBe('C) 4 saat')
+    expect(480 / (70 + 50)).toBe(4)
+    expect(s?.steps.at(-1)).toContain('280 + 200 = 480')
+    expect(s?.formulas?.map((f) => f.formula)).toEqual([
+      't = x / (V₁ + V₂)',
+      't = x / (V₁ − V₂)',
+      'x = (V₁ + V₂) × t',
+    ])
+    const overtake = s?.examples?.[0]
+    expect(60 / (90 - 60)).toBe(2)
+    expect(overtake?.answer).toBe('2 saat')
+    expect(s?.seoTitle?.length ?? 0).toBeLessThanOrEqual(60)
+    expect(s?.question).not.toContain('karşılaşışır')
+  })
+
   it('yüzde kâr-zarar çözümünde indirim sonrası kârı doğru hesaplar', () => {
     const question = getCozumluSoru('tyt-matematik-yuzde-kar-zarar')
     expect(question?.correctAnswer).toBe('A) 36 TL')
