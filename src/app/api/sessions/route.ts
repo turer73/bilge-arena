@@ -6,7 +6,7 @@ import { sessionSubmitSchema } from '@/lib/validations/schemas'
 import { FEATURES, FREE_DAILY_LIMIT } from '@/lib/constants/premium'
 import { trDayStartUtcISO } from '@/lib/utils/tr-date'
 import { z } from 'zod'
-import { getFirstQuestionAttempt } from '@/lib/questions/attempt-store'
+import { getFirstQuestionAttempts } from '@/lib/questions/attempt-store'
 import { readVerifiedAttemptQuestionSnapshots } from '@/lib/verified-attempts'
 
 // Replay korumasi: kullanici basina dk'da max 3 oturum
@@ -132,17 +132,30 @@ export async function POST(request: Request) {
   if (submittedAnswers.some(answer => !snapshotMap.has(answer.questionId))) {
     return NextResponse.json({ error: 'Sorular bulunamadi' }, { status: 400 })
   }
+  // Denemedeki HER sorunun ilk seçimi okunur, yalnız istemcinin gönderdikleri
+  // değil. Notlanmış ama gönderilmemiş soru ilk seçimiyle oturuma girer; aksi
+  // halde istemci yanlışlarını göndermeyerek doğruluğu, seri bonusunu, görev
+  // ilerlemesini ve FSRS kaydını şişirebilirdi (derin inceleme 2026-10-15 §4.2).
+  const acceptedAttempts = await getFirstQuestionAttempts(
+    `attempt:${attemptId}:user:${user.id}`,
+    snapshots.map(snapshot => snapshot.questionId),
+  )
+  const submittedIds = new Set(submittedAnswers.map(answer => answer.questionId))
+  const scoredAnswers = [
+    ...submittedAnswers.map(answer => ({
+      questionId: answer.questionId,
+      timeTaken: answer.timeTaken,
+      submitted: true,
+    })),
+    ...snapshots
+      .filter(snapshot => !submittedIds.has(snapshot.questionId)
+        && acceptedAttempts.get(snapshot.questionId) != null)
+      .map(snapshot => ({ questionId: snapshot.questionId, timeTaken: 0, submitted: false })),
+  ]
   // Streak XP has one server-canonical order: immutable issuance position.
-  const answers = [...submittedAnswers].sort((left, right) => (
+  const answers = scoredAnswers.sort((left, right) => (
     (snapshotMap.get(left.questionId)?.position ?? 101)
     - (snapshotMap.get(right.questionId)?.position ?? 101)
-  ))
-  const questionIds = answers.map(answer => answer.questionId)
-  const acceptedAttempts = new Map(await Promise.all(
-    questionIds.map(async (questionId) => [
-      questionId,
-      await getFirstQuestionAttempt(`attempt:${attemptId}:user:${user.id}`, questionId),
-    ] as const),
   ))
 
   // Server-side XP hesaplama
@@ -153,12 +166,7 @@ export async function POST(request: Request) {
   let wrongCount = 0
   let totalTime = 0
 
-  const verifiedAnswers = answers.map((a: {
-    questionId: string
-    selectedOption: number
-    isCorrect: boolean
-    timeTaken: number
-  }) => {
+  const verifiedAnswers = answers.map((a) => {
     const snapshot = snapshotMap.get(a.questionId)
     if (!snapshot) return null
     const correctIndex = snapshot.correctOption
@@ -196,13 +204,15 @@ export async function POST(request: Request) {
       is_correct: isActuallyCorrect,
       is_skipped: acceptedOption < 0,
       time_taken_sec: Math.round(safeTimeTaken * 10) / 10,
-      is_fast: safeTimeTaken < 10,
+      // Gönderilmeyen sorunun süresi bilinmiyor; hızlı sayılmaz.
+      is_fast: a.submitted && safeTimeTaken < 10,
       xp_earned: xpEarned,
       question_order: snapshot.position - 1,
     }
   }).filter((a): a is NonNullable<typeof a> => a !== null)
 
-  const avgTime = answers.length > 0 ? totalTime / answers.length : 0
+  const timedAnswers = answers.filter(answer => answer.submitted).length
+  const avgTime = timedAnswers > 0 ? totalTime / timedAnswers : 0
   // Integer arithmetic matches PostgreSQL floor(total_xp::numeric * 0.7).
   // Multiplying by 0.7 first makes e.g. 360 become 251.99999999999997.
   const baseXP = Math.floor((totalXP * 7) / 10)

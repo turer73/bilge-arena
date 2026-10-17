@@ -70,3 +70,28 @@ export async function getFirstQuestionAttempt(
   }
   return readMemory(key)
 }
+
+/**
+ * Bir aktörün birden çok sorudaki ilk seçimlerini tek Redis turunda (MGET)
+ * okur. Notlanmamış soru `null` döner.
+ */
+export async function getFirstQuestionAttempts(
+  actorKey: string,
+  questionIds: readonly string[],
+): Promise<Map<string, number | null>> {
+  const attempts = new Map<string, number | null>()
+  if (questionIds.length === 0) return attempts
+  const keys = questionIds.map(questionId => attemptKey(actorKey, questionId))
+  const client = getRedis()
+  if (client) {
+    const stored = await client.mget<(number | string | null)[]>(...keys)
+    questionIds.forEach((questionId, index) => {
+      const value = stored[index]
+      const parsed = value === null || value === undefined ? Number.NaN : Number(value)
+      attempts.set(questionId, Number.isInteger(parsed) ? parsed : null)
+    })
+    return attempts
+  }
+  questionIds.forEach((questionId, index) => attempts.set(questionId, readMemory(keys[index])))
+  return attempts
+}

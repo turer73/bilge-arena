@@ -22,6 +22,7 @@ import {
 } from '@/lib/coach/hints'
 import { coachPublicResponseSchema } from '@/lib/coach/public-contract'
 import { toDomainQuestion, toPublicQuestion, type QuestionRow as PublicQuestionRow } from '@/lib/utils/question-public'
+import { recordFirstQuestionAttempt } from '@/lib/questions/attempt-store'
 
 const userLimiter = createRateLimiter('coach-hint-user', 20, 60_000)
 const ipLimiter = createRateLimiter('coach-hint-ip', 40, 60_000)
@@ -425,6 +426,28 @@ export async function POST(request: Request) {
   let sessionId: string
   let initialSelectedOption: number
   if (stage === 'hint1') {
+    // Koç'ta işaretlenen ilk deneme, notlamanın ilk seçim kilidine yazılır
+    // (grade route ile aynı aktör anahtarı). Önceden bu seçim kilide değmiyordu:
+    // öğrenci ipuçlarını ve çözümü gördükten sonra doğru şıkkı "ilk seçim"
+    // olarak notlatıp XP alabiliyordu (derin inceleme 2026-10-15 §4.2). Soru
+    // zaten notlandıysa Koç yalnız o ilk seçimle başlayabilir.
+    let firstChoice: number
+    try {
+      firstChoice = await recordFirstQuestionAttempt(
+        `attempt:${attemptId}:user:${user.id}`,
+        questionId,
+        selectedOption!,
+      )
+    } catch {
+      console.error('[CoachHint] ilk seçim kilidi yazılamadı')
+      return noStoreJson({ error: 'Koç şu anda kullanılamıyor' }, { status: 503 })
+    }
+    if (firstChoice !== selectedOption) {
+      return noStoreJson(
+        { error: 'Koç, bu soruya verdiğin ilk cevapla başlayabilir' },
+        { status: 409 },
+      )
+    }
     const { data: startData, error: startError } = await supabase.rpc('start_verified_coach_session', {
       p_attempt_id: attemptId,
       p_user_id: user.id,
@@ -521,7 +544,15 @@ export async function POST(request: Request) {
   const transferDomain = transferData
     ? toDomainQuestion(transferData as unknown as PublicQuestionRow)
     : null
-  if (transferError || !transferDomain || transferDomain.id === questionId || transferDomain.game !== question.game) {
+  // Transfer cevabı doğru şıkkı açar. Aynı denemedeki bir soru transfer olarak
+  // gelirse öğrenci onun cevabını notlamadan önce öğrenir; akış kapalı kalır.
+  if (
+    transferError
+    || !transferDomain
+    || transferDomain.id === questionId
+    || transferDomain.game !== question.game
+    || activeAttempt.question_ids.includes(transferDomain.id)
+  ) {
     console.error('[CoachHint] transfer sorusu yüklenemedi:', transferError?.code ?? 'invalid_result')
     return noStoreJson({ error: 'Transfer sorusu hazırlanamadı' }, { status: 500 })
   }

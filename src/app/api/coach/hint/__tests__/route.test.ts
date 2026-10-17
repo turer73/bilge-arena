@@ -12,6 +12,7 @@ const {
   mockAdvanceResult,
   mockTransferAnswerResult,
   mockRpc,
+  mockRecordFirstAttempt,
 } = vi.hoisted(() => ({
   mockGetUser: vi.fn(async () => ({ data: { user: null as null | { id: string } } })),
   mockIpCheck: vi.fn(async () => ({ success: true, retryAfter: 0 })),
@@ -23,6 +24,12 @@ const {
   mockAdvanceResult: vi.fn(),
   mockTransferAnswerResult: vi.fn(),
   mockRpc: vi.fn(),
+  // Varsayılan: soru henüz notlanmamış, Koç'un ilk denemesi kilide yazılır.
+  mockRecordFirstAttempt: vi.fn(async (_actor: string, _questionId: string, selected: number) => selected),
+}))
+
+vi.mock('@/lib/questions/attempt-store', () => ({
+  recordFirstQuestionAttempt: mockRecordFirstAttempt,
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -219,6 +226,7 @@ describe('POST /api/coach/hint R2.2', () => {
     mockUserCheck.mockResolvedValue({ success: true, retryAfter: 0 })
     mockQuestionResult.mockResolvedValue({ data: questionRow(), error: null })
     mockTransferQuestionResult.mockResolvedValue({ data: transferQuestionRow(), error: null })
+    mockRecordFirstAttempt.mockImplementation(async (_actor: string, _questionId: string, selected: number) => selected)
     mockAttemptResult.mockResolvedValue({
       data: {
         id: ATTEMPT_ID,
@@ -501,6 +509,57 @@ describe('POST /api/coach/hint R2.2', () => {
     })
     expect(body.transferQuestion.content).not.toHaveProperty('answer')
     expect(body.transferQuestion.content).not.toHaveProperty('solution')
+  })
+
+  it('Koç ilk denemesini notlamanın ilk seçim kilidine yazar', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    const response = await POST(coachRequest('hint1', { selectedOption: 2 }))
+    expect(response.status).toBe(200)
+    // Grade route ile aynı aktör anahtarı: sonraki notlama bu seçimi döndürür.
+    expect(mockRecordFirstAttempt).toHaveBeenCalledWith(
+      `attempt:${ATTEMPT_ID}:user:${USER_ID}`,
+      QUESTION_ID,
+      2,
+    )
+    expect(mockStartResult).toHaveBeenCalledWith(expect.objectContaining({ p_selected_option: 2 }))
+  })
+
+  it('soru başka bir seçimle notlandıysa Koç o seçimden farklı bir "ilk deneme" ile başlayamaz', async () => {
+    // Doğru şık 1. Öğrenci 1'i notlatıp sonra Koç'u 0 ile açmaya çalışıyor, ya da
+    // tersine: Koç'u yanlış şıkla açıp çözümü gördükten sonra doğruyu notlatmak.
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockRecordFirstAttempt.mockResolvedValue(1)
+    const response = await POST(coachRequest('hint1', { selectedOption: 0 }))
+    expect(response.status).toBe(409)
+    expect(mockStartResult).not.toHaveBeenCalled()
+    expect(mockAdvanceResult).not.toHaveBeenCalled()
+  })
+
+  it('ilk seçim kilidi yazılamazsa Koç başlamaz (fail-closed)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockRecordFirstAttempt.mockRejectedValue(new Error('Question attempt store is not configured'))
+    const response = await POST(coachRequest('hint1'))
+    expect(response.status).toBe(503)
+    expect(mockStartResult).not.toHaveBeenCalled()
+  })
+
+  it('aynı denemedeki bir soruyu transfer olarak vermez (cevabı notlamadan önce açılırdı)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockAttemptResult.mockResolvedValue({
+      data: {
+        id: ATTEMPT_ID,
+        user_id: USER_ID,
+        question_ids: [QUESTION_ID, TRANSFER_ID],
+        expires_at: new Date(Date.now() + 60_000).toISOString(),
+        completed_at: null,
+      },
+      error: null,
+    })
+    const response = await POST(coachRequest('solution', { token: signedToken('solution') }))
+    expect(response.status).toBe(500)
+    const body = await response.json()
+    expect(body).not.toHaveProperty('nextToken')
+    expect(body).not.toHaveProperty('transferQuestion')
   })
 
   it('transfer cevabını yalnız solution tokeniyle DB tarafında değerlendirip sonra açar', async () => {

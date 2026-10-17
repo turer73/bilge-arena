@@ -207,11 +207,25 @@ describe('POST /api/questions/grade', () => {
   it('returns the post-submit feedback for correct and wrong selections', async () => {
     const correct = await POST(request({ questionId: QUESTION_ID, selectedOption: 2 }))
     expect(correct.status).toBe(200)
-    expect(await correct.json()).toEqual({ isCorrect: true, correctOption: 2, solution: 'Co\u0308zu\u0308m' })
+    expect(await correct.json()).toEqual({ isCorrect: true, correctOption: 2, solution: 'Co\u0308zu\u0308m', acceptedOption: 2 })
 
     const wrong = await POST(request({ questionId: QUESTION_ID, selectedOption: 1 }))
     expect(wrong.status).toBe(200)
-    expect(await wrong.json()).toEqual({ isCorrect: false, correctOption: 2, solution: 'Co\u0308zu\u0308m' })
+    expect(await wrong.json()).toEqual({ isCorrect: false, correctOption: 2, solution: 'Co\u0308zu\u0308m', acceptedOption: 1 })
+  })
+
+  it('kilitli ilk se\u00e7imi sayar ve yan\u0131tta d\u00f6nd\u00fcr\u00fcr (sonraki se\u00e7im sonucu de\u011fi\u015ftiremez)', async () => {
+    // \u00d6rn. Ko\u00e7'ta 0 ilk deneme olarak kilitlendi; \u00f6\u011frenci sonra do\u011fru \u015f\u0131kk\u0131 (2) se\u00e7iyor.
+    mockRecordAttempt.mockResolvedValueOnce(0)
+    const res = await POST(request({ questionId: QUESTION_ID, selectedOption: 2 }))
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      isCorrect: false,
+      correctOption: 2,
+      solution: 'Co\u0308zu\u0308m',
+      acceptedOption: 0,
+    })
   })
 
   it('isolates two guest sessions behind the same IP', async () => {
@@ -240,6 +254,7 @@ describe('POST /api/questions/grade', () => {
       isCorrect: false,
       correctOption: 2,
       solution: 'Co\u0308zu\u0308m',
+      acceptedOption: -1,
     })
   })
 

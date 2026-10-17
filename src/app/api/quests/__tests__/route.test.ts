@@ -7,13 +7,13 @@ const {
   mockRateLimitCheck,
   mockExistingQuests,
   mockAllQuests,
-  mockInsertQuests,
+  mockUpsertQuests,
 } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockRateLimitCheck: vi.fn(async () => ({ success: true })),
   mockExistingQuests: vi.fn(),
   mockAllQuests: vi.fn(),
-  mockInsertQuests: vi.fn(),
+  mockUpsertQuests: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -26,9 +26,9 @@ vi.mock('@/lib/supabase/server', () => ({
  * Service-role mock — user_daily_quests + daily_quests.
  *
  * GET uses 3 chains:
- *   1) .from('user_daily_quests').select().eq().eq()  → existing quests list
+ *   1) .from('user_daily_quests').select().eq().eq()  → today's quests (before and after assignment)
  *   2) .from('daily_quests').select().eq()             → all active quests
- *   3) .from('user_daily_quests').insert().select()   → new quests insert
+ *   3) .from('user_daily_quests').upsert(rows, opts)   → ON CONFLICT DO NOTHING assignment
  */
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: vi.fn(() => ({
@@ -40,9 +40,7 @@ vi.mock('@/lib/supabase/service-role', () => ({
               eq: vi.fn(() => mockExistingQuests()),
             })),
           })),
-          insert: vi.fn(() => ({
-            select: vi.fn(() => mockInsertQuests()),
-          })),
+          upsert: vi.fn((rows: unknown, options: unknown) => mockUpsertQuests(rows, options)),
         }
       }
       if (table === 'daily_quests') {
@@ -99,35 +97,55 @@ describe('GET /api/quests', () => {
     const json = await res.json()
     expect(json.quests).toHaveLength(1)
     // Dogrulama: yeni gorev olusturulmamali
-    expect(mockInsertQuests).not.toHaveBeenCalled()
+    expect(mockUpsertQuests).not.toHaveBeenCalled()
     expect(mockAllQuests).not.toHaveBeenCalled()
   })
 
-  it('creates 3 new quests when none exist for today', async () => {
+  const FOUR_QUESTS = [
+    { id: 'q1', slug: 'play-3', is_active: true },
+    { id: 'q2', slug: 'correct-5', is_active: true },
+    { id: 'q3', slug: 'streak-2', is_active: true },
+    { id: 'q4', slug: 'accuracy-80', is_active: true },
+  ]
+
+  it('creates 3 new quests when none exist for today and returns the stored rows', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockExistingQuests.mockResolvedValue({ data: [], error: null })
-    mockAllQuests.mockResolvedValue({
-      data: [
-        { id: 'q1', slug: 'play-3', is_active: true },
-        { id: 'q2', slug: 'correct-5', is_active: true },
-        { id: 'q3', slug: 'streak-2', is_active: true },
-        { id: 'q4', slug: 'accuracy-80', is_active: true },
-      ],
-      error: null,
-    })
-    mockInsertQuests.mockResolvedValue({
-      data: [
-        { id: 'uq1', quest_id: 'q1', is_completed: false, quest: { id: 'q1' } },
-        { id: 'uq2', quest_id: 'q2', is_completed: false, quest: { id: 'q2' } },
-        { id: 'uq3', quest_id: 'q3', is_completed: false, quest: { id: 'q3' } },
-      ],
-      error: null,
-    })
+    const stored = [
+      { id: 'uq1', quest_id: 'q1', is_completed: false, quest: { id: 'q1' } },
+      { id: 'uq2', quest_id: 'q2', is_completed: false, quest: { id: 'q2' } },
+      { id: 'uq3', quest_id: 'q3', is_completed: false, quest: { id: 'q3' } },
+    ]
+    mockExistingQuests
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: stored, error: null })
+    mockAllQuests.mockResolvedValue({ data: FOUR_QUESTS, error: null })
+    mockUpsertQuests.mockResolvedValue({ data: null, error: null })
 
     const res = await GET()
     expect(res.status).toBe(200)
     const json = await res.json()
-    expect(json.quests).toHaveLength(3)
+    expect(json.quests).toEqual(stored)
+    expect(mockUpsertQuests).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ user_id: 'u1', current_value: 0 })]),
+      { onConflict: 'user_id,quest_id,date', ignoreDuplicates: true },
+    )
+    expect(mockUpsertQuests.mock.calls[0][0]).toHaveLength(3)
+  })
+
+  it('picks the same quests for the same user and day, so parallel requests cannot add a second set', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockExistingQuests.mockResolvedValue({ data: [], error: null })
+    mockAllQuests.mockImplementation(async () => ({ data: [...FOUR_QUESTS].reverse(), error: null }))
+    mockUpsertQuests.mockResolvedValue({ data: null, error: null })
+
+    await GET()
+    mockAllQuests.mockImplementation(async () => ({ data: FOUR_QUESTS, error: null }))
+    await GET()
+
+    const picked = mockUpsertQuests.mock.calls.map(([rows]) => (rows as Array<{ quest_id: string }>)
+      .map(row => row.quest_id).sort())
+    expect(picked[0]).toHaveLength(3)
+    expect(picked[1]).toEqual(picked[0])
   })
 
   it('returns empty array when no daily_quests exist', async () => {
@@ -148,7 +166,7 @@ describe('GET /api/quests', () => {
       data: [{ id: 'q1', slug: 'play-3', is_active: true }],
       error: null,
     })
-    mockInsertQuests.mockResolvedValue({ data: null, error: { code: '23503' } })
+    mockUpsertQuests.mockResolvedValue({ data: null, error: { code: '23503' } })
 
     const res = await GET()
     expect(res.status).toBe(500)
@@ -164,6 +182,6 @@ describe('PATCH /api/quests', () => {
     expect(res.headers.get('Allow')).toBe('GET')
     expect(mockGetUser).not.toHaveBeenCalled()
     expect(mockExistingQuests).not.toHaveBeenCalled()
-    expect(mockInsertQuests).not.toHaveBeenCalled()
+    expect(mockUpsertQuests).not.toHaveBeenCalled()
   })
 })

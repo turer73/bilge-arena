@@ -324,13 +324,15 @@ describe('GET /api/questions', () => {
     expect(res.headers.get('Cache-Control')).toBe('private, no-store')
   })
 
-  it('anon yanitinda Cache-Control public CDN cache aktif (mevcut davranis)', async () => {
+  it('anon yaniti da CDN\'de paylasilmaz (oturumlu kullanici anon kopyayi alamasin)', async () => {
+    // CDN anahtari cerezi icermez: anon yanit s-maxage ile onbellege alinirsa
+    // ayni URL'yi isteyen oturumlu kullanici attemptId'siz kopyayi alir.
     mockGetUser.mockResolvedValue({ data: { user: null } })
     mockCheckAdmin.mockResolvedValue(null)
     mockRpc.mockResolvedValue({ data: [], error: null })
 
-    const res = await GET(makeGet('http://localhost/api/questions'))
-    expect(res.headers.get('Cache-Control')).toBe('public, s-maxage=300, stale-while-revalidate=60')
+    const res = await GET(makeGet('http://localhost/api/questions?game=matematik&active=true'))
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store')
   })
 })
 

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
@@ -5,6 +6,13 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { trDayString } from '@/lib/utils/tr-date'
 
 const questsLimiter = createRateLimiter('quests', 30, 60_000) // 30 req/dk
+const QUESTS_PER_DAY = 3
+
+// (kullanici, gun, gorev) tohumlu sira: ayni gun icin her istek ayni gorevleri
+// secer, gunler ve kullanicilar arasinda ise dagilim karisik kalir.
+function questRank(userId: string, day: string, questId: string): string {
+  return createHash('sha256').update(`${userId}:${day}:${questId}`).digest('hex')
+}
 
 // GET: Kullanıcının bugünkü günlük görevlerini getir (yoksa oluştur)
 export async function GET() {
@@ -44,9 +52,16 @@ export async function GET() {
     return NextResponse.json({ quests: [] })
   }
 
-  // Rastgele 3 görev seç
-  const shuffled = allQuests.sort(() => Math.random() - 0.5)
-  const selected = shuffled.slice(0, Math.min(3, shuffled.length))
+  // Atama paralel isteklerde tek sonuç verir. Önceden her istek rastgele
+  // karıştırıp ekliyordu; 30 paralel istek günü 6 görevle açabiliyordu (derin
+  // inceleme 2026-10-15 §4.2). Artık seçim gün için deterministik ve
+  // UNIQUE(user_id, quest_id, date) üzerinde ON CONFLICT DO NOTHING ile
+  // yazılıyor: paralel istekler aynı 3 satırı üretir, ikinci yazım yutulur.
+  const selected = [...allQuests]
+    .sort((left, right) => (
+      questRank(user.id, today, left.id) < questRank(user.id, today, right.id) ? -1 : 1
+    ))
+    .slice(0, QUESTS_PER_DAY)
 
   const inserts = selected.map((q) => ({
     user_id: user.id,
@@ -57,17 +72,28 @@ export async function GET() {
     xp_claimed: false,
   }))
 
-  const { data: created, error } = await svc
+  const { error } = await svc
     .from('user_daily_quests')
-    .insert(inserts)
-    .select('*, quest:daily_quests(*)')
+    .upsert(inserts, { onConflict: 'user_id,quest_id,date', ignoreDuplicates: true })
 
   if (error) {
     console.error('[Quests API] Insert error:', error)
     return NextResponse.json({ error: 'Görev atanamadı' }, { status: 500 })
   }
 
-  return NextResponse.json({ quests: created })
+  // Paralel bir isteğin yazdığı satırlar da dahil, günün atanmış görevleri.
+  const { data: assigned, error: readError } = await svc
+    .from('user_daily_quests')
+    .select('*, quest:daily_quests(*)')
+    .eq('user_id', user.id)
+    .eq('date', today)
+
+  if (readError) {
+    console.error('[Quests API] Read error:', readError)
+    return NextResponse.json({ error: 'Görev atanamadı' }, { status: 500 })
+  }
+
+  return NextResponse.json({ quests: assigned ?? [] })
 }
 
 // Görev ilerlemesi yalnız migration 093'ün doğrulanmış-session transaction'ında

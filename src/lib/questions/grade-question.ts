@@ -4,6 +4,8 @@ export interface QuestionGradeResult {
   isCorrect: boolean
   correctOption: number
   solution: string | null
+  /** Sunucunun saydığı (kilitli) ilk seçim; -1 boş/süre dolumu. */
+  acceptedOption?: number
 }
 
 export interface QuestionGradeStrategyEvent {
@@ -36,6 +38,11 @@ export async function gradeQuestion(
     || (payload.correctOption as number) < 0
     || (payload.correctOption as number) > 4
     || !(payload.solution === null || typeof payload.solution === 'string')
+    || !(payload.acceptedOption === undefined || (
+      Number.isInteger(payload.acceptedOption)
+      && (payload.acceptedOption as number) >= -1
+      && (payload.acceptedOption as number) <= 4
+    ))
   ) {
     throw new Error('invalid_grade_response')
   }

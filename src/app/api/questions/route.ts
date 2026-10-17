@@ -156,17 +156,15 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Admin yanitlari admin_view=true ile pasif sorulari icerir; bu datayi CDN'de
-  // public cache etmek hem stale toggle/edit gozlenmesine (sayfa nav sonrasi
-  // eski durum geri doner) hem de anon session'larda admin-only leak'e yol acar.
-  // Admin ise no-store; anon ise mevcut 5dk edge cache davranisi korunur.
-  const cacheControl = user || isAdmin
-    ? 'private, no-store'
-    : 'public, s-maxage=300, stale-while-revalidate=60'
-
+  // Hicbir yanit CDN'de paylasilmaz. Eskiden anon yanit s-maxage=300 ile
+  // onbellege aliniyordu; CDN anahtari cerezi icermedigi icin oturum acmis
+  // kullanici ayni URL'de anon kopyayi (attemptId'siz) aliyor, Bil ve Fethet
+  // odulu dusuyordu (derin inceleme 2026-10-15 §4.2, canlida HIT olculdu).
+  // Admin yanitlari ise pasif sorulari icerir. Anon cagiran neredeyse yok
+  // (admin sayfalari ve oturumlu Fethet), onbellek kaybi onemsiz.
   return NextResponse.json(
     { questions: data, total: count, page, limit, attemptId, expiresAt },
-    { headers: { 'Cache-Control': cacheControl } },
+    { headers: { 'Cache-Control': 'private, no-store' } },
   )
 }
 

@@ -348,6 +348,18 @@ describe('useQuizGame — handleAnswer', () => {
     quiz.currentQuestion.mockReturnValue(makeQ('q1'))
   })
 
+  test('sunucu kilitli ilk seçimi sayarsa tıklanan şık değil o seçim gösterilir', async () => {
+    // Koç'ta 0 ilk deneme olarak kilitlendi; öğrenci ipuçlarından sonra 2'ye tıklıyor.
+    grader.gradeQuestion.mockResolvedValueOnce({
+      isCorrect: false, correctOption: 2, solution: 'Çözüm', acceptedOption: 0,
+    })
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+    await act(async () => result.current.handleAnswer(2))
+
+    expect(quiz.answerQuestion).toHaveBeenCalledWith(0, false, expect.any(Number), expect.anything(), 0, 2, 'Çözüm')
+    expect(result.current.showBurst).toBe(false)
+  })
+
   test('doğru cevap: timer durur, answerQuestion(doğru) + correct sesi + burst', async () => {
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
     await act(async () => result.current.handleAnswer(2))
