@@ -22,6 +22,7 @@ import {
   toPublicVerifiedQuestions,
   type TytSocialLearningEpoch,
 } from '@/lib/verified-attempts'
+import { describeVerifiedAttemptFailure } from '@/lib/verified-attempt-failure'
 import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 
 // Cift kalkan rate limit (Madde 9 pattern):
@@ -331,7 +332,7 @@ export async function GET(request: NextRequest) {
           { status: 409, headers: { 'Cache-Control': 'no-store' } },
         )
       }
-      console.error('[/api/questions/random] verified attempt issuance failed')
+      console.error('[/api/questions/random] verified attempt issuance failed', describeVerifiedAttemptFailure(error))
       return NextResponse.json({ error: 'Deneme baslatilamadi' }, { status: 500 })
     }
   }

@@ -710,7 +710,7 @@ describe('verified attempts helper', () => {
 
   it('rejects empty and over-limit sets before calling the RPC', async () => {
     await expect(issueVerifiedAttempt(admin, validInput([])))
-      .rejects.toThrow('verified_attempt_issue_failed')
+      .rejects.toMatchObject({ message: 'verified_attempt_issue_failed', stage: 'request' })
     await expect(issueVerifiedAttempt(
       admin,
       validInput(Array.from({ length: 101 }, (_, index) => `question-${index}`)),
@@ -718,16 +718,38 @@ describe('verified attempts helper', () => {
     expect(rpc).not.toHaveBeenCalled()
   })
 
-  it('normalizes a returned RPC error', async () => {
-    rpc.mockResolvedValue({ data: null, error: { code: 'XX000', message: 'secret' } })
+  it('names the expired-ticket and snapshot-mismatch stages separately', async () => {
+    rpc.mockResolvedValueOnce({
+      data: {
+        attemptId: ATTEMPT_ID,
+        expiresAt: '2026-08-08T08:59:59.000Z',
+        snapshot: { items: [normalSnapshotItem(QUESTION_ONE, 1)] },
+      },
+      error: null,
+    })
     await expect(issueVerifiedAttempt(admin, validInput()))
-      .rejects.toThrow('verified_attempt_issue_failed')
+      .rejects.toMatchObject({ message: 'verified_attempt_issue_failed', stage: 'expired' })
+
+    rpc.mockResolvedValueOnce({
+      data: { attemptId: ATTEMPT_ID, expiresAt: FUTURE, snapshot: { items: [normalSnapshotItem(QUESTION_TWO, 1)] } },
+      error: null,
+    })
+    await expect(issueVerifiedAttempt(admin, validInput()))
+      .rejects.toMatchObject({ message: 'verified_attempt_issue_failed', stage: 'snapshot' })
   })
 
-  it('normalizes a rejected RPC promise', async () => {
-    rpc.mockRejectedValue(new Error('network detail'))
-    await expect(issueVerifiedAttempt(admin, validInput()))
-      .rejects.toThrow('verified_attempt_issue_failed')
+  it('normalizes a returned RPC error but keeps its code for the log', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: 'XX000', message: 'secret' } })
+    const failure = await issueVerifiedAttempt(admin, validInput()).catch((error: unknown) => error)
+    expect(failure).toMatchObject({ message: 'verified_attempt_issue_failed', stage: 'rpc', code: 'XX000' })
+    expect(JSON.stringify(failure)).not.toContain('secret')
+  })
+
+  it('normalizes a rejected RPC promise and keeps only the error type', async () => {
+    rpc.mockRejectedValue(new TypeError('network detail'))
+    const failure = await issueVerifiedAttempt(admin, validInput()).catch((error: unknown) => error)
+    expect(failure).toMatchObject({ message: 'verified_attempt_issue_failed', stage: 'unexpected', code: 'TypeError' })
+    expect(JSON.stringify(failure)).not.toContain('network detail')
   })
 
   it.each([
@@ -738,7 +760,7 @@ describe('verified attempts helper', () => {
   ])('rejects %s', async (_label, data) => {
     rpc.mockResolvedValue({ data, error: null })
     await expect(issueVerifiedAttempt(admin, validInput()))
-      .rejects.toThrow('verified_attempt_issue_failed')
+      .rejects.toMatchObject({ message: 'verified_attempt_issue_failed', stage: 'ticket' })
   })
 
   it('rejects an already-expired ticket', async () => {
@@ -747,7 +769,7 @@ describe('verified attempts helper', () => {
       error: null,
     })
     await expect(issueVerifiedAttempt(admin, validInput()))
-      .rejects.toThrow('verified_attempt_issue_failed')
+      .rejects.toMatchObject({ message: 'verified_attempt_issue_failed', stage: 'ticket' })
   })
 
   it('reads owner snapshots with the explicit active/replay policy', async () => {

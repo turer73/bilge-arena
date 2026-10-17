@@ -22,6 +22,7 @@ import {
   toPublicVerifiedQuestions,
   type TytSocialLearningEpoch,
 } from '@/lib/verified-attempts'
+import { describeVerifiedAttemptFailure } from '@/lib/verified-attempt-failure'
 import { isValidUuid } from '@/lib/utils/uuid'
 import { DENEME_CONFIGS } from '@/lib/constants/modes'
 import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
@@ -275,7 +276,7 @@ export async function GET(request: NextRequest) {
         { status: 409, headers: { 'Cache-Control': 'no-store' } },
       )
     }
-    console.error('[/api/study/personalized-mock] verified attempt issuance failed')
+    console.error('[/api/study/personalized-mock] verified attempt issuance failed', describeVerifiedAttemptFailure(error))
     return NextResponse.json(
       { error: 'Deneme baslatilamadi' },
       { status: 500, headers: { 'Cache-Control': 'no-store' } },

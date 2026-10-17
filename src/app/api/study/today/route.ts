@@ -17,6 +17,7 @@ import {
   toPublicVerifiedQuestions,
   type TytSocialLearningEpoch,
 } from '@/lib/verified-attempts'
+import { describeVerifiedAttemptFailure } from '@/lib/verified-attempt-failure'
 import { buildPlanCandidates } from '@/lib/study/plan-candidates'
 import type { PlanOutcomeState } from '@/lib/study/outcome-targets'
 import { MASTERY_STATE_COLUMNS, toMasteryStateInput, type MasteryStateRow } from '@/lib/mastery/state-row'
@@ -168,7 +169,7 @@ async function respondWithTicket(
       attemptId: ticket.attemptId,
       expiresAt: ticket.expiresAt,
     })
-  } catch {
+  } catch (issueError) {
     // Quarantine may occur after the first read. The DB issuer remains the
     // authority. Re-read once to classify known content drift, never retry
     // issuance or rewrite the immutable plan. Infrastructure failures stay 500.
@@ -179,7 +180,7 @@ async function respondWithTicket(
     } catch {
       // A failed read is unknown state, not proof of content unavailability.
     }
-    console.error('[/api/study/today] verified attempt issuance failed')
+    console.error('[/api/study/today] verified attempt issuance failed', describeVerifiedAttemptFailure(issueError))
     return noStoreJson({ error: 'Plan baslatilamadi' }, { status: 500 })
   }
 }

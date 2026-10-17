@@ -1,5 +1,6 @@
 import type { createServiceRoleClient } from './service-role'
 import { PLATFORM_ADMIN_ENTRY_PERMISSIONS } from '@/lib/admin/platform-permissions'
+import { PROXY_UPSTREAM_TIMEOUT_MS } from '@/lib/utils/fetch-timeout'
 
 type ServiceRoleClient = ReturnType<typeof createServiceRoleClient>
 type FetchLike = typeof fetch
@@ -19,6 +20,8 @@ function serviceRestHeaders(serviceKey: string): Record<string, string> {
  * REST error, malformed response, or missing profile is not an active account.
  * Keep it REST-based because proxy runs before route handlers and must not
  * depend on a server-only Supabase client runtime.
+ * A slow upstream times out after PROXY_UPSTREAM_TIMEOUT_MS and counts as
+ * 'unavailable' instead of holding the request until the platform limit.
  */
 export type UserProfileAccessState = 'active' | 'deleted' | 'unavailable'
 
@@ -43,6 +46,7 @@ export async function getUserProfileAccessStateViaRest({
     const response = await fetchImpl(profileUrl, {
       headers: serviceRestHeaders(serviceKey),
       cache: 'no-store',
+      signal: AbortSignal.timeout(PROXY_UPSTREAM_TIMEOUT_MS),
     })
     if (!response.ok) return 'unavailable'
     const rows = await response.json() as unknown
@@ -113,6 +117,7 @@ export async function userHasAnyPlatformPermissionViaRest({
     const assignmentsResponse = await fetchImpl(assignmentsUrl, {
       headers,
       cache: 'no-store',
+      signal: AbortSignal.timeout(PROXY_UPSTREAM_TIMEOUT_MS),
     })
     if (!assignmentsResponse.ok) return false
 
@@ -133,6 +138,7 @@ export async function userHasAnyPlatformPermissionViaRest({
     const permissionsResponse = await fetchImpl(permissionsUrl, {
       headers,
       cache: 'no-store',
+      signal: AbortSignal.timeout(PROXY_UPSTREAM_TIMEOUT_MS),
     })
     if (!permissionsResponse.ok) return false
 

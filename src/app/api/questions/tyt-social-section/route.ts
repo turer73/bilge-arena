@@ -9,6 +9,7 @@ import {
   issueVerifiedTytSocialOfficialSection,
   toPublicVerifiedQuestions,
 } from '@/lib/verified-attempts'
+import { describeVerifiedAttemptFailure } from '@/lib/verified-attempt-failure'
 import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 
 const requestSchema = z.object({ requestId: z.uuid() }).strict()
@@ -110,7 +111,11 @@ export async function POST(request: NextRequest) {
         { 'Retry-After': '60' },
       )
     }
-    console.error('[/api/questions/tyt-social-section] issuance failed')
+    console.error('[/api/questions/tyt-social-section] issuance failed', {
+      ...describeVerifiedAttemptFailure(caught),
+      // Yalnız iç hata kodları (ör. tyt_social_section_issue_failed) loglanır.
+      reason: /^[a-z0-9_]{1,80}$/.test(reason) ? reason : 'other',
+    })
     return noStoreJson({
       error: 'Deneme başlatılamadı',
       code: 'TYT_SOCIAL_SECTION_FAILED',
