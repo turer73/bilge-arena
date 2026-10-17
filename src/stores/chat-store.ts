@@ -5,6 +5,8 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   timestamp: number
+  /** Sunucunun asistan yanıtı için verdiği imza; yalnız imzalı turlar geçmiş olarak geri gider. */
+  signature?: string
 }
 
 interface ChatStore {
@@ -17,7 +19,7 @@ interface ChatStore {
   toggleOpen: () => void
   setOpen: (open: boolean) => void
   addMessage: (role: 'user' | 'assistant', content: string) => void
-  updateLastAssistant: (content: string) => void
+  updateLastAssistant: (content: string, signature?: string) => void
   setLoading: (loading: boolean) => void
   setQuestionContext: (ctx: string | null) => void
   clearMessages: () => void
@@ -40,12 +42,12 @@ export const useChatStore = create<ChatStore>((set) => ({
       ],
     })),
 
-  updateLastAssistant: (content) =>
+  updateLastAssistant: (content, signature) =>
     set((s) => {
       const msgs = [...s.messages]
       const lastIdx = msgs.findLastIndex((m) => m.role === 'assistant')
       if (lastIdx >= 0) {
-        msgs[lastIdx] = { ...msgs[lastIdx], content }
+        msgs[lastIdx] = { ...msgs[lastIdx], content, signature }
       }
       return { messages: msgs }
     }),

@@ -7,6 +7,9 @@ import { getClientIp } from '@/lib/utils/client-ip'
 import type { Json } from '@/types/database.generated'
 import { TOPIC_EXPLANATION_SYSTEM_INSTRUCTION } from '@/lib/bilge-tahta/topic-explanation'
 import { redactChatPersonalData } from '@/lib/privacy/chat-redaction'
+import { signAssistantTurn, verifyAssistantTurn } from '@/lib/chat/turn-signature'
+import { buildChatContext } from '@/lib/chat/server-context'
+import { CHAT_TURN_SIGNATURE_HEADER } from '@/lib/chat/client-history'
 
 // Rate limit dusuruldu (konu#7 ders-hub plani, Faz 3): Gemini free-tier'a gore
 // daha maliyetli/dar DeepSeek kotasi + hub'da chat artik tek merkezi surface
@@ -131,15 +134,24 @@ export async function POST(request: Request) {
     )
   }
 
-  const { messages, questionContext, mode } = parsed.data
+  const { messages, context, mode } = parsed.data
+
+  // 3.4) Gecmis istemcide tutulur; asistan turu yalniz bu sunucunun ayni kullaniciya
+  // imzaladigi yanitsa saglayiciya gider. Imzasiz/sahte tur (prompt injection,
+  // maliyet sisirme) sessizce duser; hata metinleri de zaten imzasizdir.
+  const history = messages.filter((m) => (
+    m.role === 'user' || verifyAssistantTurn(user.id, m.content, m.signature)
+  ))
 
   // 3.5) Prompt-injection guard — jailbreak/role-swap/system-leak girisimlerini engelle
   // DeepSeek gecisiyle bu denylist erken-reddetme + audit log'un OTESINDE asil
   // savunma katmanlarindan biri oldu (Gemini'nin ayarlanabilir safety filtresi yok artik).
-  const userText = [
-    ...messages.map((m) => m.content),
-    questionContext ?? '',
-  ].join('\n')
+  // Yalniz kullanicinin yazdigi turlar taranir: imzali asistan turlari ve sunucunun
+  // kurdugu baglam istemci metni degildir.
+  const userText = history
+    .filter((m) => m.role === 'user')
+    .map((m) => m.content)
+    .join('\n')
   const matchedPattern = INJECTION_PATTERNS.find((re) => re.test(userText))
   if (matchedPattern) {
     // Abuse log — best-effort, hata atmasin
@@ -160,21 +172,6 @@ export async function POST(request: Request) {
     )
   }
 
-  const modeInstruction = mode === 'topic_explanation'
-    ? `\n\n${TOPIC_EXPLANATION_SYSTEM_INSTRUCTION}`
-    : ''
-  const questionInstruction = questionContext
-    ? `\n\nÖğrencinin şu anda çalıştığı soru:\n${redactChatPersonalData(questionContext)}`
-    : ''
-  const systemInstruction = `${SYSTEM_PROMPT}${modeInstruction}${questionInstruction}`
-
-  // Mesajlari OpenAI-uyumlu (DeepSeek) formatina cevir — role isimleri zaten
-  // ayni ('user'/'assistant'), Gemini'deki 'model' remap'i gerekmiyor.
-  const deepseekMessages = [
-    { role: 'system' as const, content: systemInstruction },
-    ...messages.map((m) => ({ role: m.role, content: redactChatPersonalData(m.content) })),
-  ]
-
   const apiKey = process.env.DEEPSEEK_API_KEY
   if (!apiKey) {
     return NextResponse.json(
@@ -182,6 +179,30 @@ export async function POST(request: Request) {
       { status: 500 }
     )
   }
+
+  // Soru/ödev/çalışma bağlamı sunucuda kurulur (soru bankası + sabitler); kullanıcı
+  // metni olmadığı için maskelenmez. Kurulamazsa sohbet bağlamsız sürer.
+  let contextBlock: string | null = null
+  if (context) {
+    try {
+      contextBlock = await buildChatContext(context, { admin: createServiceRoleClient(), userId: user.id })
+    } catch {
+      contextBlock = null
+    }
+  }
+
+  const modeInstruction = mode === 'topic_explanation'
+    ? `\n\n${TOPIC_EXPLANATION_SYSTEM_INSTRUCTION}`
+    : ''
+  const contextInstruction = contextBlock ? `\n\n${contextBlock}` : ''
+  const systemInstruction = `${SYSTEM_PROMPT}${modeInstruction}${contextInstruction}`
+
+  // Mesajlari OpenAI-uyumlu (DeepSeek) formatina cevir — role isimleri zaten
+  // ayni ('user'/'assistant'), Gemini'deki 'model' remap'i gerekmiyor.
+  const deepseekMessages = [
+    { role: 'system' as const, content: systemInstruction },
+    ...history.map((m) => ({ role: m.role, content: redactChatPersonalData(m.content) })),
+  ]
 
   try {
     const res = await fetch(DEEPSEEK_API_URL, {
@@ -262,8 +283,13 @@ export async function POST(request: Request) {
       },
     })
 
+    // Istemci bu imzayla yaniti sonraki istekte asistan turu olarak geri gonderir.
+    const turnSignature = signAssistantTurn(user.id, text)
     return new Response(stream, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        ...(turnSignature ? { [CHAT_TURN_SIGNATURE_HEADER]: turnSignature } : {}),
+      },
     })
   } catch (err) {
     console.error('[Chat API] Fetch error type:', err instanceof Error ? err.name : 'unknown')

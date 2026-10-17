@@ -7,13 +7,15 @@ import type { BilgeTahtaLesson } from '@/lib/bilge-tahta/contract'
 import { buildTopicExplanationPrompt } from '@/lib/bilge-tahta/topic-explanation'
 import { trackBilgeBoardEvent } from '@/lib/bilge-tahta/analytics'
 import { canUseHelper, useAssistancePolicy } from '@/lib/assistance-policy/client'
+import type { ChatContext } from '@/lib/validations/schemas'
 
 interface TopicExplanationButtonProps {
   topic: string
   subject: string
   examRef?: string | null
   difficulty?: number | null
-  questionContext: string
+  /** Sunucunun soruyu kendi kaynağından okuyacağı kimlik; serbest metin değil. */
+  chatContext: ChatContext
   surface?: 'game' | 'classroom'
   appearance?: 'default' | 'learning'
   disabled?: boolean
@@ -24,7 +26,7 @@ export function TopicExplanationButton({
   subject,
   examRef = null,
   difficulty = null,
-  questionContext,
+  chatContext,
   surface = 'game',
   appearance = 'default',
   disabled = false,
@@ -78,7 +80,7 @@ export function TopicExplanationButton({
             role: 'user',
             content: buildTopicExplanationPrompt({ topic, subject, examRef, difficulty }),
           }],
-          questionContext: questionContext.slice(0, 1000),
+          context: chatContext,
         }),
       })
       if (!response.ok) throw new Error('topic_explanation_failed')

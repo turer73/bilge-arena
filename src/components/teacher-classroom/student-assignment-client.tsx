@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
 import { ArrowLeft, CheckCircle2, CircleSlash2, RefreshCw, Send, XCircle } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
-import { renderRichText, stripRichText } from '@/lib/utils/rich-text'
+import { renderRichText } from '@/lib/utils/rich-text'
 import {
   fetchStudentTeacherAssignment,
   fetchClassroomBilgeTahtaAccess,
@@ -182,13 +182,6 @@ export function StudentAssignmentClient({ assignmentId }: { assignmentId: string
             : null
           const result = resultByPosition.get(item.position)
           const topic = item.question.topic || item.question.category || 'Sorunun temel konusu'
-          const questionText = stripRichText(item.question.content.question)
-          const options = item.question.content.options
-            .map((option, optionIndex) => `${OPTION_LETTERS[optionIndex]}) ${stripRichText(option)}`)
-            .join('\n')
-          const questionContext = result
-            ? `[${item.question.game.toUpperCase()} - ${topic}]\n\nSoru: ${questionText}\n\n${options}\n\nDoğru cevap: ${OPTION_LETTERS[result.correctOption]}) ${stripRichText(item.question.content.options[result.correctOption] ?? '')}`
-            : ''
           return (
             <Fragment key={item.position}>
             <fieldset
@@ -256,7 +249,7 @@ export function StudentAssignmentClient({ assignmentId }: { assignmentId: string
                   topic={topic}
                   subject={item.question.game}
                   difficulty={item.question.difficulty}
-                  questionContext={questionContext}
+                  chatContext={{ kind: 'assignment_item', assignmentId: assignment.id, position: item.position }}
                   surface="classroom"
                 />
               </div>

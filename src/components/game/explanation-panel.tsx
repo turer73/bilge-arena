@@ -43,18 +43,13 @@ export function ExplanationPanel({
   }, [])
 
   const topic = question.subcategory || question.category
-  const topicContext = (() => {
-    const opts = question.content.options
-      .map((o, i) => `${'ABCDE'[i]}) ${o}`)
-      .join('\n')
-    const qText = stripRichText(question.content.question || question.content.sentence)
-    // Öncül bloğu (passage) varsa soru metninin önüne ekle — asistan ifadeleri görsün (<u> AI'ya gitmesin)
-    const body = question.content.passage ? `${stripRichText(question.content.passage)}\n\n${qText}` : qText
-    const answerContext = correctText
-      ? `${getOptionLetter(correctAnswer)}) ${correctText}`
-      : 'Sunucudan alınamadı'
-    return `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${body}\n\n${opts}\n\nDoğru cevap: ${answerContext}${solution ? '\nÇözüm: ' + solution : ''}`
-  })()
+  // Soru metni, öncül ve şıklar sunucuda soru kimliğinden okunur (maskelemeye girmez);
+  // istemci yalnız ekranda gösterilen doğru şıkkın indeksini bildirir.
+  const chatContext = {
+    kind: 'question' as const,
+    questionId: question.id,
+    shownCorrectOption: correctText ? correctAnswer : null,
+  }
 
   const ResultIcon = isCorrect ? CircleCheckBig : correctText ? CircleX : Clock3
   const resultText = isCorrect
@@ -126,7 +121,7 @@ export function ExplanationPanel({
             topic={topic}
             subject={question.game}
             difficulty={question.difficulty}
-            questionContext={topicContext}
+            chatContext={chatContext}
             appearance="learning"
           />
 
