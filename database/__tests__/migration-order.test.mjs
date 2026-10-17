@@ -44,7 +44,6 @@ describe('repo migration manifesti', () => {
       '20261013183312_adaptive_diagnostic_legacy_coverage_repair.sql',
       '20261013184551_tyt_social_learning_epoch_forward.sql',
       '20261014183929_revision_bound_turkce_quality_policy.sql',
-      '223_drop_orphan_disposable_email_trigger.sql',
     ])
     expect(repo.migrations.slice(-pending.length).map((e) => e.file)).toEqual(pending)
   })
@@ -57,10 +56,10 @@ describe('repo migration manifesti', () => {
     expect(computed).toEqual([...LEXICAL_ORDER_EXCEPTIONS])
   })
 
-  it('2026-10-17 defterindeki 171 satirin her biri tam bir kez tasinir', () => {
+  it('2026-10-17 defterindeki 172 satirin (223 dahil) her biri tam bir kez tasinir', () => {
     const rows = repo.migrations.flatMap((e) => e.ledger ?? [])
-    expect(rows).toHaveLength(171)
-    expect(new Set(rows.map((r) => r.version)).size).toBe(171)
+    expect(rows).toHaveLength(172)
+    expect(new Set(rows.map((r) => r.version)).size).toBe(172)
   })
 })
 

@@ -12,7 +12,7 @@
 | `supabase-platform-stub.sql` | Supabase'in hazır verdiği roller, `auth`/`storage`/`extensions` şemaları ve varsayılan yetkiler. |
 | `operator/*.sql` | Üretimde migration dışında yapılmış operatör adımlarının taklidi (manifestte `operatorStep`). |
 | `function-fingerprint.sql` | `public` fonksiyonlarının imza, gövde md5'i (CR'siz), SECURITY DEFINER, search_path ve ACL bilgisi. |
-| `production-functions.txt` | Bu sorgunun üretimdeki çıktısı (2026-10-17, 440 fonksiyon). |
+| `production-functions.txt` | Bu sorgunun üretimdeki çıktısı (2026-10-17, 223 sonrası, 439 fonksiyon). |
 | `known-production-drift.json` | Zincir ile üretim arasındaki açıklanmış farklar. Her giriş hash'e bağlıdır, bayat giriş CI'ı durdurur. |
 
 `status` değerleri:
@@ -25,8 +25,8 @@
 
 ## Yeni migration
 
-1. Dosyaya mevcut her dosyadan sözlükte **sonra** gelen bir ad ver, ör. `223_konu.sql`. Zaman damgası 202_'den önceye düşer; lint bunu `order-lexical-position` ile reddeder.
-2. Manifestin sonuna `{ "file": "223_konu.sql", "status": "pending" }` ekle.
+1. Dosyaya mevcut her dosyadan sözlükte **sonra** gelen bir ad ver, ör. `224_konu.sql`. Zaman damgası 202_'den önceye düşer; lint bunu `order-lexical-position` ile reddeder.
+2. Manifestin sonuna `{ "file": "224_konu.sql", "status": "pending" }` ekle.
 3. Fonksiyonu düşürüp yeniden oluşturuyorsan PUBLIC, anon ve authenticated yetkisini `CREATE`'ten sonra açıkça yaz (`function-acl-reset`). `CREATE FUNCTION` ya `OR REPLACE` kullanmalı ya da önünde `DROP FUNCTION` olmalı (`create-function-no-replace`).
 
 ## Üretime uygulandıktan sonra
@@ -58,6 +58,6 @@ MIGRATION_CHAIN_DATABASE_URL=postgres://postgres:postgres@localhost:5432/chain M
 
 ## Sınırlar
 
-- Karşılaştırma yalnız `public` fonksiyonlarını kapsar. Tablo, politika ve tetikleyici farkı aranmaz. Üretimde `auth.users` üzerinde depoda olmayan `trg_block_disposable_emails` tetikleyicisi de bu yüzden ancak fonksiyonu üzerinden göründü; 223 onu kaldırır. 223 üretime uygulanınca `known-production-drift.json`'daki `block_disposable_emails()` girdisi bayatlar ve silinmelidir.
+- Karşılaştırma yalnız `public` fonksiyonlarını kapsar. Tablo, politika ve tetikleyici farkı aranmaz. Üretimde `auth.users` üzerinde depoda olmayan `trg_block_disposable_emails` tetikleyicisi de bu yüzden ancak fonksiyonu üzerinden göründü; 223 onu 2026-10-17'de kaldırdı.
 - Parmak izi depoya kaydedilen anlık görüntüdür. Üretimde elle yapılan yeni bir değişikliği CI kendiliğinden görmez; yukarıdaki yenileme komutu görür.
 - Soru bankası fikstürü (`operator/002_minimal_question_bank.sql`) yayın kapılarını geçecek kadar sentetik soru içerir; üretim verisinin yerine geçmez.
