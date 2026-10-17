@@ -76,6 +76,7 @@ async function sendStreakReminders(req: Request) {
 
   let sentCount = 0
   let expiredCount = 0
+  let rejectedCount = 0
   const expiredEndpoints: string[] = []
 
   for (const sub of subscriptions) {
@@ -94,7 +95,7 @@ async function sendStreakReminders(req: Request) {
     else if (result === 'expired') {
       expiredCount += 1
       expiredEndpoints.push(sub.endpoint)
-    }
+    } else if (result === 'rejected') rejectedCount += 1
   }
 
   // Expired subscription cleanup — 410/404 donen endpoint'leri DB'den sil
@@ -112,6 +113,8 @@ async function sendStreakReminders(req: Request) {
   return NextResponse.json({
     sent: sentCount,
     expired: expiredCount,
+    // Tarayıcı push servisi olmayan adresler: istek atılmadı.
+    rejected: rejectedCount,
     candidates: profiles.length,
     subscriptions: subscriptions.length,
   })

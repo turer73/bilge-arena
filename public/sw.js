@@ -125,3 +125,89 @@ self.addEventListener('fetch', (event) => {
     )
   }
 })
+
+// ── Push bildirimleri ─────────────────────────────────────────────────────
+// Sunucu (src/lib/utils/push.ts) { title, body, icon, data: { url } } gönderir.
+// userVisibleOnly aboneliğinde her push görünür bir bildirim göstermek
+// zorundadır; göstermezsek tarayıcı genel bir bildirim gösterip izni geri
+// alabilir. Bu yüzden bozuk ya da boş yükte de varsayılan bildirim gösterilir.
+const DEFAULT_NOTIFICATION_URL = '/arena'
+const DEFAULT_NOTIFICATION = {
+  title: 'Bilge Arena',
+  body: 'Bugünkü çalışman seni bekliyor.',
+  icon: '/icon-192.png',
+}
+
+// Yalnız aynı origin içindeki yollar açılır; dış adres, protokol-göreli
+// adres ya da javascript: hiçbir koşulda açılmaz.
+function sameOriginPath(value, fallback) {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return fallback
+  try {
+    const url = new URL(value, self.location.origin)
+    if (url.origin !== self.location.origin) return fallback
+    return url.pathname + url.search + url.hash
+  } catch {
+    return fallback
+  }
+}
+
+function boundedText(value, maxLength, fallback) {
+  if (typeof value !== 'string') return fallback
+  const text = value.trim()
+  return text ? text.slice(0, maxLength) : fallback
+}
+
+function readPushPayload(event) {
+  let data = null
+  try {
+    data = event.data ? event.data.json() : null
+  } catch {
+    data = null
+  }
+  if (!data || typeof data !== 'object') data = {}
+  return {
+    title: boundedText(data.title, 80, DEFAULT_NOTIFICATION.title),
+    body: boundedText(data.body, 240, DEFAULT_NOTIFICATION.body),
+    icon: sameOriginPath(data.icon, DEFAULT_NOTIFICATION.icon),
+    url: sameOriginPath(data.data && data.data.url, DEFAULT_NOTIFICATION_URL),
+  }
+}
+
+self.addEventListener('push', (event) => {
+  const payload = readPushPayload(event)
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: payload.icon,
+      badge: '/favicon-32.png',
+      // Aynı türden hatırlatmalar üst üste birikmesin, yenisi eskisinin yerini alsın.
+      tag: 'bilge-arena-reminder',
+      data: { url: payload.url },
+    }),
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const target = sameOriginPath(
+    event.notification.data && event.notification.data.url,
+    DEFAULT_NOTIFICATION_URL,
+  )
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((windows) => {
+        // Hedef zaten açıksa o sekmeye geç; değilse yeni sekme aç.
+        const existing = windows.find((client) => {
+          try {
+            const url = new URL(client.url)
+            return url.origin === self.location.origin && url.pathname + url.search + url.hash === target
+          } catch {
+            return false
+          }
+        })
+        if (existing && typeof existing.focus === 'function') return existing.focus()
+        return self.clients.openWindow(target)
+      }),
+  )
+})

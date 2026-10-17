@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { REVIEW_ERROR_REASON_CODES } from '@/lib/review/error-reasons'
+import { isAllowedPushEndpoint } from '@/lib/utils/push-endpoint'
 
 // ============================================================
 // Chat API
@@ -287,7 +288,8 @@ export const challengeSubmitSchema = z.object({
 // ============================================================
 
 export const pushSubscribeSchema = z.object({
-  endpoint: z.string().url().max(500),
+  // Yalnız tarayıcı push servisleri; ayrıntı push-endpoint.ts'te.
+  endpoint: z.string().url().max(500).refine(isAllowedPushEndpoint, 'Desteklenmeyen push servisi'),
   p256dh: z.string().min(1).max(500),
   auth: z.string().min(1).max(500),
 })
