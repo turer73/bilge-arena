@@ -1,61 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// ─── Supabase mock ──────────────────────────────────
+// Seri, gün sınırı ve tek-kazanan kuralı claim_daily_login RPC'sinde; gerçek
+// PostgreSQL davranışı database/__tests__/economy-integrity-postgres'te
+// sınanır. Bu dosya route'un RPC sözleşmesini ve hata eşlemesini sınar.
 
-const mockGetUser = vi.fn()
-const mockSelectSingle = vi.fn()
-const mockUpdateSelect = vi.fn()
-const mockUpdate = vi.fn(() => ({
-  eq: vi.fn(() => ({
-    or: vi.fn(() => ({
-      select: mockUpdateSelect,
-    })),
-  })),
+const { mockGetUser, mockRpc, mockLimiterCheck } = vi.hoisted(() => ({
+  mockGetUser: vi.fn(),
+  mockRpc: vi.fn(),
+  mockLimiterCheck: vi.fn(),
 }))
-const mockInsertThen = vi.fn()
-
-const mockFrom = vi.fn((table: string) => {
-  if (table === 'profiles') {
-    return {
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: mockSelectSingle,
-        })),
-      })),
-      update: mockUpdate,
-    }
-  }
-  if (table === 'xp_log') {
-    return { insert: vi.fn(() => ({ then: mockInsertThen })) }
-  }
-  return { insert: vi.fn() }
-})
 
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(async () => ({
-    auth: { getUser: mockGetUser },
-    from: mockFrom,
-  })),
+  createClient: vi.fn(async () => ({ auth: { getUser: mockGetUser } })),
 }))
 
 vi.mock('@/lib/supabase/service-role', () => ({
-  createServiceRoleClient: () => ({
-    from: mockFrom,
-    rpc: vi.fn().mockResolvedValue({ error: null }),
-  }),
+  createServiceRoleClient: () => ({ rpc: mockRpc }),
 }))
 
-// ─── Import after mock ──────────────────────────────
+vi.mock('@/lib/utils/rate-limit', () => ({
+  createRateLimiter: () => ({ check: mockLimiterCheck }),
+}))
 
 import { POST } from '../route'
-
-// ─── Tests ──────────────────────────────────────────
 
 describe('POST /api/daily-login', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-03-29T10:00:00.000Z'))
+    mockLimiterCheck.mockResolvedValue({ success: true })
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
   })
 
   it('returns 401 if not authenticated', async () => {
@@ -63,81 +36,60 @@ describe('POST /api/daily-login', () => {
 
     const res = await POST()
     expect(res.status).toBe(401)
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 
-  it('returns already_claimed if played today', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockSelectSingle.mockResolvedValue({
-      data: { current_streak: 3, last_played_at: '2026-03-29T08:00:00.000Z', total_xp: 100 },
+  it('returns 429 when rate limited, before the RPC', async () => {
+    mockLimiterCheck.mockResolvedValue({ success: false })
+
+    const res = await POST()
+    expect(res.status).toBe(429)
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('claims through the single RPC with the authenticated user id', async () => {
+    mockRpc.mockResolvedValue({
+      data: { status: 'claimed', streak: 3, xpAwarded: 30, coinsAwarded: 6 },
+      error: null,
     })
 
     const res = await POST()
-    const json = await res.json()
-
-    expect(json.status).toBe('already_claimed')
-    expect(json.xpAwarded).toBe(0)
-    expect(json.streak).toBe(3)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      status: 'claimed', streak: 3, xpAwarded: 30, coinsAwarded: 6, maxXP: 70,
+    })
+    expect(mockRpc).toHaveBeenCalledWith('claim_daily_login', { p_user_id: 'u1' })
   })
 
-  it('continues streak if played yesterday', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockSelectSingle.mockResolvedValue({
-      data: { current_streak: 5, last_played_at: '2026-03-28T15:00:00.000Z', total_xp: 500 },
+  it('passes through already_claimed and streak_reset', async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: { status: 'already_claimed', streak: 4, xpAwarded: 0, coinsAwarded: 0 },
+      error: null,
     })
-    mockUpdateSelect.mockResolvedValue({ data: [{ id: 'u1' }], error: null })
-    mockInsertThen.mockImplementation((cb: () => void) => { cb?.() })
+    expect(await (await POST()).json()).toMatchObject({ status: 'already_claimed', xpAwarded: 0 })
 
-    const res = await POST()
-    const json = await res.json()
-
-    expect(json.status).toBe('claimed')
-    expect(json.streak).toBe(6)
-    expect(json.xpAwarded).toBe(60) // min(6*10, 70) = 60
+    mockRpc.mockResolvedValueOnce({
+      data: { status: 'streak_reset', streak: 1, xpAwarded: 10, coinsAwarded: 2 },
+      error: null,
+    })
+    expect(await (await POST()).json()).toMatchObject({ status: 'streak_reset', streak: 1 })
   })
 
-  it('resets streak if gap > 1 day', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockSelectSingle.mockResolvedValue({
-      data: { current_streak: 10, last_played_at: '2026-03-27T15:00:00.000Z', total_xp: 1000 },
-    })
-    mockUpdateSelect.mockResolvedValue({ data: [{ id: 'u1' }], error: null })
-    mockInsertThen.mockImplementation((cb: () => void) => { cb?.() })
+  it('maps a missing profile to 404 and a missing RPC to 503', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { code: 'P0002', message: 'profile not found' } })
+    expect((await POST()).status).toBe(404)
 
-    const res = await POST()
-    const json = await res.json()
-
-    expect(json.status).toBe('streak_reset')
-    expect(json.streak).toBe(1)
-    expect(json.xpAwarded).toBe(10) // 1*10
+    mockRpc.mockResolvedValueOnce({ data: null, error: { code: 'PGRST202', message: 'not found' } })
+    expect((await POST()).status).toBe(503)
   })
 
-  it('caps XP at 70 for 7+ day streak', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockSelectSingle.mockResolvedValue({
-      data: { current_streak: 9, last_played_at: '2026-03-28T15:00:00.000Z', total_xp: 2000 },
-    })
-    mockUpdateSelect.mockResolvedValue({ data: [{ id: 'u1' }], error: null })
-    mockInsertThen.mockImplementation((cb: () => void) => { cb?.() })
+  it('does not echo database errors or malformed results', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: { code: 'XX000', message: 'sensitive detail' } })
+    const failed = await POST()
+    expect(failed.status).toBe(500)
+    expect(JSON.stringify(await failed.json())).not.toContain('sensitive')
 
-    const res = await POST()
-    const json = await res.json()
-
-    expect(json.streak).toBe(10)
-    expect(json.xpAwarded).toBe(70) // min(10*10, 70) = 70 (capped)
-  })
-
-  it('handles race condition — concurrent claim returns already_claimed', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockSelectSingle.mockResolvedValue({
-      data: { current_streak: 3, last_played_at: '2026-03-28T08:00:00.000Z', total_xp: 100 },
-    })
-    // Atomic guard: update returns 0 rows (another request already claimed)
-    mockUpdateSelect.mockResolvedValue({ data: [], error: null })
-
-    const res = await POST()
-    const json = await res.json()
-
-    expect(json.status).toBe('already_claimed')
-    expect(json.xpAwarded).toBe(0)
+    mockRpc.mockResolvedValueOnce({ data: { status: 'claimed', streak: -1 }, error: null })
+    expect((await POST()).status).toBe(500)
   })
 })

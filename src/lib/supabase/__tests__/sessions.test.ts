@@ -73,7 +73,45 @@ describe('saveGameSession', () => {
       wrongCount: 1,
       newBadges: ['first_game'],
       coinsEarned: 40,
+      xpCapped: false,
+      repeatQuestions: 0,
     })
+  })
+
+  it('tekrar kuralinin XP vermedigi soru sayisini tasir; gecersizse 0', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        sessionId: 'session-123', totalXP: 20, correctCount: 2, wrongCount: 0, newBadges: [], repeatQuestions: 2,
+      }),
+    })
+    expect((await saveGameSession(baseParams))?.repeatQuestions).toBe(2)
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        sessionId: 'session-123', totalXP: 20, correctCount: 2, wrongCount: 0, newBadges: [], repeatQuestions: -3,
+      }),
+    })
+    expect((await saveGameSession(baseParams))?.repeatQuestions).toBe(0)
+  })
+
+  it('gunluk XP tavani bilgisini tasir; yalniz true kabul edilir', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        sessionId: 'session-123', totalXP: 12, correctCount: 2, wrongCount: 1, newBadges: [], coinsEarned: 0, xpCapped: true,
+      }),
+    })
+    expect(await saveGameSession(baseParams)).toMatchObject({ totalXP: 12, xpCapped: true })
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        sessionId: 'session-123', totalXP: 12, correctCount: 2, wrongCount: 1, newBadges: [], xpCapped: 'evet',
+      }),
+    })
+    expect((await saveGameSession(baseParams))?.xpCapped).toBe(false)
   })
 
   it('gunluk tavan dolu oturumda coinsEarned 0 korunur (null a dusurulmez)', async () => {

@@ -151,4 +151,24 @@ describe('ResultScreen', () => {
     expect(screen.getByText(/altın sınırına ulaştın/)).toBeInTheDocument()
     expect(screen.queryByText(/\+0 altın/)).not.toBeInTheDocument()
   })
+
+  test('gunluk XP tavani oturumun XP\'sini kestiyse sinir notu gosterir', () => {
+    const { container, rerender } = render(
+      <ResultScreen onRestart={vi.fn()} onExit={vi.fn()} saveStatus="saved" savedTotalXP={20} xpCapped />,
+    )
+    expect(screen.getByText(/XP sınırına ulaştın/)).toBeInTheDocument()
+    expect(container.querySelector('[data-xp-cap-notice]')).not.toBeNull()
+
+    rerender(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} saveStatus="saved" savedTotalXP={20} />)
+    expect(screen.queryByText(/XP sınırına ulaştın/)).not.toBeInTheDocument()
+  })
+
+  test('cevabi son 7 gunde gorulen sorular XP vermediyse sayisiyla not gosterir', () => {
+    const { container } = render(
+      <ResultScreen onRestart={vi.fn()} onExit={vi.fn()} saveStatus="saved" savedTotalXP={20} repeatQuestions={3} />,
+    )
+    expect(screen.getByText(/son 7 günde gördüğün 3 soru XP vermedi/)).toBeInTheDocument()
+    expect(container.querySelector('[data-xp-repeat-notice]')).not.toBeNull()
+    expect(screen.queryByText(/XP sınırına ulaştın/)).not.toBeInTheDocument()
+  })
 })
