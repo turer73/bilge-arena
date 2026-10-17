@@ -66,12 +66,31 @@ describe('chatRequestSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  it('questionContext opsiyonel', () => {
+  it('eski serbest metin questionContext alanı reddedilmez ama ayrıştırmada düşer', () => {
     const result = chatRequestSchema.safeParse({
       messages: [{ role: 'user', content: 'test' }],
       questionContext: 'Matematik sorusu',
     })
     expect(result.success).toBe(true)
+    expect(result.data).not.toHaveProperty('questionContext')
+  })
+
+  it.each([
+    [{ kind: 'question', questionId: '6f1c2b8e-3d4a-4f5b-9c6d-7e8f9a0b1c2d', shownCorrectOption: 2 }, true],
+    [{ kind: 'assignment_item', assignmentId: '6f1c2b8e-3d4a-4f5b-9c6d-7e8f9a0b1c2d', position: 3 }, true],
+    [{ kind: 'study', game: 'matematik', examRef: 'TYT', action: 'topic' }, true],
+    [{ kind: 'question', questionId: 'q1' }, false],
+    [{ kind: 'question', questionId: '6f1c2b8e-3d4a-4f5b-9c6d-7e8f9a0b1c2d', text: 'serbest metin' }, false],
+    [{ kind: 'study', game: 'tarih' }, false],
+    [{ kind: 'free_text', text: 'Soru: ...' }, false],
+  ])('bağlam yalnız yapılandırılmış biçimde kabul edilir: %j → %s', (context, ok) => {
+    expect(chatRequestSchema.safeParse({ messages: [{ role: 'user', content: 'test' }], context }).success).toBe(ok)
+  })
+
+  it('son mesaj kullanıcıdan olmalı', () => {
+    expect(chatRequestSchema.safeParse({
+      messages: [{ role: 'user', content: 'soru' }, { role: 'assistant', content: 'cevap', signature: 'v1.1.x' }],
+    }).success).toBe(false)
   })
 
   it('toplam sohbet gecmisi sinirini uygular', () => {
