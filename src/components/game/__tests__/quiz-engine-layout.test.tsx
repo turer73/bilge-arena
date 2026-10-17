@@ -271,14 +271,14 @@ describe('QuizEngine yerleşim', () => {
     try {
       const { rerender } = render(<QuizEngine game="matematik" />)
       expect(JSON.parse(screen.getByTestId('saved-result-props').textContent!)).toEqual({
-        coinsEarned: null, saveStatus: 'pending', savedTotalXP: null, savedCorrectCount: null, savedWrongCount: null,
+        coinsEarned: null, xpCapped: false, saveStatus: 'pending', savedTotalXP: null, savedCorrectCount: null, savedWrongCount: null,
       })
       useSessionSaverMock.mockReturnValue({
-        saveStatus: 'saved', savedSession: { totalXP: 360, correctCount: 14, wrongCount: 1, coinsEarned: 0 },
+        saveStatus: 'saved', savedSession: { totalXP: 360, correctCount: 14, wrongCount: 1, coinsEarned: 0, xpCapped: true },
       })
       rerender(<QuizEngine game="matematik" />)
       expect(JSON.parse(screen.getByTestId('saved-result-props').textContent!)).toEqual({
-        coinsEarned: 0, saveStatus: 'saved', savedTotalXP: 360, savedCorrectCount: 14, savedWrongCount: 1,
+        coinsEarned: 0, xpCapped: true, saveStatus: 'saved', savedTotalXP: 360, savedCorrectCount: 14, savedWrongCount: 1,
       })
     } finally {
       quizGame.screen = 'game'

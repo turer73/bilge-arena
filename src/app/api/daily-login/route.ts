@@ -1,16 +1,31 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
-import { trDayString, trYesterdayString, trDayStartUtcISO } from '@/lib/utils/tr-date'
 
 const loginLimiter = createRateLimiter('daily-login', 5, 60_000)
+
+const MAX_XP = 70
+
+const claimResultSchema = z.object({
+  status: z.enum(['claimed', 'streak_reset', 'already_claimed']),
+  streak: z.number().int().nonnegative(),
+  xpAwarded: z.number().int().nonnegative(),
+  coinsAwarded: z.number().int().nonnegative(),
+})
 
 /**
  * Günlük giriş ödülü API'si.
  *
- * Her gün ilk girişte artan XP verir:
+ * Her gün (Europe/Istanbul) ilk girişte artan XP verir:
  *   Gün 1: 10 XP, Gün 2: 20 XP ... Gün 7+: 70 XP (max)
+ *
+ * Seri, ödül ve "bugün alındı mı" kararı tek bir RPC'de, profil satırı
+ * kilitliyken verilir (claim_daily_login, migration 20261017100100). Önceden
+ * route profili oku-değiştir-yaz ile güncelliyor, longest_streak'e
+ * dokunmuyordu; oturum tetikleyicisi ise seriyi UTC gününe göre yazıyordu
+ * (derin inceleme 2026-10-15 §4.2).
  *
  * Dönüş:
  *   - already_claimed: Bugün zaten giriş ödülü alınmış
@@ -28,111 +43,28 @@ export async function POST() {
   const rl = await loginLimiter.check(user.id)
   if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
 
-  // Mig 049 prereq: profiles authenticated REVOKE'a hazirlik — service-role + .eq guard
   const svc = createServiceRoleClient()
-
-  // Profili çek
-  const { data: profile } = await svc
-    .from('profiles')
-    .select('current_streak, last_played_at, total_xp')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile) {
-    return NextResponse.json({ error: 'profile_not_found' }, { status: 404 })
-  }
-  // Eski profillerde alan NULL kalmis olabilir; ilk giris davranisini (0) koru.
-  const currentStreak = profile.current_streak ?? 0
-
-  const now = new Date()
-  const todayStr = trDayString(now) // TR takvim gunu (YYYY-MM-DD)
-
-  // Son oynanma tarihini kontrol et — TR gunune gore
-  const lastPlayed = profile.last_played_at
-    ? new Date(profile.last_played_at)
-    : null
-
-  const lastPlayedStr = lastPlayed
-    ? trDayString(lastPlayed)
-    : null
-
-  // Bugün zaten giriş yapılmış mı?
-  if (lastPlayedStr === todayStr) {
-    return NextResponse.json({
-      status: 'already_claimed',
-      streak: currentStreak,
-      xpAwarded: 0,
-    })
-  }
-
-  // Dünkü tarih kontrolü — seri devam mı, kırıldı mı? (TR gunune gore)
-  const yesterdayStr = trYesterdayString(now)
-
-  let newStreak: number
-  let streakReset = false
-
-  if (lastPlayedStr === yesterdayStr) {
-    // Dün de giriş yapılmış — seri devam
-    newStreak = currentStreak + 1
-  } else {
-    // Seri kırıldı veya ilk giriş
-    newStreak = 1
-    if (currentStreak > 0) {
-      streakReset = true
+  // claim_daily_login üretilmiş tiplerde henüz yok (tip senkronu ayrı iş, #2451);
+  // sonuç aşağıda zod ile doğrulanır.
+  const { data, error } = await svc.rpc('claim_daily_login' as never, { p_user_id: user.id } as never)
+  if (error) {
+    if (error.code === 'P0002') {
+      return NextResponse.json({ error: 'profile_not_found' }, { status: 404 })
     }
+    console.error('[DailyLogin] claim_daily_login hatası:', error.code)
+    // PGRST202: migration henüz uygulanmamış. Ödül bugün verilemez, istemci
+    // sessizce geçer; tekrar denenebilir.
+    return NextResponse.json(
+      { error: 'daily_login_unavailable' },
+      { status: error.code === 'PGRST202' ? 503 : 500 },
+    )
   }
 
-  // XP hesapla: gün * 10, max 70
-  const xpReward = Math.min(newStreak * 10, 70)
-
-  // Profili güncelle — atomic guard: sadece bugun (TR) henuz claim edilmemisse
-  const todayStart = trDayStartUtcISO(now)
-  const { data: updated, error: updateError } = await svc
-    .from('profiles')
-    .update({
-      current_streak: newStreak,
-      last_played_at: now.toISOString(),
-      total_xp: (profile.total_xp || 0) + xpReward,
-    })
-    .eq('id', user.id)
-    .or(`last_played_at.is.null,last_played_at.lt.${todayStart}`)
-    .select('id')
-
-  if (!updated || updated.length === 0) {
-    return NextResponse.json({
-      status: 'already_claimed',
-      streak: currentStreak,
-      xpAwarded: 0,
-    })
-  }
-
-  if (updateError) {
-    console.error('[DailyLogin] Güncelleme hatası:', updateError)
+  const result = claimResultSchema.safeParse(data)
+  if (!result.success) {
+    console.error('[DailyLogin] claim_daily_login beklenmeyen yanıt')
     return NextResponse.json({ error: 'update_failed' }, { status: 500 })
   }
 
-  // XP log'a kaydet
-  await svc.from('xp_log').insert({
-    user_id: user.id,
-    amount: xpReward,
-    reason: 'daily_login',
-  }).then(() => {})
-
-  // Günlük giriş coin ödülü: streak * 2, max 20
-  const coinReward = Math.min(newStreak * 2, 20)
-  const { error: coinErr } = await svc.rpc('increment_coins', {
-    p_user_id: user.id,
-    p_amount: coinReward,
-  })
-  if (coinErr) {
-    console.error('[DailyLogin] increment_coins hatası:', coinErr.message)
-  }
-
-  return NextResponse.json({
-    status: streakReset ? 'streak_reset' : 'claimed',
-    streak: newStreak,
-    xpAwarded: xpReward,
-    coinsAwarded: coinErr ? 0 : coinReward,
-    maxXP: 70,
-  })
+  return NextResponse.json({ ...result.data, maxXP: MAX_XP })
 }

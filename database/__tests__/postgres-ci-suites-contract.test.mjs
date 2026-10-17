@@ -119,7 +119,7 @@ describe('PostgreSQL CI suite manifest', () => {
     expect(POSTGRES_CI_SUITES['learning-reward']).toMatchObject({ job: 'learning-reward-postgres', runner: 'vitest', sequential: true })
     expect(POSTGRES_CI_SUITES['learning-reward'].files.map((file) => file.replace(/^database\/__tests__\/|-postgres\.integration\.test\.mjs$/g, '')).sort()).toEqual([
       'activation-reward-claims', 'award-badges', 'canonical-category-remap', 'cohort-team-boss', 'curriculum-graph-v1',
-      'daily-plan-items-v2', 'error-report-rewards', 'paper-study-packs', 'persistent-fsrs', 'positive-learning-spotlights',
+      'daily-plan-items-v2', 'economy-integrity', 'error-report-rewards', 'paper-study-packs', 'persistent-fsrs', 'positive-learning-spotlights',
       'purchase-ledger', 'relative-weekly-leagues', 'session-coin-scale', 'verified-attempts', 'verified-coach-flow',
       'verified-exam-strategy',
     ])

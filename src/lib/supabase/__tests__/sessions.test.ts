@@ -73,7 +73,26 @@ describe('saveGameSession', () => {
       wrongCount: 1,
       newBadges: ['first_game'],
       coinsEarned: 40,
+      xpCapped: false,
     })
+  })
+
+  it('gunluk XP tavani bilgisini tasir; yalniz true kabul edilir', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        sessionId: 'session-123', totalXP: 12, correctCount: 2, wrongCount: 1, newBadges: [], coinsEarned: 0, xpCapped: true,
+      }),
+    })
+    expect(await saveGameSession(baseParams)).toMatchObject({ totalXP: 12, xpCapped: true })
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        sessionId: 'session-123', totalXP: 12, correctCount: 2, wrongCount: 1, newBadges: [], xpCapped: 'evet',
+      }),
+    })
+    expect((await saveGameSession(baseParams))?.xpCapped).toBe(false)
   })
 
   it('gunluk tavan dolu oturumda coinsEarned 0 korunur (null a dusurulmez)', async () => {

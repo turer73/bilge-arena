@@ -15,6 +15,9 @@ const sessionLimiter = createRateLimiter('session-submit', 3, 60_000)
 const completeSessionResultSchema = z.object({
   sessionId: z.string().min(1),
   totalXP: z.number().int().nonnegative(),
+  // Gunluk oturum XP tavanindan sonra fiilen odenen XP (migration
+  // 20261017100000). Taze tamamlamada gelir; replay ve eski veritabaninda yok.
+  xpAwarded: z.number().int().nonnegative().optional(),
   correctCount: z.number().int().nonnegative(),
   wrongCount: z.number().int().nonnegative(),
   alreadyProcessed: z.boolean(),
@@ -262,10 +265,26 @@ export async function POST(request: Request) {
   const {
     sessionId,
     totalXP: persistedTotalXP,
+    xpAwarded: rpcXpAwarded,
     correctCount: persistedCorrectCount,
     wrongCount: persistedWrongCount,
     alreadyProcessed,
   } = parsedRpcResult.data
+  // total_xp oturumun nominal puanidir; kullaniciya odenen XP gunluk tavandan
+  // sonra daha az olabilir. Replay'de RPC odeneni dondurmez, satirdan okunur.
+  let awardedXP = rpcXpAwarded ?? persistedTotalXP
+  if (rpcXpAwarded === undefined && alreadyProcessed) {
+    const { data: sessionRow } = await svc
+      .from('game_sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    const storedAward = (sessionRow as { xp_awarded?: unknown } | null)?.xp_awarded
+    if (typeof storedAward === 'number' && Number.isInteger(storedAward) && storedAward >= 0) {
+      awardedXP = Math.min(storedAward, persistedTotalXP)
+    }
+  }
   // Migration 093, verified_attempt bind edilirken ayni transaction icinde gorev
   // ilerlemesini, rozetleri ve bunlarin odul ledger kayitlarini tamamlar. Route bu
   // alanlarda artik mutasyon yapmaz. Yalniz yeni tamamlamada, UI toast'i icin o
@@ -311,7 +330,9 @@ export async function POST(request: Request) {
     sessionId,
     // Always return the transaction's persisted values. On an idempotent
     // replay these can intentionally differ from the current request body.
-    totalXP: persistedTotalXP,
+    // totalXP is what was paid; xpCapped tells the UI the daily cap cut it.
+    totalXP: awardedXP,
+    xpCapped: awardedXP < persistedTotalXP,
     correctCount: persistedCorrectCount,
     wrongCount: persistedWrongCount,
     maxStreak,

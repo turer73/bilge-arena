@@ -629,6 +629,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
             onRestart={quiz.handleRestart}
             onExit={quiz.handleRestart}
             coinsEarned={sessionSaver.savedSession?.coinsEarned ?? null}
+            xpCapped={sessionSaver.savedSession?.xpCapped ?? false}
             saveStatus={sessionSaver.saveStatus}
             savedTotalXP={sessionSaver.savedSession?.totalXP ?? null}
             savedCorrectCount={sessionSaver.savedSession?.correctCount ?? null}
