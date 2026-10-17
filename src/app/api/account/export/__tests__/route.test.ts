@@ -66,6 +66,47 @@ describe('account data export', () => {
     expect(body.data).toHaveProperty('teacher_assignment_submission_items')
   })
 
+  it('does not reveal who blocked the subject', async () => {
+    const BLOCKER_ID = '22222222-2222-4222-8222-222222222222'
+    const BLOCKED_ID = '33333333-3333-4333-8333-333333333333'
+    const FRIEND_ID = '44444444-4444-4444-8444-444444444444'
+    mocks.rpc.mockResolvedValue({
+      data: {
+        tables: {
+          friendships: [
+            { id: 'f-1', user_id: BLOCKER_ID, friend_id: USER_ID, status: 'blocked' },
+            { id: 'f-2', user_id: USER_ID, friend_id: BLOCKED_ID, status: 'blocked' },
+            { id: 'f-3', user_id: FRIEND_ID, friend_id: USER_ID, status: 'pending' },
+          ],
+        },
+        coverage: { directSubjectColumns: true, relatedTables: [] },
+      },
+      error: null,
+    })
+
+    const body = await (await GET()).json()
+
+    expect(body.data.friendships.map((row: { id: string }) => row.id)).toEqual(['f-2', 'f-3'])
+    expect(JSON.stringify(body)).not.toContain(BLOCKER_ID)
+  })
+
+  it('drops the friendships table when only a foreign block was in it', async () => {
+    mocks.rpc.mockResolvedValue({
+      data: {
+        tables: {
+          friendships: [{ id: 'f-1', user_id: '22222222-2222-4222-8222-222222222222', friend_id: USER_ID, status: 'blocked' }],
+          verified_attempts: [{ id: 'attempt-1', user_id: USER_ID }],
+        },
+        coverage: { directSubjectColumns: true, relatedTables: [] },
+      },
+      error: null,
+    })
+
+    const body = await (await GET()).json()
+
+    expect(Object.keys(body.data)).toEqual(['verified_attempts'])
+  })
+
   it('fails closed when the catalog export contract is incomplete', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     mocks.rpc.mockResolvedValue({ data: { tables: {} }, error: null })
