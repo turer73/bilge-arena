@@ -113,7 +113,7 @@ describe('GET /api/cron/daily-streak-reminder', () => {
     const res = await GET(makeRequest('Bearer test-secret-123'))
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body).toEqual({ sent: 2, expired: 0, candidates: 2, subscriptions: 2 })
+    expect(body).toEqual({ sent: 2, expired: 0, rejected: 0, candidates: 2, subscriptions: 2 })
     expect(mockSendPush).toHaveBeenCalledTimes(2)
 
     // U1 streak=5 mesaji icerir
@@ -170,6 +170,22 @@ describe('GET /api/cron/daily-streak-reminder', () => {
     expect(body.sent).toBe(0)
     expect(body.expired).toBe(0)
     // Transient error icin DELETE cagrilmaz (sub korunur, sonraki firing'de tekrar denenir)
+    expect(mockDeleteRes).not.toHaveBeenCalled()
+  })
+
+  it('counts addresses that are not push services and neither sends to nor deletes them', async () => {
+    mockProfilesRes.mockResolvedValueOnce({
+      data: [{ id: 'u1', display_name: 'A', current_streak: 2 }],
+      error: null,
+    })
+    mockSubscriptionsRes.mockResolvedValueOnce({
+      data: [{ user_id: 'u1', endpoint: 'https://169.254.169.254/latest', p256dh: 'k1', auth: 'a1' }],
+      error: null,
+    })
+    mockSendPush.mockResolvedValueOnce('rejected')
+
+    const body = await (await GET(makeRequest('Bearer test-secret-123'))).json()
+    expect(body).toMatchObject({ sent: 0, expired: 0, rejected: 1 })
     expect(mockDeleteRes).not.toHaveBeenCalled()
   })
 })

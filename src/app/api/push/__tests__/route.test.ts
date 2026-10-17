@@ -38,7 +38,7 @@ function makeRequest(body: Record<string, unknown>, method = 'POST') {
   })
 }
 
-const validSub = { endpoint: 'https://fcm.example.com/xyz', p256dh: 'key1', auth: 'auth1' }
+const validSub = { endpoint: 'https://fcm.googleapis.com/fcm/send/xyz', p256dh: 'key1', auth: 'auth1' }
 
 // ─── Tests ──────────────────────────────────────────
 
@@ -77,6 +77,15 @@ describe('POST /api/push', () => {
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.status).toBe('subscribed')
+  })
+
+  it('rejects an address that is not a browser push service without storing it', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    for (const endpoint of ['https://fcm.example.com/xyz', 'https://169.254.169.254/latest', 'http://fcm.googleapis.com/x']) {
+      const res = await POST(makeRequest({ ...validSub, endpoint }))
+      expect(res.status).toBe(400)
+    }
+    expect(mockUpsert).not.toHaveBeenCalled()
   })
 
   it('returns 500 on upsert error', async () => {

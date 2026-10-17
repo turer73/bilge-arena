@@ -1,4 +1,5 @@
 import webpush from 'web-push'
+import { isAllowedPushEndpoint } from './push-endpoint'
 
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || ''
@@ -20,8 +21,10 @@ export interface PushPayload {
  * - 'sent': basariyla gonderildi
  * - 'expired': abonelik gecersiz (410/404), DB'den silinmeli
  * - 'error': gecici hata (network, server) — abonelik sakla, sonraki firing'de tekrar dene
+ * - 'rejected': adres bir tarayıcı push servisi değil; istek hiç atılmaz.
+ *   Satır silinmez: izin listesi eksik kalırsa gerçek aboneler kaybolmasın.
  */
-export type PushSendResult = 'sent' | 'expired' | 'error'
+export type PushSendResult = 'sent' | 'expired' | 'error' | 'rejected'
 
 /**
  * Tek bir aboneye push bildirim gonderir.
@@ -31,6 +34,10 @@ export async function sendPushNotification(
   subscription: { endpoint: string; p256dh: string; auth: string },
   payload: PushPayload,
 ): Promise<PushSendResult> {
+  // Kayıt sırasında da denetleniyor, ama abonelik PostgREST üzerinden doğrudan
+  // yazılabildiği için sunucudan istek atılmadan önceki son kapı burası.
+  if (!isAllowedPushEndpoint(subscription.endpoint)) return 'rejected'
+
   if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
     console.warn('[Push] VAPID keys not configured')
     return 'error'
