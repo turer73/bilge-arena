@@ -13,7 +13,7 @@
 -- aciyordu. Lig, gorevler ve altin tavani Istanbul gununu kullaniyor.
 --
 -- COZUM
---   * Oturum XP'si Istanbul gununde en cok c_daily_session_xp_cap (1500) odenir.
+--   * Oturum XP'si Istanbul gununde en cok c_daily_session_xp_cap (2500) odenir.
 --     Gunun odenmis oturum XP'si xp_log'daki 'session_complete' satirlarindan
 --     okunur (bu nedeni yalniz complete_game_session yazar). Kullanici profil
 --     satiri kilitlenerek ayni kullanicinin eszamanli oturumlari siralanir.
@@ -28,10 +28,11 @@
 --     profilde KEY SHARE tuttugu icin ikisi kilitleniyordu (deadlock; gercek
 --     PostgreSQL 16 testiyle olculdu). NO KEY UPDATE, KEY SHARE ile catismaz.
 --
--- Tavan degeri: 40 soruluk bir denemenin gercekci ust siniri (~35 dogru,
--- ortalama 20-30 puan + seri bonusu) tek basina sigsin diye 1500. Durust
--- oyuncularda olculen en yuksek haftalik toplam bunun altinda. Bot icin kazanc
--- gunde 1500 ile sinirlanir; tavan cevap toplamayi engellemez, getirisini sinirlar.
+-- Tavan degeri 2500 (kullanici karari, 2026-10-17). Canli olcum, son 90 gun:
+-- oturum XP'li 116 kullanici-gunu; p50 290, p90 910, p99 ~1634, en yuksek 2270.
+-- 1500'u asan yalniz 3 gun vardi ve uc de durust gorunuyordu (%80-88 dogruluk,
+-- soru basina 13-17 sn). 2500 bunlarin hicbirini kesmez. Bot icin kazanc gunde
+-- 2500 ile sinirlanir; tavan cevap toplamayi engellemez, getirisini sinirlar.
 --
 -- DAVRANIS: complete_game_session JSON'una 'xpAwarded' eklendi. 'totalXP'
 -- nominal (cevaplardan hesaplanan) kalir.
@@ -81,7 +82,7 @@ SET search_path = pg_catalog
 AS $fn$
 DECLARE
   -- Istanbul gunu basina odenecek en cok oturum XP'si. Ayar tek yerde.
-  c_daily_session_xp_cap CONSTANT integer := 1500;
+  c_daily_session_xp_cap CONSTANT integer := 2500;
   v_existing RECORD;
   v_session_id UUID;
   v_xp_today integer;

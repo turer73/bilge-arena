@@ -3,7 +3,7 @@
 --
 -- Sorun. Her notlama dogru sikki acar (secim -1 ya da yanlis olsa da). Bir bot
 -- notlamayla bankayi toplayip ayni sorulari baska denemelerde %100 oynayabiliyor.
--- 20261017100000'daki gunluk oturum XP tavani (1500) getiriyi sinirliyor ama
+-- 20261017100000'daki gunluk oturum XP tavani (2500) getiriyi sinirliyor ama
 -- toplanan cevaplarla oynamayi XP'siz birakmiyordu.
 --
 -- Karar (kullanici, 2026-10-17): bir sorunun cevabi bir denemede acildiktan
@@ -120,7 +120,7 @@ SET search_path = pg_catalog
 AS $fn$
 DECLARE
   -- Istanbul gunu basina odenecek en cok oturum XP'si. Ayar tek yerde.
-  c_daily_session_xp_cap CONSTANT integer := 1500;
+  c_daily_session_xp_cap CONSTANT integer := 2500;
   -- Cevabi baska bir denemede acilmis soru bu sure boyunca XP vermez.
   c_reveal_window CONSTANT interval := interval '7 days';
   v_existing RECORD;

@@ -34,7 +34,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const migrationSql = (filename) => readFileSync(join(__dirname, '..', 'migrations', filename), 'utf8');
 
 // Mirrored from the migration constant, checked independently here.
-const DAILY_SESSION_XP_CAP = 1500;
+const DAILY_SESSION_XP_CAP = 2500;
 const HOUR = 3600 * 1000;
 
 const fixtureSql = `
