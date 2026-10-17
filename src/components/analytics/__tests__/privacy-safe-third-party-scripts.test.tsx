@@ -147,23 +147,39 @@ describe('privacy-safe third-party document boundary', () => {
   it('marks public documents so an unexpected sensitive render can force a reload', () => {
     render(<PrivacySafeThirdPartyScripts />)
     expect(document.documentElement.dataset.telemetryDocumentBoundary).toBe('public')
-    expect(mocks.script).not.toHaveBeenCalledWith(
+    expect(mocks.googleAnalytics).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }), undefined)
+  })
+
+  it('mounts cookieless Plausible on public documents without any consent record', () => {
+    render(<PrivacySafeThirdPartyScripts />)
+    expect(mocks.script).toHaveBeenCalledWith(
       expect.objectContaining({ src: 'https://analytics.panola.app/js/script.js', strategy: 'afterInteractive' }),
       undefined,
+    )
+    expect(mocks.script).not.toHaveBeenCalledWith(
+      expect.objectContaining({ src: expect.stringContaining('googletagmanager.com') }), undefined,
+    )
+  })
+
+  it('keeps Plausible mounted when analytics consent is explicitly refused', () => {
+    localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({
+      essential: true, analytics: false, ads: false, version: 2, date: new Date().toISOString(),
+    }))
+    render(<PrivacySafeThirdPartyScripts />)
+    expect(mocks.script).toHaveBeenCalledWith(
+      expect.objectContaining({ src: 'https://analytics.panola.app/js/script.js' }), undefined,
     )
     expect(mocks.googleAnalytics).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }), undefined)
   })
 
-  it('loads analytics only after its own grant and reloads on revocation', () => {
+  it('enables Google Analytics only after its own grant and reloads on revocation', () => {
     const reloadDocument = vi.fn()
     render(<PrivacySafeThirdPartyScripts reloadDocument={reloadDocument} />)
+    expect(mocks.googleAnalytics).not.toHaveBeenCalledWith(expect.objectContaining({ enabled: true }), undefined)
     localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({
       essential: true, analytics: true, ads: false, version: 2, date: new Date().toISOString(),
     }))
     act(() => window.dispatchEvent(new Event(COOKIE_CONSENT_CHANGED_EVENT)))
-    expect(mocks.script).toHaveBeenCalledWith(
-      expect.objectContaining({ src: 'https://analytics.panola.app/js/script.js' }), undefined,
-    )
     expect(mocks.googleAnalytics).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }), undefined)
 
     localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({

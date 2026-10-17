@@ -119,6 +119,7 @@ export function installSensitiveNavigationBoundary({
 
 /**
  * Ucuncu taraf reklam ve analitik betiklerinin tek yukleme noktasi.
+ * Cerezsiz Plausible izin beklemeden yuklenir; GA ve AdSense kendi izinlerine baglidir.
  * Hassas çalışma alanları ayrı bir document boundary arkasındadır. Görünür
  * girişler DocumentBoundaryLink/native anchor kullanarak RSC prefetch başlamadan
  * yeni belge açar. Bu history sarmalayıcısı programatik/olağandışı geçişler için
@@ -184,14 +185,17 @@ export function PrivacySafeThirdPartyScripts({
 
   return (
     <>
-      {analyticsAllowed && (
-        <Script
-          defer
-          data-domain="bilgearena.com"
-          src="https://analytics.panola.app/js/script.js"
-          strategy="afterInteractive"
-        />
-      )}
+      {/*
+        Plausible CE çerezsizdir, IP'yi saklamaz ve PII toplamaz; bu yüzden
+        analitik çerez izninden bağımsız yüklenir. Çerez/kimlik kullanan GA ve
+        AdSense ise kendi izinleri verilmeden mount edilmez.
+      */}
+      <Script
+        defer
+        data-domain="bilgearena.com"
+        src="https://analytics.panola.app/js/script.js"
+        strategy="afterInteractive"
+      />
       <GoogleAnalytics enabled={analyticsAllowed} />
       {adsAllowed && process.env.NEXT_PUBLIC_ADSENSE_ID && (
         <Script

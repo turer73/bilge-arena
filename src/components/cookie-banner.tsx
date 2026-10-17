@@ -150,7 +150,7 @@ export function CookieBanner() {
                             Analitik
                           </p>
                           <p className="text-xs text-[var(--text-muted)]">
-                            Google Analytics ve Plausible ile kullanım istatistikleri
+                            Google Analytics ile kullanım istatistikleri (çerezsiz Plausible bu izne bağlı değildir)
                           </p>
                         </div>
                       </div>
