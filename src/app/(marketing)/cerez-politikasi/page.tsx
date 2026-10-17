@@ -50,7 +50,7 @@ export default function CerezPolitikasiPage() {
                 </tr>
                 <tr className="border-b border-[var(--border)]">
                   <td className="py-2 pr-4 font-medium text-[var(--text)]">Analitik Çerezler</td>
-                  <td className="py-2 pr-4">Google Analytics ve Plausible — kullanım istatistikleri</td>
+                  <td className="py-2 pr-4">Google Analytics — kullanım istatistikleri (yalnız analitik izniyle)</td>
                   <td className="py-2">Sağlayıcı ayarlarına göre</td>
                 </tr>
                 <tr className="border-b border-[var(--border)]">
@@ -74,7 +74,8 @@ export default function CerezPolitikasiPage() {
           <ul className="ml-4 mt-2 list-disc space-y-1">
             <li>
               <strong>Plausible Analytics:</strong> Anonim kullanım istatistikleri toplar.
-              Çerez kullanmadan sayfa görüntüleme istatistikleri sağlar.
+              Çerez kullanmaz, IP adresini saklamaz ve kişisel veri işlemez; bu nedenle
+              çerez iznine tabi değildir ve kamusal sayfalarda her zaman çalışır.
             </li>
             <li>
               <strong>Google Analytics:</strong> Kullanım istatistikleri için kullanılır;
