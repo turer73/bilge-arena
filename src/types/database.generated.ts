@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -574,6 +574,74 @@ export type Database = {
         }
         Relationships: []
       }
+      candidate_exam_policy_events: {
+        Row: {
+          effective_at: string
+          id: string
+          notice_version: string
+          policy_version: string
+          privacy_classification: string
+          recorded_at: string
+          request_id: string
+          supersedes_event_id: string | null
+          user_id: string
+          variant_code: string
+        }
+        Insert: {
+          effective_at?: string
+          id?: string
+          notice_version: string
+          policy_version: string
+          privacy_classification?: string
+          recorded_at?: string
+          request_id: string
+          supersedes_event_id?: string | null
+          user_id: string
+          variant_code: string
+        }
+        Update: {
+          effective_at?: string
+          id?: string
+          notice_version?: string
+          policy_version?: string
+          privacy_classification?: string
+          recorded_at?: string
+          request_id?: string
+          supersedes_event_id?: string | null
+          user_id?: string
+          variant_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_exam_policy_events_policy_version_fkey"
+            columns: ["policy_version"]
+            isOneToOne: false
+            referencedRelation: "exam_candidate_policy_versions"
+            referencedColumns: ["policy_version"]
+          },
+          {
+            foreignKeyName: "candidate_exam_policy_events_policy_version_variant_code_fkey"
+            columns: ["policy_version", "variant_code"]
+            isOneToOne: false
+            referencedRelation: "exam_candidate_policy_variants"
+            referencedColumns: ["policy_version", "variant_code"]
+          },
+          {
+            foreignKeyName: "candidate_exam_policy_events_supersedes_event_id_user_id_p_fkey"
+            columns: ["supersedes_event_id", "user_id", "policy_version"]
+            isOneToOne: false
+            referencedRelation: "candidate_exam_policy_events"
+            referencedColumns: ["id", "user_id", "policy_version"]
+          },
+          {
+            foreignKeyName: "candidate_exam_policy_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       challenges: {
         Row: {
           category: string | null
@@ -1056,6 +1124,87 @@ export type Database = {
         }
         Relationships: []
       }
+      curriculum_canonical_exam_scopes: {
+        Row: {
+          canonical_id: string
+          exam_year: number
+          reviewed_at: string
+          reviewed_by: string
+          source_receipt: Json
+        }
+        Insert: {
+          canonical_id: string
+          exam_year: number
+          reviewed_at?: string
+          reviewed_by: string
+          source_receipt: Json
+        }
+        Update: {
+          canonical_id?: string
+          exam_year?: number
+          reviewed_at?: string
+          reviewed_by?: string
+          source_receipt?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_canonical_exam_scopes_canonical_id_fkey"
+            columns: ["canonical_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_canonical_outcomes"
+            referencedColumns: ["canonical_id"]
+          },
+          {
+            foreignKeyName: "curriculum_canonical_exam_scopes_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curriculum_canonical_outcomes: {
+        Row: {
+          canonical_id: string
+          created_at: string
+          exam_ref: string
+          game: string
+          grade: number
+          official_code: string
+          official_path: Json
+          program_edition: string
+          program_key: string
+          source_receipt: Json
+          title: string
+        }
+        Insert: {
+          canonical_id: string
+          created_at?: string
+          exam_ref: string
+          game: string
+          grade: number
+          official_code: string
+          official_path: Json
+          program_edition: string
+          program_key: string
+          source_receipt: Json
+          title: string
+        }
+        Update: {
+          canonical_id?: string
+          created_at?: string
+          exam_ref?: string
+          game?: string
+          grade?: number
+          official_code?: string
+          official_path?: Json
+          program_edition?: string
+          program_key?: string
+          source_receipt?: Json
+          title?: string
+        }
+        Relationships: []
+      }
       curriculum_nodes: {
         Row: {
           category: string | null
@@ -1108,6 +1257,45 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "curriculum_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curriculum_outcome_canonical_links: {
+        Row: {
+          canonical_id: string
+          created_at: string
+          outcome_id: string
+          package_sha256: string
+          taxonomy_version: string
+        }
+        Insert: {
+          canonical_id: string
+          created_at?: string
+          outcome_id: string
+          package_sha256: string
+          taxonomy_version: string
+        }
+        Update: {
+          canonical_id?: string
+          created_at?: string
+          outcome_id?: string
+          package_sha256?: string
+          taxonomy_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_outcome_canonical_links_canonical_id_fkey"
+            columns: ["canonical_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_canonical_outcomes"
+            referencedColumns: ["canonical_id"]
+          },
+          {
+            foreignKeyName: "curriculum_outcome_canonical_links_outcome_id_fkey"
+            columns: ["outcome_id"]
+            isOneToOne: true
+            referencedRelation: "curriculum_outcomes"
             referencedColumns: ["id"]
           },
         ]
@@ -1416,6 +1604,80 @@ export type Database = {
           },
         ]
       }
+      daily_plan_candidate_policy_snapshots: {
+        Row: {
+          plan_id: string
+          policy_version: string
+          resolved_at: string
+          rules_sha256: string
+          selection_effective_at: string
+          selection_event_id: string
+          user_id: string
+          variant_code: string
+        }
+        Insert: {
+          plan_id: string
+          policy_version: string
+          resolved_at?: string
+          rules_sha256: string
+          selection_effective_at: string
+          selection_event_id: string
+          user_id: string
+          variant_code: string
+        }
+        Update: {
+          plan_id?: string
+          policy_version?: string
+          resolved_at?: string
+          rules_sha256?: string
+          selection_effective_at?: string
+          selection_event_id?: string
+          user_id?: string
+          variant_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_plan_candidate_policy_s_selection_event_id_user_id_p_fkey"
+            columns: [
+              "selection_event_id",
+              "user_id",
+              "policy_version",
+              "variant_code",
+              "selection_effective_at",
+            ]
+            isOneToOne: false
+            referencedRelation: "candidate_exam_policy_events"
+            referencedColumns: [
+              "id",
+              "user_id",
+              "policy_version",
+              "variant_code",
+              "effective_at",
+            ]
+          },
+          {
+            foreignKeyName: "daily_plan_candidate_policy_sn_policy_version_rules_sha256_fkey"
+            columns: ["policy_version", "rules_sha256"]
+            isOneToOne: false
+            referencedRelation: "exam_candidate_policy_versions"
+            referencedColumns: ["policy_version", "rules_sha256"]
+          },
+          {
+            foreignKeyName: "daily_plan_candidate_policy_sn_policy_version_variant_code_fkey"
+            columns: ["policy_version", "variant_code"]
+            isOneToOne: false
+            referencedRelation: "exam_candidate_policy_variants"
+            referencedColumns: ["policy_version", "variant_code"]
+          },
+          {
+            foreignKeyName: "daily_plan_candidate_policy_snapshots_plan_id_user_id_fkey"
+            columns: ["plan_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "daily_plan"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       daily_plan_items: {
         Row: {
           completed_at: string | null
@@ -1457,6 +1719,62 @@ export type Database = {
           },
           {
             foreignKeyName: "daily_plan_items_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_plan_question_exam_role_snapshots: {
+        Row: {
+          exam_role: string
+          plan_id: string
+          policy_version: string
+          position: number
+          question_id: string
+          revision_id: string
+        }
+        Insert: {
+          exam_role: string
+          plan_id: string
+          policy_version: string
+          position: number
+          question_id: string
+          revision_id: string
+        }
+        Update: {
+          exam_role?: string
+          plan_id?: string
+          policy_version?: string
+          position?: number
+          question_id?: string
+          revision_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_plan_question_exam_role_policy_version_revision_id_e_fkey"
+            columns: ["policy_version", "revision_id", "exam_role"]
+            isOneToOne: false
+            referencedRelation: "question_revision_exam_roles"
+            referencedColumns: ["policy_version", "revision_id", "exam_role"]
+          },
+          {
+            foreignKeyName: "daily_plan_question_exam_role_snap_revision_id_question_id_fkey"
+            columns: ["revision_id", "question_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id", "question_id"]
+          },
+          {
+            foreignKeyName: "daily_plan_question_exam_role_snaps_plan_id_policy_version_fkey"
+            columns: ["plan_id", "policy_version"]
+            isOneToOne: false
+            referencedRelation: "daily_plan_candidate_policy_snapshots"
+            referencedColumns: ["plan_id", "policy_version"]
+          },
+          {
+            foreignKeyName: "daily_plan_question_exam_role_snapshots_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
@@ -1573,6 +1891,86 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      exam_candidate_policy_variants: {
+        Row: {
+          allowed_roles: string[]
+          created_at: string
+          policy_version: string
+          question_range: unknown
+          variant_code: string
+        }
+        Insert: {
+          allowed_roles: string[]
+          created_at?: string
+          policy_version: string
+          question_range: unknown
+          variant_code: string
+        }
+        Update: {
+          allowed_roles?: string[]
+          created_at?: string
+          policy_version?: string
+          question_range?: unknown
+          variant_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_candidate_policy_variants_policy_version_fkey"
+            columns: ["policy_version"]
+            isOneToOne: false
+            referencedRelation: "exam_candidate_policy_versions"
+            referencedColumns: ["policy_version"]
+          },
+        ]
+      }
+      exam_candidate_policy_versions: {
+        Row: {
+          created_at: string
+          display_exam_ref: string
+          game: string
+          official_source_url: string
+          policy_version: string
+          question_exam_ref: string
+          released_at: string | null
+          rules: Json
+          rules_sha256: string
+          status: string
+          taxonomy_version: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_exam_ref: string
+          game: string
+          official_source_url: string
+          policy_version: string
+          question_exam_ref: string
+          released_at?: string | null
+          rules: Json
+          rules_sha256: string
+          status: string
+          taxonomy_version: string
+          valid_from: string
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_exam_ref?: string
+          game?: string
+          official_source_url?: string
+          policy_version?: string
+          question_exam_ref?: string
+          released_at?: string | null
+          rules?: Json
+          rules_sha256?: string
+          status?: string
+          taxonomy_version?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: []
       }
       friendships: {
         Row: {
@@ -3211,6 +3609,213 @@ export type Database = {
           },
           {
             foreignKeyName: "mastery_outcome_evidence_days_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_form_releases: {
+        Row: {
+          enabled: boolean
+          form_id: string
+        }
+        Insert: {
+          enabled?: boolean
+          form_id: string
+        }
+        Update: {
+          enabled?: boolean
+          form_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_form_releases_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: true
+            referencedRelation: "measurement_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_forms: {
+        Row: {
+          acceptance_ref: string
+          accepted_at: string
+          accepted_by: string
+          exam_ref: string
+          exam_year: number
+          form_sha256: string
+          game: string
+          id: string
+          pins: Json
+          protocol: string
+        }
+        Insert: {
+          acceptance_ref: string
+          accepted_at?: string
+          accepted_by: string
+          exam_ref: string
+          exam_year: number
+          form_sha256: string
+          game: string
+          id?: string
+          pins: Json
+          protocol?: string
+        }
+        Update: {
+          acceptance_ref?: string
+          accepted_at?: string
+          accepted_by?: string
+          exam_ref?: string
+          exam_year?: number
+          form_sha256?: string
+          game?: string
+          id?: string
+          pins?: Json
+          protocol?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_forms_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_items: {
+        Row: {
+          acknowledged_at: string | null
+          answered_at: string | null
+          assistance_used: boolean
+          content_sha256: string
+          interrupted: boolean
+          issued_at: string | null
+          position: number
+          prior_recorded_exposure: boolean
+          question_id: string
+          render_ok: boolean
+          render_version: string | null
+          request_id: string | null
+          revision_id: string
+          selected_option: number | null
+          server_elapsed_ms: number | null
+          session_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          answered_at?: string | null
+          assistance_used?: boolean
+          content_sha256: string
+          interrupted?: boolean
+          issued_at?: string | null
+          position: number
+          prior_recorded_exposure: boolean
+          question_id: string
+          render_ok?: boolean
+          render_version?: string | null
+          request_id?: string | null
+          revision_id: string
+          selected_option?: number | null
+          server_elapsed_ms?: number | null
+          session_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          answered_at?: string | null
+          assistance_used?: boolean
+          content_sha256?: string
+          interrupted?: boolean
+          issued_at?: string | null
+          position?: number
+          prior_recorded_exposure?: boolean
+          question_id?: string
+          render_ok?: boolean
+          render_version?: string | null
+          request_id?: string | null
+          revision_id?: string
+          selected_option?: number | null
+          server_elapsed_ms?: number | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_items_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_items_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_items_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_evidence_v1"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "measurement_items_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_sessions: {
+        Row: {
+          answered: number
+          completed_at: string | null
+          expires_at: string
+          form_id: string
+          id: string
+          request_id: string
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          answered?: number
+          completed_at?: string | null
+          expires_at?: string
+          form_id: string
+          id?: string
+          request_id: string
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          answered?: number
+          completed_at?: string | null
+          expires_at?: string
+          form_id?: string
+          id?: string
+          request_id?: string
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_sessions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_sessions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -5345,6 +5950,201 @@ export type Database = {
           },
         ]
       }
+      question_revision_exam_role_candidates: {
+        Row: {
+          decided_at: string | null
+          id: string
+          policy_version: string
+          prepared_at: string
+          prepared_by: string
+          proposed_role: string
+          rationale: string
+          revision_id: string
+          status: string
+        }
+        Insert: {
+          decided_at?: string | null
+          id?: string
+          policy_version: string
+          prepared_at?: string
+          prepared_by: string
+          proposed_role: string
+          rationale: string
+          revision_id: string
+          status?: string
+        }
+        Update: {
+          decided_at?: string | null
+          id?: string
+          policy_version?: string
+          prepared_at?: string
+          prepared_by?: string
+          proposed_role?: string
+          rationale?: string
+          revision_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_revision_exam_role_candidates_policy_version_fkey"
+            columns: ["policy_version"]
+            isOneToOne: false
+            referencedRelation: "exam_candidate_policy_versions"
+            referencedColumns: ["policy_version"]
+          },
+          {
+            foreignKeyName: "question_revision_exam_role_candidates_prepared_by_fkey"
+            columns: ["prepared_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_revision_exam_role_candidates_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_revision_exam_role_reviews: {
+        Row: {
+          candidate_id: string
+          decided_at: string
+          decision: string
+          rationale: string
+          request_id: string
+          reviewer_id: string
+          stage: number
+        }
+        Insert: {
+          candidate_id: string
+          decided_at?: string
+          decision: string
+          rationale: string
+          request_id: string
+          reviewer_id: string
+          stage: number
+        }
+        Update: {
+          candidate_id?: string
+          decided_at?: string
+          decision?: string
+          rationale?: string
+          request_id?: string
+          reviewer_id?: string
+          stage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_revision_exam_role_reviews_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "question_revision_exam_role_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_revision_exam_role_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_revision_exam_roles: {
+        Row: {
+          acceptance_mode: string
+          ai_preparation: Json | null
+          approved_at: string
+          candidate_id: string
+          exam_role: string
+          policy_version: string
+          preparation_pool_id: string | null
+          revision_id: string
+          stage1_reviewer_id: string
+          stage2_reviewer_id: string | null
+        }
+        Insert: {
+          acceptance_mode?: string
+          ai_preparation?: Json | null
+          approved_at?: string
+          candidate_id: string
+          exam_role: string
+          policy_version: string
+          preparation_pool_id?: string | null
+          revision_id: string
+          stage1_reviewer_id: string
+          stage2_reviewer_id?: string | null
+        }
+        Update: {
+          acceptance_mode?: string
+          ai_preparation?: Json | null
+          approved_at?: string
+          candidate_id?: string
+          exam_role?: string
+          policy_version?: string
+          preparation_pool_id?: string | null
+          revision_id?: string
+          stage1_reviewer_id?: string
+          stage2_reviewer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_revision_exam_roles_candidate_id_policy_version_r_fkey"
+            columns: [
+              "candidate_id",
+              "policy_version",
+              "revision_id",
+              "exam_role",
+            ]
+            isOneToOne: false
+            referencedRelation: "question_revision_exam_role_candidates"
+            referencedColumns: [
+              "id",
+              "policy_version",
+              "revision_id",
+              "proposed_role",
+            ]
+          },
+          {
+            foreignKeyName: "question_revision_exam_roles_policy_version_fkey"
+            columns: ["policy_version"]
+            isOneToOne: false
+            referencedRelation: "exam_candidate_policy_versions"
+            referencedColumns: ["policy_version"]
+          },
+          {
+            foreignKeyName: "question_revision_exam_roles_preparation_pool_id_fkey"
+            columns: ["preparation_pool_id"]
+            isOneToOne: false
+            referencedRelation: "tyt_social_reviewed_preparation_pools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_revision_exam_roles_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_revision_exam_roles_stage1_reviewer_id_fkey"
+            columns: ["stage1_reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_revision_exam_roles_stage2_reviewer_id_fkey"
+            columns: ["stage2_reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       question_revision_outcomes: {
         Row: {
           is_primary: boolean
@@ -5436,6 +6236,114 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "question_revision_psychometrics_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_revision_source_exceptions: {
+        Row: {
+          content_sha256: string
+          declaration: Json
+          evidence_fingerprint: string
+          report_sha256: string
+          request_id: string
+          reviewed_at: string
+          reviewer_id: string
+          revision_id: string
+        }
+        Insert: {
+          content_sha256: string
+          declaration: Json
+          evidence_fingerprint: string
+          report_sha256: string
+          request_id: string
+          reviewed_at?: string
+          reviewer_id: string
+          revision_id: string
+        }
+        Update: {
+          content_sha256?: string
+          declaration?: Json
+          evidence_fingerprint?: string
+          report_sha256?: string
+          request_id?: string
+          reviewed_at?: string
+          reviewer_id?: string
+          revision_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_revision_source_exceptions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_revision_source_exceptions_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: true
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_revision_source_reviews: {
+        Row: {
+          acceptance_mode: string
+          ai_preparation: Json | null
+          content_sha256: string
+          created_at: string
+          evidence_fingerprint: string
+          id: string
+          policy_version: string
+          report: Json
+          report_sha256: string
+          reviewed_at: string
+          reviewer_id: string
+          revision_id: string
+        }
+        Insert: {
+          acceptance_mode?: string
+          ai_preparation?: Json | null
+          content_sha256: string
+          created_at?: string
+          evidence_fingerprint: string
+          id?: string
+          policy_version?: string
+          report: Json
+          report_sha256: string
+          reviewed_at: string
+          reviewer_id: string
+          revision_id: string
+        }
+        Update: {
+          acceptance_mode?: string
+          ai_preparation?: Json | null
+          content_sha256?: string
+          created_at?: string
+          evidence_fingerprint?: string
+          id?: string
+          policy_version?: string
+          report?: Json
+          report_sha256?: string
+          reviewed_at?: string
+          reviewer_id?: string
+          revision_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_revision_source_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_revision_source_reviews_revision_id_fkey"
             columns: ["revision_id"]
             isOneToOne: false
             referencedRelation: "question_content_revisions"
@@ -5554,6 +6462,80 @@ export type Database = {
           },
         ]
       }
+      question_turkish_restoration_stems: {
+        Row: {
+          ascii_stem: string
+          turkish_stem: string
+        }
+        Insert: {
+          ascii_stem: string
+          turkish_stem: string
+        }
+        Update: {
+          ascii_stem?: string
+          turkish_stem?: string
+        }
+        Relationships: []
+      }
+      question_turkish_restorations: {
+        Row: {
+          base_revision_id: string
+          created_at: string
+          published_by: string
+          question_id: string
+          revision_id: string
+          rule_version: string
+          words: string[]
+        }
+        Insert: {
+          base_revision_id: string
+          created_at?: string
+          published_by: string
+          question_id: string
+          revision_id: string
+          rule_version: string
+          words: string[]
+        }
+        Update: {
+          base_revision_id?: string
+          created_at?: string
+          published_by?: string
+          question_id?: string
+          revision_id?: string
+          rule_version?: string
+          words?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_turkish_restorations_base_revision_id_fkey"
+            columns: ["base_revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_turkish_restorations_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_turkish_restorations_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_turkish_restorations_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: true
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       question_validation_decisions: {
         Row: {
           blind_agreement_ratio: number | null
@@ -5612,6 +6594,75 @@ export type Database = {
             foreignKeyName: "question_validation_decisions_revision_id_fkey"
             columns: ["revision_id"]
             isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_validation_revision_policies: {
+        Row: {
+          audit_code_commit: string
+          audit_execution: Json
+          audit_policy_version: string
+          base_policy_version: string
+          benchmark_ref: string
+          benchmark_sha256: string
+          code_commit: string
+          content_sha256: string
+          created_at: string
+          evidence_ref: string
+          evidence_sha256: string
+          policy_version: string
+          question_id: string
+          revision_id: string
+          run_id: string
+        }
+        Insert: {
+          audit_code_commit: string
+          audit_execution: Json
+          audit_policy_version: string
+          base_policy_version: string
+          benchmark_ref: string
+          benchmark_sha256: string
+          code_commit: string
+          content_sha256: string
+          created_at?: string
+          evidence_ref: string
+          evidence_sha256: string
+          policy_version: string
+          question_id: string
+          revision_id: string
+          run_id: string
+        }
+        Update: {
+          audit_code_commit?: string
+          audit_execution?: Json
+          audit_policy_version?: string
+          base_policy_version?: string
+          benchmark_ref?: string
+          benchmark_sha256?: string
+          code_commit?: string
+          content_sha256?: string
+          created_at?: string
+          evidence_ref?: string
+          evidence_sha256?: string
+          policy_version?: string
+          question_id?: string
+          revision_id?: string
+          run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_validation_revision_policies_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_validation_revision_policies_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: true
             referencedRelation: "question_content_revisions"
             referencedColumns: ["id"]
           },
@@ -6269,6 +7320,238 @@ export type Database = {
         }
         Relationships: []
       }
+      social_discovery_answers: {
+        Row: {
+          answered_at: string
+          is_correct: boolean
+          pack_id: string
+          payload_sha256: string
+          question_id: string
+          request_id: string
+          response_time_ms: number
+          result_after: Json
+          selected_option: number
+          sequence: number
+          server_response_time_ms: number
+          session_id: string
+        }
+        Insert: {
+          answered_at?: string
+          is_correct: boolean
+          pack_id: string
+          payload_sha256: string
+          question_id: string
+          request_id: string
+          response_time_ms: number
+          result_after: Json
+          selected_option: number
+          sequence: number
+          server_response_time_ms: number
+          session_id: string
+        }
+        Update: {
+          answered_at?: string
+          is_correct?: boolean
+          pack_id?: string
+          payload_sha256?: string
+          question_id?: string
+          request_id?: string
+          response_time_ms?: number
+          result_after?: Json
+          selected_option?: number
+          sequence?: number
+          server_response_time_ms?: number
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_discovery_answers_pack_id_question_id_fkey"
+            columns: ["pack_id", "question_id"]
+            isOneToOne: false
+            referencedRelation: "social_discovery_pack_candidates"
+            referencedColumns: ["pack_id", "question_id"]
+          },
+          {
+            foreignKeyName: "social_discovery_answers_session_id_pack_id_fkey"
+            columns: ["session_id", "pack_id"]
+            isOneToOne: false
+            referencedRelation: "social_discovery_sessions"
+            referencedColumns: ["id", "pack_id"]
+          },
+        ]
+      }
+      social_discovery_pack_candidates: {
+        Row: {
+          category: string
+          content_sha256: string
+          content_snapshot: Json
+          difficulty: number
+          level_tag: string | null
+          pack_id: string
+          question_id: string
+          revision_id: string
+          subcategory: string | null
+          topic: string | null
+        }
+        Insert: {
+          category: string
+          content_sha256: string
+          content_snapshot?: Json
+          difficulty: number
+          level_tag?: string | null
+          pack_id: string
+          question_id: string
+          revision_id: string
+          subcategory?: string | null
+          topic?: string | null
+        }
+        Update: {
+          category?: string
+          content_sha256?: string
+          content_snapshot?: Json
+          difficulty?: number
+          level_tag?: string | null
+          pack_id?: string
+          question_id?: string
+          revision_id?: string
+          subcategory?: string | null
+          topic?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_discovery_pack_candidates_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "social_discovery_packs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_discovery_pack_candidates_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_discovery_pack_candidates_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_discovery_packs: {
+        Row: {
+          acceptance_reference: string | null
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          id: string
+          manifest_sha256: string | null
+          policy_version: string
+          released_at: string | null
+          source_package_sha256: string | null
+          status: string
+          version: string
+        }
+        Insert: {
+          acceptance_reference?: string | null
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          id?: string
+          manifest_sha256?: string | null
+          policy_version?: string
+          released_at?: string | null
+          source_package_sha256?: string | null
+          status?: string
+          version: string
+        }
+        Update: {
+          acceptance_reference?: string | null
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          id?: string
+          manifest_sha256?: string | null
+          policy_version?: string
+          released_at?: string | null
+          source_package_sha256?: string | null
+          status?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_discovery_packs_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_discovery_sessions: {
+        Row: {
+          answered_count: number
+          completed_at: string | null
+          current_question_id: string | null
+          expires_at: string
+          id: string
+          issued_at: string | null
+          pack_id: string
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          answered_count?: number
+          completed_at?: string | null
+          current_question_id?: string | null
+          expires_at?: string
+          id: string
+          issued_at?: string | null
+          pack_id: string
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          answered_count?: number
+          completed_at?: string | null
+          current_question_id?: string | null
+          expires_at?: string
+          id?: string
+          issued_at?: string | null
+          pack_id?: string
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_discovery_sessions_pack_id_current_question_id_fkey"
+            columns: ["pack_id", "current_question_id"]
+            isOneToOne: false
+            referencedRelation: "social_discovery_pack_candidates"
+            referencedColumns: ["pack_id", "question_id"]
+          },
+          {
+            foreignKeyName: "social_discovery_sessions_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "social_discovery_packs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_discovery_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_assignment_items: {
         Row: {
           assignment_id: string
@@ -6724,6 +8007,95 @@ export type Database = {
           },
         ]
       }
+      tyt_social_policy_capabilities: {
+        Row: {
+          activated_at: string
+          capability: string
+          capability_version: number
+          evidence: Json
+          manifest_sha256: string
+          policy_version: string
+        }
+        Insert: {
+          activated_at?: string
+          capability: string
+          capability_version: number
+          evidence: Json
+          manifest_sha256: string
+          policy_version: string
+        }
+        Update: {
+          activated_at?: string
+          capability?: string
+          capability_version?: number
+          evidence?: Json
+          manifest_sha256?: string
+          policy_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tyt_social_policy_capabilities_policy_version_fkey"
+            columns: ["policy_version"]
+            isOneToOne: false
+            referencedRelation: "exam_candidate_policy_versions"
+            referencedColumns: ["policy_version"]
+          },
+        ]
+      }
+      tyt_social_reviewed_preparation_pools: {
+        Row: {
+          exam_year: number
+          id: string
+          manifest_sha256: string
+          pins: Json
+          policy_rules_sha256: string
+          policy_version: string
+          prepared_at: string
+          prepared_by: string
+          rationale: string
+          request_id: string
+        }
+        Insert: {
+          exam_year: number
+          id?: string
+          manifest_sha256: string
+          pins: Json
+          policy_rules_sha256: string
+          policy_version: string
+          prepared_at?: string
+          prepared_by: string
+          rationale: string
+          request_id: string
+        }
+        Update: {
+          exam_year?: number
+          id?: string
+          manifest_sha256?: string
+          pins?: Json
+          policy_rules_sha256?: string
+          policy_version?: string
+          prepared_at?: string
+          prepared_by?: string
+          rationale?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tyt_social_reviewed_preparation_pools_policy_version_fkey"
+            columns: ["policy_version"]
+            isOneToOne: true
+            referencedRelation: "exam_candidate_policy_versions"
+            referencedColumns: ["policy_version"]
+          },
+          {
+            foreignKeyName: "tyt_social_reviewed_preparation_pools_prepared_by_fkey"
+            columns: ["prepared_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_achievements: {
         Row: {
           achievement_id: string
@@ -7152,6 +8524,114 @@ export type Database = {
           },
         ]
       }
+      verified_attempt_candidate_policy_snapshots: {
+        Row: {
+          artifact_kind: string
+          attempt_id: string
+          composition: Json
+          issue_request_id: string
+          policy_version: string
+          question_set_sha256: string
+          resolved_at: string
+          rules_sha256: string
+          selection_effective_at: string
+          selection_event_id: string
+          source_plan_id: string | null
+          user_id: string
+          variant_code: string
+        }
+        Insert: {
+          artifact_kind: string
+          attempt_id: string
+          composition: Json
+          issue_request_id: string
+          policy_version: string
+          question_set_sha256: string
+          resolved_at?: string
+          rules_sha256: string
+          selection_effective_at: string
+          selection_event_id: string
+          source_plan_id?: string | null
+          user_id: string
+          variant_code: string
+        }
+        Update: {
+          artifact_kind?: string
+          attempt_id?: string
+          composition?: Json
+          issue_request_id?: string
+          policy_version?: string
+          question_set_sha256?: string
+          resolved_at?: string
+          rules_sha256?: string
+          selection_effective_at?: string
+          selection_event_id?: string
+          source_plan_id?: string | null
+          user_id?: string
+          variant_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verified_attempt_candidate_po_selection_event_id_user_id_p_fkey"
+            columns: [
+              "selection_event_id",
+              "user_id",
+              "policy_version",
+              "variant_code",
+              "selection_effective_at",
+            ]
+            isOneToOne: false
+            referencedRelation: "candidate_exam_policy_events"
+            referencedColumns: [
+              "id",
+              "user_id",
+              "policy_version",
+              "variant_code",
+              "effective_at",
+            ]
+          },
+          {
+            foreignKeyName: "verified_attempt_candidate_pol_policy_version_rules_sha256_fkey"
+            columns: ["policy_version", "rules_sha256"]
+            isOneToOne: false
+            referencedRelation: "exam_candidate_policy_versions"
+            referencedColumns: ["policy_version", "rules_sha256"]
+          },
+          {
+            foreignKeyName: "verified_attempt_candidate_pol_policy_version_variant_code_fkey"
+            columns: ["policy_version", "variant_code"]
+            isOneToOne: false
+            referencedRelation: "exam_candidate_policy_variants"
+            referencedColumns: ["policy_version", "variant_code"]
+          },
+          {
+            foreignKeyName: "verified_attempt_candidate_policy_snaps_attempt_id_user_id_fkey"
+            columns: ["attempt_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "verified_attempts"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "verified_attempt_policy_source_plan_fkey"
+            columns: [
+              "source_plan_id",
+              "user_id",
+              "policy_version",
+              "variant_code",
+              "selection_event_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "daily_plan_candidate_policy_snapshots"
+            referencedColumns: [
+              "plan_id",
+              "user_id",
+              "policy_version",
+              "variant_code",
+              "selection_event_id",
+            ]
+          },
+        ]
+      }
       verified_attempt_hint_events: {
         Row: {
           attempt_id: string
@@ -7194,6 +8674,65 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verified_attempt_question_exam_role_snapshots: {
+        Row: {
+          attempt_id: string
+          exam_role: string
+          gradeable: boolean
+          policy_version: string
+          position: number
+          question_id: string
+          revision_id: string
+        }
+        Insert: {
+          attempt_id: string
+          exam_role: string
+          gradeable?: boolean
+          policy_version: string
+          position: number
+          question_id: string
+          revision_id: string
+        }
+        Update: {
+          attempt_id?: string
+          exam_role?: string
+          gradeable?: boolean
+          policy_version?: string
+          position?: number
+          question_id?: string
+          revision_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verified_attempt_question_exa_policy_version_revision_id_e_fkey"
+            columns: ["policy_version", "revision_id", "exam_role"]
+            isOneToOne: false
+            referencedRelation: "question_revision_exam_roles"
+            referencedColumns: ["policy_version", "revision_id", "exam_role"]
+          },
+          {
+            foreignKeyName: "verified_attempt_question_exam_r_attempt_id_policy_version_fkey"
+            columns: ["attempt_id", "policy_version"]
+            isOneToOne: false
+            referencedRelation: "verified_attempt_candidate_policy_snapshots"
+            referencedColumns: ["attempt_id", "policy_version"]
+          },
+          {
+            foreignKeyName: "verified_attempt_question_exam_rol_revision_id_question_id_fkey"
+            columns: ["revision_id", "question_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id", "question_id"]
+          },
+          {
+            foreignKeyName: "verified_attempt_question_exam_role_snapshots_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
             referencedColumns: ["id"]
           },
         ]
@@ -7949,8 +9488,86 @@ export type Database = {
           },
         ]
       }
+      measurement_evidence_v1: {
+        Row: {
+          content_sha256: string | null
+          exclusion_reasons: string[] | null
+          form_id: string | null
+          is_correct: boolean | null
+          position: number | null
+          question_id: string | null
+          revision_id: string | null
+          selected_option: number | null
+          server_elapsed_ms: number | null
+          session_id: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_items_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_items_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_sessions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      accept_question_revision_ai_source_review: {
+        Args: {
+          p_preparation: Json
+          p_rationale: string
+          p_report: Json
+          p_request_id: string
+          p_revision_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      accept_question_revision_source_exception_review: {
+        Args: {
+          p_exception: Json
+          p_preparation: Json
+          p_rationale: string
+          p_report: Json
+          p_request_id: string
+          p_revision_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      accept_question_revision_source_review: {
+        Args: {
+          p_rationale: string
+          p_report: Json
+          p_request_id: string
+          p_revision_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       accept_teacher_classroom_invite: {
         Args: {
           p_consent_version: string
@@ -7958,6 +9575,18 @@ export type Database = {
           p_request_id: string
           p_token_digest: string
           p_user_id: string
+        }
+        Returns: Json
+      }
+      accept_tyt_social_preparation_pool_roles: {
+        Args: {
+          p_actor_user_id: string
+          p_evidence_fingerprint: string
+          p_manifest_sha256: string
+          p_pool_id: string
+          p_preparation: Json
+          p_rationale: string
+          p_request_id: string
         }
         Returns: Json
       }
@@ -8078,6 +9707,18 @@ export type Database = {
         Args: { p_question_id: string }
         Returns: undefined
       }
+      assert_tyt_social_attempt_snapshot_integrity: {
+        Args: { p_attempt_id: string }
+        Returns: undefined
+      }
+      assert_tyt_social_exam_role_approval: {
+        Args: { p_policy_version: string; p_revision_id: string }
+        Returns: undefined
+      }
+      assert_tyt_social_plan_snapshot_integrity: {
+        Args: { p_plan_id: string }
+        Returns: undefined
+      }
       award_badges: {
         Args: { p_badge_codes: string[]; p_user_id: string }
         Returns: {
@@ -8192,6 +9833,18 @@ export type Database = {
           p_total_xp: number
           p_user_id: string
           p_wrong_count: number
+        }
+        Returns: Json
+      }
+      compose_and_issue_tyt_social_preparation: {
+        Args: { p_request_id: string; p_user_id: string; p_variant: string }
+        Returns: Json
+      }
+      compose_and_issue_verified_tyt_social_section_attempt: {
+        Args: {
+          p_duration_sec: number
+          p_request_id: string
+          p_user_id: string
         }
         Returns: Json
       }
@@ -8336,6 +9989,10 @@ export type Database = {
         Args: { p_name: string; p_request_id: string; p_user_id: string }
         Returns: Json
       }
+      create_tyt_social_daily_plan_v2: {
+        Args: { p_items: Json; p_plan_date: string; p_user_id: string }
+        Returns: Json
+      }
       curriculum_graph_integrity: { Args: never; Returns: Json }
       curriculum_outcome_scope_valid: {
         Args: {
@@ -8367,6 +10024,14 @@ export type Database = {
         Returns: Json
       }
       export_account_data: { Args: { p_user_id: string }; Returns: Json }
+      export_tyt_social_candidate_policy_data: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      filter_tyt_social_question_candidates: {
+        Args: { p_question_ids: string[]; p_user_id: string }
+        Returns: Json
+      }
       finalize_legacy_question_appeal_transition: {
         Args: { p_appeal_id: string; p_coins: number; p_user_id: string }
         Returns: Json
@@ -8680,6 +10345,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
+      get_measurement_context: { Args: { p_user_id: string }; Returns: Json }
       get_my_assistance_policy: { Args: { p_user_id: string }; Returns: Json }
       get_my_classroom_bilge_tahta_access: {
         Args: {
@@ -8737,6 +10403,7 @@ export type Database = {
         Returns: Json
       }
       get_my_teacher_classrooms: { Args: { p_user_id: string }; Returns: Json }
+      get_my_tyt_social_exam_policy: { Args: never; Returns: Json }
       get_my_weekly_learning_league: {
         Args: { p_user_id: string }
         Returns: Json
@@ -8822,6 +10489,39 @@ export type Database = {
       }
       get_question_quality_case_evidence: {
         Args: { p_actor_id: string; p_case_id: string }
+        Returns: Json
+      }
+      get_question_revision_source_review: {
+        Args: { p_revision_id: string; p_user_id: string }
+        Returns: Json
+      }
+      get_social_discovery_pilot_context: {
+        Args: { p_session_id?: string; p_user_id: string }
+        Returns: Json
+      }
+      get_tyt_social_preparation_context: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      get_tyt_social_preparation_pool: {
+        Args: { p_actor_user_id: string; p_pool_id: string }
+        Returns: Json
+      }
+      get_tyt_social_release_operations: {
+        Args: {
+          p_actor_user_id: string
+          p_cursor?: string
+          p_limit?: number
+          p_state?: string
+        }
+        Returns: Json
+      }
+      get_tyt_social_reviewed_pool_preflight: {
+        Args: {
+          p_actor_user_id: string
+          p_items: Json
+          p_policy_version: string
+        }
         Returns: Json
       }
       get_verified_attempt_question_snapshots: {
@@ -8931,6 +10631,10 @@ export type Database = {
         Args: { p_integrity: Json }
         Returns: boolean
       }
+      institution_study_program_completion_ready: {
+        Args: { p_program_id: string }
+        Returns: boolean
+      }
       institution_study_program_review_evidence: {
         Args: { p_program_id: string }
         Returns: Json
@@ -8982,6 +10686,60 @@ export type Database = {
         }
         Returns: Json
       }
+      issue_verified_tyt_social_attempt: {
+        Args: {
+          p_duration_sec: number
+          p_mode: string
+          p_question_ids: string[]
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      issue_verified_tyt_social_attempt_with_event: {
+        Args: {
+          p_artifact_kind: string
+          p_duration_sec: number
+          p_mode: string
+          p_policy_version: string
+          p_question_ids: string[]
+          p_request_id: string
+          p_selection_event_id: string
+          p_source_plan_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      issue_verified_tyt_social_exam_attempt: {
+        Args: {
+          p_blueprint_version: string
+          p_duration_sec: number
+          p_items: Json
+          p_planned_duration_sec: number
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      issue_verified_tyt_social_plan_attempt: {
+        Args: {
+          p_duration_sec: number
+          p_mode: string
+          p_plan_id: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      issue_verified_tyt_social_section_attempt: {
+        Args: {
+          p_duration_sec: number
+          p_question_ids: string[]
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       legacy_error_report_intake_enabled: { Args: never; Returns: boolean }
       list_pilot_institutions: { Args: { p_user_id: string }; Returns: Json }
       list_question_outcome_mapping_candidates: {
@@ -9008,6 +10766,10 @@ export type Database = {
         Args: { p_revision_id: string }
         Returns: undefined
       }
+      lock_question_revision_validation_run: {
+        Args: { p_revision_id: string }
+        Returns: undefined
+      }
       materialize_question_revision_psychometrics: {
         Args: {
           p_request_id: string
@@ -9021,6 +10783,15 @@ export type Database = {
       materialize_verified_attempt_mastery: {
         Args: { p_attempt_id: string }
         Returns: undefined
+      }
+      measurement_feedback_blocked: {
+        Args: { p_question_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      measurement_form_ready: { Args: { p_form_id: string }; Returns: boolean }
+      measurement_public_session: {
+        Args: { p_session_id: string; p_user_id: string }
+        Returns: Json
       }
       mutate_admin_homepage: {
         Args: {
@@ -9042,6 +10813,27 @@ export type Database = {
         }
         Returns: Json
       }
+      prepare_tyt_social_exam_role: {
+        Args: {
+          p_actor_user_id: string
+          p_exam_role: string
+          p_rationale: string
+          p_request_id: string
+          p_revision_id: string
+        }
+        Returns: Json
+      }
+      prepare_tyt_social_reviewed_pool: {
+        Args: {
+          p_actor_user_id: string
+          p_exam_year: number
+          p_pins: Json
+          p_policy_version: string
+          p_rationale: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       preview_expired_account_retention: {
         Args: { p_batch_size?: number }
         Returns: Json
@@ -9052,6 +10844,10 @@ export type Database = {
       }
       preview_teacher_classroom_invite: {
         Args: { p_token_digest: string; p_user_id: string }
+        Returns: Json
+      }
+      preview_tyt_social_candidate_policy_retention: {
+        Args: { p_user_id: string }
         Returns: Json
       }
       provision_free_pilot_institution: {
@@ -9086,6 +10882,16 @@ export type Database = {
       }
       publish_question_content_revision: {
         Args: { p_request_id: string; p_revision_id: string; p_user_id: string }
+        Returns: Json
+      }
+      publish_question_turkish_restoration: {
+        Args: {
+          p_base_revision_id: string
+          p_content: Json
+          p_question_id: string
+          p_request_id: string
+          p_user_id: string
+        }
         Returns: Json
       }
       publish_teacher_assignment: {
@@ -9148,8 +10954,16 @@ export type Database = {
         Args: { p_question_id: string }
         Returns: boolean
       }
+      question_ai_preparation_declaration_valid: {
+        Args: { p: Json }
+        Returns: boolean
+      }
       question_content_basic_guard: {
         Args: { p_content: Json; p_game: string }
+        Returns: boolean
+      }
+      question_content_basic_guard_for_exam: {
+        Args: { p_content: Json; p_exam_ref: string; p_game: string }
         Returns: boolean
       }
       question_outcome_mapping_actor_has_aal2: {
@@ -9187,6 +11001,100 @@ export type Database = {
       question_revision_outcomes_valid: {
         Args: { p_revision_id: string }
         Returns: boolean
+      }
+      question_revision_single_review_ready: {
+        Args: { p_revision_id: string }
+        Returns: boolean
+      }
+      question_revision_validation_policy: {
+        Args: { p_revision_id: string }
+        Returns: string
+      }
+      question_revision_validation_run_complete: {
+        Args: {
+          b: Database["public"]["Tables"]["question_validation_revision_policies"]["Row"]
+        }
+        Returns: boolean
+      }
+      question_source_curriculum_binding_valid: {
+        Args: { p_report: Json; p_revision_id: string }
+        Returns: boolean
+      }
+      question_source_exception_allowances: {
+        Args: { p: Json; p_report: Json; p_revision_id: string }
+        Returns: Json
+      }
+      question_source_exception_keys: {
+        Args: { keys: string[]; p: Json }
+        Returns: boolean
+      }
+      question_source_exception_supported: {
+        Args: { c: Json; s: Json }
+        Returns: boolean
+      }
+      question_source_report_evidence_valid: {
+        Args: { p_exception: Json; p_report: Json; p_revision_id: string }
+        Returns: boolean
+      }
+      question_source_report_valid: {
+        Args: { p_report: Json; p_revision_id: string }
+        Returns: boolean
+      }
+      question_source_review_actor_valid: {
+        Args: { p_review_id: string; p_revision_id: string }
+        Returns: boolean
+      }
+      question_source_review_fingerprint: {
+        Args: { p_revision_id: string }
+        Returns: string
+      }
+      question_turkish_restoration_fold: {
+        Args: { p_text: string }
+        Returns: string
+      }
+      question_turkish_restoration_string: {
+        Args: { p_new: string; p_old: string }
+        Returns: string[]
+      }
+      question_turkish_restoration_words: {
+        Args: { p_new: Json; p_old: Json }
+        Returns: string[]
+      }
+      read_canonical_curriculum_catalog: {
+        Args: { p_exam_ref: string; p_game: string; p_taxonomy_version: string }
+        Returns: Json
+      }
+      read_canonical_mastery_context: {
+        Args: {
+          p_exam_ref: string
+          p_game: string
+          p_taxonomy_version: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      read_tyt_social_mastery_outcome_state: {
+        Args: { p_user_id: string }
+        Returns: {
+          attempts: number
+          careless_annotations: number
+          correct_attempts: number
+          delayed_correct: number
+          difficulty_weighted_earned: number
+          difficulty_weighted_possible: number
+          fast_wrong: number
+          guess_annotations: number
+          hint_stage_sum: number
+          hinted_attempts: number
+          last_answered_at: string
+          outcome_id: string
+          timed_attempts: number
+          total_time_sec: number
+          v2_attempts: number
+          verified_evidence_days: number
+          weighted_earned: number
+          weighted_possible: number
+        }[]
       }
       rebuild_review_card: {
         Args: { p_question_id: string; p_user_id: string }
@@ -9228,6 +11136,21 @@ export type Database = {
         }
         Returns: Json
       }
+      record_measurement_event: {
+        Args: {
+          p_action: string
+          p_assistance_used: boolean
+          p_interrupted: boolean
+          p_position: number
+          p_render_ok: boolean
+          p_render_version: string
+          p_request_id: string
+          p_selected_option: number
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       record_question_quality_consensus: {
         Args: {
           p_actor_id: string
@@ -9245,6 +11168,19 @@ export type Database = {
           p_evidence: Json
           p_proof_kind: string
           p_request_id: string
+        }
+        Returns: Json
+      }
+      record_social_discovery_pilot_answer: {
+        Args: {
+          p_expected_answered_count: number
+          p_next_question_id: string
+          p_question_id: string
+          p_request_id: string
+          p_response_time_ms: number
+          p_selected_option: number
+          p_session_id: string
+          p_user_id: string
         }
         Returns: Json
       }
@@ -9282,6 +11218,25 @@ export type Database = {
         Args: {
           p_actor_user_id: string
           p_candidate_id: string
+          p_rationale: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      release_tyt_social_mastery_scope: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_active_question_count: number
+          p_expected_source_evidence_sha256: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      release_tyt_social_preparation_pool: {
+        Args: {
+          p_actor_user_id: string
+          p_manifest_sha256: string
+          p_pool_id: string
           p_rationale: string
           p_request_id: string
         }
@@ -9360,6 +11315,30 @@ export type Database = {
           outcome_id: string
         }[]
       }
+      resolve_current_tyt_social_candidate_policy: {
+        Args: never
+        Returns: {
+          created_at: string
+          display_exam_ref: string
+          game: string
+          official_source_url: string
+          policy_version: string
+          question_exam_ref: string
+          released_at: string | null
+          rules: Json
+          rules_sha256: string
+          status: string
+          taxonomy_version: string
+          valid_from: string
+          valid_until: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "exam_candidate_policy_versions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       resolve_institution_student_followup: {
         Args: {
           p_followup_ref: string
@@ -9399,6 +11378,14 @@ export type Database = {
         Args: { p_display_exam_ref: string; p_game: string }
         Returns: Json
       }
+      resolve_tyt_social_exam_policy_for_user: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      resolve_tyt_social_mastery_read_context: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       review_institution_study_program: {
         Args: {
           p_note: string
@@ -9417,6 +11404,17 @@ export type Database = {
           p_revision_id: string
           p_stage: number
           p_user_id: string
+        }
+        Returns: Json
+      }
+      review_tyt_social_exam_role: {
+        Args: {
+          p_actor_user_id: string
+          p_candidate_id: string
+          p_decision: string
+          p_rationale: string
+          p_request_id: string
+          p_stage: number
         }
         Returns: Json
       }
@@ -9543,6 +11541,14 @@ export type Database = {
         }
         Returns: Json
       }
+      set_my_tyt_social_exam_policy: {
+        Args: {
+          p_notice_version: string
+          p_request_id: string
+          p_variant: string
+        }
+        Returns: Json
+      }
       set_pilot_institution_status: {
         Args: {
           p_institution_id: string
@@ -9594,6 +11600,18 @@ export type Database = {
         Args: { p_opted_in: boolean; p_request_id: string; p_user_id: string }
         Returns: Json
       }
+      social_discovery_pilot_rows: {
+        Args: { p_pack_id: string }
+        Returns: Json
+      }
+      social_discovery_pilot_session_context: {
+        Args: { p_session_id: string; p_user_id: string }
+        Returns: Json
+      }
+      social_discovery_valid_content: {
+        Args: { p_content: Json }
+        Returns: boolean
+      }
       soft_delete_user: { Args: { p_user_id: string }; Returns: undefined }
       spend_coins: {
         Args: { p_amount: number; p_user_id: string }
@@ -9621,11 +11639,24 @@ export type Database = {
         Args: { p_challenge_id: string; p_user_id: string }
         Returns: Json
       }
+      start_measurement: {
+        Args: { p_form_id: string; p_request_id: string; p_user_id: string }
+        Returns: Json
+      }
       start_my_institution_study_program_item: {
         Args: {
           p_position: number
           p_program_ref: string
           p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      start_social_discovery_pilot: {
+        Args: {
+          p_first_question_id: string
+          p_pack_id: string
+          p_session_id: string
           p_user_id: string
         }
         Returns: Json
@@ -9720,6 +11751,10 @@ export type Database = {
         Returns: Json
       }
       sweep_question_appeal_sla: { Args: { p_now: string }; Returns: Json }
+      sync_institution_study_program_completion: {
+        Args: { p_program_id: string }
+        Returns: undefined
+      }
       sync_taxonomy_auto_question_outcomes: {
         Args: {
           p_category: string
@@ -9764,6 +11799,48 @@ export type Database = {
         }
         Returns: Json
       }
+      tyt_social_candidate_policy_integrity: { Args: never; Returns: Json }
+      tyt_social_combined_release_integrity: { Args: never; Returns: Json }
+      tyt_social_exam_role_compatible: {
+        Args: { p_category: string; p_exam_role: string }
+        Returns: boolean
+      }
+      tyt_social_mastery_reader_integrity: { Args: never; Returns: Json }
+      tyt_social_mastery_reader_manifest_sha256: {
+        Args: never
+        Returns: string
+      }
+      tyt_social_official_section_composer_integrity: {
+        Args: never
+        Returns: Json
+      }
+      tyt_social_official_section_composer_manifest_sha256: {
+        Args: never
+        Returns: string
+      }
+      tyt_social_preparation_boundary_sha256: { Args: never; Returns: string }
+      tyt_social_preparation_pins_valid: { Args: { p: Json }; Returns: boolean }
+      tyt_social_preparation_policy_valid: {
+        Args: { p_policy: string; p_year: number }
+        Returns: boolean
+      }
+      tyt_social_preparation_pool_integrity: {
+        Args: { p_pool_id: string }
+        Returns: Json
+      }
+      tyt_social_preparation_variants_valid: {
+        Args: { p_policy: string }
+        Returns: boolean
+      }
+      tyt_social_revision_source_policy_ready: {
+        Args: { p_revision_id: string }
+        Returns: boolean
+      }
+      tyt_social_snapshot_boundary_integrity: { Args: never; Returns: Json }
+      tyt_social_snapshot_boundary_manifest_sha256: {
+        Args: never
+        Returns: string
+      }
       tyt_social_source_policy_integrity: {
         Args: {
           p_display_exam_ref: string
@@ -9795,6 +11872,10 @@ export type Database = {
         Returns: Json
       }
       update_streak: { Args: { p_user_id: string }; Returns: undefined }
+      validate_social_discovery_pack: {
+        Args: { p_pack_id: string }
+        Returns: undefined
+      }
       verified_attempt_private_snapshot: {
         Args: { p_attempt_id: string }
         Returns: Json
