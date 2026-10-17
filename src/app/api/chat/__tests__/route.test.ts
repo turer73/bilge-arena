@@ -18,7 +18,7 @@
  *
  * Bu MVP baseline regression safety. Genis coverage sonraki PR'a.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const {
   mockGetUser,
@@ -29,9 +29,14 @@ const {
   mockQuestionEq,
   mockQuestionMaybeSingle,
   mockRpc,
+  mockReadPolicy,
 } = vi.hoisted(() => {
   process.env.DEEPSEEK_API_KEY = 'test-deepseek-key'
   return {
+    mockReadPolicy: vi.fn(async () => ({
+      policy: { examMode: false, board: true, coach: true, assistant: true, until: null as string | null },
+      status: 200 as 200 | 503,
+    })),
     mockQuestionEq: vi.fn(),
     mockQuestionMaybeSingle: vi.fn(async () => ({ data: null as unknown, error: null as null | { code: string } })),
     mockRpc: vi.fn(async () => ({ data: null as unknown, error: null as null | { code: string } })),
@@ -67,6 +72,10 @@ vi.mock('@/lib/supabase/service-role', () => ({
       rpc: mockRpc,
     }
   }),
+}))
+
+vi.mock('@/lib/assistance-policy/server', () => ({
+  readAssistancePolicy: mockReadPolicy,
 }))
 
 vi.mock('@/lib/utils/rate-limit', () => ({
@@ -445,19 +454,18 @@ describe('POST /api/chat — imzalı geçmiş ve sunucu tarafı bağlam', () => 
     expect(sentProviderBody().messages[0]!.content).not.toContain('Öğrencinin şu anda çalıştığı soru')
   })
 
-  it('ödev bağlamı kullanıcının kendi ödevinden okunur', async () => {
+  it('ödev doğrulanamazsa (üye değil) istek reddedilir', async () => {
     mockRpc.mockResolvedValueOnce({ data: null, error: { code: 'P0002' } })
     const response = await POST(makeReq({
       messages: [{ role: 'user', content: 'Konu anlat' }],
       context: { kind: 'assignment_item', assignmentId: ASSIGNMENT_ID, position: 1 },
     }))
-    expect(response.status).toBe(200)
+    expect(response.status).toBe(403)
     expect(mockRpc).toHaveBeenCalledWith('get_my_teacher_assignment', {
       p_user_id: VALID_USER.id,
       p_assignment_id: ASSIGNMENT_ID,
     })
-    // Üye olmayan öğrenci için bağlam kurulmaz.
-    expect(sentProviderBody().messages[0]!.content).not.toContain('Öğretmen ödevi')
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 
   it('çalışma bağlamı sabitlerden kurulur', async () => {
@@ -466,5 +474,112 @@ describe('POST /api/chat — imzalı geçmiş ve sunucu tarafı bağlam', () => 
       context: { kind: 'study', game: 'matematik', examRef: 'TYT', action: 'topic' },
     }))
     expect(sentProviderBody().messages[0]!.content).toContain('Ders: Matematik\nSınav: TYT\nİstenen yardım: Konu anlat')
+  })
+})
+
+describe('POST /api/chat — sunucu tarafı yardım kapıları', () => {
+  const OPEN = { examMode: false, board: true, coach: true, assistant: true, until: null }
+  const EXAM = { examMode: true, board: false, coach: false, assistant: false, until: '2026-10-17T20:00:00.000Z' }
+  const CLOSED = { examMode: true, board: false, coach: false, assistant: false, until: null }
+  const CLASSROOM_ID = '11111111-2222-4333-8444-555555555555'
+  const ASSIGNMENT = {
+    id: ASSIGNMENT_ID,
+    title: 'Kesirler tekrarı',
+    status: 'submitted',
+    availableAt: '2026-08-09T10:00:00.000Z',
+    dueAt: '2026-08-10T10:00:00.000Z',
+    classroom: { id: CLASSROOM_ID, name: '12-A Matematik', teacherAlias: 'Öğretmen 4' },
+    items: [{
+      position: 1,
+      question: { game: 'matematik', category: 'Sayılar', topic: 'Toplama', difficulty: 1, content: { question: '1 + 1 kaçtır?', options: ['2', '3'] } },
+    }],
+    result: { answeredCount: 1, correctCount: 1, items: [{ position: 1, selectedOption: 0, isCorrect: true, correctOption: 0 }] },
+    reward: { xp: 0, coins: 0, socialPoints: 0 },
+  }
+
+  function routeRpc(access: { data: unknown; error: null | { code: string } }) {
+    mockRpc.mockImplementation((async (name: string) => (
+      name === 'get_my_classroom_bilge_tahta_access' ? access : { data: ASSIGNMENT, error: null }
+    )) as never)
+  }
+
+  const assignmentRequest = () => makeReq({
+    mode: 'topic_explanation',
+    messages: [{ role: 'user', content: 'Konu anlat' }],
+    context: { kind: 'assignment_item', assignmentId: ASSIGNMENT_ID, position: 1 },
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.stubEnv('BILGE_TAHTA_PILOT_ENABLED', 'true')
+    vi.stubEnv('BILGE_TAHTA_PILOT_INSTITUTION_ID', '3f2b1c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d')
+    mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
+    mockChatLimitCheck.mockResolvedValue({ success: true, retryAfter: 0 })
+    mockChatIpLimitCheck.mockResolvedValue({ success: true, retryAfter: 0 })
+    mockReadPolicy.mockResolvedValue({ policy: OPEN, status: 200 })
+    vi.stubGlobal('fetch', mockFetch)
+    mockFetch.mockResolvedValue(deepseekOk('ayrıntılı ders'))
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    mockRpc.mockReset()
+    mockRpc.mockResolvedValue({ data: null, error: null })
+  })
+
+  it.each([
+    ['sohbet', VALID_BODY],
+    ['konu anlatımı', { mode: 'topic_explanation', messages: [{ role: 'user', content: 'Konu anlat' }] }],
+    ['soru bağlamlı', { messages: [{ role: 'user', content: 'Bu sorunun cevabı ne?' }], context: { kind: 'question', questionId: QUESTION_ID } }],
+  ])('sınav modu açıkken %s isteği 403 alır, sağlayıcıya gitmez', async (_name, body) => {
+    mockReadPolicy.mockResolvedValueOnce({ policy: EXAM, status: 200 })
+    const response = await POST(makeReq(body))
+    expect(response.status).toBe(403)
+    expect((await response.json()).error).toMatch(/Sınav modu/)
+    expect(mockReadPolicy).toHaveBeenCalledWith(VALID_USER.id)
+    expect(mockFetch).not.toHaveBeenCalled()
+    expect(mockQuestionMaybeSingle).not.toHaveBeenCalled()
+  })
+
+  it('politika okunamazsa fail-closed 503 döner', async () => {
+    mockReadPolicy.mockResolvedValueOnce({ policy: CLOSED, status: 503 })
+    const response = await POST(makeReq(VALID_BODY))
+    expect(response.status).toBe(503)
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('sınav modu kapalıyken istek normal sürer', async () => {
+    const response = await POST(makeReq(VALID_BODY))
+    expect(response.status).toBe(200)
+    expect(mockFetch).toHaveBeenCalledOnce()
+  })
+
+  it('sınıfta Bilge Tahta kapalıyken ödev bağlamlı istek 403 alır', async () => {
+    routeRpc({ data: { enabled: false }, error: null })
+    const response = await POST(assignmentRequest())
+    expect(response.status).toBe(403)
+    expect((await response.json()).error).toMatch(/Bilge Tahta/)
+    expect(mockRpc).toHaveBeenCalledWith('get_my_classroom_bilge_tahta_access', {
+      p_user_id: VALID_USER.id,
+      p_classroom_id: CLASSROOM_ID,
+      p_institution_id: '3f2b1c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d',
+    })
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('pilot kapalıyken ödev bağlamlı istek 403 alır', async () => {
+    vi.stubEnv('BILGE_TAHTA_PILOT_ENABLED', 'false')
+    routeRpc({ data: { enabled: true }, error: null })
+    expect((await POST(assignmentRequest())).status).toBe(403)
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('sınıfta Bilge Tahta açıkken ödev bağlamı kurulur', async () => {
+    routeRpc({ data: { enabled: true }, error: null })
+    const response = await POST(assignmentRequest())
+    expect(response.status).toBe(200)
+    const system = sentProviderBody().messages[0]!.content
+    expect(system).toContain('Öğretmen ödevi, soru 1')
+    expect(system).toContain('Doğru cevap: A) 2')
   })
 })
