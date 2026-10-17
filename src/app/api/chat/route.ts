@@ -8,7 +8,8 @@ import type { Json } from '@/types/database.generated'
 import { TOPIC_EXPLANATION_SYSTEM_INSTRUCTION } from '@/lib/bilge-tahta/topic-explanation'
 import { redactChatPersonalData } from '@/lib/privacy/chat-redaction'
 import { signAssistantTurn, verifyAssistantTurn } from '@/lib/chat/turn-signature'
-import { buildChatContext } from '@/lib/chat/server-context'
+import { buildChatContext, chatContextUnavailable, type ChatContextResult } from '@/lib/chat/server-context'
+import { readAssistancePolicy } from '@/lib/assistance-policy/server'
 import { CHAT_TURN_SIGNATURE_HEADER } from '@/lib/chat/client-history'
 
 // Rate limit dusuruldu (konu#7 ders-hub plani, Faz 3): Gemini free-tier'a gore
@@ -122,6 +123,19 @@ export async function POST(request: Request) {
     )
   }
 
+  // 2.5) Sinav modu — istemci kapisi (canUseHelper) dogrudan istekle atlanabilir;
+  // asil kapi burasi. Politika kimlik bazli: aktif uyeligi olan herhangi bir
+  // sinifta sinav modu aciksa asistan her yuzeyde kapali. Okunamazsa fail-closed.
+  const assistance = await readAssistancePolicy(user.id)
+  if (!assistance.policy.assistant) {
+    return NextResponse.json(
+      assistance.status === 503
+        ? { error: 'Yardımcı ayarları şu anda okunamıyor. Lütfen birazdan tekrar dene.' }
+        : { error: 'Sınav modu açıkken Bilge Asistan kullanılamaz.' },
+      { status: assistance.status === 503 ? 503 : 403 },
+    )
+  }
+
   // 3) Request body — Zod ile dogrula
   const body = await request.json()
   const parsed = chatRequestSchema.safeParse(body)
@@ -181,15 +195,23 @@ export async function POST(request: Request) {
   }
 
   // Soru/ödev/çalışma bağlamı sunucuda kurulur (soru bankası + sabitler); kullanıcı
-  // metni olmadığı için maskelenmez. Kurulamazsa sohbet bağlamsız sürer.
-  let contextBlock: string | null = null
+  // metni olmadığı için maskelenmez. Kurulamazsa sohbet bağlamsız sürer; ödev
+  // bağlamında sınıfın Bilge Tahta ayarı kapalıysa ya da doğrulanamıyorsa istek reddedilir.
+  let builtContext: ChatContextResult = { allowed: true, block: null }
   if (context) {
     try {
-      contextBlock = await buildChatContext(context, { admin: createServiceRoleClient(), userId: user.id })
+      builtContext = await buildChatContext(context, { admin: createServiceRoleClient(), userId: user.id })
     } catch {
-      contextBlock = null
+      builtContext = chatContextUnavailable(context)
     }
   }
+  if (!builtContext.allowed) {
+    return NextResponse.json(
+      { error: 'Bu ödevde Bilge Tahta kullanılamıyor.' },
+      { status: 403 }
+    )
+  }
+  const contextBlock = builtContext.block
 
   const modeInstruction = mode === 'topic_explanation'
     ? `\n\n${TOPIC_EXPLANATION_SYSTEM_INSTRUCTION}`

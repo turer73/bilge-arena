@@ -54,6 +54,13 @@ vi.mock('@/lib/supabase/service-role', () => ({
   })),
 }))
 
+vi.mock('@/lib/assistance-policy/server', () => ({
+  readAssistancePolicy: vi.fn(async () => ({
+    policy: { examMode: false, board: true, coach: true, assistant: true, until: null },
+    status: 200,
+  })),
+}))
+
 vi.mock('@/lib/utils/rate-limit', () => ({
   createRateLimiter: vi.fn((name: string) => ({
     check: name === 'chat-ip' ? mockChatIpLimitCheck : mockChatLimitCheck,
