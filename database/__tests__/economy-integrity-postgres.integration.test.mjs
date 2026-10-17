@@ -4,6 +4,8 @@
 //                    awarded XP and uses the Istanbul week.
 //   20261017100100 - one streak writer on the Istanbul day that grows
 //                    longest_streak; claim_daily_login as the only login reward.
+//   20261017110000 - a question whose answer was revealed in another attempt
+//                    within 7 days pays 0 XP (still counted for accuracy).
 // The fixture stands in for the base schema as production had it before these
 // migrations (007's update_streak and update_weekly_leaderboard, the session
 // trigger), then applies the real 071, 081, 091, 092, 093 and 129 chain.
@@ -272,6 +274,24 @@ async function claim(client, userId) {
   ).rows[0].result);
 }
 
+async function reveal(client, userId, attemptId, questionId) {
+  return withServiceRole(client, async () => (
+    await client.query('SELECT public.record_question_reveal($1, $2, $3) AS owner', [userId, attemptId, questionId])
+  ).rows[0].owner);
+}
+
+async function revealAll(client, prepared) {
+  const owners = [];
+  for (const questionId of prepared.questionIds) owners.push(await reveal(client, prepared.userId, prepared.attemptId, questionId));
+  return owners;
+}
+
+// Issue an attempt over existing question ids (a repeat), as the random route would.
+async function prepareRepeat(client, userId, questionIds, correct) {
+  const attempt = await withServiceRole(client, () => issueAttempt(client, userId, questionIds));
+  return { attemptId: attempt.attemptId, userId, questionIds, correct };
+}
+
 describePostgres('economy integrity (session XP cap, Istanbul week, single streak writer) on actual PostgreSQL', () => {
   let client;
   let backfillUser;
@@ -296,6 +316,7 @@ describePostgres('economy integrity (session XP cap, Istanbul week, single strea
     // Left behind by the two-writer era: longest below current. 100100 repairs it.
     backfillUser = await newProfile(client, { current: 7, longest: 3 });
     await client.query(migrationSql('20261017100100_single_streak_writer.sql'));
+    await client.query(migrationSql('20261017110000_revealed_question_xp_window.sql'));
   });
 
   afterAll(async () => { await client?.end(); });
@@ -541,6 +562,122 @@ describePostgres('economy integrity (session XP cap, Istanbul week, single strea
       try {
         await expect(client.query('SELECT public.claim_daily_login($1)', [randomUUID()])).rejects.toMatchObject({ code: '42501' });
       } finally { await client.query('RESET ROLE'); }
+    });
+  });
+
+  describe('revealed question XP window (20261017110000)', () => {
+    it('pays a question in the attempt that revealed it and withholds it in another attempt within 7 days', async () => {
+      const user = await newProfile(client, { optIn: true });
+      const first = await prepareSession(client, user, { questionCount: 4, correct: 4 });
+      expect(await revealAll(client, first)).toEqual([true, true, true, true]);
+      const paid = await withServiceRole(client, () => completeAttempt(client, first));
+      expect(paid).toMatchObject({ totalXP: 40, xpAwarded: 40, xpRepeatWithheld: 0, repeatQuestions: 0 });
+
+      // The same questions in a new attempt: the answers are known.
+      const repeat = await prepareRepeat(client, user, first.questionIds, 4);
+      expect(await revealAll(client, repeat)).toEqual([false, false, false, false]);
+      const withheld = await withServiceRole(client, () => completeAttempt(client, repeat));
+      expect(withheld).toMatchObject({ totalXP: 40, xpAwarded: 0, xpRepeatWithheld: 40, repeatQuestions: 4, correctCount: 4 });
+
+      // Learning records keep the answers; only the payout dropped.
+      const state = await client.query(`
+        SELECT gs.total_xp, gs.xp_awarded, gs.correct_count,
+          (SELECT count(*)::int FROM public.session_answers sa WHERE sa.session_id = gs.id AND sa.is_correct) AS correct_rows,
+          (SELECT amount FROM public.reward_ledger rl WHERE rl.source_id = gs.id AND rl.reward_type = 'xp' AND rl.source_type = 'session') AS ledger_xp
+        FROM public.game_sessions gs WHERE gs.id = $1
+      `, [withheld.sessionId]);
+      expect(state.rows[0]).toEqual({ total_xp: 40, xp_awarded: 0, correct_count: 4, correct_rows: 4, ledger_xp: 0 });
+      expect(await sessionXpLog(client, user)).toEqual({ total: 40, rows: 1 });
+      const weekly = await client.query('SELECT xp_earned, sessions_played FROM public.leaderboard_weekly WHERE user_id = $1', [user]);
+      expect(weekly.rows).toEqual([{ xp_earned: 40, sessions_played: 2 }]);
+    });
+
+    it('withholds only the repeats; new questions in the same session still pay', async () => {
+      const user = await newProfile(client);
+      const seen = await prepareSession(client, user, { questionCount: 2, correct: 2 });
+      await revealAll(client, seen);
+      const fresh = await freshQuestions(client, 2);
+      const mixed = await prepareRepeat(client, user, [...seen.questionIds, ...fresh], 4);
+      expect(await revealAll(client, mixed)).toEqual([false, false, true, true]);
+
+      const result = await withServiceRole(client, () => completeAttempt(client, mixed));
+      expect(result).toMatchObject({ totalXP: 40, xpAwarded: 20, xpRepeatWithheld: 20, repeatQuestions: 2 });
+    });
+
+    it('applies the repeat rule before the daily cap', async () => {
+      const user = await newProfile(client);
+      await priorSessionXp(client, user, DAILY_SESSION_XP_CAP - 10);
+      const seen = await prepareSession(client, user, { questionCount: 2, correct: 0 });
+      await revealAll(client, seen);
+      const fresh = await freshQuestions(client, 2);
+      const mixed = await prepareRepeat(client, user, [...seen.questionIds, ...fresh], 4);
+      await revealAll(client, mixed);
+
+      // 40 nominal - 20 repeats = 20 payable; only 10 left under the cap.
+      const result = await withServiceRole(client, () => completeAttempt(client, mixed));
+      expect(result).toMatchObject({ totalXP: 40, xpRepeatWithheld: 20, xpAwarded: 10 });
+    });
+
+    it('stops withholding after 7 days and hands the window to the next revealing attempt', async () => {
+      const user = await newProfile(client);
+      const old = await prepareSession(client, user, { questionCount: 2, correct: 0 });
+      await revealAll(client, old);
+      await client.query(
+        "UPDATE public.question_answer_reveals SET revealed_at = now() - interval '7 days 1 minute' WHERE user_id = $1",
+        [user],
+      );
+
+      const later = await prepareRepeat(client, user, old.questionIds, 2);
+      expect(await revealAll(client, later)).toEqual([true, true]);
+      const result = await withServiceRole(client, () => completeAttempt(client, later));
+      expect(result).toMatchObject({ xpAwarded: 20, xpRepeatWithheld: 0 });
+      const owners = await client.query('SELECT DISTINCT attempt_id FROM public.question_answer_reveals WHERE user_id = $1', [user]);
+      expect(owners.rows).toEqual([{ attempt_id: later.attemptId }]);
+    });
+
+    it('gives the window to exactly one attempt when two record the same question concurrently', async () => {
+      const user = await newProfile(client);
+      const [questionId] = await freshQuestions(client, 1);
+      const attempts = [
+        await prepareRepeat(client, user, [questionId], 1),
+        await prepareRepeat(client, user, [questionId], 1),
+      ];
+      const connections = [new Client({ connectionString: databaseUrl }), new Client({ connectionString: databaseUrl })];
+      await Promise.all(connections.map((connection) => connection.connect()));
+      let owners;
+      try {
+        owners = await Promise.all(attempts.map((attempt, index) => reveal(connections[index], user, attempt.attemptId, questionId)));
+      } finally { await Promise.all(connections.map((connection) => connection.end())); }
+      expect(owners.sort()).toEqual([false, true]);
+    });
+
+    it('records reveals only for the attempt owner and for questions of that attempt', async () => {
+      const owner = await newProfile(client);
+      const stranger = await newProfile(client);
+      const attempt = await prepareSession(client, owner, { questionCount: 1, correct: 1 });
+      const [outside] = await freshQuestions(client, 1);
+
+      await expect(reveal(client, stranger, attempt.attemptId, attempt.questionIds[0])).rejects.toMatchObject({ code: '42501' });
+      await expect(reveal(client, owner, attempt.attemptId, outside)).rejects.toMatchObject({ code: '22023' });
+    });
+
+    it('keeps the reveal table private and the recorder service-role only', async () => {
+      const acl = await client.query(`
+        SELECT
+          (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.question_answer_reveals'::regclass) AS rls,
+          has_table_privilege('service_role', 'public.question_answer_reveals', 'SELECT') AS service_read,
+          has_table_privilege('authenticated', 'public.question_answer_reveals', 'SELECT') AS auth_read,
+          has_table_privilege('anon', 'public.question_answer_reveals', 'INSERT') AS anon_write,
+          has_function_privilege('service_role', 'public.record_question_reveal(uuid,uuid,uuid)', 'EXECUTE') AS record_service,
+          has_function_privilege('authenticated', 'public.record_question_reveal(uuid,uuid,uuid)', 'EXECUTE') AS record_auth,
+          (SELECT proconfig FROM pg_proc WHERE oid = 'public.record_question_reveal(uuid,uuid,uuid)'::regprocedure) AS record_config,
+          (SELECT proconfig FROM pg_proc WHERE oid = 'public.complete_verified_game_session(uuid,uuid,uuid,text,text,text,smallint,jsonb,integer,integer,integer,smallint,smallint,integer,numeric)'::regprocedure) AS wrapper_config
+      `);
+      expect(acl.rows[0]).toEqual({
+        rls: true, service_read: false, auth_read: false, anon_write: false,
+        record_service: true, record_auth: false,
+        record_config: ['search_path=pg_catalog'], wrapper_config: ['search_path=pg_catalog'],
+      });
     });
   });
 });

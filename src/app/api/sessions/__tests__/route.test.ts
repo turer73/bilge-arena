@@ -345,6 +345,30 @@ describe('POST /api/sessions', () => {
     expect(mockSessionRowMaybeSingle).not.toHaveBeenCalled()
   })
 
+  it('tekrar kuralının kestiği XP tavan sayılmaz; tekrar soru sayısını bildirir', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        sessionId: 'session-1', totalXP: 40, xpAwarded: 20, xpRepeatWithheld: 20, repeatQuestions: 1,
+        correctCount: 2, wrongCount: 0, alreadyProcessed: false,
+      },
+      error: null,
+    })
+    expect(await (await POST(makeRequest(validBody))).json())
+      .toMatchObject({ totalXP: 20, xpCapped: false, repeatQuestions: 1 })
+
+    // Tekrar kuralından sonra kalan 20'nin 15'ini tavan kesti.
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        sessionId: 'session-1', totalXP: 40, xpAwarded: 5, xpRepeatWithheld: 20, repeatQuestions: 1,
+        correctCount: 2, wrongCount: 0, alreadyProcessed: false,
+      },
+      error: null,
+    })
+    expect(await (await POST(makeRequest(validBody))).json())
+      .toMatchObject({ totalXP: 5, xpCapped: true, repeatQuestions: 1 })
+  })
+
   it('replay sırasında ödenen XP miktarını oturum satırından okur', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockRpc.mockResolvedValueOnce({

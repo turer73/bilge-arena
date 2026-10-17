@@ -24,6 +24,8 @@ interface ResultScreenProps {
   coinsEarned?: number | null
   /** Gunluk oturum XP tavani bu oturumun XP'sini kesti. */
   xpCapped?: boolean
+  /** Cevabi son 7 gunde baska denemede acildigi icin XP vermeyen soru sayisi. */
+  repeatQuestions?: number
   saveStatus?: SessionSaveStatus
   savedTotalXP?: number | null
   savedCorrectCount?: number | null
@@ -35,6 +37,7 @@ export function ResultScreen({
   onExit,
   coinsEarned = null,
   xpCapped = false,
+  repeatQuestions = 0,
   saveStatus = 'not_applicable',
   savedTotalXP = null,
   savedCorrectCount = null,
@@ -188,6 +191,18 @@ export function ResultScreen({
       {/* Kazanilan altin — oturum kaydi tamamlaninca gorunur. Altin XP'den ayri
           bir para birimi: XP seviye ilerlemesi, altin magaza alimi. Kullanici
           kazandigini burada gormezse magazaya yonelmiyor. */}
+      {saveStatus === 'saved' && repeatQuestions > 0 && (
+        <div
+          data-xp-repeat-notice
+          className="rounded-2xl border-2 border-[var(--app-warn-border)] bg-[var(--app-warn-tint)] px-4 py-3 text-center shadow-[0_4px_0_var(--app-warn-border)] animate-fadeUp"
+          style={{ animationDelay: '0.5s', animationFillMode: 'both' }}
+        >
+          <span className="text-[13px] font-semibold text-[var(--app-text-sub)]">
+            🔁 Cevabını son 7 günde gördüğün {repeatQuestions} soru XP vermedi; doğrulukta ve tekrarda sayıldı.
+          </span>
+        </div>
+      )}
+
       {saveStatus === 'saved' && xpCapped && (
         <div
           data-xp-cap-notice

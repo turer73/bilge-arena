@@ -18,6 +18,10 @@ const completeSessionResultSchema = z.object({
   // Gunluk oturum XP tavanindan sonra fiilen odenen XP (migration
   // 20261017100000). Taze tamamlamada gelir; replay ve eski veritabaninda yok.
   xpAwarded: z.number().int().nonnegative().optional(),
+  // Cevabi son 7 gunde baska bir denemede acilmis sorularin odenmeyen XP'si
+  // ve bu soru sayisi (migration 20261017110000). Yalniz taze tamamlamada.
+  xpRepeatWithheld: z.number().int().nonnegative().optional(),
+  repeatQuestions: z.number().int().nonnegative().optional(),
   correctCount: z.number().int().nonnegative(),
   wrongCount: z.number().int().nonnegative(),
   alreadyProcessed: z.boolean(),
@@ -266,6 +270,8 @@ export async function POST(request: Request) {
     sessionId,
     totalXP: persistedTotalXP,
     xpAwarded: rpcXpAwarded,
+    xpRepeatWithheld = 0,
+    repeatQuestions = 0,
     correctCount: persistedCorrectCount,
     wrongCount: persistedWrongCount,
     alreadyProcessed,
@@ -330,9 +336,11 @@ export async function POST(request: Request) {
     sessionId,
     // Always return the transaction's persisted values. On an idempotent
     // replay these can intentionally differ from the current request body.
-    // totalXP is what was paid; xpCapped tells the UI the daily cap cut it.
+    // totalXP is what was paid. xpCapped: the daily cap cut it (after the
+    // repeat rule); repeatQuestions: answers whose XP the repeat rule withheld.
     totalXP: awardedXP,
-    xpCapped: awardedXP < persistedTotalXP,
+    xpCapped: awardedXP < persistedTotalXP - xpRepeatWithheld,
+    repeatQuestions,
     correctCount: persistedCorrectCount,
     wrongCount: persistedWrongCount,
     maxStreak,

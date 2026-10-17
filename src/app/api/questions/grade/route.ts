@@ -179,6 +179,29 @@ export async function POST(request: Request) {
     parsed.data.selectedOption,
   )
 
+  // Doğru şık bu yanıtla açılır. Doğrulanmış denemede açılış kaydı yazılmadan
+  // dönmez: kayıt, cevabı açılan sorunun 7 gün boyunca başka bir denemede XP
+  // vermemesini sağlar (migration 20261017110000). Kayıt yazılamazsa cevap da
+  // açılmaz; ilk seçim kilitli kaldığı için tekrar deneme aynı sonucu verir.
+  if (user && parsed.data.attemptId && verifiedQuestionIds) {
+    // record_question_reveal üretilmiş tiplerde henüz yok (tip senkronu ayrı iş).
+    const { error: revealError } = await admin.rpc('record_question_reveal' as never, {
+      p_user_id: user.id,
+      p_attempt_id: parsed.data.attemptId,
+      p_question_id: parsed.data.questionId,
+    } as never)
+    if (revealError?.code === 'PGRST202') {
+      // Migration henüz uygulanmamış: notlamayı engelleme, yalnız logla.
+      console.error('[/api/questions/grade] record_question_reveal bulunamadı')
+    } else if (revealError) {
+      console.error('[/api/questions/grade] açılış kaydı yazılamadı:', revealError.code)
+      return NextResponse.json(
+        { error: 'Notlandırma geçici olarak kullanılamıyor. Birazdan tekrar dene.' },
+        { status: 503, headers: { 'Retry-After': '15', 'Cache-Control': 'no-store' } },
+      )
+    }
+  }
+
   // R2.3 timing is server-receipt telemetry, never the client timeTaken field.
   // This write is deliberately best-effort: experiment analytics cannot make
   // canonical grading fail or hide the answer after a valid first selection.

@@ -162,4 +162,13 @@ describe('ResultScreen', () => {
     rerender(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} saveStatus="saved" savedTotalXP={20} />)
     expect(screen.queryByText(/XP sınırına ulaştın/)).not.toBeInTheDocument()
   })
+
+  test('cevabi son 7 gunde gorulen sorular XP vermediyse sayisiyla not gosterir', () => {
+    const { container } = render(
+      <ResultScreen onRestart={vi.fn()} onExit={vi.fn()} saveStatus="saved" savedTotalXP={20} repeatQuestions={3} />,
+    )
+    expect(screen.getByText(/son 7 günde gördüğün 3 soru XP vermedi/)).toBeInTheDocument()
+    expect(container.querySelector('[data-xp-repeat-notice]')).not.toBeNull()
+    expect(screen.queryByText(/XP sınırına ulaştın/)).not.toBeInTheDocument()
+  })
 })

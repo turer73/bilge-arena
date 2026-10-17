@@ -74,7 +74,26 @@ describe('saveGameSession', () => {
       newBadges: ['first_game'],
       coinsEarned: 40,
       xpCapped: false,
+      repeatQuestions: 0,
     })
+  })
+
+  it('tekrar kuralinin XP vermedigi soru sayisini tasir; gecersizse 0', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        sessionId: 'session-123', totalXP: 20, correctCount: 2, wrongCount: 0, newBadges: [], repeatQuestions: 2,
+      }),
+    })
+    expect((await saveGameSession(baseParams))?.repeatQuestions).toBe(2)
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        sessionId: 'session-123', totalXP: 20, correctCount: 2, wrongCount: 0, newBadges: [], repeatQuestions: -3,
+      }),
+    })
+    expect((await saveGameSession(baseParams))?.repeatQuestions).toBe(0)
   })
 
   it('gunluk XP tavani bilgisini tasir; yalniz true kabul edilir', async () => {
