@@ -111,7 +111,9 @@ export function useRoomChannel(
   const typingTimerRef = useRef<number | null>(null)
   const broadcastTyping = useCallback(() => {
     const ch = channelRef.current
-    if (!ch) return
+    // Kanal katilmadan send() realtime-js'te REST /api/broadcast'e duser; o yol
+    // edge'de kapali (ws-dev-socket-only.yml). Katilmadan yayin anlamsiz.
+    if (!ch || ch.state !== 'joined') return
     void ch.send({
       type: 'broadcast',
       event: 'typing_start',

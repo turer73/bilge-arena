@@ -15,6 +15,7 @@
 import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
+import { isScoreboardMember } from '@/lib/rooms/member-status'
 import { cn } from '@/lib/utils/cn'
 import { ShareButton } from './ShareButton'
 import { ReplayButton } from './ReplayButton'
@@ -67,7 +68,7 @@ export function GameCompleted({ state, userId }: GameCompletedProps) {
     scoreboard.length > 0
       ? scoreboard
       : [...members]
-          .filter((m) => !m.is_kicked)
+          .filter((m) => isScoreboardMember(m, room.ended_at))
           .map((m) => ({
             user_id: m.user_id,
             display_name: m.display_name,

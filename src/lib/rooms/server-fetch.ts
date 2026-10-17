@@ -25,6 +25,7 @@ import type {
   CurrentRound,
   RoomState as RoomFullState,
 } from './room-state-reducer'
+import { isScoreboardMember } from './member-status'
 
 const RPC_URL =
   process.env.BILGE_ARENA_RPC_URL ?? 'http://127.0.0.1:3001'
@@ -473,7 +474,7 @@ export async function fetchRoomState(
           agg.set(a.user_id, cur)
         }
         scoreboard = members
-          .filter((m) => !m.is_kicked)
+          .filter((m) => isScoreboardMember(m, rooms[0].ended_at))
           .map((m) => {
             const a = agg.get(m.user_id) ?? { correct: 0, ms_total: 0 }
             return {

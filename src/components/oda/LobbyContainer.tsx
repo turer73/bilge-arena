@@ -17,6 +17,7 @@
 
 import { useRoomChannel } from '@/lib/rooms/use-room-channel'
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
+import { isActiveMember } from '@/lib/rooms/member-status'
 import type { LobbyPreviewQuestion as PreviewQ } from '@/lib/rooms/server-fetch'
 import { LobbyHeader } from './LobbyHeader'
 import { RoomInfoPanel } from './RoomInfoPanel'
@@ -147,7 +148,7 @@ export function LobbyContainer({
             currentRound={state.current_round}
             answersCount={state.answers_count}
             totalActiveMembers={
-              state.members.filter((m) => !m.is_kicked).length
+              state.members.filter(isActiveMember).length
             }
             mode="async"
           />
@@ -172,7 +173,7 @@ export function LobbyContainer({
             currentRound={state.current_round}
             answersCount={state.answers_count}
             totalActiveMembers={
-              state.members.filter((m) => !m.is_kicked).length
+              state.members.filter(isActiveMember).length
             }
             mode="async"
           />
@@ -196,7 +197,7 @@ export function LobbyContainer({
           currentRound={state.current_round}
           answersCount={state.answers_count}
           totalActiveMembers={
-            state.members.filter((m) => !m.is_kicked).length
+            state.members.filter(isActiveMember).length
           }
           mode="async"
         />
@@ -216,7 +217,7 @@ export function LobbyContainer({
           currentRound={state.current_round}
           answersCount={state.answers_count}
           totalActiveMembers={
-            state.members.filter((m) => !m.is_kicked).length
+            state.members.filter(isActiveMember).length
           }
         />
       </div>
@@ -233,7 +234,7 @@ export function LobbyContainer({
           currentRound={state.current_round}
           answersCount={state.answers_count}
           totalActiveMembers={
-            state.members.filter((m) => !m.is_kicked).length
+            state.members.filter(isActiveMember).length
           }
         />
       </div>

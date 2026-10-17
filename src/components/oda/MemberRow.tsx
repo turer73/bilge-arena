@@ -9,11 +9,12 @@
  *   - viewerIsHost (current user host_id'ye esit)
  *   - member host degil (host kendini cikaramaz)
  *   - member current viewer degil (host kendini cikaramaz)
- *   - member is_kicked degil (zaten cikarilmis)
+ *   - member aktif (atilmis ya da ayrilmis degil — member-status.ts)
  *   - room state lobby/active/reveal (kick_member RPC P0003 kontrol)
  */
 
 import type { Member } from '@/lib/rooms/room-state-reducer'
+import { isActiveMember } from '@/lib/rooms/member-status'
 import { cn } from '@/lib/utils/cn'
 import { KickMemberButton } from './KickMemberButton'
 
@@ -60,7 +61,7 @@ export function MemberRow({
     viewerIsHost === true &&
     !isHost &&
     member.user_id !== viewerUserId &&
-    !member.is_kicked &&
+    isActiveMember(member) &&
     roomId !== undefined &&
     roomState !== undefined &&
     KICKABLE_STATES.includes(roomState)
@@ -69,7 +70,7 @@ export function MemberRow({
     <li
       className={cn(
         'flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2',
-        member.is_kicked && 'opacity-50',
+        !isActiveMember(member) && 'opacity-50',
       )}
     >
       <span aria-hidden="true" className="text-lg">

@@ -4,7 +4,7 @@ name: Rooms SQL tests
 # Bu testler CI'da hic kosmadigi icin 20 testin 10'u fark edilmeden kirilmisti
 # (disc #2535): start_room, submit_answer*, replay vb. RPC'lerin regresyon
 # korumasi fiilen yoktu. Is bos bir postgres:16'ya canli rol setini kurar,
-# 0..26 migration'i sirayla uygular ve her testi ON_ERROR_STOP ile kosar.
+# 0..27 migration'i sirayla uygular ve her testi ON_ERROR_STOP ile kosar.
 # Mantik infra/vps/bilge-arena/scripts/run-sql-tests.sh'te; yerelde de ayni
 # betik kosulur.
 
@@ -68,5 +68,5 @@ jobs:
           done
           test "$(psql -X -tAc 'SHOW wal_level' -d postgres)" = logical
 
-      - name: Apply 0..26 and run every *_test.sql
+      - name: Apply 0..27 and run every *_test.sql
         run: bash infra/vps/bilge-arena/scripts/run-sql-tests.sh
