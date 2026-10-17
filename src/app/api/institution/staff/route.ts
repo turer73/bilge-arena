@@ -69,13 +69,16 @@ export async function POST(request: Request) {
     p_request_id: body.data.requestId,
   })
   if (error) {
+    // RPC, hesabın olmadığı ve kişinin başka kuruma bağlı olduğu durumları aynı
+    // P0002 ile döndürür; personel sınırını e-postaya bakmadan söyler. Mesajlar
+    // da e-postanın kayıtlı olup olmadığını ele vermemeli.
     const status = institutionPilotRpcStatus(error.code)
     return institutionPilotNoStoreJson(
       {
         error: status === 404
-          ? 'Bu e-posta ile doğrulanmış bir Bilge Arena hesabı bulunamadı'
+          ? 'Bu e-posta ile öğretmen eklenemedi. Kişinin doğrulanmış bir Bilge Arena hesabı olmalı ve başka bir kuruma bağlı olmamalı.'
           : status === 409
-          ? 'Öğretmen başka bir kuruma bağlı olabilir veya kurum personel sınırı dolmuş olabilir'
+          ? 'Kurum personel sınırı dolu olabilir veya istek tekrarlanmış olabilir'
           : 'Kurum öğretmeni eklenemedi',
       },
       { status },
