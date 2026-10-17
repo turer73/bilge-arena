@@ -58,6 +58,6 @@ MIGRATION_CHAIN_DATABASE_URL=postgres://postgres:postgres@localhost:5432/chain M
 
 ## Sınırlar
 
-- Karşılaştırma yalnız `public` fonksiyonlarını kapsar. Tablo, politika ve tetikleyici farkı aranmaz. Üretimde `auth.users` üzerinde depoda olmayan `trg_block_disposable_emails` tetikleyicisi de bu yüzden ancak fonksiyonu üzerinden görünür.
+- Karşılaştırma yalnız `public` fonksiyonlarını kapsar. Tablo, politika ve tetikleyici farkı aranmaz. Üretimde `auth.users` üzerinde depoda olmayan `trg_block_disposable_emails` tetikleyicisi de bu yüzden ancak fonksiyonu üzerinden göründü; 223 onu kaldırır. 223 üretime uygulanınca `known-production-drift.json`'daki `block_disposable_emails()` girdisi bayatlar ve silinmelidir.
 - Parmak izi depoya kaydedilen anlık görüntüdür. Üretimde elle yapılan yeni bir değişikliği CI kendiliğinden görmez; yukarıdaki yenileme komutu görür.
 - Soru bankası fikstürü (`operator/002_minimal_question_bank.sql`) yayın kapılarını geçecek kadar sentetik soru içerir; üretim verisinin yerine geçmez.
