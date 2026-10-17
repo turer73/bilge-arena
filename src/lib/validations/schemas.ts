@@ -17,15 +17,50 @@ export const chatMessageSchema = z.discriminatedUnion('role', [
   z.object({
     role: z.literal('assistant'),
     content: z.string().min(1).max(CHAT_ASSISTANT_MAX_LENGTH),
+    // Sunucunun bu yanıt için verdiği imza; imzasız asistan turu sağlayıcıya gitmez.
+    signature: z.string().max(80).optional(),
   }),
 ])
+
+/**
+ * Asistanın bağlamı istemciden serbest metin olarak gelmez: sunucu soruyu
+ * kimliğinden, ödev sorusunu ödev + sıradan, çalışma yüzeyini sabitlerden kurar.
+ * Böylece bağlam maskelemeye girmez ve enjeksiyon taşıyamaz.
+ */
+export const chatContextSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('question'),
+    questionId: z.string().uuid(),
+    // Öğrencinin ekranında doğru cevap olarak gösterilen şıkkın indeksi. Doğrulanmaz
+    // (açılış kaydı okunamaz); serbest metin taşımaz, yanlışsa yalnız o öğrencinin
+    // asistanını yanıltır. Şık metni veritabanından okunur.
+    shownCorrectOption: z.number().int().min(0).max(9).nullish(),
+  }).strict(),
+  z.object({
+    kind: z.literal('assignment_item'),
+    assignmentId: z.string().uuid(),
+    position: z.number().int().min(1).max(30),
+  }).strict(),
+  z.object({
+    kind: z.literal('study'),
+    game: z.enum(['matematik', 'turkce', 'fen', 'sosyal', 'wordquest']),
+    examRef: z.string().max(20).nullish(),
+    action: z.enum(['solve', 'topic', 'example', 'plan']).nullish(),
+  }).strict(),
+])
+
+export type ChatContext = z.infer<typeof chatContextSchema>
 
 export const chatRequestSchema = z.object({
   messages: z.array(chatMessageSchema).min(1).max(50).refine(
     (messages) => messages.reduce((total, message) => total + message.content.length, 0) <= CHAT_HISTORY_MAX_LENGTH,
     { message: 'Sohbet gecmisi cok uzun' }
+  ).refine(
+    (messages) => messages.at(-1)?.role === 'user',
+    { message: 'Son mesaj kullanicidan olmali' }
   ),
-  questionContext: z.string().max(1000).nullish(),
+  // Eski istemcilerin `questionContext` alanı şemada yok ve yok sayılır.
+  context: chatContextSchema.nullish(),
   mode: z.enum(['chat', 'topic_explanation']).optional().default('chat'),
 })
 

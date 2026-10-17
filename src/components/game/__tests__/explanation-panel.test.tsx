@@ -101,7 +101,7 @@ describe('ExplanationPanel', () => {
     expect(() => renderPanel()).not.toThrow()
   })
 
-  test('"Konu Anlatımı": passage dahil ayrıntılı DeepSeek isteği Bilge Tahta penceresini açar', async () => {
+  test('"Konu Anlatımı": soru kimliğiyle ayrıntılı DeepSeek isteği Bilge Tahta penceresini açar', async () => {
     let resolveFetch!: (response: Response) => void
     const fetchMock = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) => new Promise<Response>((resolve) => {
       resolveFetch = resolve
@@ -115,13 +115,12 @@ describe('ExplanationPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: /Konu Anlat/ }))
     expect(screen.getByRole('dialog', { name: /problemler/i })).toHaveAttribute('aria-busy', 'true')
     expect(screen.getByText(/Bilge Asistan ayrıntılı anlatımı tahtaya hazırlıyor/)).toBeInTheDocument()
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/chat',
-      expect.objectContaining({
-        body: expect.stringContaining('I. Bir.'),
-      }),
-    )
+    expect(fetchMock).toHaveBeenCalledWith('/api/chat', expect.objectContaining({ method: 'POST' }))
     const sent = JSON.parse(fetchMock.mock.calls[0]![1]!.body as string)
+    // Soru metni, öncül ve çözüm istemciden gitmez; sunucu soruyu kimliğinden okur.
+    expect(sent.context).toEqual({ kind: 'question', questionId: 'q1', shownCorrectOption: 2 })
+    expect(sent).not.toHaveProperty('questionContext')
+    expect(JSON.stringify(sent)).not.toMatch(/I\. Bir\.|Çözüm açıklaması/)
     expect(sent.mode).toBe('topic_explanation')
     expect(sent.messages[0].content).toContain('yüzeysel özetleme')
     await act(async () => {

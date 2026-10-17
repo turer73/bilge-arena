@@ -30,7 +30,7 @@ describe('sınav modu bütün yardımcıları kapatır', () => {
       <TopicExplanationButton
         topic="Fonksiyonlar"
         subject="matematik"
-        questionContext="test"
+        chatContext={{ kind: 'question', questionId: '6f1c2b8e-3d4a-4f5b-9c6d-7e8f9a0b1c2d' }}
       />,
     )
     expect(container).toBeEmptyDOMElement()
@@ -48,7 +48,7 @@ describe('sınav modu bütün yardımcıları kapatır', () => {
       <TopicExplanationButton
         topic="Fonksiyonlar"
         subject="matematik"
-        questionContext="test"
+        chatContext={{ kind: 'question', questionId: '6f1c2b8e-3d4a-4f5b-9c6d-7e8f9a0b1c2d' }}
       />,
     )
     render(<StudyAssistantLauncher game="matematik" examRef="TYT" />)

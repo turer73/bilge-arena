@@ -7,6 +7,7 @@ import type { BilgeTahtaLesson, BilgeTahtaStage } from '@/lib/bilge-tahta/contra
 import { trackBilgeBoardEvent } from '@/lib/bilge-tahta/analytics'
 import type { GameSlug } from '@/lib/constants/games'
 import { GAMES } from '@/lib/constants/games'
+import { CHAT_PERSONAL_DATA_NOTICE } from '@/components/chat/chat-input'
 import {
   STUDY_ASSISTANT_ACTIONS,
   type StudyAssistantAction,
@@ -91,13 +92,9 @@ export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; exam
             role: 'user',
             content: [`Çalışma hedefi: ${target}`, action.prompt].join('\n\n'),
           }],
-          questionContext: [
-            'Yüzey: Ders Çalış',
-            `Ders: ${GAMES[game].name}`,
-            examRef ? `Sınav: ${examRef}` : null,
-            `Konu veya soru: ${target}`,
-            `İstenen yardım: ${action.label}`,
-          ].filter(Boolean).join('\n'),
+          // Çalışma hedefi kullanıcı metnidir ve yukarıdaki mesajda maskelenir;
+          // bağlam yalnız sunucunun sabitlerden kurduğu alanları taşır.
+          context: { kind: 'study', game, examRef, action: action.id },
         }),
       })
       if (!response.ok) {
@@ -171,7 +168,7 @@ export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; exam
               if (targetError) setTargetError('')
             }}
             aria-invalid={Boolean(targetError)}
-            aria-describedby={targetError ? `${targetId}-error` : `${targetId}-hint`}
+            aria-describedby={`${targetError ? `${targetId}-error` : `${targetId}-hint`} ${targetId}-privacy`}
             placeholder="Örn. İkinci dereceden denklemler veya soru metni"
             className="min-h-[76px] w-full resize-y rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] px-3 py-2.5 text-sm font-semibold leading-5 text-[var(--app-text)] outline-none transition placeholder:text-[var(--app-text-muted)] focus:border-[var(--app-accent)] focus:ring-2 focus:ring-[var(--app-accent)]/20"
           />
@@ -184,6 +181,9 @@ export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; exam
               Yanıt seçtiğin {GAMES[game].name} ve {examRef ?? 'sınav'} bağlamına göre hazırlanır.
             </p>
           )}
+          <p id={`${targetId}-privacy`} className="mt-1 text-[10px] font-semibold leading-4 text-[var(--app-text-sub)]">
+            {CHAT_PERSONAL_DATA_NOTICE}
+          </p>
 
           <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
             {STUDY_ASSISTANT_ACTIONS.map((action) => (

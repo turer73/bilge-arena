@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { StudyAssistantLauncher } from '../study-assistant-launcher'
 
 const oldBoardUiEnabled = process.env.NEXT_PUBLIC_BILGE_TAHTA_ENABLED
@@ -46,5 +46,32 @@ describe('StudyAssistantLauncher', () => {
     render(<StudyAssistantLauncher game="matematik" examRef="TYT" />)
     const actions = screen.getAllByRole('button')
     expect(actions.length).toBeGreaterThanOrEqual(4)
+  })
+})
+
+describe('StudyAssistantLauncher baglam ve gizlilik', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  test('calisma hedefi kutusunda kisisel bilgi uyarisi vardir', () => {
+    render(<StudyAssistantLauncher game="matematik" examRef="TYT" />)
+    const notice = screen.getByText(/Kişisel bilgilerini .* yazma\./)
+    expect(screen.getByLabelText(/Hangi konu veya soruda/).getAttribute('aria-describedby')).toContain(notice.id)
+  })
+
+  test('baglam serbest metin degil: hedef yalniz kullanici mesajinda gider', async () => {
+    const mockFetch = vi.fn().mockResolvedValue(new Response('Anlatim'))
+    vi.stubGlobal('fetch', mockFetch)
+    render(<StudyAssistantLauncher game="matematik" examRef="TYT" />)
+
+    fireEvent.change(screen.getByLabelText(/Hangi konu veya soruda/), { target: { value: 'Uslu sayilar' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Konu anlat' }))
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled())
+    const body = JSON.parse(String((mockFetch.mock.calls[0] as [string, RequestInit])[1].body))
+    expect(body.context).toEqual({ kind: 'study', game: 'matematik', examRef: 'TYT', action: 'topic' })
+    expect(body).not.toHaveProperty('questionContext')
+    expect(body.messages[0].content).toContain('Uslu sayilar')
   })
 })
