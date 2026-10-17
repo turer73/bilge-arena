@@ -108,3 +108,61 @@ describe('migration ordinal guard', () => {
     });
   });
 });
+
+describe('fonksiyon yeniden olusturma kurallari', () => {
+  const rulesOf = (sql) => lintSql(sql).map((v) => v.rule);
+
+  it('OR REPLACE ya da onceden DROP olmadan CREATE FUNCTION re-run sirasinda patlar', () => {
+    expect(rulesOf('CREATE FUNCTION public.f() RETURNS void LANGUAGE sql AS $$ SELECT 1 $$;'))
+      .toEqual(['create-function-no-replace']);
+    expect(rulesOf('CREATE OR REPLACE FUNCTION public.f() RETURNS void LANGUAGE sql AS $$ SELECT 1 $$;'))
+      .toEqual([]);
+  });
+
+  it('DROP + CREATE: REVOKE FROM PUBLIC tek basina yetmez, anon ve authenticated da yazilmali', () => {
+    const publicOnly = `
+      DROP FUNCTION IF EXISTS public.f(uuid);
+      CREATE FUNCTION public.f(p uuid) RETURNS void LANGUAGE sql AS $$ SELECT 1 $$;
+      REVOKE ALL ON FUNCTION public.f(uuid) FROM PUBLIC;
+      GRANT EXECUTE ON FUNCTION public.f(uuid) TO authenticated;
+    `;
+    const violations = lintSql(publicOnly);
+    expect(violations.map((v) => v.rule)).toEqual(['function-acl-reset']);
+    expect(violations[0].detail).toContain('anon');
+  });
+
+  it('DROP + CREATE: ayri REVOKE/GRANT ifadelerinin birlesimi rolleri kapsarsa temiz', () => {
+    const restated = `
+      DROP FUNCTION IF EXISTS public.f(uuid), public.g();
+      CREATE FUNCTION public.f(p uuid) RETURNS void LANGUAGE sql AS $$ SELECT 1 $$;
+      REVOKE ALL ON FUNCTION public.f(uuid) FROM PUBLIC;
+      REVOKE ALL ON FUNCTION public.f(uuid) FROM anon;
+      GRANT EXECUTE ON FUNCTION public.f(uuid) TO authenticated, service_role;
+    `;
+    expect(lintSql(restated)).toEqual([]);
+  });
+
+  it('CREATE oncesinde yazilan yetki sayilmaz; ACL yeniden olusturmada sifirlanir', () => {
+    const before = `
+      REVOKE ALL ON FUNCTION public.f(uuid) FROM PUBLIC, anon, authenticated;
+      DROP FUNCTION public.f(uuid);
+      CREATE OR REPLACE FUNCTION public.f(p uuid) RETURNS void LANGUAGE sql AS $$ SELECT 1 $$;
+    `;
+    expect(rulesOf(before)).toEqual(['function-acl-reset']);
+  });
+
+  it('baska fonksiyonun yetkisi sayilmaz', () => {
+    const other = `
+      DROP FUNCTION IF EXISTS public.f();
+      CREATE FUNCTION public.f() RETURNS void LANGUAGE sql AS $$ SELECT 1 $$;
+      REVOKE ALL ON FUNCTION public.f_other() FROM PUBLIC, anon, authenticated;
+    `;
+    expect(rulesOf(other)).toEqual(['function-acl-reset']);
+  });
+
+  it('028/053 search_profiles_admin ACL sifirlamasi baseline kaydinda (090 canli sapmanin kaynagi)', () => {
+    const all = lintAll();
+    expect(all['028_add_user_stats_to_search_profiles_admin.sql'].map((v) => v.rule)).toContain('function-acl-reset');
+    expect(all['053_honeypot_filter_search_rpcs.sql'].filter((v) => v.rule === 'function-acl-reset')).toHaveLength(2);
+  });
+});

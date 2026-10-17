@@ -1,0 +1,30 @@
+{
+  "_comment": [
+    "Tam zincir ile uretim arasindaki BILINEN ve aciklanmis fonksiyon farklari (2026-10-17 olcumu; 223 sonrasi 439 public fonksiyon).",
+    "Her giris imza + fark turu + iki tarafin govde ozetiyle eslesir; ozetlerden biri degisirse giris eslesmez ve CI yeniden durur.",
+    "Eslesmeyen (bayat) giris de CI'i durdurur. Yeni giris eklemek uretim sapmasini kabul etmektir; PR'da gerekcesiyle incelenir."
+  ],
+  "functions": [
+    {
+      "signature": "grant_multiplayer_stats(uuid,text,boolean)",
+      "kind": "body-differs",
+      "production": "af1648ea65f0c986767bea48d6fd1ac5",
+      "chain": "4d60aeb9ab20952761478205a916e903",
+      "reason": "Yalniz yorum farki: 080 dosyasindaki govdede uretimde olmayan uc yorum satiri var. Kod ayni."
+    },
+    {
+      "signature": "increment_xp(uuid,integer,text,uuid)",
+      "kind": "body-differs",
+      "production": "ef6617f6447acba42ebfba9634c7c9f6",
+      "chain": "fd27397e9701afdc365d7c67df39e748",
+      "reason": "Yalniz bicim farki: uretimdeki surumde UPDATE satirlari bolunmus ve iki yorum var, 071 dosyasinda yok. Kod ayni."
+    },
+    {
+      "signature": "record_outcome_evidence()",
+      "kind": "body-differs",
+      "production": "a0945d217377f6b279dfedae01d50632",
+      "chain": "e627dc469c17f12cf07ff52682fe9153",
+      "reason": "Yalniz bicim farki: 086 dosyasinda sutun listeleri satir satir yazilmis ve bir yorum eklenmis. Kod ayni."
+    }
+  ]
+}

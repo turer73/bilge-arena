@@ -34,6 +34,12 @@ WHERE  exam_ref IS NULL
   AND  game <> 'wordquest';
 
 -- 2) RPC güncelle — p_exam_ref parametresi eklendi
+-- Yeni imza 044'ün 5 argümanlı sürümünü değiştirmez, yanına overload ekler.
+-- Üretimde 5 argümanlı sürüm yok (2026-10-17 pg_proc); aşağıdaki argümansız
+-- COMMENT de overload varken "not unique" hatası verir. Sıfırdan kurulan zincir
+-- üretimle aynı kalsın diye eski imza burada düşürülür (derin inceleme §4.5).
+DROP FUNCTION IF EXISTS public.select_random_questions(text, int, text, int, uuid[]);
+
 CREATE OR REPLACE FUNCTION public.select_random_questions(
   p_game         text,
   p_limit        int     DEFAULT 10,
