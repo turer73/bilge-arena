@@ -63,6 +63,7 @@ vi.mock('@/lib/utils/admin-rate-limit', () => ({
 }))
 
 import { GET, PATCH } from '../route'
+import { VerifiedAttemptIssueError } from '@/lib/verified-attempt-failure'
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -206,6 +207,35 @@ describe('GET /api/questions', () => {
 
     expect(res.status).toBe(500)
     expect(await res.json()).toEqual({ error: 'Sorular baslatilamadi' })
+  })
+
+  it('logs the issuance stage and code, not the database detail', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockCheckAdmin.mockResolvedValue(null)
+    mockRpc.mockResolvedValue({
+      data: [{
+        id: VALID_QID,
+        game: 'matematik',
+        category: 'cebir',
+        difficulty: 2,
+        content: { question: '2+2?', options: ['3', '4'], answer: 1 },
+        total_count: 1,
+      }],
+      error: null,
+    })
+    mockIssueVerifiedAttempt.mockRejectedValueOnce(
+      new VerifiedAttemptIssueError('verified_attempt_issue_failed', 'rpc', 'PGRST202'),
+    )
+
+    const res = await GET(makeGet('http://localhost/api/questions?game=matematik&active=true'))
+
+    expect(res.status).toBe(500)
+    expect(consoleError).toHaveBeenCalledWith(
+      '[/api/questions] verified attempt issuance failed',
+      { stage: 'rpc', code: 'PGRST202' },
+    )
+    consoleError.mockRestore()
   })
 
   it('returns 400 for invalid game slug', async () => {

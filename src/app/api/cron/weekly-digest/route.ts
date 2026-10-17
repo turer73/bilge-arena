@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { escapeHtml } from '@/lib/utils/security'
+import { withCronMonitor } from '@/lib/observability/cron-monitor'
 
 const CRON_SECRET = process.env.CRON_SECRET
 const resendKey = process.env.RESEND_API_KEY
@@ -11,7 +12,7 @@ const resendKey = process.env.RESEND_API_KEY
  * Haftalik ozet email gonderir. Vercel Cron tarafindan tetiklenir.
  * Guvenlik: CRON_SECRET header'i gerekli.
  */
-export async function GET(req: Request) {
+async function sendWeeklyDigest(req: Request) {
   // Cron guvenlik kontrolu — CRON_SECRET zorunlu
   if (!CRON_SECRET) {
     return NextResponse.json({ error: 'CRON_SECRET ayarlanmamis' }, { status: 500 })
@@ -167,3 +168,5 @@ function buildDigestHTML(data: {
 </body>
 </html>`
 }
+
+export const GET = withCronMonitor('weekly-digest', '0 9 * * 1', sendWeeklyDigest)

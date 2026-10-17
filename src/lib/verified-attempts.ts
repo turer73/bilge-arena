@@ -23,6 +23,7 @@ import {
   type PublicQuestion,
   type QuestionRow,
 } from '@/lib/utils/question-public'
+import { VerifiedAttemptIssueError } from '@/lib/verified-attempt-failure'
 
 const privateQuestionContentSchema = z.object({
   question: z.string().min(1).max(20_000),
@@ -337,7 +338,7 @@ async function resolveTytSocialEpochForQuestions(
   supplied: TytSocialLearningEpoch | undefined,
 ): Promise<TytSocialLearningEpoch> {
   if (supplied) {
-    if (!isSelectionEpoch(supplied)) throw new Error('verified_attempt_issue_failed')
+    if (!isSelectionEpoch(supplied)) throw new VerifiedAttemptIssueError('verified_attempt_issue_failed', 'epoch')
     return supplied
   }
   const snapshot = await readTytSocialLearningSnapshot(admin, userId, questionIds)
@@ -345,7 +346,7 @@ async function resolveTytSocialEpochForQuestions(
     snapshot.status !== 'active'
     || snapshot.allowedQuestionIds.length !== questionIds.length
     || snapshot.allowedQuestionIds.some((id, index) => id !== questionIds[index])
-  ) throw new Error('verified_attempt_issue_failed')
+  ) throw new VerifiedAttemptIssueError('verified_attempt_issue_failed', 'epoch')
   return {
     policyVersion: snapshot.context.policyVersion,
     selectionEventId: snapshot.context.selectionEventId,
@@ -358,7 +359,7 @@ function throwNormalizedAttemptRpcError(
   epochBound: boolean,
 ): never {
   if (epochBound && isTytSocialEpochRpcConflict(error)) throw new Error(TYT_SOCIAL_SELECTION_EPOCH_CHANGED)
-  throw new Error(fallback)
+  throw new VerifiedAttemptIssueError(fallback, 'rpc', error?.code ?? null)
 }
 
 /**
@@ -443,11 +444,11 @@ export async function issueVerifiedAttempt(
     && input.game === 'sosyal'
     && input.examRef === 'TYT'
   if (isGovernedTytSocial && input.mode === 'deneme') {
-    throw new Error('verified_attempt_issue_failed')
+    throw new VerifiedAttemptIssueError('verified_attempt_issue_failed', 'request')
   }
   const dedupedIds = Array.from(new Set(input.questionIds))
   if (dedupedIds.length === 0 || dedupedIds.length > 100) {
-    throw new Error('verified_attempt_issue_failed')
+    throw new VerifiedAttemptIssueError('verified_attempt_issue_failed', 'request')
   }
   const durationSec = getVerifiedAttemptDurationSec(input.game, input.mode)
   try {
@@ -497,13 +498,13 @@ export async function issueVerifiedAttempt(
     }).strict()
     const parsed = ticketSchema.safeParse(data)
     if (!parsed.success) {
-      throw new Error('verified_attempt_issue_failed')
+      throw new VerifiedAttemptIssueError('verified_attempt_issue_failed', 'ticket')
     }
     if (Date.parse(parsed.data.expiresAt) <= Date.now()) {
-      throw new Error('verified_attempt_issue_failed')
+      throw new VerifiedAttemptIssueError('verified_attempt_issue_failed', 'expired')
     }
     if (!snapshotsMatchNormalRequest(parsed.data.snapshot.items, dedupedIds, input.game)) {
-      throw new Error('verified_attempt_issue_failed')
+      throw new VerifiedAttemptIssueError('verified_attempt_issue_failed', 'snapshot')
     }
     return withPrivateSnapshots(
       { attemptId: parsed.data.attemptId, expiresAt: parsed.data.expiresAt },
@@ -511,7 +512,13 @@ export async function issueVerifiedAttempt(
     )
   } catch (error) {
     if (isTytSocialSelectionEpochChanged(error)) throw error
-    throw new Error('verified_attempt_issue_failed')
+    if (error instanceof VerifiedAttemptIssueError) throw error
+    // Ağ hatası, zaman aşımı ya da beklenmeyen istisna: yalnız hata türü taşınır.
+    throw new VerifiedAttemptIssueError(
+      'verified_attempt_issue_failed',
+      'unexpected',
+      error instanceof Error ? error.name : null,
+    )
   }
 }
 

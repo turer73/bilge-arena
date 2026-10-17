@@ -10,6 +10,7 @@ import { getClientIp } from '@/lib/utils/client-ip'
 import { parsePublicQuestionContent } from '@/lib/utils/question-public'
 import type { Database, TablesUpdate } from '@/types/database.generated'
 import { issueVerifiedAttempt, toPublicVerifiedQuestions } from '@/lib/verified-attempts'
+import { describeVerifiedAttemptFailure } from '@/lib/verified-attempt-failure'
 import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 
 const questionsLimiter = createRateLimiter('questions', 120, 60_000) // anon: IP bazli (50 öğrenci × ~2 req/dk)
@@ -150,8 +151,8 @@ export async function GET(request: NextRequest) {
         || verifiedQuestions.some((question, index) => question.id !== data[index]?.id)
       ) throw new Error('verified_attempt_snapshot_mismatch')
       data = verifiedQuestions
-    } catch {
-      console.error('[/api/questions] verified attempt issuance failed')
+    } catch (error) {
+      console.error('[/api/questions] verified attempt issuance failed', describeVerifiedAttemptFailure(error))
       return NextResponse.json({ error: 'Sorular baslatilamadi' }, { status: 500 })
     }
   }

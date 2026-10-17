@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { withCronMonitor } from '@/lib/observability/cron-monitor'
 
 const resultSchema = z.object({
   cutoff: z.string().datetime({ offset: true }),
@@ -12,7 +13,7 @@ function noStore(body: unknown, status = 200) {
   return NextResponse.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
 }
 
-export async function GET(request: Request) {
+async function pruneInstitutionRequestLedger(request: Request) {
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) return noStore({ error: 'CRON_SECRET ayarlanmamış' }, 500)
   if (request.headers.get('authorization') !== `Bearer ${cronSecret}`) {
@@ -38,3 +39,5 @@ export async function GET(request: Request) {
     ? noStore(parsed.data)
     : noStore({ error: 'Kurum istek kaydı temizleme sonucu doğrulanamadı' }, 500)
 }
+
+export const GET = withCronMonitor('institution-request-ledger-retention', '20 1 * * *', pruneInstitutionRequestLedger)
