@@ -147,6 +147,8 @@ jobs:
       LEADERBOARD_PRIVACY_TEST_DATABASE_DISPOSABLE: '1'
       RETENTION_ERASURE_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/bilge_r02_test_ci
       RETENTION_ERASURE_TEST_DATABASE_DISPOSABLE: '1'
+      PUSH_SUBSCRIPTIONS_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/bilge_push_test_ci
+      PUSH_SUBSCRIPTIONS_TEST_DATABASE_DISPOSABLE: '1'
     steps:
       - uses: actions/checkout@v6
 
@@ -164,6 +166,7 @@ jobs:
           'postgres://postgres:postgres@localhost:5432/postgres' });
           await client.connect(); await client.query('CREATE DATABASE bilge_r42_test_ci');
           await client.query('CREATE DATABASE bilge_r02_test_ci');
+          await client.query('CREATE DATABASE bilge_push_test_ci');
           await client.end(); })().catch((error) => { console.error(error); process.exit(1); });"
 
       # run-postgres-ci-suite.mjs dosya listesini postgres-ci-suites.mjs'ten alir
@@ -179,6 +182,9 @@ jobs:
 
       - name: Run tombstone and retention boundary acceptance tests
         run: node scripts/security/run-postgres-ci-suite.mjs retention-erasure
+
+      - name: Run push subscription privilege acceptance tests
+        run: node scripts/security/run-postgres-ci-suite.mjs push-subscriptions
 
   question-quality-postgres:
     name: 🧭 Question quality PostgreSQL

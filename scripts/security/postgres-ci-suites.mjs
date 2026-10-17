@@ -34,6 +34,11 @@ export const POSTGRES_CI_SUITES = Object.freeze({
     runner: 'vitest',
     files: [t('retention-erasure-profile-tombstone-postgres.integration.test.mjs')],
   },
+  'push-subscriptions': {
+    job: 'institution-pilot-postgres',
+    runner: 'vitest',
+    files: [t('push-subscriptions-privileges-postgres.integration.test.mjs')],
+  },
   'question-quality': {
     job: 'question-quality-postgres',
     runner: 'vitest',
