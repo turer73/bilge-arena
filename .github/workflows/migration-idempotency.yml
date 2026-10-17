@@ -5,6 +5,11 @@ name: Migration idempotency
 # down-SQL yoktur. Bu guard, korumasiz DDL ve yinelenen migration sira numarasi
 # ekleyen PR'lari yakalar.
 # Linter sadece Node built-in kullanir -> npm install GEREKMEZ (hizli).
+#
+# full-chain: tam zinciri BOS PostgreSQL 16 ve 17'ye (uretim 17) uretim sirasiyla
+# (database/migration-order.json) kurar ve uretime uygulanmis kismin public
+# fonksiyonlarini uretim parmak iziyle karsilastirir. Ayrinti:
+# database/migration-chain/README.md. Bu da yalniz Node built-in + psql kullanir.
 
 on:
   pull_request:
@@ -12,6 +17,11 @@ on:
       - 'database/migrations/**'
       - 'database/lint-migrations.mjs'
       - 'database/migration-idempotency-baseline.json'
+      - 'database/migration-order.json'
+      - 'database/migration-order.mjs'
+      - 'database/apply-migration-chain.mjs'
+      - 'database/migration-chain/**'
+      - 'database/schema.sql'
       - '.github/workflows/migration-idempotency.yml'
   push:
     branches: [master]
@@ -19,6 +29,11 @@ on:
       - 'database/migrations/**'
       - 'database/lint-migrations.mjs'
       - 'database/migration-idempotency-baseline.json'
+      - 'database/migration-order.json'
+      - 'database/migration-order.mjs'
+      - 'database/apply-migration-chain.mjs'
+      - 'database/migration-chain/**'
+      - 'database/schema.sql'
 
 permissions:
   contents: read
@@ -31,5 +46,40 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Lint migrations for idempotency and unique ordinals
+      - name: Lint migrations for idempotency, unique ordinals and the order manifest
         run: node database/lint-migrations.mjs
+
+  full-chain:
+    name: Full chain on empty PostgreSQL ${{ matrix.postgres }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['16', '17']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bilge_chain_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bilge_chain_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MIGRATION_CHAIN_DATABASE_URL: postgres://postgres:postgres@localhost:5432/bilge_chain_ci
+      MIGRATION_CHAIN_DATABASE_DISPOSABLE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: psql client
+        run: psql --version
+      - name: Apply every migration in production order and compare with the production fingerprint
+        run: node database/apply-migration-chain.mjs --expect-functions database/migration-chain/production-functions.txt

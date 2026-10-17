@@ -624,5 +624,5 @@ INSERT INTO daily_quests (slug, title, description, icon, quest_type, target_val
   ('correct_10',     '10 Doğru Cevap',      'Bugün 10 doğru cevap ver',               '✅', 'correct_answers',10, 50),
   ('correct_30',     '30 Doğru Cevap',      'Bugün 30 doğru cevap ver',               '💪', 'correct_answers',30, 150),
   ('streak_keep',    'Serini Koru',         'Bugün en az 1 oturum tamamla',           '🔥', 'streak_maintain',1,  40),
-  ('wordquest',      'İngilizce Zamanı',    'Kelime Atölyesi\'nde 1 oturum tamamla',  '📖', 'specific_game',  1,  60),
+  ('wordquest',      'İngilizce Zamanı',    'Kelime Atölyesi''nde 1 oturum tamamla',  '📖', 'specific_game',  1,  60),
   ('accuracy_70',    '%70 Doğruluk',        'Bugün en az %70 doğrulukla oyna',        '🎯', 'accuracy',       70, 70);

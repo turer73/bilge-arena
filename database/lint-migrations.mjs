@@ -15,6 +15,9 @@
 //   - CREATE POLICY "x"       -> ayni dosyada onceden DROP POLICY IF EXISTS "x"
 //   - CREATE TRIGGER x        -> DROP TRIGGER IF EXISTS x (veya CREATE OR REPLACE TRIGGER)
 //   - CREATE SEQUENCE         -> IF NOT EXISTS sart
+//   - CREATE FUNCTION x       -> OR REPLACE ya da ayni dosyada onceden DROP FUNCTION x
+//   - DROP + CREATE FUNCTION  -> PUBLIC/anon/authenticated yetkisi CREATE'ten sonra
+//                                acikca yazilmali (yeniden olusan fonksiyon ACL'yi kaybeder)
 //
 // Yorum (-- ve /* */), string literal ('...') ve dollar-quoted blok ($$...$$,
 // $tag$...$tag$ — fonksiyon govdesi ve DO blogu) tarama disi birakilir; satir
@@ -26,10 +29,15 @@
 // Migration sira numaralari da benzersiz olmali. Tarihsel 017 cakismasi prod
 // gecmisini yeniden yazmamak icin dosya adlariyla sabitlenmistir; yeni bir
 // cakisma CI'i durdurur.
+// Uygulama sirasi dosya adindan degil database/migration-order.json'dan gelir;
+// manifest kurallari (her dosya listede, uretim defteriyle tutarli, yeni dosya
+// sozlukte en sonda) database/migration-order.mjs'tedir ve burada da kosar.
 
 import { readFileSync, readdirSync, existsSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { validateMigrationOrder } from './migration-order.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const MIGRATIONS_DIR = join(__dirname, 'migrations');
@@ -141,7 +149,51 @@ export function lintSql(sql) {
       add('create-trigger-no-drop', `CREATE TRIGGER ${m[2]} without DROP TRIGGER IF EXISTS / OR REPLACE`, m.index);
     }
   }
+  // 7) CREATE FUNCTION x -> OR REPLACE ya da ayni dosyada onceden DROP FUNCTION x
+  // 8) DROP + CREATE FUNCTION x -> PUBLIC/anon/authenticated yetkisi CREATE'ten
+  //    sonra acikca yeniden yazilmali (REVOKE ... FROM ya da GRANT ... TO).
+  //    Yeniden olusan fonksiyon eski ACL'yi kaybeder ve Supabase varsayilaniyla
+  //    anon/authenticated'a acik dogar; REVOKE FROM PUBLIC tek basina anon'un
+  //    dogrudan iznini kaldirmaz (028/053 search_profiles_admin, 090'da kapatildi).
+  const droppedFunctions = functionDrops(s);
+  for (const m of s.matchAll(/\bCREATE\s+(OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE)\s+([\w."]+)\s*\(/gi)) {
+    const name = normName(m[2]);
+    const dropped = droppedFunctions.some((drop) => drop.name === name && drop.index < m.index);
+    if (!m[1] && !dropped) {
+      add('create-function-no-replace', `CREATE FUNCTION ${m[2]} without OR REPLACE or a prior DROP FUNCTION`, m.index);
+    }
+    if (dropped) {
+      const restated = functionAclRoles(s.slice(m.index), name);
+      const missing = ACL_RESTATED_ROLES.filter((role) => !restated.has(role));
+      if (missing.length) {
+        add('function-acl-reset', `${m[2]} is dropped and re-created but its ACL for ${missing.join(', ')} is left to defaults; REVOKE/GRANT it after CREATE`, m.index);
+      }
+    }
+  }
   return violations;
+}
+
+// DROP+CREATE sonrasi yetkisi acikca yazilmasi gereken istemci rolleri.
+export const ACL_RESTATED_ROLES = ['public', 'anon', 'authenticated'];
+
+// DROP FUNCTION/PROCEDURE ifadelerindeki adlar (virgulle ayrilmis liste dahil).
+function functionDrops(s) {
+  const drops = [];
+  for (const m of s.matchAll(/\bDROP\s+(?:FUNCTION|PROCEDURE)\s+(?:IF\s+EXISTS\s+)?([^;]*)/gi)) {
+    for (const name of m[1].matchAll(/([\w."]+)\s*\(/g)) drops.push({ name: normName(name[1]), index: m.index });
+  }
+  return drops;
+}
+
+// Verilen metindeki REVOKE ... ON FUNCTION ... FROM / GRANT ... ON FUNCTION ... TO
+// ifadelerinin `name` icin yazdigi roller (kucuk harf).
+function functionAclRoles(s, name) {
+  const roles = new Set();
+  for (const m of s.matchAll(/\b(?:REVOKE|GRANT)\s+[^;]*?\bON\s+FUNCTION\s+([^;]*?)\b(?:FROM|TO)\s+([^;]*)/gi)) {
+    if (![...m[1].matchAll(/([\w."]+)\s*\(/g)].some((fn) => normName(fn[1]) === name)) continue;
+    for (const role of m[2].split(',')) roles.add(role.trim().replace(/"/g, '').split(/\s+/)[0].toLowerCase());
+  }
+  return roles;
 }
 
 // ---------------------------------------------------------------------------
@@ -448,6 +500,14 @@ function main() {
   const contentAll = lintAllQuestionContent();
   const content = showAll ? contentAll : newQuestionContentViolations(contentAll);
   const contentCount = Object.keys(content).length;
+  const order = validateMigrationOrder();
+
+  if (order.length) {
+    console.error(`\nMIGRATION SIRA MANIFESTI IHLALI: ${order.length}\n`);
+    for (const v of order) console.error(`  ${v.file ?? '-'}  [${v.rule}]  ${v.detail}`);
+    console.error('\nUygulama sirasi database/migration-order.json\'dadir; yeni migration en sona status "pending" ile eklenir.\n');
+    process.exitCode = 1;
+  }
 
   if (contentCount) {
     console.error(`\nSORU ICERIGI MIGRATION ILE DEGISMEZ ${showAll ? '(tum ihlaller, onaylilar dahil)' : ''}: ${contentCount} dosya\n`);
@@ -463,7 +523,7 @@ function main() {
     }
   }
   if (!fileCount && !duplicateCount) {
-    if (!contentCount) console.log(`OK: ${totalFiles} migration tarandi, ${showAll ? '' : 'baseline-disi '}idempotency, sira numarasi veya soru icerigi ihlali yok.`);
+    if (!contentCount && !order.length) console.log(`OK: ${totalFiles} migration tarandi, ${showAll ? '' : 'baseline-disi '}idempotency, sira numarasi, sira manifesti veya soru icerigi ihlali yok.`);
     return;
   }
   if (fileCount) {
