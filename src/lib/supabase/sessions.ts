@@ -28,6 +28,10 @@ export interface SavedGameSession {
   /** Bu oturumun kazandirdigi altin. null = sunucu okuyamadi (UI gostermez),
    * 0 = gunluk tavan dolu (UI bunu ayrica bildirir). */
   coinsEarned: number | null
+  /** Gunluk oturum XP tavani bu oturumun XP'sini kesti (totalXP odenen miktar). */
+  xpCapped: boolean
+  /** Cevabi son 7 gunde baska denemede acildigi icin XP vermeyen soru sayisi. */
+  repeatQuestions: number
 }
 
 /**
@@ -100,6 +104,10 @@ export async function saveGameSession({
       coinsEarned: Number.isInteger(data.coinsEarned) && data.coinsEarned >= 0
         ? data.coinsEarned
         : null,
+      xpCapped: data.xpCapped === true,
+      repeatQuestions: Number.isInteger(data.repeatQuestions) && data.repeatQuestions > 0
+        ? data.repeatQuestions
+        : 0,
     }
   } catch (err) {
     console.error('[saveGameSession] Fetch hatasi:', err)

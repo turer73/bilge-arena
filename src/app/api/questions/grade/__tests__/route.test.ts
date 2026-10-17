@@ -118,6 +118,8 @@ describe('POST /api/questions/grade', () => {
     mockIpLimiter.check.mockResolvedValue({ success: true })
     mockUserLimiter.check.mockResolvedValue({ success: true })
     mockRecordAttempt.mockImplementation(async (_actor: string, _questionId: string, selected: number) => selected)
+    // record_question_reveal (and other RPCs) succeed unless a test says otherwise.
+    mockRpc.mockResolvedValue({ data: true, error: null })
     mockReadSnapshots.mockResolvedValue([{
       position: 1,
       questionId: QUESTION_ID,
@@ -283,6 +285,44 @@ describe('POST /api/questions/grade', () => {
     expect(mockQuestionQuery).not.toHaveBeenCalled()
   })
 
+  it('records the reveal for a verified attempt before returning the answer', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-42' } } })
+    const res = await POST(request({ questionId: QUESTION_ID, selectedOption: 1, attemptId: ATTEMPT_ID }))
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ correctOption: 2 })
+    expect(mockRpc).toHaveBeenCalledWith('record_question_reveal', {
+      p_user_id: 'user-42', p_attempt_id: ATTEMPT_ID, p_question_id: QUESTION_ID,
+    })
+  })
+
+  it('does not reveal the answer when the reveal cannot be recorded', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-42' } } })
+    mockRpc.mockResolvedValue({ data: null, error: { code: '57014', message: 'canceling statement' } })
+    const res = await POST(request({ questionId: QUESTION_ID, selectedOption: 1, attemptId: ATTEMPT_ID }))
+
+    expect(res.status).toBe(503)
+    expect(res.headers.get('Retry-After')).toBe('15')
+    const body = await res.json()
+    expect(body).not.toHaveProperty('correctOption')
+    expect(body).not.toHaveProperty('solution')
+  })
+
+  it('keeps grading when the reveal RPC is not deployed yet (PGRST202)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-42' } } })
+    mockRpc.mockResolvedValue({ data: null, error: { code: 'PGRST202', message: 'not found' } })
+    const res = await POST(request({ questionId: QUESTION_ID, selectedOption: 2, attemptId: ATTEMPT_ID }))
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ isCorrect: true, correctOption: 2 })
+  })
+
+  it('does not record reveals for guest previews (no verified attempt, no XP)', async () => {
+    const res = await POST(request({ questionId: QUESTION_ID, selectedOption: 2 }))
+    expect(res.status).toBe(200)
+    expect(mockRpc).not.toHaveBeenCalledWith('record_question_reveal', expect.anything())
+  })
+
   it('replayed selection is graded against the first accepted attempt', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-42' } } })
     mockRecordAttempt.mockResolvedValue(-1)
@@ -339,7 +379,12 @@ describe('POST /api/questions/grade', () => {
   it('records server-receipt answer telemetry best-effort without breaking grading', async () => {
     process.env.MOCK_STRATEGY_ENABLED = 'true'
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-42' } } })
-    mockRpc.mockResolvedValue({ data: null, error: { code: 'P0001' } })
+    // Only the telemetry RPC fails; the reveal record is not best-effort.
+    mockRpc.mockImplementation(async (name: string) => (
+      name === 'record_verified_exam_strategy_event'
+        ? { data: null, error: { code: 'P0001' } }
+        : { data: true, error: null }
+    ))
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 
     const res = await POST(request({
