@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { sendPushNotification } from '@/lib/utils/push'
 import { trDayStartUtcISO } from '@/lib/utils/tr-date'
+import { withCronMonitor } from '@/lib/observability/cron-monitor'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -15,7 +16,7 @@ const CRON_SECRET = process.env.CRON_SECRET
  *
  * Guvenlik: CRON_SECRET header'i gerekli (weekly-digest paterni).
  */
-export async function GET(req: Request) {
+async function sendStreakReminders(req: Request) {
   if (!CRON_SECRET) {
     return NextResponse.json({ error: 'CRON_SECRET ayarlanmamis' }, { status: 500 })
   }
@@ -115,3 +116,5 @@ export async function GET(req: Request) {
     subscriptions: subscriptions.length,
   })
 }
+
+export const GET = withCronMonitor('daily-streak-reminder', '0 18 * * *', sendStreakReminders)

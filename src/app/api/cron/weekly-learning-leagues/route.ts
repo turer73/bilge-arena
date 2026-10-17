@@ -5,8 +5,9 @@ import {
   socialLeagueRpcStatus,
 } from '@/lib/social-league/server-contract'
 import { formationRequestId, getIstanbulWeekStart } from '@/lib/social-league/weekly-formation'
+import { withCronMonitor } from '@/lib/observability/cron-monitor'
 
-export async function GET(request: Request) {
+async function formWeeklyLeagues(request: Request) {
   if (process.env.SOCIAL_LEAGUE_ENABLED !== 'true') {
     return socialLeagueNoStoreJson({ error: 'Haftalık lig servisi devre dışı' }, { status: 503 })
   }
@@ -38,3 +39,8 @@ export async function GET(request: Request) {
   }
   return socialLeagueNoStoreJson(result.data)
 }
+
+// SOCIAL_LEAGUE_ENABLED kapalıyken 503 bilinçli bir durumdur, alarm değil.
+export const GET = withCronMonitor('weekly-learning-leagues', '5 21 * * 0', formWeeklyLeagues, {
+  disabledStatus: 503,
+})

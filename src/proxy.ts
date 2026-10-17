@@ -18,6 +18,7 @@ import {
   resolveAcademyServerSupabaseOrigin,
 } from '@/lib/auth/isolated-test'
 import { isSensitiveWorkspacePath } from '@/lib/privacy/telemetry-policy'
+import { PROXY_UPSTREAM_TIMEOUT_MS, withFetchTimeout } from '@/lib/utils/fetch-timeout'
 import {
   buildSensitiveDocumentCsp,
   createCspNonce,
@@ -115,6 +116,9 @@ export async function proxy(request: NextRequest) {
           )
         },
       },
+      // getUser ve AAL sorgusu yavaş Auth yüzünden istek süresini doldurmasın;
+      // zaman aşımında kullanıcı yok sayılır (korumalı yollar kapalı kalır).
+      global: { fetch: withFetchTimeout(PROXY_UPSTREAM_TIMEOUT_MS) },
     }
   )
 

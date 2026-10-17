@@ -1,5 +1,7 @@
 'use client'
 
+import * as Sentry from '@sentry/nextjs'
+import { useEffect } from 'react'
 import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
 import { Button } from '@/components/ui/button'
 
@@ -10,6 +12,12 @@ export default function ArenaError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  // Kök error.tsx gibi: oyun yüzeyindeki hata kullanıcıya gösterilip
+  // Sentry'ye hiç ulaşmıyordu. PII temizliği sentry-options'ta.
+  useEffect(() => {
+    Sentry.captureException(error)
+  }, [error])
+
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center md:gap-6 md:px-6">
       <div className="text-4xl md:text-5xl xl:text-6xl">🎮</div>

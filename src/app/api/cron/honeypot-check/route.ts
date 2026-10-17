@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { withCronMonitor } from '@/lib/observability/cron-monitor'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -25,7 +26,7 @@ interface HoneypotIntegrityRow {
  * Vercel Cron 6 saatte bir tetikler. Güvenlik: CRON_SECRET header
  * (weekly-digest/daily-streak-reminder paterni).
  */
-export async function GET(req: Request) {
+async function checkHoneypots(req: Request) {
   if (!CRON_SECRET) {
     return NextResponse.json({ error: 'CRON_SECRET ayarlanmamis' }, { status: 500 })
   }
@@ -79,3 +80,5 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ status: 'ok', drift: false })
 }
+
+export const GET = withCronMonitor('honeypot-check', '0 */6 * * *', checkHoneypots)

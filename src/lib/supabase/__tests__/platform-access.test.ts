@@ -176,4 +176,26 @@ describe('platform access boundary', () => {
     })).toBe('unavailable')
     expect(fetchImpl).toHaveBeenCalledTimes(1)
   })
+
+  it('bounds every proxy REST read with a timeout and fails closed when it fires', async () => {
+    const userId = '22222222-2222-4222-8222-222222222222'
+    const timedOut = vi.fn().mockRejectedValue(new DOMException('The operation timed out', 'TimeoutError'))
+    expect(await getUserProfileAccessStateViaRest({
+      supabaseUrl: 'https://example.supabase.co', serviceKey: 'service-key', userId, fetchImpl: timedOut,
+    })).toBe('unavailable')
+    expect(await userHasAnyPlatformPermissionViaRest({
+      supabaseUrl: 'https://example.supabase.co', serviceKey: 'service-key', userId,
+      permissions: ['admin.logs.view'], fetchImpl: timedOut,
+    })).toBe(false)
+    for (const [, init] of timedOut.mock.calls) expect(init.signal).toBeInstanceOf(AbortSignal)
+
+    const ok = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ role_id: ROLE_ID }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ role_id: ROLE_ID }]), { status: 200 }))
+    expect(await userHasAnyPlatformPermissionViaRest({
+      supabaseUrl: 'https://example.supabase.co', serviceKey: 'service-key', userId,
+      permissions: ['admin.logs.view'], fetchImpl: ok,
+    })).toBe(true)
+    expect(ok.mock.calls.map(([, init]) => init.signal instanceof AbortSignal)).toEqual([true, true])
+  })
 })
