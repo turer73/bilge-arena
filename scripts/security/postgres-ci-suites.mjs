@@ -44,6 +44,7 @@ export const POSTGRES_CI_SUITES = Object.freeze({
       t('question-outcome-mapping-candidates-postgres.integration.test.mjs'),
       t('admin-homepage-mutation-governance-postgres.integration.test.mjs'),
       t('admin-rbac-mutation-governance-postgres.integration.test.mjs'),
+      t('admin-read-privacy-boundaries-postgres.integration.test.mjs'),
       t('reward-integrity-postgres.integration.test.mjs'),
     ],
   },

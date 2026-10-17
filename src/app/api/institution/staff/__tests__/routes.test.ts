@@ -97,11 +97,31 @@ describe('institution staff routes', () => {
     }))
     expect(missing.status).toBe(404)
     expect(await missing.json()).toEqual({
-      error: 'Bu e-posta ile doğrulanmış bir Bilge Arena hesabı bulunamadı',
+      error: 'Bu e-posta ile öğretmen eklenemedi. Kişinin doğrulanmış bir Bilge Arena hesabı olmalı ve başka bir kuruma bağlı olmamalı.',
     })
     expect(mocks.rpc).toHaveBeenCalledWith('add_my_institution_teacher_by_email', expect.objectContaining({
       p_teacher_email: TEACHER_EMAIL,
     }))
+  })
+
+  it('does not tell whether a refused e-mail belongs to an account', async () => {
+    const answers = []
+    for (const code of ['P0002', 'P0002', 'P0003']) {
+      mocks.rpc.mockResolvedValueOnce({ data: null, error: { code } })
+      const response = await addTeacher(request('/api/institution/staff', 'POST', {
+        teacherEmail: TEACHER_EMAIL,
+        requestId: REQUEST_ID,
+      }))
+      answers.push({ status: response.status, body: await response.json() })
+    }
+    // "Hesap yok" ve "başka kurumda" RPC'den aynı kodla gelir, yanıtları aynıdır.
+    expect(answers[0]).toEqual(answers[1])
+    expect(JSON.stringify(answers)).not.toMatch(/bulunamadı|başka bir kuruma bağlı olabilir/)
+    // Personel sınırı e-postaya bakmadan söylenir; mesajı hesaptan söz etmez.
+    expect(answers[2]).toEqual({
+      status: 409,
+      body: { error: 'Kurum personel sınırı dolu olabilir veya istek tekrarlanmış olabilir' },
+    })
   })
 
   it('toggles the authenticated manager teacher role without accepting a member id', async () => {

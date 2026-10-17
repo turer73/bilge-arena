@@ -15,6 +15,25 @@ const accountExportSchema = z.object({
 
 export const dynamic = 'force-dynamic'
 
+type ExportTables = z.infer<typeof accountExportSchema>['tables']
+
+/**
+ * Engellenen kişi, kendisini kimin engellediğini dökümünde görmemeli.
+ *
+ * `friendships` satırında `user_id` engelleyen, `friend_id` engellenendir;
+ * `status='blocked'` satırı yalnız engelleyenin verisidir. RPC iki tarafı da
+ * döktüğü için (bağlantı sütunu `friend_id`) burada süzülür. RPC'nin kendisi
+ * değiştirilmedi: gövdesi ölçüm yayın kontrolünde hash ile sabitli ve tek
+ * tüketicisi bu route.
+ */
+function withoutForeignBlocks(tables: ExportTables, subjectId: string): ExportTables {
+  const friendships = tables.friendships
+  if (!friendships) return tables
+  const { friendships: _all, ...rest } = tables
+  const kept = friendships.filter((row) => !(row.status === 'blocked' && row.user_id !== subjectId))
+  return kept.length > 0 ? { ...rest, friendships: kept } : rest
+}
+
 export async function GET() {
   const client = await createClient()
   const { data: { user } } = await client.auth.getUser()
@@ -69,7 +88,7 @@ export async function GET() {
       lastSignInAt: user.last_sign_in_at ?? null,
     },
     coverage: parsed.data.coverage,
-    data: parsed.data.tables,
+    data: withoutForeignBlocks(parsed.data.tables, user.id),
   }
 
   return new Response(JSON.stringify(payload, null, 2), {

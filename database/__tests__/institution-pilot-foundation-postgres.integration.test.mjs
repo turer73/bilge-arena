@@ -46,6 +46,10 @@ const managerTeacherRoleSql = readFileSync(
   join(migrationsDir, '135_institution_manager_teacher_role.sql'),
   'utf8',
 )
+const teacherAddUniformRefusalSql = readFileSync(
+  join(migrationsDir, '20261017090100_institution_teacher_add_uniform_refusal.sql'),
+  'utf8',
+)
 const institutionOperationsSql = readFileSync(
   join(migrationsDir, '145_institution_operations_governance.sql'),
   'utf8',
@@ -527,6 +531,8 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
     await client.query(institutionAuditSql)
     await client.query(authenticatedBoundarySql)
     await client.query(institutionLifecycleSql)
+    await client.query(teacherAddUniformRefusalSql)
+    await client.query(teacherAddUniformRefusalSql)
     // Migration 136 belongs to the question-governance chain and is not loaded
     // by this focused suite. Its trigger function is stubbed so migration 152's
     // forward REVOKE and retention function still compile on real PostgreSQL.
@@ -2777,6 +2783,58 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
       ]),
       'P0003',
     )
+  })
+
+  it('answers unknown, assigned and capacity-blocked e-mails alike, and still replays at capacity', async () => {
+    // Hata kodu ve mesaji e-postanin kayitli olup olmadigini ele vermemeli.
+    // Tek islemde kosar ve geri alinir: pilot-9 sonraki testlerde ikinci
+    // kurumun yoneticisi olur.
+    const attempt = async (manager, email, requestId = randomUUID()) => {
+      await client.query('SAVEPOINT teacher_add_attempt')
+      try {
+        await client.query('SET ROLE service_role')
+        const { rows } = await client.query(
+          'SELECT public.add_my_institution_teacher_by_email($1,$2,$3) AS result',
+          [manager, email, requestId],
+        )
+        await client.query('RESET ROLE')
+        await client.query('RELEASE SAVEPOINT teacher_add_attempt')
+        return { result: rows[0].result }
+      } catch (error) {
+        await client.query('ROLLBACK TO SAVEPOINT teacher_add_attempt')
+        return { error: { code: error.code, message: error.message } }
+      }
+    }
+    const cannotAdd = { error: { code: 'P0002', message: 'institution teacher cannot be added' } }
+    const full = { error: { code: 'P0003', message: 'institution staff capacity reached' } }
+
+    await client.query('BEGIN')
+    try {
+      // Ikinci kurumda yer var; pilot-4 birinci kurumun ogretmeni.
+      expect(await attempt(managerTwo, 'kayitli-degil-2@example.com')).toEqual(cannotAdd)
+      expect(await attempt(managerTwo, 'pilot-4@example.com')).toEqual(cannotAdd)
+
+      // Birinci kurum dolu: bos dogrulanmis hesap ile olmayan hesap ayni yaniti alir.
+      expect(await attempt(managerOne, 'kayitli-degil-3@example.com')).toEqual(full)
+      expect(await attempt(managerOne, 'pilot-9@example.com')).toEqual(full)
+
+      // Son koltugu dolduran istegin tekrari, kurum dolduktan sonra da replay doner.
+      const requestId = randomUUID()
+      const added = await attempt(managerTwo, 'pilot-9@example.com', requestId)
+      expect(added.result).toMatchObject({ role: 'teacher', replayed: false })
+      await client.query(
+        `UPDATE public.pilot_institutions SET staff_limit = (
+           SELECT count(*) FROM public.pilot_institution_memberships
+           WHERE institution_id = $1 AND status = 'active'
+         ) WHERE id = $1`,
+        [institutionTwo],
+      )
+      expect(await attempt(managerTwo, 'pilot-9@example.com', requestId))
+        .toEqual({ result: expect.objectContaining({ memberRef: added.result.memberRef, replayed: true }) })
+      expect(await attempt(managerTwo, 'kayitli-degil-4@example.com')).toEqual(full)
+    } finally {
+      await client.query('ROLLBACK')
+    }
   })
 
   it('closes every helper for the whole classroom while exam mode is on', async () => {
