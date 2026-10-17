@@ -4,9 +4,10 @@ import { useCallback } from 'react'
 import { useChatStore } from '@/stores/chat-store'
 import { ChatMessages } from './chat-messages'
 import { ChatInput } from './chat-input'
+import { chatApiHistory, readChatTurnSignature } from '@/lib/chat/client-history'
 
 export function ChatWidget() {
-  const { messages, isOpen, isLoading, questionContext, toggleOpen, addMessage, updateLastAssistant, setLoading } = useChatStore()
+  const { messages, isOpen, isLoading, toggleOpen, addMessage, updateLastAssistant, setLoading } = useChatStore()
 
   const handleSend = useCallback(async (text: string) => {
     addMessage('user', text)
@@ -16,15 +17,10 @@ export function ChatWidget() {
     addMessage('assistant', '')
 
     try {
-      const apiMessages = [
-        ...messages.map((m) => ({ role: m.role, content: m.content })),
-        { role: 'user' as const, content: text },
-      ]
-
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages, questionContext }),
+        body: JSON.stringify({ messages: chatApiHistory(messages, text) }),
       })
 
       if (!res.ok) {
@@ -61,13 +57,15 @@ export function ChatWidget() {
 
       if (!fullText) {
         updateLastAssistant('Cevap alınamadı. Lütfen tekrar deneyin.')
+      } else {
+        updateLastAssistant(fullText, readChatTurnSignature(res))
       }
     } catch {
       updateLastAssistant('Bağlantı hatası. İnternet bağlantınızı kontrol edin.')
     } finally {
       setLoading(false)
     }
-  }, [messages, questionContext, addMessage, updateLastAssistant, setLoading])
+  }, [messages, addMessage, updateLastAssistant, setLoading])
 
   return (
     <>

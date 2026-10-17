@@ -9,6 +9,7 @@ import { useBilgeTahtaEnabled } from '@/lib/bilge-tahta/client'
 import type { BilgeTahtaLesson } from '@/lib/bilge-tahta/contract'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { trackBilgeBoardEvent } from '@/lib/bilge-tahta/analytics'
+import { chatApiHistory, readChatTurnSignature } from '@/lib/chat/client-history'
 
 interface StudyAssistantProps {
   /** CalismaClient kendi responsive kabuğunu çizdiğinde yalnız chat gövdesini render eder. */
@@ -74,15 +75,15 @@ export function StudyAssistant({ embedded = false, game, examRef = null, initial
     addMessage('assistant', '')
 
     try {
-      const apiMessages = [
-        ...messages.map((message) => ({ role: message.role, content: message.content })),
-        { role: 'user' as const, content: text },
-      ]
-
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages, questionContext, mode }),
+        body: JSON.stringify({
+          messages: chatApiHistory(messages, text),
+          // Bağlam serbest metin değil: sunucu dersi ve sınavı sabitlerden kurar.
+          ...(game ? { context: { kind: 'study', game, examRef } } : {}),
+          mode,
+        }),
       })
 
       if (!response.ok) {
@@ -118,13 +119,16 @@ export function StudyAssistant({ embedded = false, game, examRef = null, initial
       }
 
       if (!fullText) updateLastAssistant('Cevap alınamadı. Lütfen tekrar dene.')
-      else setBoardAnswer({ topic: boardTopic(text, questionContext), content: fullText })
+      else {
+        updateLastAssistant(fullText, readChatTurnSignature(response))
+        setBoardAnswer({ topic: boardTopic(text, questionContext), content: fullText })
+      }
     } catch {
       updateLastAssistant('Bağlantı hatası. İnternet bağlantını kontrol et.')
     } finally {
       setLoading(false)
     }
-  }, [messages, questionContext, addMessage, updateLastAssistant, setLoading])
+  }, [messages, questionContext, game, examRef, addMessage, updateLastAssistant, setLoading])
 
   useEffect(() => {
     if (!initialRequest || handledInitialRequest.current === initialRequest.id) return

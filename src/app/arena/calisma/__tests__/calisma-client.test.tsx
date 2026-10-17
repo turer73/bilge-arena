@@ -266,9 +266,11 @@ describe('CalismaClient', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/chat', expect.objectContaining({
       body: expect.stringContaining('"mode":"topic_explanation"'),
     }))
-    expect(fetchMock).toHaveBeenCalledWith('/api/chat', expect.objectContaining({
-      body: expect.stringContaining('Konu veya soru: İkinci dereceden denklemler'),
-    }))
+    // Çalışma hedefi kullanıcı mesajında gider; bağlam yalnız sabit alanları taşır.
+    const sent = JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body))
+    expect(sent.messages[0].content).toContain('Çalışma hedefi: İkinci dereceden denklemler')
+    expect(sent.context).toMatchObject({ kind: 'study', action: 'topic' })
+    expect(sent).not.toHaveProperty('questionContext')
   })
 
   test('somut çalışma hedefi yoksa istek göndermez ve alanı odağa alır', () => {

@@ -125,5 +125,15 @@ describe('StudentAssignmentClient', () => {
     expect(document.body).toHaveTextContent('Boş bırakıldı · Doğru cevap B')
     expect(screen.queryByRole('button', { name: 'Final teslimi yap' })).not.toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Konu Anlatımı' })).toHaveLength(2)
+
+    // Konu anlatımı soruyu ve doğru şıkkı göndermez; sunucu ödev kaydından okur.
+    const chatFetch = vi.fn().mockResolvedValue(new Response('Anlatım'))
+    vi.stubGlobal('fetch', chatFetch)
+    await user.click(screen.getAllByRole('button', { name: 'Konu Anlatımı' })[1]!)
+    await waitFor(() => expect(chatFetch).toHaveBeenCalledWith('/api/chat', expect.anything()))
+    const body = JSON.parse(String((chatFetch.mock.calls[0] as [string, RequestInit])[1].body))
+    expect(body.context).toEqual({ kind: 'assignment_item', assignmentId: ASSIGNMENT_ID, position: 2 })
+    expect(JSON.stringify(body)).not.toContain('5 - 2 kaçtır?')
+    vi.unstubAllGlobals()
   })
 })

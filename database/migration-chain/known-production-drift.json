@@ -1,16 +1,10 @@
 {
   "_comment": [
-    "Tam zincir ile uretim arasindaki BILINEN ve aciklanmis fonksiyon farklari (2026-10-17 olcumu, 440 public fonksiyon).",
+    "Tam zincir ile uretim arasindaki BILINEN ve aciklanmis fonksiyon farklari (2026-10-17 olcumu; 223 sonrasi 439 public fonksiyon).",
     "Her giris imza + fark turu + iki tarafin govde ozetiyle eslesir; ozetlerden biri degisirse giris eslesmez ve CI yeniden durur.",
     "Eslesmeyen (bayat) giris de CI'i durdurur. Yeni giris eklemek uretim sapmasini kabul etmektir; PR'da gerekcesiyle incelenir."
   ],
   "functions": [
-    {
-      "signature": "block_disposable_emails()",
-      "kind": "missing-in-chain",
-      "production": "498775d2131b8e1280cc515441958ee7",
-      "reason": "Yalniz uretimde: hicbir migration olusturmaz, auth.users uzerinde trg_block_disposable_emails tetikleyicisine bagli. 048'in kurdugu block_disposable_email() (tekil, block_disposable_email_trg) ile ayni isi ayri bir alan adi listesiyle yapar; iki tetikleyici birlikte calisir. Kaldirmak ayri bir karar ve migration ister."
-    },
     {
       "signature": "grant_multiplayer_stats(uuid,text,boolean)",
       "kind": "body-differs",
