@@ -41,8 +41,16 @@ REVOKE ALL ON FUNCTION public.update_question_stats()
   FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.update_weekly_leaderboard()
   FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.block_disposable_emails()
-  FROM PUBLIC, anon, authenticated;
+-- block_disposable_emails() (cogul) yalniz uretimde var: hicbir migration
+-- olusturmaz (048 tekil block_disposable_email()'i kurar). Sifirdan kurulan
+-- zincir burada durmasin diye yalniz varsa daraltilir.
+DO $migration$
+BEGIN
+  IF to_regprocedure('public.block_disposable_emails()') IS NOT NULL THEN
+    EXECUTE 'REVOKE ALL ON FUNCTION public.block_disposable_emails() FROM PUBLIC, anon, authenticated';
+  END IF;
+END
+$migration$;
 
 -- Admin RPC remains callable by authenticated users because its body enforces
 -- admin.users.view. Remove the unexpected anonymous grant observed in prod.

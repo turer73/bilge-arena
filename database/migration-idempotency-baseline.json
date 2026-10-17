@@ -46,11 +46,23 @@
     "025_fix_error_reports_rls_rbac.sql": {
       "create-policy-no-drop": 2
     },
+    "028_add_user_stats_to_search_profiles_admin.sql": {
+      "function-acl-reset": 1
+    },
     "036_consolidate_permissive_policies.sql": {
       "create-policy-no-drop": 5
     },
     "037_premium_waitlist.sql": {
       "create-policy-no-drop": 3
+    },
+    "053_honeypot_filter_search_rpcs.sql": {
+      "function-acl-reset": 2
+    },
+    "081_atomic_complete_game_session.sql": {
+      "create-function-no-replace": 1
+    },
+    "20261013184551_tyt_social_learning_epoch_forward.sql": {
+      "create-function-no-replace": 6
     }
   }
 }
