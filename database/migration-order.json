@@ -3,7 +3,7 @@
     "Migration uygulama sirasinin tek kaynagi. Dosya adi sirasi DEGIL: zaman damgali dosyalar sozluk sirasinda 201 ile 202 arasina duser ama uretimde 222'den sonra uygulandi.",
     "Sira uretim defterinden (supabase_migrations.schema_migrations, 2026-10-17 salt okuma) alindi. database/apply-migration-chain.mjs bu sirayi bos PostgreSQL'e uygular.",
     "status: pre-ledger = defter acilmadan (2026-05-26) once uygulandi, sayisal sira | ledger = defter satiri var, sira defter versiyonu | ledger-backfill = defter satiri sonradan yazildi, sira note'ta | unrecorded = uretimde var ama defter satiri yok, sira komsu dosyalardan | pending = uretime henuz uygulanmadi, listenin sonunda durur.",
-    "Yeni migration: dosya adi mevcut her dosyadan sozlukte SONRA gelmeli (ornek 223_konu.sql; zaman damgasi 202_ oncesine duser) ve buraya en sona status pending olarak eklenmeli. Uretime uygulaninca status ledger + defter satiri yazilir: node database/migration-order.mjs --ledger <dump> kontrol eder."
+    "Yeni migration: dosya adi mevcut her dosyadan sozlukte SONRA gelmeli (ornek 224_konu.sql; zaman damgasi 202_ oncesine duser) ve buraya en sona status pending olarak eklenmeli. Uretime uygulaninca status ledger + defter satiri yazilir: node database/migration-order.mjs --ledger <dump> kontrol eder."
   ],
   "platformStub": "migration-chain/supabase-platform-stub.sql",
   "baseline": "schema.sql",
@@ -250,6 +250,7 @@
     { "file": "20261017100100_single_streak_writer.sql", "status": "ledger", "ledger": [{ "version": "20261017100100", "name": "single_streak_writer" }] },
     { "file": "20261017100200_coach_transfer_excludes_attempt_questions.sql", "status": "ledger", "ledger": [{ "version": "20261017100200", "name": "coach_transfer_excludes_attempt_questions" }] },
     { "file": "20261017110000_revealed_question_xp_window.sql", "status": "ledger", "ledger": [{ "version": "20261017110000", "name": "revealed_question_xp_window" }] },
+    { "file": "223_drop_orphan_disposable_email_trigger.sql", "status": "ledger", "ledger": [{ "version": "20261017195301", "name": "223_drop_orphan_disposable_email_trigger" }] },
     { "file": "20261013183312_adaptive_diagnostic_legacy_coverage_repair.sql", "status": "pending" },
     { "file": "20261013184551_tyt_social_learning_epoch_forward.sql", "status": "pending" },
     { "file": "20261014183929_revision_bound_turkce_quality_policy.sql", "status": "pending" }

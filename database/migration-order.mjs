@@ -164,7 +164,7 @@ export function validateMigrationOrder(
     else if (pendingFrom) add('order-pending-not-tail', file, `${status} entry after pending ${pendingFrom}; pending migrations stay at the end`)
 
     if (lexicalMax !== null && !lexicalAfter(file, lexicalMax) && !exceptions.has(file)) {
-      add('order-lexical-position', file, `sorts before ${lexicalMaxFile} but runs after it; name it so it sorts after every earlier migration (e.g. 223_<topic>.sql) — timestamps sort before 202_`)
+      add('order-lexical-position', file, `sorts before ${lexicalMaxFile} but runs after it; name it so it sorts after every earlier migration (e.g. 224_<topic>.sql) — timestamps sort before 202_`)
     }
     if (lexicalMax === null || lexicalAfter(file, lexicalMax)) {
       lexicalMax = file

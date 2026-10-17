@@ -40,7 +40,6 @@ backfill_verified_attempt_mastery(integer)|66b85e9339a3f632ff3f78a3381518f7|t|se
 batch_increment_question_stats(uuid[],boolean[])|0f15db29447b77026bca5a732e4bc87f|t|search_path=public|{postgres=X/postgres,service_role=X/postgres}
 bind_mastery_evidence_verified_day()|a3b451f1c726730fe992a00025c86f8d|t|search_path=pg_catalog|{postgres=X/postgres}
 block_disposable_email()|c8f022635578c3ff1160d4cc8c76ea9e|t|search_path=public, auth|{postgres=X/postgres,service_role=X/postgres}
-block_disposable_emails()|498775d2131b8e1280cc515441958ee7|t|search_path=public, auth|{postgres=X/postgres,service_role=X/postgres}
 block_user(uuid)|eca89ba26409b5cdf92da20bb4bd2e6c|t|search_path=pg_catalog, public|{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}
 capture_weekly_learning_league_contribution()|073aa1b82a5f8bc262a66d784ff8e276|t|search_path=pg_catalog|{postgres=X/postgres}
 check_honeypot_integrity()|5e7121ae30a0b653a6071c4ab1b8343b|t|search_path=public|{postgres=X/postgres,service_role=X/postgres}

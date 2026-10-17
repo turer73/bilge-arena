@@ -64,8 +64,9 @@ describe('kayitli uretim parmak izi ve bilinen sapmalar', () => {
     readFileSync(join(DATABASE_DIR, 'migration-chain', 'production-functions.txt'), 'utf8'),
   )
 
-  it('2026-10-17 olcumundeki 440 public fonksiyonu tasir; 044 surumunun 5 argumanli imzasi yok', () => {
-    expect(production.size).toBe(440)
+  it('223 sonrasi 2026-10-17 olcumundeki 439 public fonksiyonu tasir; 044 surumunun 5 argumanli imzasi ve yetim block_disposable_emails() yok', () => {
+    expect(production.size).toBe(439)
+    expect(production.has('block_disposable_emails()')).toBe(false)
     expect([...production.keys()].filter((s) => s.startsWith('select_random_questions('))).toEqual([
       'select_random_questions(text,integer,text,integer,uuid[],text)',
     ])
