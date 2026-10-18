@@ -230,9 +230,20 @@ export function dbLookupIds(proposals) {
  * birlikte yalniz bu RPC'den gelir.
  * fallbackOutcomes: question_outcomes satirlari (legacy revizyonlarda revizyon
  * eslemesi bos olabilir). */
-export function currentFromRevisionDetail({ question, detail, fallbackOutcomes = [] }) {
+export function currentFromRevisionDetail({ question, detail, fallbackOutcomes = [], releasedScope = null }) {
   if (!question) return null
   const r = detail?.revision ?? null
+  let examRef = question.exam_ref ?? undefined
+  // Migration 187 separates WordQuest storage (NULL) from revision scope (YDT).
+  // Resolve the released registry entry, never infer scope from an outcome label.
+  if (question.game === 'wordquest' && examRef === undefined) {
+    if (releasedScope?.game !== question.game || releasedScope.questionExamRef !== null
+      || releasedScope.displayExamRef !== 'YDT' || !releasedScope.taxonomyVersion
+      || (r?.metadata?.examRef != null && r.metadata.examRef !== releasedScope.displayExamRef)) {
+      throw new Error('WordQuest revision scope requires the matching released YDT registry entry')
+    }
+    examRef = releasedScope.displayExamRef
+  }
   const raw = Array.isArray(r?.outcomes) && r.outcomes.length
     ? r.outcomes
     : fallbackOutcomes.map((o) => ({ outcomeId: o.outcome_id ?? o.outcomeId, weight: o.weight, primary: (o.is_primary ?? o.primary) === true }))
@@ -243,7 +254,7 @@ export function currentFromRevisionDetail({ question, detail, fallbackOutcomes =
     content: r?.content ?? question.content ?? null,
     metadata: {
       game: question.game, category: question.category, subcategory: question.subcategory ?? undefined, topic: question.topic ?? undefined,
-      difficulty: question.difficulty, levelTag: question.level_tag ?? undefined, examRef: question.exam_ref ?? undefined, isBoss: question.is_boss ?? undefined,
+      difficulty: question.difficulty, levelTag: question.level_tag ?? undefined, examRef, isBoss: question.is_boss ?? undefined,
     },
     outcomes: sortOutcomes(raw.map((o) => ({ outcomeId: uid(o.outcomeId), weight: Number(o.weight), primary: o.primary === true }))),
     source: r?.source && typeof r.source === 'object' && Object.keys(r.source).length ? pick(r.source, SOURCE_KEYS) : null,
@@ -562,6 +573,12 @@ export async function loadCurrentFromDb(db, questionIds, userId) {
   if (!ids.length) return byId
   const questions = await all(db, 'questions', 'id,game,category,subcategory,topic,difficulty,level_tag,exam_ref,is_boss,is_active,content,published_revision_id', (q) => q.in('id', ids))
   const outcomes = await all(db, 'question_outcomes', 'question_id,outcome_id,weight,is_primary', (q) => q.in('question_id', ids))
+  let releasedScope = null
+  if (questions.some(q => q.game === 'wordquest' && q.exam_ref == null)) {
+    const { data, error } = await db.rpc('resolve_released_curriculum_scope', { p_game: 'wordquest', p_display_exam_ref: 'YDT' })
+    if (error) throw new Error(`resolve_released_curriculum_scope: ${error.code ?? ''} ${error.message ?? ''}`.trim())
+    releasedScope = data
+  }
   for (const q of questions) {
     let detail = null
     if (q.published_revision_id) {
@@ -569,7 +586,7 @@ export async function loadCurrentFromDb(db, questionIds, userId) {
       if (error) throw new Error(`get_question_content_revision(${q.published_revision_id}): ${error.code ?? ''} ${error.message ?? ''}`.trim())
       detail = data
     }
-    byId.set(uid(q.id), currentFromRevisionDetail({ question: q, detail, fallbackOutcomes: outcomes.filter((o) => uid(o.question_id) === uid(q.id)) }))
+    byId.set(uid(q.id), currentFromRevisionDetail({ question: q, detail, releasedScope, fallbackOutcomes: outcomes.filter((o) => uid(o.question_id) === uid(q.id)) }))
   }
   return byId
 }

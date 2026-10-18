@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { SUPABASE_DEFAULT_PRIVILEGES_SQL } from './supabase-default-privileges.mjs'
+import { currentFromRevisionDetail, buildRevisionPayload } from '../prepare-question-revision-drafts.mjs'
 
 const url = process.env.CONTENT_GOVERNANCE_TEST_DATABASE_URL
 if (url && process.env.CONTENT_GOVERNANCE_TEST_DATABASE_DISPOSABLE !== '1') throw new Error('Set CONTENT_GOVERNANCE_TEST_DATABASE_DISPOSABLE=1')
@@ -641,6 +642,25 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     )).rows[0]).toEqual({ outcome_id:candidateOutcome,status:'transferred' })
   })
   it('keeps Wordquest storage NULL through YDT governance, candidate repair, and fail-closed publish', async () => {
+    const releasedScope = await rpc('public.resolve_released_curriculum_scope($1,$2)', ['wordquest','YDT'])
+    for (const id of [ydtQuestion, ydtLegacyNullQuestion]) {
+      await client.query('BEGIN')
+      try {
+        const questionRow = (await client.query('SELECT * FROM public.questions WHERE id=$1', [id])).rows[0]
+        const detail = await rpc('public.get_question_content_revision($1,$2)', [author,questionRow.published_revision_id])
+        const fallbackOutcomes = (await client.query('SELECT * FROM public.question_outcomes WHERE question_id=$1',[id])).rows
+        const current = currentFromRevisionDetail({ question:questionRow,detail,fallbackOutcomes,releasedScope })
+        const built = buildRevisionPayload({ current, proposal:{ ref:'YDT-PREPARER',changeKind:'edit',
+          finding:{ severity:'P2',code:'SCOPE',summary:'Preserve registered display scope' },patch:{ solution:'Verified YDT scope.' } } })
+        expect(built.errors).toEqual([])
+        expect(built.payload.metadata.examRef).toBe('YDT')
+        expect(built.payload.outcomes).toHaveLength(1)
+        const draft = await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',
+          [author,id,questionRow.published_revision_id,JSON.stringify(built.payload),randomUUID()])
+        expect(draft).toEqual(expect.objectContaining({ status:'draft',mappingRequired:false }))
+        expect((await client.query('SELECT exam_ref FROM public.questions WHERE id=$1',[id])).rows[0].exam_ref).toBeNull()
+      } finally { await client.query('ROLLBACK') }
+    }
     expect((await client.query(`SELECT question.exam_ref,revision.exam_ref AS revision_exam_ref
       FROM public.questions question
       JOIN public.question_content_revisions revision ON revision.id=question.published_revision_id

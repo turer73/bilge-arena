@@ -38,10 +38,11 @@ describe('repo migration manifesti', () => {
       .toBeLessThan(order.indexOf('20261009200000_question_source_evidence_exceptions.sql'))
   })
 
-  it('uclu yayin sonrasi pending kalmaz; son uc dosya gercek uretim defterine baglidir', () => {
+  it('the literature seed and prior three releases retain their actual ledger pins', () => {
     const pending = repo.migrations.filter((e) => e.status === 'pending').map((e) => e.file)
     expect(pending).toEqual([])
-    expect(repo.migrations.slice(-3).map(({ file, status, ledger: rows }) => ({ file, status, ledger: rows }))).toEqual([
+    expect(repo.migrations.at(-1)).toEqual({ file:'226_ayt_literature_internal_outcome.sql',status:'ledger',ledger:[ledger('20261018230450','226_ayt_literature_internal_outcome')] })
+    expect(repo.migrations.slice(-4,-1).map(({ file, status, ledger: rows }) => ({ file, status, ledger: rows }))).toEqual([
       {
         file: '20261013183312_adaptive_diagnostic_legacy_coverage_repair.sql',
         status: 'ledger',
@@ -68,10 +69,10 @@ describe('repo migration manifesti', () => {
     expect(computed).toEqual([...LEXICAL_ORDER_EXCEPTIONS])
   })
 
-  it('2026-10-18 uclu yayin sonrasi 177 defter satirinin her biri tam bir kez tasinir', () => {
+  it('178 production ledger rows occur exactly once after the literature seed', () => {
     const rows = repo.migrations.flatMap((e) => e.ledger ?? [])
-    expect(rows).toHaveLength(177)
-    expect(new Set(rows.map((r) => r.version)).size).toBe(177)
+    expect(rows).toHaveLength(178)
+    expect(new Set(rows.map((r) => r.version)).size).toBe(178)
   })
 })
 

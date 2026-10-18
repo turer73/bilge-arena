@@ -20,6 +20,7 @@ import {
   currentFromRevisionDetail,
   contentFingerprint,
   dbLookupIds,
+  loadCurrentFromDb,
   diffContent,
   draftRequestId,
   parseProposals,
@@ -386,6 +387,41 @@ describe('parseProposals / validateProposal', () => {
 })
 
 describe('currentFromRows / snapshotFromExport', () => {
+  const releasedYdt = { game: 'wordquest', questionExamRef: null, displayExamRef: 'YDT', taxonomyVersion: 'ba-ydt-eng-v1' }
+  const wordquest = { id: Q, game: 'wordquest', category: 'vocabulary', exam_ref: null, difficulty: 2, published_revision_id: Q }
+  it.each([undefined, 'YDT'])('keeps YDT outcomes for NULL storage and a %s revision scope', (examRef) => {
+    const c = currentFromRevisionDetail({ question: wordquest, releasedScope: releasedYdt,
+      detail: { revision: { metadata: { examRef }, content: current().content, source: current().source } },
+      fallbackOutcomes: [{ outcome_id: OUTCOME, weight: 1, is_primary: true }] })
+    const result = buildRevisionPayload({ current: c, proposal: proposal() })
+    expect(result.errors).toEqual([])
+    expect(result.payload.metadata.examRef).toBe('YDT')
+    expect(result.payload.outcomes).toEqual([{ outcomeId: OUTCOME, weight: 1, primary: true }])
+    expect(wordquest.exam_ref).toBeNull()
+  })
+  it.each([null, {}, { ...releasedYdt, game: 'turkce' }, { ...releasedYdt, questionExamRef: 'YDT' },
+    { ...releasedYdt, displayExamRef: 'TYT' }, { ...releasedYdt, taxonomyVersion: '' }])('rejects an absent or mismatched registry entry %j', (releasedScope) => {
+    expect(() => currentFromRevisionDetail({ question: wordquest, releasedScope })).toThrow('matching released YDT')
+  })
+  it('rejects a conflicting published revision scope instead of silently overwriting it', () => {
+    expect(() => currentFromRevisionDetail({ question: wordquest, releasedScope: releasedYdt,
+      detail: { revision: { metadata: { examRef: 'TYT' } } } })).toThrow('matching released YDT')
+  })
+  it('loads the registry through its permitted RPC and keeps fallback outcomes', async () => {
+    const calls = []
+    const db = {
+      from(table) { return { select() { return { in() { return { range: async () => ({ data: table === 'questions'
+        ? [wordquest] : [{ question_id: Q, outcome_id: OUTCOME, weight: 1, is_primary: true }] }) } } } } } },
+      async rpc(name, args) { calls.push([name, args]); return { data: name === 'resolve_released_curriculum_scope'
+        ? releasedYdt : { revision: { content: current().content, source: current().source, outcomes: [] } } } },
+    }
+    const result = await loadCurrentFromDb(db, [Q], Q)
+    expect(result.get(Q).metadata.examRef).toBe('YDT')
+    expect(result.get(Q).outcomes).toHaveLength(1)
+    expect(calls[0]).toEqual(['resolve_released_curriculum_scope', { p_game: 'wordquest', p_display_exam_ref: 'YDT' }])
+    db.rpc = async () => ({ error: { code: '42501', message: 'denied' } })
+    await expect(loadCurrentFromDb(db, [Q], Q)).rejects.toThrow('42501')
+  })
   it('get_question_content_revision ciktisini tek nesneye ceker; icerik/kaynak/kazanim RPC detayindan, taban published_revision_id, kimlikler kucuk harf', () => {
     const c = currentFromRevisionDetail({
       question: { id: Q.toUpperCase(), game: 'fen', category: 'fizik', subcategory: null, topic: null, difficulty: 3, level_tag: null, exam_ref: null, is_boss: false, is_active: true, content: { question: 'eski' }, published_revision_id: 'BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB' },
