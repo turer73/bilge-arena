@@ -19,6 +19,16 @@ describe('rehber yazilari kontrati', () => {
     }
   })
 
+  it('bolunebilme rehberi aranan her kural icin ayri baslik tasir, 12 kurali dahil', () => {
+    const article = getArticle('tyt-matematik-bolunebilme-kurallari')
+    const headings = article?.body.filter((p) => p.startsWith('## ')) ?? []
+    for (const rule of ['2\'ye', '3\'e', '4\'e', '5\'e', '6\'ya', '8\'e', '9\'a', '10\'a', '11\'e', '12\'ye']) {
+      expect(headings, rule).toContain(`## ${rule} Bölünebilme Kuralı`)
+    }
+    expect(article?.seoTitle?.length ?? 0).toBeLessThanOrEqual(60)
+    expect(article?.body.join(' ')).toContain('2.316 = 12 × 193')
+  })
+
   it('getArticle bilinen slug dondurur, bilinmeyen icin undefined', () => {
     expect(getArticle(REHBER_SLUGS[0])?.slug).toBe(REHBER_SLUGS[0])
     expect(getArticle('boyle-bir-yazi-yok')).toBeUndefined()

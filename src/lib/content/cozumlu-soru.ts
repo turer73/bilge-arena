@@ -10,6 +10,8 @@ export interface CozumluSoru {
   slug: string
   ders: string
   title: string
+  /** Uzun H1'den farklı, arama sonucu için kısa ve marka tekrarsız başlık */
+  seoTitle?: string
   description: string
   readingMinutes: number
   /** ISO tarih (literal — request-aninda hesaplanmaz, rehber.ts ile ayni desen) */
@@ -23,6 +25,15 @@ export interface CozumluSoru {
   tip: string
   tipLinkHref?: string
   tipLinkLabel?: string
+  /**
+   * Sayfanın en üstünde, sorudan önce gösterilen kısa formül özeti. Arama ve
+   * yapay zekâ yanıtları formülü arayan kullanıcıya bu bölümü alıntılar.
+   */
+  formulas?: Array<{ label: string; formula: string; note: string }>
+  /** Formülün değişkenlerini açıklayan tek satır (ör. "x: aradaki mesafe") */
+  formulaLegend?: string
+  /** Aynı konunun diğer soru tipleri için kısa çözümlü örnekler */
+  examples?: Array<{ title: string; problem: string; steps: string[]; answer: string }>
 }
 
 export const COZUMLU_SORU_LIST: CozumluSoru[] = [
@@ -54,13 +65,32 @@ export const COZUMLU_SORU_LIST: CozumluSoru[] = [
   {
     slug: 'tyt-matematik-hiz-problemi-karsilasma',
     ders: 'TYT Matematik',
-    title: 'İki Araç Arasındaki Karşılaşma ve Hız Problemi — Çözümlü Soru',
+    title: 'Hız Problemlerinde Karşılaşma Formülü — Çözümlü Soru ve Örnekler',
+    seoTitle: 'Hız Problemi Karşılaşma Formülü: Çözümlü Soru ve Örnekler',
     description:
-      'Aralarında 480 km mesafe bulunan iki araçtan birbirine doğru hareket edenlerin karşılaşma süresi ve yol hesaplaması.',
-    readingMinutes: 4,
-    updated: '2026-08-16',
+      'Karşılaşma formülü t = x / (V₁ + V₂) ve aynı yöne giden araçlarda yetişme formülü t = x / (V₁ − V₂): adım adım çözümlü TYT hız problemi ve örnek.',
+    readingMinutes: 5,
+    updated: '2026-10-18',
+    formulas: [
+      {
+        label: 'Birbirine doğru hareket (karşılaşma)',
+        formula: 't = x / (V₁ + V₂)',
+        note: 'Araçlar arasındaki mesafe her saat hızlarının toplamı kadar kapanır.',
+      },
+      {
+        label: 'Aynı yönde hareket (yetişme)',
+        formula: 't = x / (V₁ − V₂)',
+        note: 'Arkadaki araç daha hızlıysa (V₁ > V₂) aradaki mesafe her saat hızlarının farkı kadar kapanır.',
+      },
+      {
+        label: 'Zıt yönlere uzaklaşma',
+        formula: 'x = (V₁ + V₂) × t',
+        note: 'Aynı noktadan zıt yönlere çıkan araçlar arasındaki mesafe her saat hızlarının toplamı kadar büyür.',
+      },
+    ],
+    formulaLegend: 'x: araçlar arasındaki mesafe, t: süre, V₁ ve V₂: araçların hızları.',
     question:
-      'A ve B şehirleri arasındaki mesafe 480 km’dir. A’dan saatteki hızı 70 km olan bir araç ile B’den saatteki hızı 50 km olan başka bir araç aynı anda birbirine doğru harekete başlıyor. Bu iki araç kaç saat sonra karşılaşışır?',
+      'A ve B şehirleri arasındaki mesafe 480 km’dir. A’dan saatteki hızı 70 km olan bir araç ile B’den saatteki hızı 50 km olan başka bir araç aynı anda birbirine doğru harekete başlıyor. Bu iki araç kaç saat sonra karşılaşır?',
     options: ['A) 3 saat', 'B) 3.5 saat', 'C) 4 saat', 'D) 4.5 saat', 'E) 5 saat'],
     correctAnswer: 'C) 4 saat',
     steps: [
@@ -70,6 +100,20 @@ export const COZUMLU_SORU_LIST: CozumluSoru[] = [
       'Hızlar toplamı: V1 + V2 = 70 + 50 = 120 km/sa.',
       'Formülü uygulayalım: 480 = 120 × t.',
       'Zamanı bulmak için her iki tarafı 120’ye bölelim: t = 480 / 120 = 4 saat.',
+      'Kontrol: 4 saatte A’dan çıkan araç 70 × 4 = 280 km, B’den çıkan araç 50 × 4 = 200 km yol alır; 280 + 200 = 480 km, yani araçlar tam bu anda karşılaşır.',
+    ],
+    examples: [
+      {
+        title: 'Aynı yöne giden araçlar: yetişme süresi',
+        problem:
+          'Aralarında 60 km bulunan iki araç aynı anda aynı yöne hareket ediyor. Arkadaki aracın hızı saatte 90 km, öndekinin saatte 60 km’dir. Arkadaki araç kaç saat sonra öndekine yetişir?',
+        steps: [
+          'Aynı yöne giden araçlarda aradaki mesafe her saat hızların farkı kadar kapanır: 90 − 60 = 30 km/sa.',
+          'Yetişme formülü: t = x / (V₁ − V₂) = 60 / 30 = 2 saat.',
+          'Kontrol: 2 saatte arkadaki araç 180 km, öndeki 120 km yol alır; aradaki fark 60 km olduğundan başlangıçtaki mesafe tam kapanmıştır.',
+        ],
+        answer: '2 saat',
+      },
     ],
     commonMistake:
       'Öğrenciler bazen hızları toplamak yerine birbirinden çıkarır veya yolu yanlış böler. Birbirine doğru hareket eden araçlarda mesafenin kapanması için hızlar toplanır; aynı yöne giden araçlarda ise hızlar çıkarılır.',

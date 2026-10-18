@@ -5,6 +5,7 @@ import { SectionWrapper } from '@/components/landing/section-wrapper'
 import { AcademyHome } from '@/components/landing/academy-home'
 import { FeaturedLearningResources } from '@/components/landing/featured-learning-resources'
 import { InstitutionPartnership } from '@/components/landing/institution-partnership'
+import { HomeFaq } from '@/components/landing/home-faq'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import type {
   HomepageAlignment,
@@ -180,6 +181,7 @@ export default async function Home() {
   ])
   const featuredResources = <FeaturedLearningResources />
   const institutionPartnership = <InstitutionPartnership />
+  const faq = <HomeFaq />
 
   return (
     <>
@@ -193,7 +195,7 @@ export default async function Home() {
       />
       <Navbar variant="home" />
       <main>
-        <AcademyHome sections={sections} elements={elements} gameCounts={gameCounts} featuredResources={featuredResources} institutionPartnership={institutionPartnership} />
+        <AcademyHome sections={sections} elements={elements} gameCounts={gameCounts} featuredResources={featuredResources} institutionPartnership={institutionPartnership} faq={faq} />
       </main>
       <SectionWrapper section="footer" elements={elements}>
         <Footer config={sections.footer} academyDesktop />

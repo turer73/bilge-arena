@@ -30,6 +30,27 @@ describe('/cozumlu-soru/[slug]', () => {
     expect(screen.getAllByText(s.correctAnswer).length).toBeGreaterThanOrEqual(2)
   })
 
+  it('basliga markayi bir kez koyar: kok layout sablonu "%s | Bilge Arena" iki kez eklemesin', async () => {
+    for (const slug of COZUMLU_SORU_SLUGS) {
+      const m = await generateMetadata({ params: Promise.resolve({ slug }) })
+      expect(m.title, slug).toEqual({ absolute: expect.any(String) })
+      const absolute = (m.title as { absolute: string }).absolute
+      expect(absolute.match(/Bilge Arena/g)?.length ?? 0, slug).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('hiz problemi sayfasi formul ozetini, yetisme ornegini ve kisa arama basligini tasir', async () => {
+    const slug = 'tyt-matematik-hiz-problemi-karsilasma'
+    const m = await generateMetadata({ params: Promise.resolve({ slug }) })
+    expect(m.title).toEqual({ absolute: 'Hız Problemi Karşılaşma Formülü: Çözümlü Soru ve Örnekler' })
+    render(await CozumluSoruDetailPage({ params: Promise.resolve({ slug }) }))
+    expect(screen.getByRole('heading', { name: 'Formül Özeti', level: 2 })).toBeInTheDocument()
+    expect(screen.getByText('t = x / (V₁ + V₂)')).toBeInTheDocument()
+    expect(screen.getByText('t = x / (V₁ − V₂)')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Örnek: Aynı yöne giden araçlar/, level: 2 })).toBeInTheDocument()
+    expect(screen.getByText(/kaç saat sonra karşılaşır\?/)).toBeInTheDocument()
+  })
+
   it('generateMetadata baslik + canonical uretir', async () => {
     const slug = COZUMLU_SORU_SLUGS[0]
     const m = await generateMetadata({ params: Promise.resolve({ slug }) })
