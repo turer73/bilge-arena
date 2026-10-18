@@ -13,7 +13,11 @@ const {
   mockTransferAnswerResult,
   mockRpc,
   mockRecordFirstAttempt,
+  mockReadPolicy,
+  mockRevealResult,
 } = vi.hoisted(() => ({
+  mockReadPolicy: vi.fn(),
+  mockRevealResult: vi.fn(),
   mockGetUser: vi.fn(async () => ({ data: { user: null as null | { id: string } } })),
   mockIpCheck: vi.fn(async () => ({ success: true, retryAfter: 0 })),
   mockUserCheck: vi.fn(async () => ({ success: true, retryAfter: 0 })),
@@ -30,6 +34,10 @@ const {
 
 vi.mock('@/lib/questions/attempt-store', () => ({
   recordFirstQuestionAttempt: mockRecordFirstAttempt,
+}))
+
+vi.mock('@/lib/assistance-policy/server', () => ({
+  readAssistancePolicy: mockReadPolicy,
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -63,6 +71,7 @@ vi.mock('@/lib/supabase/service-role', () => ({
       if (name === 'start_verified_coach_session') return mockStartResult(args)
       if (name === 'advance_verified_coach_stage') return mockAdvanceResult(args)
       if (name === 'answer_verified_coach_transfer') return mockTransferAnswerResult(args)
+      if (name === 'record_question_reveal') return mockRevealResult(args)
       return Promise.resolve({ data: null, error: { code: 'unknown_rpc' } })
     }),
   })),
@@ -227,6 +236,11 @@ describe('POST /api/coach/hint R2.2', () => {
     mockQuestionResult.mockResolvedValue({ data: questionRow(), error: null })
     mockTransferQuestionResult.mockResolvedValue({ data: transferQuestionRow(), error: null })
     mockRecordFirstAttempt.mockImplementation(async (_actor: string, _questionId: string, selected: number) => selected)
+    mockReadPolicy.mockResolvedValue({
+      policy: { examMode: false, board: true, coach: true, assistant: true, until: null },
+      status: 200,
+    })
+    mockRevealResult.mockResolvedValue({ data: true, error: null })
     mockAttemptResult.mockResolvedValue({
       data: {
         id: ATTEMPT_ID,
@@ -509,6 +523,81 @@ describe('POST /api/coach/hint R2.2', () => {
     })
     expect(body.transferQuestion.content).not.toHaveProperty('answer')
     expect(body.transferQuestion.content).not.toHaveProperty('solution')
+  })
+
+  it('çözüm, 7 günlük tekrar penceresine açılış olarak kaydedildikten sonra açılır (Codex F4)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    const hint2Token = await stageToken('hint1')
+    const hint3Token = await stageToken('hint2', hint2Token)
+    const solutionToken = await stageToken('hint3', hint3Token)
+    mockRpc.mockClear()
+    const response = await POST(coachRequest('solution', { token: solutionToken }))
+    expect(response.status).toBe(200)
+    const calls = mockRpc.mock.calls.map(([name]) => name)
+    expect(calls).toContain('record_question_reveal')
+    expect(calls.indexOf('record_question_reveal')).toBeLessThan(calls.indexOf('advance_verified_coach_stage'))
+    expect(mockRevealResult).toHaveBeenCalledWith({
+      p_user_id: USER_ID,
+      p_attempt_id: ATTEMPT_ID,
+      p_question_id: QUESTION_ID,
+    })
+  })
+
+  it('açılış kaydı yazılamazsa çözüm açılmaz (fail-closed)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    const hint2Token = await stageToken('hint1')
+    const hint3Token = await stageToken('hint2', hint2Token)
+    const solutionToken = await stageToken('hint3', hint3Token)
+    mockAdvanceResult.mockClear()
+    mockRevealResult.mockResolvedValue({ data: null, error: { code: '40001' } })
+    const response = await POST(coachRequest('solution', { token: solutionToken }))
+    expect(response.status).toBe(503)
+    expect(mockAdvanceResult).not.toHaveBeenCalled()
+    expect(JSON.stringify(await response.json())).not.toContain('sekiz')
+  })
+
+  it('ipucu aşamaları cevap açmadığı için açılış kaydı yazmaz', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    expect((await POST(coachRequest('hint1'))).status).toBe(200)
+    expect(mockRevealResult).not.toHaveBeenCalled()
+  })
+
+  it.each(['hint1', 'hint2', 'solution', 'transfer'] as const)(
+    'sınav modu açıkken %s aşamasını ilk seçim kilidi ya da RPC yazmadan 403 ile reddeder (Codex F3)',
+    async (stage) => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+      // Token sınav modu açılmadan önce alınmış olsa bile reddedilmeli.
+      const hint2Token = await stageToken('hint1')
+      const hint3Token = await stageToken('hint2', hint2Token)
+      const solutionToken = await stageToken('hint3', hint3Token)
+      const transferToken = await stageToken('solution', solutionToken)
+      const tokens = { hint1: undefined, hint2: hint2Token, solution: solutionToken, transfer: transferToken }
+      mockRpc.mockClear()
+      mockRecordFirstAttempt.mockClear()
+      mockReadPolicy.mockResolvedValue({
+        policy: { examMode: true, board: false, coach: false, assistant: false, until: '2026-10-18T12:00:00.000Z' },
+        status: 200,
+      })
+      const response = await POST(coachRequest(stage, {
+        ...(tokens[stage] ? { token: tokens[stage] } : {}),
+        ...(stage === 'hint1' || stage === 'transfer' ? { selectedOption: 0 } : {}),
+      }))
+      expect(response.status).toBe(403)
+      expect(mockRecordFirstAttempt).not.toHaveBeenCalled()
+      expect(mockRpc).not.toHaveBeenCalled()
+    },
+  )
+
+  it('yardım politikası okunamazsa Koç fail-closed 503 döner', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockReadPolicy.mockResolvedValue({
+      policy: { examMode: true, board: false, coach: false, assistant: false, until: null },
+      status: 503,
+    })
+    const response = await POST(coachRequest('hint1'))
+    expect(response.status).toBe(503)
+    expect(mockRecordFirstAttempt).not.toHaveBeenCalled()
+    expect(mockStartResult).not.toHaveBeenCalled()
   })
 
   it('Koç ilk denemesini notlamanın ilk seçim kilidine yazar', async () => {

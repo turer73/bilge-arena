@@ -86,7 +86,7 @@ describe('buildChatContext — soru kimliği', () => {
   it('soru bankasındaki metni maskelemeden, cevap anahtarı olmadan kurar', async () => {
     const { admin, eq } = fakeAdmin({ question: QUESTION_ROW })
     const block = blockOf(await buildChatContext(
-      { kind: 'question', questionId: QUESTION_ID, shownCorrectOption: 1 },
+      { kind: 'question', questionId: QUESTION_ID, shownCorrectOption: 1, optionOrder: [0, 1, 2, 3] },
       { admin, userId: USER_ID },
     ))
 
@@ -102,6 +102,36 @@ describe('buildChatContext — soru kimliği', () => {
     // İstemcinin bildirdiği indeks, şık metni veritabanından.
     expect(block).toContain('Öğrencinin ekranında doğru cevap olarak gösterilen şık: B) 387')
     expect(block).not.toMatch(/GIZLI-COZUM|GIZLI-ACIKLAMA|GIZLI-IPUCU/)
+  })
+
+  it('karıştırılmış şıklarda öğrencinin gördüğü sırayı ve gerçekten doğru şıkkı yazar (Codex F2)', async () => {
+    // Veritabanı: [397 (doğru), 387, 512…, 400]; ekran sırası [2,0,3,1] →
+    // ekranda [512…, 397, 400, 387]; doğru şık ekranda 1 (B).
+    const { admin } = fakeAdmin({ question: QUESTION_ROW })
+    const block = blockOf(await buildChatContext(
+      { kind: 'question', questionId: QUESTION_ID, shownCorrectOption: 1, optionOrder: [2, 0, 3, 1] },
+      { admin, userId: USER_ID },
+    ))
+    expect(block).toContain('A) 512 3 4 5 6 7 8 9')
+    expect(block).toContain('B) 397')
+    expect(block).toContain('D) 387')
+    expect(block).toContain('Öğrencinin ekranında doğru cevap olarak gösterilen şık: B) 397')
+    expect(block).not.toContain('gösterilen şık: B) 387')
+  })
+
+  it.each([
+    ['sıra yok (eski istemci)', undefined],
+    ['sıra eksik', [0, 1, 2]],
+    ['sıra tekrar içeriyor', [0, 0, 1, 2]],
+    ['sıra aralık dışında', [0, 1, 2, 9]],
+  ])('ekran sırası doğrulanamazsa doğru şık etiketi konmaz: %s', async (_name, optionOrder) => {
+    const { admin } = fakeAdmin({ question: QUESTION_ROW })
+    const block = blockOf(await buildChatContext(
+      { kind: 'question', questionId: QUESTION_ID, shownCorrectOption: 1, ...(optionOrder ? { optionOrder } : {}) },
+      { admin, userId: USER_ID },
+    ))
+    expect(block).toContain('A) 397')
+    expect(block).not.toContain('doğru cevap')
   })
 
   it.each([

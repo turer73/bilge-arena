@@ -101,6 +101,15 @@ describe('ExplanationPanel', () => {
     expect(() => renderPanel()).not.toThrow()
   })
 
+  test('karıştırılmış şık sırasını sohbet bağlamına ekler (Codex F2)', () => {
+    const fetchMock = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) => new Promise<Response>(() => {}))
+    global.fetch = fetchMock as unknown as typeof fetch
+    renderPanel({ isCorrect: false, selectedOption: 0, optionOrder: [2, 0, 3, 1] })
+    fireEvent.click(screen.getByRole('button', { name: /Konu Anlat/ }))
+    const sent = JSON.parse(fetchMock.mock.calls[0]![1]!.body as string)
+    expect(sent.context).toEqual({ kind: 'question', questionId: 'q1', shownCorrectOption: 2, optionOrder: [2, 0, 3, 1] })
+  })
+
   test('"Konu Anlatımı": soru kimliğiyle ayrıntılı DeepSeek isteği Bilge Tahta penceresini açar', async () => {
     let resolveFetch!: (response: Response) => void
     const fetchMock = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) => new Promise<Response>((resolve) => {

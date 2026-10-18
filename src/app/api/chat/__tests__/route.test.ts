@@ -430,7 +430,7 @@ describe('POST /api/chat — imzalı geçmiş ve sunucu tarafı bağlam', () => 
     const response = await POST(makeReq({
       mode: 'topic_explanation',
       messages: [{ role: 'user', content: 'Bu konuyu anlat. Numaram 0532 123 45 67.' }],
-      context: { kind: 'question', questionId: QUESTION_ID, shownCorrectOption: 0 },
+      context: { kind: 'question', questionId: QUESTION_ID, shownCorrectOption: 0, optionOrder: [0, 1, 2, 3] },
     }))
 
     expect(response.status).toBe(200)

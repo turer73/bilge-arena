@@ -20,6 +20,14 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({ auth: { getUser: async () => ({ data: { user: session.user } }) } }),
 }))
 
+// Sınav modu politikası bu kontratın konusu değil (route.test.ts sınar); açık döner.
+vi.mock('@/lib/assistance-policy/server', () => ({
+  readAssistancePolicy: async () => ({
+    policy: { examMode: false, board: true, coach: true, assistant: true, until: null },
+    status: 200,
+  }),
+}))
+
 // Koç oturumu RPC'leri (start/advance) bu kontratın konusu değil: tablo
 // sorguları gerçek PostgREST'e gider, yalnız bu iki RPC sabit sonuç döner.
 const rpcCalls = vi.hoisted(() => [] as Array<{ name: string; args: Record<string, unknown> }>)

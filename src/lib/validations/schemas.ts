@@ -36,6 +36,9 @@ export const chatContextSchema = z.discriminatedUnion('kind', [
     // (açılış kaydı okunamaz); serbest metin taşımaz, yanlışsa yalnız o öğrencinin
     // asistanını yanıltır. Şık metni veritabanından okunur.
     shownCorrectOption: z.number().int().min(0).max(9).nullish(),
+    // Şıkların ekran sırası: optionOrder[ekranIndeksi] = veritabanıIndeksi. Sunucu
+    // şıkları bu sırayla yazar; shownCorrectOption bu ekran sırasına göre okunur.
+    optionOrder: z.array(z.number().int().min(0).max(9)).min(2).max(10).optional(),
   }).strict(),
   z.object({
     kind: z.literal('assignment_item'),
