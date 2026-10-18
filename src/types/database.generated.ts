@@ -2027,6 +2027,7 @@ export type Database = {
           game: string
           id: string
           mode: string | null
+          repeat_questions: number | null
           skipped_count: number | null
           started_at: string | null
           status: string | null
@@ -2036,6 +2037,8 @@ export type Database = {
           total_xp: number | null
           user_id: string
           wrong_count: number | null
+          xp_awarded: number | null
+          xp_repeat_withheld: number | null
         }
         Insert: {
           avg_time_sec?: number | null
@@ -2049,6 +2052,7 @@ export type Database = {
           game: string
           id?: string
           mode?: string | null
+          repeat_questions?: number | null
           skipped_count?: number | null
           started_at?: string | null
           status?: string | null
@@ -2058,6 +2062,8 @@ export type Database = {
           total_xp?: number | null
           user_id: string
           wrong_count?: number | null
+          xp_awarded?: number | null
+          xp_repeat_withheld?: number | null
         }
         Update: {
           avg_time_sec?: number | null
@@ -2071,6 +2077,7 @@ export type Database = {
           game?: string
           id?: string
           mode?: string | null
+          repeat_questions?: number | null
           skipped_count?: number | null
           started_at?: string | null
           status?: string | null
@@ -2080,6 +2087,8 @@ export type Database = {
           total_xp?: number | null
           user_id?: string
           wrong_count?: number | null
+          xp_awarded?: number | null
+          xp_repeat_withheld?: number | null
         }
         Relationships: [
           {
@@ -4515,6 +4524,42 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_answer_reveals: {
+        Row: {
+          attempt_id: string
+          question_id: string
+          revealed_at: string
+          user_id: string
+        }
+        Insert: {
+          attempt_id: string
+          question_id: string
+          revealed_at?: string
+          user_id: string
+        }
+        Update: {
+          attempt_id?: string
+          question_id?: string
+          revealed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_answer_reveals_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "verified_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_answer_reveals_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -9762,6 +9807,7 @@ export type Database = {
         Args: { p_amount: number; p_claim_id: string; p_user_id: string }
         Returns: Json
       }
+      claim_daily_login: { Args: { p_user_id: string }; Returns: Json }
       claim_daily_quest_reward: {
         Args: { p_user_id: string; p_user_quest_id: string }
         Returns: Json
@@ -11170,6 +11216,10 @@ export type Database = {
           p_request_id: string
         }
         Returns: Json
+      }
+      record_question_reveal: {
+        Args: { p_attempt_id: string; p_question_id: string; p_user_id: string }
+        Returns: boolean
       }
       record_social_discovery_pilot_answer: {
         Args: {

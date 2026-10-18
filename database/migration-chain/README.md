@@ -12,7 +12,7 @@
 | `supabase-platform-stub.sql` | Supabase'in hazır verdiği roller, `auth`/`storage`/`extensions` şemaları ve varsayılan yetkiler. |
 | `operator/*.sql` | Üretimde migration dışında yapılmış operatör adımlarının taklidi (manifestte `operatorStep`). |
 | `function-fingerprint.sql` | `public` fonksiyonlarının imza, gövde md5'i (CR'siz), SECURITY DEFINER, search_path ve ACL bilgisi. |
-| `production-functions.txt` | Bu sorgunun üretimdeki çıktısı (2026-10-17, 223 sonrası, 439 fonksiyon). |
+| `production-functions.txt` | Bu sorgunun üretimdeki çıktısı (2026-10-18, 225 sonrası, 439 fonksiyon). |
 | `known-production-drift.json` | Zincir ile üretim arasındaki açıklanmış farklar. Her giriş hash'e bağlıdır, bayat giriş CI'ı durdurur. |
 
 `status` değerleri:

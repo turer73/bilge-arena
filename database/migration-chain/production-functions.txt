@@ -18,7 +18,7 @@ admin_rbac_require_service_actor(uuid)|ae11ed0e76bf44a154758dc6a15df031|t|search
 admin_revoke_role(uuid,uuid,uuid,uuid)|08d19fbddafae25144d6eff23d7b29f3|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 admin_update_role(uuid,uuid,uuid,jsonb)|f641981daaf1cc7441f8bed373ebb01a|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 advance_verified_coach_stage(uuid,uuid,smallint,uuid,text,text,boolean,text,text)|9cc0268f9afadd919757fe1b80d8ca08|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
-answer_verified_coach_transfer(uuid,uuid,uuid,smallint)|863edae02d616a7516bab9f41e9ab510|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
+answer_verified_coach_transfer(uuid,uuid,uuid,smallint)|0db9e499ec8946fc15aaa8de48dc70f8|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 apply_question_result_corrections(uuid,uuid,uuid)|a0169b643cc0f351d9de3718489d39b5|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 apply_review_answer(uuid)|953617c27b258fe44cd9730c4fadc7f8|t|search_path=pg_catalog|{postgres=X/postgres}
 apply_verified_session_rewards(uuid,uuid)|061eefe355d9ba0fb4340a7d53433a06|t|search_path=pg_catalog|{postgres=X/postgres}
@@ -50,11 +50,11 @@ claim_daily_quest_reward(uuid,uuid)|bd4f1442605e2b116894456adaae0620|t|search_pa
 claim_question_quality_consensus_job(uuid)|d01a5a1405224fb14d653a1475a92a3c|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 claim_question_quality_verification(uuid,text)|aade16c38867a6d0c5bc9f59602804de|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 complete_daily_plan_items(uuid,uuid,uuid[])|a0d88ad113e2a226790cd9ed8eb8f1a3|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
-complete_game_session(uuid,uuid,text,text,text,smallint,jsonb,integer,integer,integer,smallint,smallint,integer,numeric)|36d87ac4d046a98bcfa976c4a00f68f0|t|search_path=pg_catalog|{postgres=X/postgres}
+complete_game_session(uuid,uuid,text,text,text,smallint,jsonb,integer,integer,integer,smallint,smallint,integer,numeric)|8a61df3aa571ea55a49f22259bd8c787|t|search_path=pg_catalog|{postgres=X/postgres}
 complete_institution_program_item_from_diagnostic()|e88f45b32fe5cd5f2c2bd09122c5b5c2|t|search_path=pg_catalog|{postgres=X/postgres}
 complete_institution_program_item_from_verified_attempt()|fcc8247297b2df02b9f4e63f2ff35b34|t|search_path=pg_catalog|{postgres=X/postgres}
 complete_question_quality_verification(uuid,uuid,text,text,text,text,text,numeric,integer,jsonb,jsonb,jsonb,text,text)|531a7c27d1266a41e92f4d293d990f57|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
-complete_verified_game_session(uuid,uuid,uuid,text,text,text,smallint,jsonb,integer,integer,integer,smallint,smallint,integer,numeric)|64d3c657381932778fdb531fcf3ead40|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
+complete_verified_game_session(uuid,uuid,uuid,text,text,text,smallint,jsonb,integer,integer,integer,smallint,smallint,integer,numeric)|a55ecf7d272a373d14d52f4c8ebba894|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 compose_and_issue_tyt_social_preparation(uuid,text,uuid)|d71dec2f0e5893ba12fd516e8ae70c4f|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 compose_and_issue_verified_tyt_social_section_attempt(uuid,integer,uuid)|e30a3c7d7cc1781ec2e6529373b204e9|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 compute_question_quality_consensus(uuid)|2539533156afc8a710c78994de5b6784|t|search_path=pg_catalog|{postgres=X/postgres}
@@ -288,7 +288,7 @@ record_measurement_event(uuid,uuid,text,integer,uuid,integer,boolean,boolean,boo
 record_outcome_evidence()|a0945d217377f6b279dfedae01d50632|t|search_path=public|{postgres=X/postgres,service_role=X/postgres}
 record_question_quality_consensus(uuid,uuid,text,uuid)|28a66fad68771b29397a4f82922275c2|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 record_question_quality_external_proof(uuid,uuid,text,text,jsonb,uuid)|0ba5bc8536c8fdf771ba90efea38ee7c|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
-record_question_reveal(uuid,uuid,uuid)|9f0580ac787d3e9833cdcfa88b41b981|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
+record_question_reveal(uuid,uuid,uuid)|9fcbc3db14d4effb0dc74939996f40f3|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 record_social_discovery_pilot_answer(uuid,uuid,uuid,smallint,integer,uuid,smallint,uuid)|3c2e90a045cebc184ade4b976e17d23b|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 record_verified_exam_exposure(uuid,uuid,text,integer,uuid)|84cc3c66bfacfdcee9fe5a3716b7c0f5|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 record_verified_exam_strategy_event(uuid,uuid,uuid,integer,smallint,text)|b7195652857e69d0a74dba5233278cc4|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
