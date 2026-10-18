@@ -337,7 +337,7 @@ describe('POST /api/sessions', () => {
   it('günlük XP tavanı kestiyse ödenen XP miktarını döndürür ve xpCapped bildirir', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockRpc.mockResolvedValueOnce({
-      data: { sessionId: 'session-1', totalXP: 20, xpAwarded: 5, correctCount: 1, wrongCount: 1, alreadyProcessed: false },
+      data: { sessionId: 'session-1', totalXP: 20, xpAwarded: 5, xpRepeatWithheld: 0, repeatQuestions: 0, correctCount: 1, wrongCount: 1, alreadyProcessed: false },
       error: null,
     })
     const json = await (await POST(makeRequest(validBody))).json()
@@ -369,7 +369,21 @@ describe('POST /api/sessions', () => {
       .toMatchObject({ totalXP: 5, xpCapped: true, repeatQuestions: 1 })
   })
 
-  it('replay sırasında ödenen XP miktarını oturum satırından okur', async () => {
+  it.each([false, true])('tekrar kesintisi ve günlük sınırı ilk ve replay yanıtında korur: replay=%s', async (alreadyProcessed) => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    for (const xpAwarded of [20, 5]) {
+      mockRpc.mockResolvedValueOnce({
+        data: { sessionId: 'session-1', totalXP: 40, xpAwarded, xpRepeatWithheld: 20, repeatQuestions: 1,
+          correctCount: 2, wrongCount: 0, alreadyProcessed }, error: null,
+      })
+      expect(await (await POST(makeRequest(validBody))).json()).toMatchObject({
+        totalXP: xpAwarded, repeatQuestions: 1, xpCapped: xpAwarded < 20, xpBreakdownKnown: true,
+      })
+    }
+    expect(mockSessionRowMaybeSingle).not.toHaveBeenCalled()
+  })
+
+  it('legacy replay ödenen XP miktarını okur ama eksik kesinti nedenini uydurmaz', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockRpc.mockResolvedValueOnce({
       data: { sessionId: 'session-1', totalXP: 20, correctCount: 1, wrongCount: 1, alreadyProcessed: true },
@@ -377,7 +391,17 @@ describe('POST /api/sessions', () => {
     })
     mockSessionRowMaybeSingle.mockResolvedValueOnce({ data: { id: 'session-1', total_xp: 20, xp_awarded: 0 }, error: null })
     const json = await (await POST(makeRequest(validBody))).json()
-    expect(json).toMatchObject({ totalXP: 0, xpCapped: true })
+    expect(json).toMatchObject({ totalXP: 0, xpCapped: false, xpBreakdownKnown: false })
+  })
+
+  it('migration öncesi oturumun null kesinti bilgisi yanıtı bozmaz', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValueOnce({
+      data: { sessionId: 'session-1', totalXP: 40, xpAwarded: 20, xpRepeatWithheld: null, repeatQuestions: null,
+        correctCount: 2, wrongCount: 0, alreadyProcessed: true }, error: null,
+    })
+    expect(await (await POST(makeRequest(validBody))).json())
+      .toMatchObject({ totalXP: 20, xpCapped: false, repeatQuestions: 0, xpBreakdownKnown: false })
   })
 
   it('xp_awarded olmayan (tavandan önceki) replay nominal XP miktarını korur', async () => {

@@ -19,9 +19,9 @@ const completeSessionResultSchema = z.object({
   // 20261017100000). Taze tamamlamada gelir; replay ve eski veritabaninda yok.
   xpAwarded: z.number().int().nonnegative().optional(),
   // Cevabi son 7 gunde baska bir denemede acilmis sorularin odenmeyen XP'si
-  // ve bu soru sayisi (migration 20261017110000). Yalniz taze tamamlamada.
-  xpRepeatWithheld: z.number().int().nonnegative().optional(),
-  repeatQuestions: z.number().int().nonnegative().optional(),
+  // ve bu soru sayisi. 225 bunlari replay icin saklar; eski satirlarda null.
+  xpRepeatWithheld: z.number().int().nonnegative().nullish(),
+  repeatQuestions: z.number().int().nonnegative().nullish(),
   correctCount: z.number().int().nonnegative(),
   wrongCount: z.number().int().nonnegative(),
   alreadyProcessed: z.boolean(),
@@ -270,14 +270,14 @@ export async function POST(request: Request) {
     sessionId,
     totalXP: persistedTotalXP,
     xpAwarded: rpcXpAwarded,
-    xpRepeatWithheld = 0,
-    repeatQuestions = 0,
+    xpRepeatWithheld,
+    repeatQuestions,
     correctCount: persistedCorrectCount,
     wrongCount: persistedWrongCount,
     alreadyProcessed,
   } = parsedRpcResult.data
   // total_xp oturumun nominal puanidir; kullaniciya odenen XP gunluk tavandan
-  // sonra daha az olabilir. Replay'de RPC odeneni dondurmez, satirdan okunur.
+  // sonra daha az olabilir. Eski RPC replay'de odeneni dondurmez; o durumda satirdan okunur.
   let awardedXP = rpcXpAwarded ?? persistedTotalXP
   if (rpcXpAwarded === undefined && alreadyProcessed) {
     const { data: sessionRow } = await svc
@@ -339,8 +339,10 @@ export async function POST(request: Request) {
     // totalXP is what was paid. xpCapped: the daily cap cut it (after the
     // repeat rule); repeatQuestions: answers whose XP the repeat rule withheld.
     totalXP: awardedXP,
-    xpCapped: awardedXP < persistedTotalXP - xpRepeatWithheld,
-    repeatQuestions,
+    xpCapped: typeof xpRepeatWithheld === 'number'
+      && awardedXP < persistedTotalXP - xpRepeatWithheld,
+    repeatQuestions: repeatQuestions ?? 0,
+    xpBreakdownKnown: typeof xpRepeatWithheld === 'number' && typeof repeatQuestions === 'number',
     correctCount: persistedCorrectCount,
     wrongCount: persistedWrongCount,
     maxStreak,

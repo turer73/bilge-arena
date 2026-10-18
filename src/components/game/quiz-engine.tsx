@@ -821,6 +821,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
           <>
             <ExplanationPanel
               question={question}
+              attemptId={quiz.attemptId}
               optionOrder={quiz.optionOrderFor(question.id, question.content.options.length)}
               selectedOption={lastAnswer.selectedOption}
               isCorrect={lastAnswer.isCorrect}
