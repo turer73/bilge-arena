@@ -9760,6 +9760,14 @@ export type Database = {
         Args: { p_policy_version: string; p_revision_id: string }
         Returns: undefined
       }
+      assert_tyt_social_learning_epoch: {
+        Args: {
+          p_policy_version: string
+          p_selection_event_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       assert_tyt_social_plan_snapshot_integrity: {
         Args: { p_plan_id: string }
         Returns: undefined
@@ -10033,6 +10041,16 @@ export type Database = {
       }
       create_teacher_classroom: {
         Args: { p_name: string; p_request_id: string; p_user_id: string }
+        Returns: Json
+      }
+      create_tyt_social_daily_plan_for_epoch: {
+        Args: {
+          p_expected_policy_version: string
+          p_expected_selection_event_id: string
+          p_items: Json
+          p_plan_date: string
+          p_user_id: string
+        }
         Returns: Json
       }
       create_tyt_social_daily_plan_v2: {
@@ -10742,6 +10760,18 @@ export type Database = {
         }
         Returns: Json
       }
+      issue_verified_tyt_social_attempt_for_epoch: {
+        Args: {
+          p_duration_sec: number
+          p_expected_policy_version: string
+          p_expected_selection_event_id: string
+          p_mode: string
+          p_question_ids: string[]
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       issue_verified_tyt_social_attempt_with_event: {
         Args: {
           p_artifact_kind: string
@@ -10760,6 +10790,19 @@ export type Database = {
         Args: {
           p_blueprint_version: string
           p_duration_sec: number
+          p_items: Json
+          p_planned_duration_sec: number
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      issue_verified_tyt_social_exam_attempt_for_epoch: {
+        Args: {
+          p_blueprint_version: string
+          p_duration_sec: number
+          p_expected_policy_version: string
+          p_expected_selection_event_id: string
           p_items: Json
           p_planned_duration_sec: number
           p_request_id: string
@@ -11052,6 +11095,15 @@ export type Database = {
         Args: { p_revision_id: string }
         Returns: boolean
       }
+      question_revision_validation_pair_valid: {
+        Args: {
+          p_audit: string
+          p_decision: string
+          p_exam: string
+          p_game: string
+        }
+        Returns: boolean
+      }
       question_revision_validation_policy: {
         Args: { p_revision_id: string }
         Returns: string
@@ -11117,6 +11169,10 @@ export type Database = {
           p_taxonomy_version: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      read_tyt_social_learning_snapshot: {
+        Args: { p_question_ids?: string[]; p_user_id: string }
         Returns: Json
       }
       read_tyt_social_mastery_outcome_state: {
@@ -11854,6 +11910,10 @@ export type Database = {
       tyt_social_exam_role_compatible: {
         Args: { p_category: string; p_exam_role: string }
         Returns: boolean
+      }
+      tyt_social_learning_context_at: {
+        Args: { p_at: string; p_user_id: string }
+        Returns: Json
       }
       tyt_social_mastery_reader_integrity: { Args: never; Returns: Json }
       tyt_social_mastery_reader_manifest_sha256: {
