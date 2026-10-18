@@ -1,0 +1,25 @@
+# VPS: /opt/edge/dynamic/ws-dev-socket-only.yml (Traefik file provider, watch: true;
+# kopyalaninca sicak yuklenir, Realtime yeniden baslamaz).
+#
+# 2026-10-18 (derin inceleme §4.1, Klipper disc #2611): ws-dev.bilgearena.com
+# tum yollari disa aciyordu. Realtime'in yonetim API'si (/api/tenants...) tenant
+# sirri ile imzali kullanici token'ini kabul ediyordu (tenant jwt_secret ==
+# API_JWT_SECRET): GET /api/tenants -> 200. Istemci yalniz /socket kullanir
+# (realtime-js REST yedegi /api/broadcast'e de bu engelle kapanir; uygulama
+# yayini kanal katilmadan gondermez). /metrics zaten 403 donuyordu.
+#
+# Bu engel derinlemesine savunmadir; asil duzeltme realtime.env'de ayri
+# API_JWT_SECRET + SEED_SELF_HOST=false (generate-realtime-env.sh). KALDIRMAYIN.
+http:
+  middlewares:
+    ws-dev-deny-all:
+      ipAllowList:
+        sourceRange: ["127.0.0.1/32"]
+  routers:
+    ws-dev-block-non-socket:
+      rule: "Host(`ws-dev.bilgearena.com`) && !PathPrefix(`/socket`)"
+      entryPoints: [websecure]
+      priority: 10000
+      middlewares: [ws-dev-deny-all]
+      service: noop@internal
+      tls: {certResolver: letsencrypt}

@@ -1,0 +1,52 @@
+# Yalitilmis Oda Realtime duman yigini (inceleme §4.1). Uretimle ayni imajlar:
+# bilge-arena-db (postgres 16 + wal2json, Dockerfile.db) ve
+# supabase/realtime:v2.140.7. Port disari acilmaz; yalniz ic ag.
+# Kullanim: run.sh (fazlari ve sirlari o yonetir).
+name: ba-rt-smoke
+networks:
+  smoke: {}
+services:
+  db:
+    build:
+      context: ../../vps/bilge-arena
+      dockerfile: Dockerfile.db
+    image: ba-rt-smoke-db:16-wal2json
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${SMOKE_DB_PASSWORD:?run.sh ile calistir}
+    command: ["postgres", "-c", "wal_level=logical", "-c", "output_plugin_libraries=pgoutput,test_decoding,wal2json"]
+    volumes:
+      - ../../vps/bilge-arena/sql:/sql:ro
+    networks: [smoke]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  realtime:
+    image: supabase/realtime:v2.140.7
+    env_file: [./.state/realtime.env]
+    depends_on:
+      db: {condition: service_healthy}
+    networks:
+      smoke:
+        # Realtime tenant'i Host basliginin ilk etiketinden okur: ws-dev.
+        aliases: [ws-dev.smoke]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4000/ -o /dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+  runner:
+    image: node:22-bookworm-slim
+    profiles: [runner]
+    working_dir: /smoke
+    volumes:
+      - ./dist:/smoke:ro
+    environment:
+      SMOKE_TENANT_SECRET: ${SMOKE_TENANT_SECRET:-}
+      SMOKE_ADMIN_SECRET: ${SMOKE_ADMIN_SECRET:-}
+      SMOKE_DATABASE_URL: postgres://postgres:${SMOKE_DB_PASSWORD:-}@db:5432/bilge_arena_dev
+    networks: [smoke]

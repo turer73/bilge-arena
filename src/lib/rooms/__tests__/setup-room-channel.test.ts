@@ -31,6 +31,15 @@ describe('setupRoomChannel', () => {
     expect(sb.channel).toHaveBeenCalledWith('room-r1', expect.any(Object))
   })
 
+  test('11b) kanal private: presence/broadcast realtime.messages RLS ile yetkilendirilir', () => {
+    const ch = mockChannel()
+    const sb = mockSupabaseClient(ch)
+    setupRoomChannel(sb as never, 'r1', 'u1', vi.fn())
+    expect(sb.channel).toHaveBeenCalledWith('room-r1', {
+      config: { private: true, presence: { key: 'u1' } },
+    })
+  })
+
   test('12) postgres_changes filters: rooms (id eq.r1) + room_members (room_id eq.r1) x3', () => {
     const ch = mockChannel()
     const sb = mockSupabaseClient(ch)

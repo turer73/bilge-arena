@@ -23,7 +23,7 @@ const initialMember = (overrides: Partial<Member> = {}): Member => ({
   display_name: 'Player1',
   joined_at: '2026-04-30T00:00:00Z',
   is_host: false,
-  is_kicked: false,
+  is_active: true,
   ...overrides,
 })
 
@@ -92,9 +92,9 @@ describe('roomStateReducer', () => {
     const s = { ...initialState(), members: [initialMember()] }
     const result = roomStateReducer(s, {
       type: 'MEMBER_UPDATE',
-      payload: initialMember({ is_kicked: true }),
+      payload: initialMember({ is_active: false }),
     })
-    expect(result.members[0].is_kicked).toBe(true)
+    expect(result.members[0].is_active).toBe(false)
   })
 
   test('5) MEMBER_DELETE -> liste kucur', () => {
