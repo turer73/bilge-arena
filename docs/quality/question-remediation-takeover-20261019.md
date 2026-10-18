@@ -53,7 +53,19 @@ sekiz edit/retire çakışması korunan kayda taşıma ile çözülmüş, üç k
 ek içerik düzeltmesi eklenmiş, farklı sınav kapsamlarını birleştiren bir
 emeklilik ayrılmıştır: 675 farklı soru için 152 düzenleme ve 523 emeklilik
 taslağı önerisi. İncelenmemiş 200 kazanım eklemesi kaldırılmıştır. Tek tek
-gerekçelendirilen 44 eşleme önerisi vardır; 156 öğe eşleme bekler.
+gerekçelendirilen 189 eşleme önerisi vardır; ilk eksiklerden 11 öğe eşleme bekler. İç katalog
+becerileri resmî MEB kazanımı olarak sunulmaz. Dört LGS geometri emekliliği,
+bir AYT edebiyat düzenlemesi ve kategorisi incelenecek altı sosyal soru için
+uydurma kazanım atanmaz.
+
+Canlı kapsam kontrolü ayrıca 28 WordQuest sorusunun `exam_ref=null` iken YDT
+kazanımına bağlandığını gösterdi. `legacyOutcomeRemoval` beyanı, yalnız eşleme
+bekleyen taslak modunda, sınav etiketi olmayan WordQuest için kullanılabilir.
+Tam taban pini, kaldırılacak eski `expectedOutcomes` dizisinin birebir eşitliği
+ve gerekçe gerekir. Aynı öneride yeni kazanım verilemez. Yalnız yeni taslağın
+eşlemesi boş bırakılır; canlı soru, mevcut eşlemesi ve sınav etiketi değişmez.
+İnceleme sayfası kaldırılan kazanımı gösterir. Bu 28 kayıtla toplam 39 taslak
+eşleme bekler; katalog/sınav kapsamı ayrıca karara bağlanmalıdır.
 
 675 önerinin tamamı taban/hash ile sabitlenir. Matematikte 45 düzenleme ayrı
 hesapla denetlenir; 22 WordQuest kaydının eski alanları açık beyanla ele alınır.

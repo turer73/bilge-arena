@@ -162,6 +162,20 @@ export function validateProposal(p, index = 0) {
       errors.push(`${at}.legacyNormalization: pinli edit/correct_answer, acik gerekce ve yalniz exact correct (0-4)/structure:null degerleri gerekir`)
     }
   }
+  if (p.legacyOutcomeRemoval !== undefined) {
+    const n = p.legacyOutcomeRemoval
+    if (!n || typeof n !== 'object' || Array.isArray(n)
+      || Object.keys(n).sort().join(',') !== 'expectedOutcomes,reason'
+      || typeof n.reason !== 'string' || n.reason.trim().length < 20 || n.reason.length > 1000
+      || !Array.isArray(n.expectedOutcomes) || n.expectedOutcomes.length < 1 || n.expectedOutcomes.length > 5
+      || n.expectedOutcomes.some(o => !o || Object.keys(o).sort().join(',') !== 'outcomeId,primary,weight'
+        || typeof o.outcomeId !== 'string' || !UUID_RE.test(o.outcomeId)
+        || typeof o.weight !== 'number' || o.weight <= 0 || !WEIGHT_RE.test(String(o.weight))
+        || typeof o.primary !== 'boolean')
+      || p.expectedBase === undefined || p.outcomes !== undefined) {
+      errors.push(`${at}.legacyOutcomeRemoval: pin, exact expectedOutcomes ve acik gerekce zorunlu; yeni esleme birlikte verilemez`)
+    }
+  }
   const f = p.finding
   if (!f || typeof f !== 'object') errors.push(`${at}.finding: zorunlu`)
   else {
@@ -307,6 +321,21 @@ export function buildRevisionPayload({ current, proposal, allowUnmapped = false 
 
   const metadata = pick(current.metadata ?? {}, METADATA_KEYS)
   let outcomes = (current.outcomes ?? []).map((o) => ({ outcomeId: uid(o.outcomeId), weight: o.weight, primary: o.primary === true }))
+  let removedOutcomes = null
+  if (proposal.legacyOutcomeRemoval !== undefined) {
+    const n = proposal.legacyOutcomeRemoval
+    const validDeclaration = !validateProposal(proposal).some(e => e.includes('.legacyOutcomeRemoval:') || e.includes('.expectedBase:'))
+    const pinMatches = current.content && proposal.expectedBase && uid(proposal.expectedBase.revisionId) === uid(current.baseRevisionId)
+      && proposal.expectedBase.contentFingerprint === contentFingerprint(current.content)
+    if (!validDeclaration || !pinMatches || !allowUnmapped || metadata.game !== 'wordquest' || metadata.examRef !== undefined
+      || !sameContent(sortOutcomes(outcomes), sortOutcomes(n?.expectedOutcomes ?? []))) {
+      errors.push('legacyOutcomeRemoval: yalniz esleme bekleyen taslak modunda, sinav etiketi olmayan WordQuest ve incelenen exact taban/eslemeler icin')
+    } else {
+      removedOutcomes = outcomes
+      outcomes = []
+      notes.push(`eski kapsam uyumsuzlugu icin acik taslak esleme kaldirma: ${n.reason}; canli soru eslemeleri degismez, yeni sinav etiketi atanmaz`)
+    }
+  }
   if (Array.isArray(proposal.outcomes)) {
     // Kazanim degisikligi icerik paketinin kapsami disinda: yalniz eslemesi
     // olmayan (legacy) sorularda oneri esleme verebilir (Codex #526).
@@ -318,7 +347,7 @@ export function buildRevisionPayload({ current, proposal, allowUnmapped = false 
   const source = pick(current.source ?? DEFAULT_SOURCE, SOURCE_KEYS)
   const payload = { changeKind: proposal.changeKind, content, metadata, outcomes, source, summary: buildSummary(proposal) }
   errors.push(...validatePayloadShape(payload, { allowUnmapped }))
-  return { payload, errors, notes, before, after: content, removedFields }
+  return { payload, errors, notes, before, after: content, removedFields, removedOutcomes }
 }
 
 /** 106 + 110 coach aynasi. allowUnmapped yalniz mevcut soru revizyonu icin
@@ -425,6 +454,7 @@ export function buildBatch({ proposals, currentById, offline = false, mappingPen
     const built = buildRevisionPayload({ current, proposal, allowUnmapped: mappingPendingDrafts })
     item.payload = built.payload; item.diff = diffContent(built.before, built.after); item.notes.push(...built.notes)
     for (const field of built.removedFields ?? []) item.diff.push({ field, before: current.content[field], after: '[removed: explicit legacyNormalization]' })
+    if (built.removedOutcomes) item.diff.push({ field: 'outcomes (draft only)', before: built.removedOutcomes, after: [] })
     let errors = built.errors
     if (mappingPendingDrafts) {
       item.mappingRequired = built.payload.outcomes.length === 0

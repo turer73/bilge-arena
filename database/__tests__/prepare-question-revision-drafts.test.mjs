@@ -47,6 +47,46 @@ const proposal = (over = {}) => ({
   changeKind: 'edit', patch: { question: 'Aşağıdakilerden hangisi doğru yazılmıştır?' }, rationale: 'Yalniz yazim.', ...over,
 })
 
+describe('sinav etiketi olmayan WordQuest eski esleme kaldirma beyani', () => {
+  const example = () => {
+    const c = { ...current(), metadata: { ...current().metadata, game: 'wordquest', category: 'vocabulary', examRef: undefined },
+      content: { question: 'Choose the word meaning examine in detail.', options: ['memorize', 'analyze'], answer: 1, solution: '' } }
+    const p = proposal({ patch: { solution: 'Analyze means examine in detail.' },
+      expectedBase: { revisionId: c.baseRevisionId, contentFingerprint: contentFingerprint(c.content) },
+      legacyOutcomeRemoval: { expectedOutcomes: c.outcomes, reason: 'Live scope check rejected inherited YDT outcome on a question with no exam label; draft remains unmapped.' } })
+    return { c, p }
+  }
+  const run = (c, p, extra = {}) => buildBatch({ proposals: [p], currentById: new Map([[Q,c]]), mappingPendingDrafts: true, ...extra })[0]
+  it('yalniz taslaktaki exact eski eslemeyi kaldirir ve gorunur fark kaydeder', async () => {
+    const { c, p } = example(); const before = structuredClone(c)
+    expect(validateProposal(p)).toEqual([])
+    const item = run(c,p)
+    expect(item).toMatchObject({ status: 'ready', lane: 'draft', mappingRequired: true, payload: { outcomes: [] } })
+    expect(item.diff).toContainEqual({ field: 'outcomes (draft only)', before: c.outcomes, after: [] })
+    expect(c).toEqual(before)
+    expect(item.payload.metadata.examRef).toBeUndefined()
+    const calls=[]
+    await applyRevisionItems({ db: { rpc: async (name,args) => { calls.push({name,args}); return { data: {revisionId:Q}, error:null } } }, userId:Q, items:[item], draftOnly:true })
+    expect(calls.map(c=>c.name)).toEqual(['create_question_content_revision'])
+    expect(calls[0].args.p_payload.outcomes).toEqual([])
+  })
+  it('normal mod, yeni esleme, farkli kapsam/taban/icerik veya esleme degeri reddedilir', () => {
+    const { c,p }=example()
+    expect(run(c,p,{mappingPendingDrafts:false,draftOnly:true}).status).toBe('blocked')
+    for(const [cur,prop] of [
+      [c,{...p,expectedBase:undefined}], [c,{...p,outcomes:[]}],
+      [{...c,baseRevisionId:Q},p], [{...c,content:{...c.content,answer:0}},p],
+      [{...c,metadata:{...c.metadata,examRef:'YDT'}},p],
+      [{...c,metadata:{...c.metadata,game:'turkce'}},p],
+      [{...c,outcomes:[]},p], [{...c,outcomes:[{...c.outcomes[0],weight:0.5}]},p],
+      [{...c,outcomes:[{...c.outcomes[0],outcomeId:Q}]},p],
+      [c,{...p,legacyOutcomeRemoval:{...p.legacyOutcomeRemoval,expectedOutcomes:null}}],
+      [c,{...p,legacyOutcomeRemoval:{...p.legacyOutcomeRemoval,unreviewed:true}}],
+    ]) expect(run(cur,prop).status).toBe('blocked')
+    expect(run(c,{...p,legacyOutcomeRemoval:undefined,outcomes:[]}).status).toBe('blocked')
+  })
+})
+
 describe('pinli legacy alan normalizasyonu', () => {
   const example = () => {
     const c = { ...current(), metadata: { ...current().metadata, game: 'wordquest', category: 'vocabulary' },
