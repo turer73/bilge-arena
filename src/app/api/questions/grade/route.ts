@@ -190,10 +190,7 @@ export async function POST(request: Request) {
       p_attempt_id: parsed.data.attemptId,
       p_question_id: parsed.data.questionId,
     } as never)
-    if (revealError?.code === 'PGRST202') {
-      // Migration henüz uygulanmamış: notlamayı engelleme, yalnız logla.
-      console.error('[/api/questions/grade] record_question_reveal bulunamadı')
-    } else if (revealError) {
+    if (revealError) {
       console.error('[/api/questions/grade] açılış kaydı yazılamadı:', revealError.code)
       return NextResponse.json(
         { error: 'Notlandırma geçici olarak kullanılamıyor. Birazdan tekrar dene.' },

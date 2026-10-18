@@ -32,6 +32,7 @@ export const chatContextSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('question'),
     questionId: z.string().uuid(),
+    attemptId: z.string().uuid().optional(),
     // Öğrencinin ekranında doğru cevap olarak gösterilen şıkkın indeksi. Doğrulanmaz
     // (açılış kaydı okunamaz); serbest metin taşımaz, yanlışsa yalnız o öğrencinin
     // asistanını yanıltır. Şık metni veritabanından okunur.

@@ -11,6 +11,7 @@ import { AcademyDialog } from '@/components/academy/academy-dialog'
 
 interface ExplanationPanelProps {
   question: PublicQuestion
+  attemptId?: string | null
   /** Ekrandaki şık sırası (`order[ekran] = veritabanı`); sohbet bağlamına gider. */
   optionOrder?: number[]
   selectedOption: number
@@ -24,6 +25,7 @@ interface ExplanationPanelProps {
 
 export function ExplanationPanel({
   question,
+  attemptId,
   optionOrder,
   selectedOption,
   isCorrect,
@@ -53,6 +55,7 @@ export function ExplanationPanel({
   const chatContext = {
     kind: 'question' as const,
     questionId: question.id,
+    ...(attemptId ? { attemptId } : {}),
     shownCorrectOption: correctText ? correctAnswer : null,
     ...(optionOrder ? { optionOrder } : {}),
   }

@@ -308,13 +308,15 @@ describe('POST /api/questions/grade', () => {
     expect(body).not.toHaveProperty('solution')
   })
 
-  it('keeps grading when the reveal RPC is not deployed yet (PGRST202)', async () => {
+  it('withholds the answer when the reveal RPC is unavailable (PGRST202)', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-42' } } })
     mockRpc.mockResolvedValue({ data: null, error: { code: 'PGRST202', message: 'not found' } })
     const res = await POST(request({ questionId: QUESTION_ID, selectedOption: 2, attemptId: ATTEMPT_ID }))
 
-    expect(res.status).toBe(200)
-    expect(await res.json()).toMatchObject({ isCorrect: true, correctOption: 2 })
+    expect(res.status).toBe(503)
+    const body = await res.json()
+    expect(body).not.toHaveProperty('correctOption')
+    expect(body).not.toHaveProperty('solution')
   })
 
   it('does not record reveals for guest previews (no verified attempt, no XP)', async () => {

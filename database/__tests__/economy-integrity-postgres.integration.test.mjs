@@ -44,6 +44,7 @@ const fixtureSql = `
   DO $$ BEGIN CREATE ROLE service_role NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
   GRANT USAGE ON SCHEMA public, auth TO anon, authenticated, service_role;
   CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULL::uuid $$;
+  CREATE FUNCTION public.uuid_generate_v4() RETURNS uuid LANGUAGE sql AS $$ SELECT gen_random_uuid() $$;
 
   CREATE TABLE public.profiles (
     id uuid PRIMARY KEY,
@@ -65,7 +66,11 @@ const fixtureSql = `
     leaderboard_opt_in boolean NOT NULL DEFAULT false,
     deleted_at timestamptz
   );
-  CREATE TABLE public.questions (id uuid PRIMARY KEY, game text NOT NULL, is_active boolean NOT NULL DEFAULT true);
+  CREATE TABLE public.questions (
+    id uuid PRIMARY KEY, game text NOT NULL, is_active boolean NOT NULL DEFAULT true,
+    category text NOT NULL DEFAULT 'fixture', difficulty smallint NOT NULL DEFAULT 3, exam_ref text,
+    content jsonb NOT NULL DEFAULT '{"question":"Fixture?","options":["0","1","2"],"answer":1,"solution":"Fixture solution."}'
+  );
   CREATE TABLE public.game_sessions (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES public.profiles(id),
     game text NOT NULL, mode text NOT NULL, status text NOT NULL, total_questions integer NOT NULL,
@@ -75,6 +80,7 @@ const fixtureSql = `
     filter_category text, filter_difficulty smallint, completed_at timestamptz
   );
   CREATE TABLE public.session_answers (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(), answered_at timestamptz NOT NULL DEFAULT clock_timestamp(),
     session_id uuid NOT NULL REFERENCES public.game_sessions(id), question_id uuid NOT NULL,
     user_id uuid NOT NULL, selected_option smallint, is_correct boolean, is_skipped boolean,
     time_taken_sec numeric, is_fast boolean, xp_earned smallint, question_order smallint
@@ -305,9 +311,12 @@ describePostgres('economy integrity (session XP cap, Istanbul week, single strea
     for (const migration of [
       '071_xp_ledger_level_security_fix.sql',
       '081_atomic_complete_game_session.sql',
+      '086_outcome_mastery_pilot.sql',
       '091_verified_attempts.sql',
       '092_complete_verified_game_session.sql',
       '093_reward_integrity.sql',
+      '096_curriculum_graph_v1.sql',
+      '099_verified_coach_flow.sql',
       '129_session_coin_scale.sql',
       '20261017100000_session_xp_daily_cap.sql',
     ]) {
@@ -317,6 +326,9 @@ describePostgres('economy integrity (session XP cap, Istanbul week, single strea
     backfillUser = await newProfile(client, { current: 7, longest: 3 });
     await client.query(migrationSql('20261017100100_single_streak_writer.sql'));
     await client.query(migrationSql('20261017110000_revealed_question_xp_window.sql'));
+    await client.query(migrationSql('20261017100200_coach_transfer_excludes_attempt_questions.sql'));
+    await client.query(migrationSql('225_coach_reveal_session_replay.sql'));
+    await client.query(migrationSql('225_coach_reveal_session_replay.sql')); // idempotency
   });
 
   afterAll(async () => { await client?.end(); });
@@ -562,6 +574,111 @@ describePostgres('economy integrity (session XP cap, Istanbul week, single strea
       try {
         await expect(client.query('SELECT public.claim_daily_login($1)', [randomUUID()])).rejects.toMatchObject({ code: '42501' });
       } finally { await client.query('RESET ROLE'); }
+    });
+  });
+
+  describe('225: persistent XP breakdown and authorized transfer reveals', () => {
+    it.each([0, 2490])('replays the original breakdown after reveal data changes, prior XP %s', async (prior) => {
+      const user = await newProfile(client);
+      if (prior) await priorSessionXp(client, user, prior);
+      const seen = await prepareSession(client, user, { questionCount: 2, correct: 0 });
+      await revealAll(client, seen);
+      const fresh = await freshQuestions(client, 2);
+      const mixed = await prepareRepeat(client, user, [...seen.questionIds, ...fresh], 4);
+      const first = await withServiceRole(client, () => completeAttempt(client, mixed));
+      expect(first).toMatchObject({ totalXP: 40, xpAwarded: prior ? 10 : 20, xpRepeatWithheld: 20, repeatQuestions: 2 });
+      await client.query('DELETE FROM public.question_answer_reveals WHERE user_id=$1', [user]);
+      const replay = await withServiceRole(client, () => completeAttempt(client, mixed));
+      expect(replay).toEqual({ ...first, alreadyProcessed: true });
+      expect((await sessionXpLog(client, user)).rows).toBe(prior ? 2 : 1);
+      // The private inner function's fast replay must have the same metadata.
+      const inner = (await client.query(
+        "SELECT public.complete_game_session($1,$2,'wordquest','classic',NULL,NULL,NULL,0,0,0,0::smallint,0::smallint,0,0) AS result",
+        [user, (await client.query('SELECT client_request_id FROM public.game_sessions WHERE id=$1', [first.sessionId])).rows[0].client_request_id],
+      )).rows[0].result;
+      expect(inner).toEqual(replay);
+    });
+
+    it('retains unknown legacy deductions rather than inventing a daily-cap reason', async () => {
+      const user = await newProfile(client);
+      const session = await playSession(client, user, { questionCount: 2, correct: 2 });
+      await client.query('UPDATE public.game_sessions SET xp_repeat_withheld=NULL, repeat_questions=NULL WHERE id=$1', [session.sessionId]);
+      const replay = await withServiceRole(client, () => completeAttempt(client, session));
+      expect(replay).toMatchObject({ xpAwarded: 20, xpRepeatWithheld: null, repeatQuestions: null, alreadyProcessed: true });
+    });
+
+    async function readyTransfer() {
+      const userId = await newProfile(client);
+      const [sourceId, transferId, unrelatedId] = await freshQuestions(client, 3);
+      const outcome = (await client.query(
+        "INSERT INTO public.curriculum_outcomes(code,game,category,title) VALUES($1,'wordquest','fixture','Transfer fixture') RETURNING id",
+        ['TR-' + randomUUID()],
+      )).rows[0].id;
+      await client.query("INSERT INTO public.question_outcomes(question_id,outcome_id,weight,is_primary,mapping_source) SELECT unnest($1::uuid[]),$2,1,true,'manual'", [[sourceId, transferId], outcome]);
+      const attempt = await prepareRepeat(client, userId, [sourceId], 1);
+      const sessionId = (await withServiceRole(client, () => client.query(
+        'SELECT public.start_verified_coach_session($1,$2,$3,0::smallint) AS result', [attempt.attemptId, userId, sourceId],
+      ))).rows[0].result.sessionId;
+      for (let stage = 1; stage <= 4; stage++) {
+        await withServiceRole(client, () => client.query(
+          "SELECT public.advance_verified_coach_stage($1,$2,$3::smallint,$4,$5,$6,true,'coach-v1',$7)",
+          [sessionId, userId, stage, randomUUID(), stage === 4 ? null : 'Hint', stage === 4 ? 'solution' : 'authored', 'a'.repeat(64)],
+        ));
+      }
+      return { userId, sourceId, transferId, unrelatedId, attemptId: attempt.attemptId, sessionId };
+    }
+
+    async function answerTransfer(fixture, requestId = randomUUID(), selected = 1) {
+      return (await withServiceRole(client, () => client.query(
+        'SELECT public.answer_verified_coach_transfer($1,$2,$3,$4::smallint) AS result',
+        [fixture.sessionId, fixture.userId, requestId, selected],
+      ))).rows[0].result;
+    }
+
+    it('records a transfer outside the source attempt and prevents XP in a later attempt', async () => {
+      const f = await readyTransfer();
+      const request = randomUUID();
+      const answered = await answerTransfer(f, request);
+      expect(answered).toMatchObject({ transferQuestionId: f.transferId, correctOption: 1, replayed: false });
+      expect((await client.query('SELECT attempt_id FROM public.question_answer_reveals WHERE user_id=$1 AND question_id=$2', [f.userId, f.transferId])).rows)
+        .toEqual([{ attempt_id: f.attemptId }]);
+      // An answer completed before migration 225 may have no reveal row yet.
+      await client.query('DELETE FROM public.question_answer_reveals WHERE user_id=$1 AND question_id=$2', [f.userId, f.transferId]);
+      expect(await answerTransfer(f, request)).toEqual({ ...answered, replayed: true });
+      expect((await client.query('SELECT attempt_id FROM public.question_answer_reveals WHERE user_id=$1 AND question_id=$2', [f.userId, f.transferId])).rows)
+        .toEqual([{ attempt_id: f.attemptId }]);
+      const later = await prepareRepeat(client, f.userId, [f.transferId], 1);
+      const paid = await withServiceRole(client, () => completeAttempt(client, later));
+      expect(paid).toMatchObject({ totalXP: 10, xpAwarded: 0, xpRepeatWithheld: 10, repeatQuestions: 1 });
+    });
+
+    it('rejects uncompleted transfers, unrelated questions, wrong owners and browser roles', async () => {
+      const f = await readyTransfer();
+      await expect(reveal(client, f.userId, f.attemptId, f.transferId)).rejects.toMatchObject({ code: '22023' });
+      await expect(reveal(client, f.userId, f.attemptId, f.unrelatedId)).rejects.toMatchObject({ code: '22023' });
+      await expect(answerTransfer({ ...f, userId: await newProfile(client) })).rejects.toMatchObject({ code: '42501' });
+      await expect(answerTransfer(f, randomUUID(), 9)).rejects.toMatchObject({ code: '22023' });
+      for (const role of ['anon', 'authenticated']) {
+        await client.query('SET ROLE ' + role);
+        try {
+          await expect(client.query('SELECT public.answer_verified_coach_transfer($1,$2,$3,1::smallint)', [f.sessionId, f.userId, randomUUID()]))
+            .rejects.toMatchObject({ code: '42501' });
+        } finally { await client.query('RESET ROLE'); }
+      }
+      expect((await client.query('SELECT count(*)::int AS n FROM public.question_answer_reveals WHERE user_id=$1', [f.userId])).rows[0].n).toBe(0);
+    });
+
+    it('rolls back the transfer answer if its reveal cannot be persisted', async () => {
+      const f = await readyTransfer();
+      await client.query("CREATE FUNCTION public.test_reject_reveal() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test reveal write failure' USING ERRCODE='40001'; END $$");
+      await client.query('CREATE TRIGGER test_reject_reveal BEFORE INSERT ON public.question_answer_reveals FOR EACH ROW EXECUTE FUNCTION public.test_reject_reveal()');
+      try {
+        await expect(answerTransfer(f)).rejects.toMatchObject({ code: '40001' });
+        expect((await client.query('SELECT transfer_completed_at FROM public.verified_coach_sessions WHERE id=$1', [f.sessionId])).rows[0].transfer_completed_at).toBeNull();
+      } finally {
+        await client.query('DROP TRIGGER test_reject_reveal ON public.question_answer_reveals; DROP FUNCTION public.test_reject_reveal()');
+      }
+      expect(await answerTransfer(f)).toMatchObject({ replayed: false });
     });
   });
 

@@ -543,13 +543,13 @@ describe('POST /api/coach/hint R2.2', () => {
     })
   })
 
-  it('açılış kaydı yazılamazsa çözüm açılmaz (fail-closed)', async () => {
+  it.each(['40001', 'PGRST202'])('açılış kaydı yazılamazsa çözüm açılmaz: %s', async (code) => {
     mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
     const hint2Token = await stageToken('hint1')
     const hint3Token = await stageToken('hint2', hint2Token)
     const solutionToken = await stageToken('hint3', hint3Token)
     mockAdvanceResult.mockClear()
-    mockRevealResult.mockResolvedValue({ data: null, error: { code: '40001' } })
+    mockRevealResult.mockResolvedValue({ data: null, error: { code } })
     const response = await POST(coachRequest('solution', { token: solutionToken }))
     expect(response.status).toBe(503)
     expect(mockAdvanceResult).not.toHaveBeenCalled()

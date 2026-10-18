@@ -56,10 +56,10 @@ describe('repo migration manifesti', () => {
     expect(computed).toEqual([...LEXICAL_ORDER_EXCEPTIONS])
   })
 
-  it('2026-10-18 defterindeki 173 satirin (224 dahil) her biri tam bir kez tasinir', () => {
+  it('2026-10-18 defterindeki 174 satirin (225 dahil) her biri tam bir kez tasinir', () => {
     const rows = repo.migrations.flatMap((e) => e.ledger ?? [])
-    expect(rows).toHaveLength(173)
-    expect(new Set(rows.map((r) => r.version)).size).toBe(173)
+    expect(rows).toHaveLength(174)
+    expect(new Set(rows.map((r) => r.version)).size).toBe(174)
   })
 })
 

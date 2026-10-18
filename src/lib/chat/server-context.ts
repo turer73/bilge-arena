@@ -10,6 +10,8 @@ import {
 } from '@/lib/teacher-classroom/server-contract'
 import { getBilgeTahtaPilotInstitutionId, isBilgeTahtaPilotEnabled } from '@/lib/bilge-tahta/server'
 import { stripRichText } from '@/lib/utils/rich-text'
+import { readVerifiedAttemptQuestionSnapshots } from '@/lib/verified-attempts'
+import type { Json } from '@/types/database.generated'
 
 /**
  * Sohbet bağlamını sunucuda kurar. Metin soru bankasından ya da sabitlerden
@@ -67,16 +69,32 @@ function formatQuestionContext({ heading, content, correctOption, correctOptionL
 
 async function questionContext(
   context: Extract<ChatContext, { kind: 'question' }>,
-  { admin }: ChatContextDeps,
+  { admin, userId }: ChatContextDeps,
 ): Promise<string | null> {
-  const { data, error } = await admin
-    .from('questions')
-    .select('game, category, subcategory, topic, exam_ref, content')
-    .eq('id', context.questionId)
-    .eq('is_active', true)
-    .maybeSingle()
-  if (error || !data) return null
-  const content = parsePublicQuestionContent(data.content)
+  let data: {
+    game: string; category: string; subcategory?: string | null
+    topic?: string | null; exam_ref?: string | null; content: unknown
+  }
+  if (context.attemptId) {
+    const snapshots = await readVerifiedAttemptQuestionSnapshots(admin, {
+      attemptId: context.attemptId, userId, requireActive: false,
+    })
+    const snapshot = snapshots.find(item => item.questionId === context.questionId)
+    if (!snapshot) throw new Error('verified_attempt_snapshot_denied')
+    data = { ...snapshot.metadata, exam_ref: snapshot.metadata.examRef, content: snapshot.content }
+  } else {
+    // Legacy/preview contexts do not carry a verified attempt. They never
+    // substitute for a failed snapshot read on an authenticated attempt.
+    const result = await admin
+      .from('questions')
+      .select('game, category, subcategory, topic, exam_ref, content')
+      .eq('id', context.questionId)
+      .eq('is_active', true)
+      .maybeSingle()
+    if (result.error || !result.data) return null
+    data = result.data
+  }
+  const content = parsePublicQuestionContent(data.content as Json)
   if (!content) return null
 
   const scope = [data.category, data.subcategory ?? data.topic].filter(Boolean).join(' / ')
@@ -170,9 +188,10 @@ function studyContext(context: Extract<ChatContext, { kind: 'study' }>): string 
 
 const QUESTION_HEADING = 'Öğrencinin şu anda çalıştığı soru (Bilge Arena soru bankasından):'
 
-/** Bağlam kurulamadığında: ödev bağlamı reddedilir, diğerleri bağlamsız sürer. */
+/** Doğrulanmış deneme/ödev bağlamı okunamazsa başka soru sürümüne geçilmez. */
 export function chatContextUnavailable(context: ChatContext): ChatContextResult {
-  return context.kind === 'assignment_item' ? FORBIDDEN : { allowed: true, block: null }
+  return context.kind === 'assignment_item' || (context.kind === 'question' && context.attemptId)
+    ? FORBIDDEN : { allowed: true, block: null }
 }
 
 /**

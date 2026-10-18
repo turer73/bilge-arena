@@ -15,9 +15,11 @@ function fakeAdmin({
   questionError = null as { code: string } | null,
   assignment = { data: null, error: null } as RpcResult,
   access = { data: { enabled: true }, error: null } as RpcResult,
+  snapshots = { data: null, error: null } as RpcResult,
 } = {}) {
   const eq = vi.fn()
-  const rpc = vi.fn(async (name: string) => (name === 'get_my_classroom_bilge_tahta_access' ? access : assignment))
+  const rpc = vi.fn(async (name: string) => name === 'get_verified_attempt_question_snapshots'
+    ? snapshots : (name === 'get_my_classroom_bilge_tahta_access' ? access : assignment))
   const query = {
     select: vi.fn(() => query),
     eq: vi.fn((column: string, value: unknown) => {
@@ -83,6 +85,42 @@ const ASSIGNMENT: StudentTeacherAssignment = {
 const ASSIGNMENT_OK: RpcResult = { data: ASSIGNMENT, error: null }
 
 describe('buildChatContext — soru kimliği', () => {
+  const attemptId = '11111111-2222-4333-8444-555555555551'
+  const snapshot = {
+    position: 1, questionId: QUESTION_ID, revisionId: '11111111-2222-4333-8444-555555555552',
+    contentSha256: 'a'.repeat(64), content: QUESTION_ROW.content, correctOption: 0,
+    metadata: { game: 'matematik', category: 'Sayılar', difficulty: 3, basePoints: 20, examRef: 'LGS' },
+  }
+
+  it('uses the owned attempt revision after the question bank changes, including shuffled options', async () => {
+    const { admin, rpc, query } = fakeAdmin({
+      question: { ...QUESTION_ROW, content: { ...QUESTION_ROW.content, options: ['NEW A', 'NEW B', 'NEW C', 'NEW D'] } },
+      snapshots: { data: { items: [snapshot] }, error: null },
+    })
+    const result = await buildChatContext({
+      kind: 'question', questionId: QUESTION_ID, attemptId, shownCorrectOption: 1, optionOrder: [2, 0, 3, 1],
+    }, { admin, userId: USER_ID })
+    expect(blockOf(result)).toContain('gösterilen şık: B) 397')
+    expect(blockOf(result)).not.toMatch(/NEW|GIZLI/)
+    expect(query.select).not.toHaveBeenCalled()
+    expect(rpc).toHaveBeenCalledWith('get_verified_attempt_question_snapshots', {
+      p_attempt_id: attemptId, p_user_id: USER_ID, p_require_active: false,
+    })
+  })
+
+  it.each(['42501', 'PGRST202'])('does not fall back to the live bank if snapshot access fails: %s', async (code) => {
+    const { admin, query } = fakeAdmin({ question: QUESTION_ROW, snapshots: { data: null, error: { code } } })
+    expect(await buildChatContext({ kind: 'question', questionId: QUESTION_ID, attemptId }, { admin, userId: USER_ID }))
+      .toEqual({ allowed: false })
+    expect(query.select).not.toHaveBeenCalled()
+  })
+
+  it('refuses a question outside the owned attempt snapshot', async () => {
+    const { admin } = fakeAdmin({ snapshots: { data: { items: [snapshot] }, error: null } })
+    expect(await buildChatContext({ kind: 'question', questionId: CLASSROOM_ID, attemptId }, { admin, userId: USER_ID }))
+      .toEqual({ allowed: false })
+  })
+
   it('soru bankasındaki metni maskelemeden, cevap anahtarı olmadan kurar', async () => {
     const { admin, eq } = fakeAdmin({ question: QUESTION_ROW })
     const block = blockOf(await buildChatContext(

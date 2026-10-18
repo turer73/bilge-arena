@@ -505,9 +505,7 @@ export async function POST(request: Request) {
       p_attempt_id: attemptId,
       p_question_id: questionId,
     } as never)
-    if (revealError?.code === 'PGRST202') {
-      console.error('[CoachHint] record_question_reveal bulunamadı')
-    } else if (revealError) {
+    if (revealError) {
       console.error('[CoachHint] açılış kaydı yazılamadı:', revealError.code)
       return noStoreJson({ error: 'Koç çözümü şu anda açılamıyor. Birazdan tekrar dene.' }, { status: 503 })
     }
