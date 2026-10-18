@@ -24,6 +24,7 @@ import {
 } from '@/lib/verified-attempts'
 import { describeVerifiedAttemptFailure } from '@/lib/verified-attempt-failure'
 import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
+import { composeQuizQuestions } from '@/lib/quiz/question-plan'
 
 // Cift kalkan rate limit (Madde 9 pattern):
 //   - IP limit her hit'te ONCE (auth.getUser quota'sini koru)
@@ -63,7 +64,8 @@ const VALID_EXAM_REFS = new Set(['TYT', 'LGS', 'AYT-SAY', 'AYT-EA', 'AYT-SOZ'])
  *
  * Review (spaced-repetition):
  *   includeReview=true ise son 7 gunde yanlis cevaplanip dogrulanmamis sorulari
- *   ek olarak doner. Client karistirip %30 review + %70 yeni soru yapar.
+ *   sunucuda %30 review + %70 yeni soru olarak birlestirilir. Secim ve sira,
+ *   verified attempt olusturulmadan once sabitlenir; client yeniden karistirmaz.
  *
  * Cache: no-store (kullaniciya ozel, random degisken)
  * Rate limit: IP 120/dk + user 60/dk
@@ -142,7 +144,7 @@ export async function GET(request: NextRequest) {
   if (category && !getCategoriesForExam(gameSlug, examRef).includes(category)) {
     return NextResponse.json({ error: 'Kategori sinav kapsamiyla uyumsuz' }, { status: 400 })
   }
-  const includeReview = searchParams.get('includeReview') === 'true'
+  const includeReview = mode !== 'deneme' && searchParams.get('includeReview') === 'true'
 
   // excludeIds: comma-separated UUID listesi, max 50
   // Klipper review B3/P1: UUID validation ortak helper'da (src/lib/utils/uuid.ts).
@@ -287,12 +289,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // The exact played list owns the immutable scoring order. Mixing review or
+  // distributing deneme categories after issuance changes streak XP (#2646).
+  const selectedQuestions = composeQuizQuestions({ questions, reviewQuestions, game: gameSlug, mode, limit })
   // Whitelist: RPC tam DB satiri donduruyor; telemetri/ic alanlar sizmasin.
-  let publicQuestions = questions.map(toPublicQuestion)
-  let publicReviewQuestions = reviewQuestions.map(toPublicQuestion)
-  const issuedQuestionIds = [
-    ...new Set([...publicQuestions.map(question => question.id), ...publicReviewQuestions.map(question => question.id)]),
-  ]
+  let publicQuestions = selectedQuestions.map(toPublicQuestion)
+  const issuedQuestionIds = publicQuestions.map(question => question.id)
 
   let attemptId: string | null = null
   let expiresAt: string | null = null
@@ -319,12 +321,10 @@ export async function GET(request: NextRequest) {
       ) throw new Error('verified_attempt_snapshot_mismatch')
       const verifiedById = new Map(verifiedQuestions.map(question => [question.id, question]))
       const nextQuestions = publicQuestions.map(question => verifiedById.get(question.id))
-      const nextReviewQuestions = publicReviewQuestions.map(question => verifiedById.get(question.id))
-      if (nextQuestions.some(question => !question) || nextReviewQuestions.some(question => !question)) {
+      if (nextQuestions.some(question => !question)) {
         throw new Error('verified_attempt_snapshot_mismatch')
       }
       publicQuestions = nextQuestions.filter((question): question is NonNullable<typeof question> => !!question)
-      publicReviewQuestions = nextReviewQuestions.filter((question): question is NonNullable<typeof question> => !!question)
     } catch (error) {
       if (isTytSocialSelectionEpochChanged(error)) {
         return NextResponse.json(
@@ -338,7 +338,7 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json(
-    { questions: publicQuestions, reviewQuestions: publicReviewQuestions, attemptId, expiresAt },
+    { questions: publicQuestions, reviewQuestions: [], attemptId, expiresAt },
     { headers: { 'Cache-Control': 'no-store' } },
   )
 }

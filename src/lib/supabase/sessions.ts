@@ -24,6 +24,8 @@ export interface SavedGameSession {
   totalXP: number
   correctCount: number
   wrongCount: number
+  /** Absent in legacy responses; never replace it with a client streak. */
+  maxStreak?: number | null
   newBadges: string[]
   /** Bu oturumun kazandirdigi altin. null = sunucu okuyamadi (UI gostermez),
    * 0 = gunluk tavan dolu (UI bunu ayrica bildirir). */
@@ -97,6 +99,9 @@ export async function saveGameSession({
       totalXP: data.totalXP,
       correctCount: data.correctCount,
       wrongCount: data.wrongCount,
+      maxStreak: Number.isInteger(data.maxStreak) && data.maxStreak >= 0 && data.maxStreak <= data.correctCount
+        ? data.maxStreak
+        : null,
       newBadges: Array.isArray(data.newBadges)
         ? data.newBadges.filter((code: unknown): code is string => typeof code === 'string')
         : [],

@@ -337,8 +337,9 @@ describe('GET /api/questions/random', () => {
     const body = await response.json()
 
     expect(response.status).toBe(200)
-    expect(body.questions.map((question: { id: string }) => question.id)).toEqual(['common'])
-    expect(body.reviewQuestions.map((question: { id: string }) => question.id)).toEqual(['review'])
+    const playedIds = body.questions.map((question: { id: string }) => question.id)
+    expect([...playedIds].sort()).toEqual(['common', 'review'])
+    expect(body.reviewQuestions).toEqual([])
     expect(mockReadTytSocialLearningSnapshot).toHaveBeenCalledTimes(1)
     expect(mockReadTytSocialLearningSnapshot).toHaveBeenCalledWith(
       expect.anything(),
@@ -351,7 +352,7 @@ describe('GET /api/questions/random', () => {
       expect.objectContaining({
         game: 'sosyal',
         examRef: 'TYT',
-        questionIds: ['common', 'review'],
+        questionIds: playedIds,
         tytSocialEpoch: TYT_SOCIAL_EPOCH,
         requestId: expect.any(String),
       }),
@@ -515,10 +516,11 @@ describe('GET /api/questions/random', () => {
     const res = await GET(makeRequest({ game: 'matematik', limit: '10' }) as never)
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.questions).toEqual([
+    expect(body.questions).toHaveLength(2)
+    expect(body.questions).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: 'q1', game: 'matematik', category: 'sayilar' }),
       expect.objectContaining({ id: 'q2', game: 'matematik', category: 'sayilar' }),
-    ])
+    ]))
     expect(body.questions[0]).not.toHaveProperty('times_answered')
     expect(body).toMatchObject({
       attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -530,14 +532,14 @@ describe('GET /api/questions/random', () => {
         userId: 'u1',
         game: 'matematik',
         mode: 'classic',
-        questionIds: ['q1', 'q2'],
+        questionIds: body.questions.map((question: { id: string }) => question.id),
         examRef: null,
         requestId: expect.any(String),
       }),
     )
   })
 
-  it('issues one attempt for the ordered de-duplicated question and review union', async () => {
+  it('issues one attempt in the exact composed question and review order', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1'), makeQuestionRow('shared')], error: null })
     sessionAnswersMock.push({ data: [{ question_id: 'shared' }, { question_id: 'review-2' }], error: null })
@@ -554,14 +556,40 @@ describe('GET /api/questions/random', () => {
     }) as never)
 
     expect(res.status).toBe(200)
+    const body = await res.json()
+    const playedIds = body.questions.map((question: { id: string }) => question.id)
+    expect([...playedIds].sort()).toEqual(['q1', 'review-2', 'shared'])
+    expect(body.reviewQuestions).toEqual([])
     expect(mockIssueVerifiedAttempt).toHaveBeenCalledTimes(1)
     expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         mode: 'practice',
-        questionIds: ['q1', 'shared', 'review-2'],
+        questionIds: playedIds,
       }),
     )
+  })
+
+  it('issues only the ten played questions rather than the oversized candidate pool', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: Array.from({ length: 20 }, (_, index) => makeQuestionRow(`q-${index}`)), error: null })
+    const res = await GET(makeRequest({ game: 'matematik', limit: '10' }) as never)
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.questions).toHaveLength(10)
+    const playedIds = body.questions.map((question: { id: string }) => question.id)
+    expect(new Set(playedIds).size).toBe(10)
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ questionIds: playedIds }))
+  })
+
+  it('never mixes review questions into a deneme even when the client requests them', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
+    const res = await GET(makeRequest({ game: 'matematik', mode: 'deneme', includeReview: 'true' }) as never)
+    const body = await res.json()
+    expect(body.questions.map((question: { id: string }) => question.id)).toEqual(['q1'])
+    expect(sessionAnswersMock.from).not.toHaveBeenCalled()
+    expect(questionsMock.from).not.toHaveBeenCalled()
   })
 
   it('returns null ticket and skips issuance when no questions were selected', async () => {
@@ -582,6 +610,19 @@ describe('GET /api/questions/random', () => {
 
     const res = await GET(makeRequest({ game: 'matematik' }) as never)
 
+    expect(res.status).toBe(500)
+    await expect(res.json()).resolves.toEqual({ error: 'Deneme baslatilamadi' })
+  })
+
+  it('rejects an issued snapshot whose positions differ from the selected plan', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1'), makeQuestionRow('q2')], error: null })
+    mockIssueVerifiedAttempt.mockImplementationOnce(async (_admin: unknown, input: { questionIds: string[] }) => ({
+      attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      expiresAt: '2026-08-08T14:00:00.000Z',
+      questionSnapshots: [...input.questionIds].reverse().map(id => makeQuestionRow(id)),
+    }))
+    const res = await GET(makeRequest({ game: 'matematik', limit: '2' }) as never)
     expect(res.status).toBe(500)
     await expect(res.json()).resolves.toEqual({ error: 'Deneme baslatilamadi' })
   })
@@ -686,9 +727,10 @@ describe('GET /api/questions/random', () => {
 
       const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
       const body = await res.json()
-      expect(body.reviewQuestions).toEqual([
+      expect(body.questions).toHaveLength(2)
+      expect(body.questions).toEqual(expect.arrayContaining([
         expect.objectContaining({ id: 'wq1', game: 'matematik', category: 'sayilar' }),
-      ])
+      ]))
       const candidateChain = sessionAnswersMock.from.mock.results[0].value
       expect(candidateChain.or).toHaveBeenCalledWith('is_skipped.eq.false,is_skipped.is.null')
     })
@@ -711,6 +753,7 @@ describe('GET /api/questions/random', () => {
       const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
       const body = await res.json()
       expect(body.reviewQuestions).toEqual([])
+      expect(body.questions.map((question: { id: string }) => question.id)).toEqual(['q1'])
     })
 
     it('disc#1371 fix: yanlistan ONCE gelen dogru cevap soruyu duzeltilmis saymamali (kronolojik)', async () => {
@@ -730,9 +773,10 @@ describe('GET /api/questions/random', () => {
 
       const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
       const body = await res.json()
-      expect(body.reviewQuestions).toEqual([
+      expect(body.questions).toHaveLength(2)
+      expect(body.questions).toEqual(expect.arrayContaining([
         expect.objectContaining({ id: 'wq1', game: 'matematik', category: 'sayilar' }),
-      ])
+      ]))
     })
 
     it('Codex P2 skip-handling: en-son SKIP onceki duzeltmeyi ezmemeli (duzeltilmis kalir)', async () => {
@@ -755,6 +799,7 @@ describe('GET /api/questions/random', () => {
       const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
       const body = await res.json()
       expect(body.reviewQuestions).toEqual([])
+      expect(body.questions.map((question: { id: string }) => question.id)).toEqual(['q1'])
     })
   })
 })

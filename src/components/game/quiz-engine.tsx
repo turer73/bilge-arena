@@ -633,6 +633,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
             repeatQuestions={sessionSaver.savedSession?.repeatQuestions ?? 0}
             saveStatus={sessionSaver.saveStatus}
             savedTotalXP={sessionSaver.savedSession?.totalXP ?? null}
+            savedMaxStreak={sessionSaver.savedSession?.maxStreak ?? null}
             savedCorrectCount={sessionSaver.savedSession?.correctCount ?? null}
             savedWrongCount={sessionSaver.savedSession?.wrongCount ?? null}
           />

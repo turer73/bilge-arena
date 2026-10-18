@@ -189,13 +189,31 @@ describe('useQuizGame — handleStart', () => {
     await act(() => result.current.handleStart())
 
     expect(fetchers.fetchQuizQuestions).toHaveBeenCalledWith(
-      expect.objectContaining({ game: 'matematik', includeReview: true, mode: 'classic' }),
+      expect.objectContaining({ game: 'matematik', includeReview: true, mode: 'classic', limit: result.current.mode.questionCount }),
     )
     const started = quiz.startQuiz.mock.calls[0][0]
     expect(started).toHaveLength(result.current.mode.questionCount)
     expect(result.current.screen).toBe('game')
     expect(result.current.isGuestMode).toBe(false)
     expect(result.current.attemptId).toBe(ATTEMPT_ID)
+  })
+
+  test('deneme sunucuda secilen sorularin sirasini kategoriye gore yeniden kurmaz', async () => {
+    gameStore.selectedMode = 'deneme'
+    const issued = Array.from({ length: 40 }, (_, index) => ({
+      ...makeQ(`issued-${index}`), category: index % 2 ? 'sayilar' : 'problemler',
+    }))
+    fetchers.fetchQuizQuestions.mockResolvedValue({
+      questions: issued, attemptId: ATTEMPT_ID, expiresAt: '2099-01-01T00:00:00.000Z',
+    })
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+    await act(() => result.current.handleStart())
+    expect(fetchers.fetchQuizQuestions).toHaveBeenCalledWith(expect.objectContaining({
+      mode: 'deneme', limit: 40, includeReview: false,
+    }))
+    expect(quiz.startQuiz.mock.calls[0][0].map((question: PublicQuestion) => question.id))
+      .toEqual(issued.map(question => question.id))
+    expect(elapsed.reset).toHaveBeenCalled()
   })
 
   test('Wordquest auth soru isteginde stale TYT tercihini null storage kapsamindan ayirir', async () => {

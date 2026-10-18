@@ -72,9 +72,30 @@ describe('saveGameSession', () => {
       correctCount: 2,
       wrongCount: 1,
       newBadges: ['first_game'],
+      maxStreak: 1,
       coinsEarned: 40,
       xpCapped: false,
       repeatQuestions: 0,
+    })
+  })
+
+  it('yerel seri yerine sunucunun dogruladigi seriyi dondurur', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ sessionId: 'session-123', totalXP: 290, correctCount: 9, wrongCount: 1, maxStreak: 8 }),
+    })
+    expect(await saveGameSession({ ...baseParams, maxStreak: 9 })).toMatchObject({
+      totalXP: 290, maxStreak: 8,
+    })
+  })
+
+  it.each([undefined, null, -1, 1.5, '8', 10])('gecersiz seri %s icin yerel tahmine donmez', async (maxStreak) => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ sessionId: 'session-123', totalXP: 290, correctCount: 9, wrongCount: 1, maxStreak }),
+    })
+    expect(await saveGameSession({ ...baseParams, maxStreak: 9 })).toMatchObject({
+      sessionId: 'session-123', maxStreak: null,
     })
   })
 
