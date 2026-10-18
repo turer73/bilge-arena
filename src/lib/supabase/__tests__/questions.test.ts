@@ -267,12 +267,14 @@ describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
     expect(result.attemptId).toBe('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
   })
 
-  it('reviewQuestions varsa %30 oranla karistirilir', async () => {
+  it('tekrar sorulari dahil sunucuda verilen sirayi aynen korur', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const issuedIds = ['review-2', 'new-4', 'new-1', 'review-0', 'new-8', 'new-0', 'new-3', 'review-1', 'new-6', 'new-2']
     fetchMock.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
-          questions: Array.from({ length: 10 }, (_, i) => makeQuestion(`new-${i}`)),
-          reviewQuestions: Array.from({ length: 5 }, (_, i) => makeQuestion(`review-${i}`)),
+          questions: issuedIds.map(id => makeQuestion(id)),
+          reviewQuestions: [],
           attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
           expiresAt: '2099-01-01T00:00:00.000Z',
         }),
@@ -280,9 +282,7 @@ describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
       ),
     )
     const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-    const reviewCount = result.questions.filter(q => q.id.startsWith('review-')).length
-    expect(reviewCount).toBeGreaterThan(0)
-    expect(reviewCount).toBeLessThanOrEqual(4)
+    expect(result.questions.map(question => question.id)).toEqual(issuedIds)
   })
 
   it('misafir mikro turu en fazla 3 public soru alir', async () => {

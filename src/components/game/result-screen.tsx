@@ -30,6 +30,7 @@ interface ResultScreenProps {
   savedTotalXP?: number | null
   savedCorrectCount?: number | null
   savedWrongCount?: number | null
+  savedMaxStreak?: number | null
 }
 
 export function ResultScreen({
@@ -42,6 +43,7 @@ export function ResultScreen({
   savedTotalXP = null,
   savedCorrectCount = null,
   savedWrongCount = null,
+  savedMaxStreak = null,
 }: ResultScreenProps) {
   const wide = useWideStudy()
   const { score, questions, answers, xpEarned, maxStreak, lives, livesEnabled } = useQuizStore()
@@ -65,6 +67,9 @@ export function ResultScreen({
   const displayedXP = saveStatus === 'saved' && savedTotalXP !== null
     ? savedTotalXP
     : xpEarned
+  const displayedMaxStreak = saveStatus === 'saved'
+    ? (savedMaxStreak !== null && Number.isInteger(savedMaxStreak) && savedMaxStreak >= 0 ? savedMaxStreak : null)
+    : maxStreak
   const xpLabel = saveStatus === 'saved'
     ? 'XP KAZANCI'
     : saveStatus === 'pending' || isGuest
@@ -98,10 +103,10 @@ export function ResultScreen({
         total: displayedAnsweredCount,
         xp: displayedXP,
         gameOver,
-        maxStreak,
+        ...(displayedMaxStreak !== null ? { maxStreak: displayedMaxStreak } : {}),
       },
     })
-  }, [isGuest, rank, pct, displayedCorrectCount, displayedAnsweredCount, displayedXP, gameOver, maxStreak])
+  }, [isGuest, rank, pct, displayedCorrectCount, displayedAnsweredCount, displayedXP, gameOver, displayedMaxStreak])
 
   // Guest signup prompt escalation (Gun 2)
   const promptInitialized = useRef(false)
@@ -236,13 +241,13 @@ export function ResultScreen({
       )}
 
       {/* Max streak */}
-      {maxStreak >= 3 && (
+      {displayedMaxStreak !== null && displayedMaxStreak >= 3 && (
         <div
           className="rounded-2xl border-2 border-[var(--app-warn-border)] bg-[var(--app-warn-tint)] px-4 py-3 text-center shadow-[0_4px_0_var(--app-warn-border)] animate-fadeUp"
           style={{ animationDelay: '0.7s', animationFillMode: 'both' }}
         >
           <span className="text-[13px] font-bold text-[var(--app-warn-ink)]">
-            🔥 En yüksek seri: {maxStreak} soru doğru!
+            🔥 En yüksek seri: {displayedMaxStreak} soru doğru!
           </span>
         </div>
       )}

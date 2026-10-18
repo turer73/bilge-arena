@@ -58,11 +58,25 @@ describe('ResultScreen', () => {
   })
 
   test('8/10 + %80 + 190 XP + en yüksek seri 5 gösterir', () => {
-    render(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} saveStatus="saved" savedTotalXP={190} />)
+    render(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} saveStatus="saved" savedTotalXP={190} savedMaxStreak={5} />)
     expect(screen.getByText('8/10')).toBeInTheDocument()
     expect(screen.getByText('%80')).toBeInTheDocument()
     expect(screen.getByText('190')).toBeInTheDocument()
     expect(screen.getByText(/En yüksek seri: 5 soru doğru/)).toBeInTheDocument()
+  })
+
+  test('kayit sonrasi yerel seri yerine sunucunun serisini gosterir', () => {
+    quiz.value = { ...quiz.value, maxStreak: 9 }
+    const { rerender } = render(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} saveStatus="pending" />)
+    expect(screen.getByText(/En yüksek seri: 9 soru doğru/)).toBeInTheDocument()
+    rerender(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} saveStatus="saved" savedMaxStreak={8} savedTotalXP={290} />)
+    expect(screen.getByText(/En yüksek seri: 8 soru doğru/)).toBeInTheDocument()
+    expect(screen.queryByText(/En yüksek seri: 9 soru doğru/)).not.toBeInTheDocument()
+  })
+
+  test.each([null, 0])('sunucu serisi %s ise eski yerel seri gosterilmez', (savedMaxStreak) => {
+    render(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} saveStatus="saved" savedMaxStreak={savedMaxStreak} />)
+    expect(screen.queryByText(/En yüksek seri/)).not.toBeInTheDocument()
   })
 
   test('maxStreak < 3 ise seri banner gizli', () => {

@@ -169,9 +169,10 @@ describe('GET /api/questions/random — FSRS rollout kohortu', () => {
 
     const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
     const body = await res.json()
-    expect(body.reviewQuestions).toEqual([
+    expect(body.questions).toHaveLength(2)
+    expect(body.questions).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: 'wq1', game: 'matematik', category: 'sayilar' }),
-    ])
+    ]))
     expect(mockReadTytSocialLearningSnapshot).not.toHaveBeenCalled()
   })
 
@@ -216,15 +217,16 @@ describe('GET /api/questions/random — FSRS rollout kohortu', () => {
     const body = await response.json()
 
     expect(response.status).toBe(200)
-    expect(body.questions.map((item: { id: string }) => item.id)).toEqual(['common'])
-    expect(body.reviewQuestions.map((item: { id: string }) => item.id)).toEqual(['review'])
+    const playedIds = body.questions.map((item: { id: string }) => item.id)
+    expect([...playedIds].sort()).toEqual(['common', 'review'])
+    expect(body.reviewQuestions).toEqual([])
     expect(mockReadTytSocialLearningSnapshot).toHaveBeenCalledTimes(1)
     expect(mockReadTytSocialLearningSnapshot).toHaveBeenCalledWith(
       expect.anything(), 'u1', ['common', 'review', 'forbidden-review'],
     )
     expect(mockIssueVerifiedAttempt).toHaveBeenCalledTimes(1)
     expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      questionIds: ['common', 'review'],
+      questionIds: playedIds,
       tytSocialEpoch: epoch,
     }))
   })
@@ -274,6 +276,7 @@ describe('GET /api/questions/random — FSRS rollout kohortu', () => {
     const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
     const body = await res.json()
     expect(body.reviewQuestions).toEqual([])
+    expect(body.questions.map((item: { id: string }) => item.id)).toEqual(['q1'])
     expect(sessionAnswersMock.from).toHaveBeenCalledTimes(2)
   })
 
@@ -289,5 +292,6 @@ describe('GET /api/questions/random — FSRS rollout kohortu', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.reviewQuestions).toEqual([])
+    expect(body.questions.map((item: { id: string }) => item.id)).toEqual(['q1'])
   })
 })

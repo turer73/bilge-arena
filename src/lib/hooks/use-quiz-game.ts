@@ -353,11 +353,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
       }
       const questionSet = await fetchQuizQuestions({
         game,
-        limit: isExactTytSocialSection
-          ? 20
-          : isDeneme
-            ? mode.questionCount * 2
-            : mode.questionCount * 3,
+        limit: mode.questionCount,
         category: isExactTytSocialSection ? null : gameStore.selectedCategory,
         difficulty: isExactTytSocialSection ? null : difficulty,
         mode: mode.id as GameMode,
@@ -399,24 +395,9 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         return { ...q, content: shuffled.content }
       })
 
-      if (isExactTytSocialSection) {
-        quizStore.startQuiz(questions)
-        elapsed.reset()
-      } else if (isDeneme && denemeConfig) {
-        // Deneme: kategori dagilimina gore sorulari sec
-        const distributed: PublicQuestion[] = []
-        for (const [cat, count] of Object.entries(denemeConfig.questionDistribution)) {
-          const catQuestions = questions.filter(q => q.category === cat)
-          const shuffled = [...catQuestions].sort(() => Math.random() - 0.5)
-          distributed.push(...shuffled.slice(0, count))
-        }
-        if (distributed.length < mode.questionCount) {
-          const remaining = questions.filter(q => !distributed.includes(q))
-          const shuffled = [...remaining].sort(() => Math.random() - 0.5)
-          distributed.push(...shuffled.slice(0, mode.questionCount - distributed.length))
-        }
-        distributed.sort(() => Math.random() - 0.5)
-        quizStore.startQuiz(distributed.slice(0, mode.questionCount))
+      if (isDeneme) {
+        // Category distribution and question order are bound by the server.
+        quizStore.startQuiz(questions.slice(0, mode.questionCount))
         elapsed.reset()
       } else {
         quizStore.startQuiz(questions.slice(0, mode.questionCount), mode.lives)
@@ -438,7 +419,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
       setLoadError('Sorular yüklenirken bir hata oluştu. İnternet bağlantınızı kontrol edin.')
       setScreen('lobby')
     }
-  }, [game, mode, quizStore, timer, isDeneme, isExactTytSocialSection, denemeConfig, elapsed, gameStore.selectedCategory, gameStore.selectedDifficulty, questionExamRef, userId, setAttemptId, setStrategyTracked, setScreen, setLoadError, setIsGuestMode])
+  }, [game, mode, quizStore, timer, isDeneme, isExactTytSocialSection, elapsed, gameStore.selectedCategory, gameStore.selectedDifficulty, questionExamRef, userId, setAttemptId, setStrategyTracked, setScreen, setLoadError, setIsGuestMode])
 
   // --- "Bugunun 15'i" plani dogrudan baslat ---
   // handleStart'in basari-dalinin aynasi: fetch/slice yok (sorular caginan

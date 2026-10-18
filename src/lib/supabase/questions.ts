@@ -37,17 +37,8 @@ export interface VerifiedQuestionSet {
   refreshRequestId?: boolean
 }
 
-/** Fisher-Yates shuffle (in-place) */
-function shuffle<T>(arr: T[]): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr
-}
-
 /**
- * /api/questions/random API'sinden quiz sorularini ceker, karistirir ve dondurur.
+ * /api/questions/random API'sinin sabitledigi soru sirasini koruyarak dondurur.
  * Madde 9 #6: eski client `supabase.rpc('select_random_questions')` yerine proxy.
  *
  * Cekilen guvenli soru metinleri IndexedDB'ye kaydedilir. Notlandirma sunucu
@@ -164,21 +155,10 @@ export async function fetchQuizQuestions({
     return { questions: [...questions], attemptId, expiresAt }
   }
 
-  if (reviewQuestions.length > 0) {
-    const reviewCount = Math.max(1, Math.floor(limit * 0.3))
-    const reviewSlice = shuffle([...reviewQuestions]).slice(0, reviewCount)
-    const reviewIds = new Set(reviewSlice.map(question => question.id))
-    const newQuestions = questions.filter(question => !reviewIds.has(question.id))
-    const newSlice = shuffle([...newQuestions]).slice(0, limit - reviewSlice.length)
-    return {
-      questions: shuffle([...reviewSlice, ...newSlice]),
-      attemptId,
-      expiresAt,
-    }
-  }
-
+  // Review mixing and deneme distribution now happen before server issuance.
+  // Even an older response must not make the client reorder snapshot positions.
   return {
-    questions: shuffle([...questions]).slice(0, limit),
+    questions: [...questions].slice(0, limit),
     attemptId,
     expiresAt,
   }
