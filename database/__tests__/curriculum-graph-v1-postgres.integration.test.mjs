@@ -16,6 +16,7 @@ const describePg = enabled ? describe : describe.skip
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const pilotMigration = readFileSync(join(root, 'migrations', '086_outcome_mastery_pilot.sql'), 'utf8')
 const migration = readFileSync(join(root, 'migrations', '096_curriculum_graph_v1.sql'), 'utf8')
+const literatureMigration = readFileSync(join(root, 'migrations', '226_ayt_literature_internal_outcome.sql'), 'utf8')
 const { Client } = pg
 
 describePg('096 curriculum graph v1 real PostgreSQL', () => {
@@ -67,6 +68,33 @@ describePg('096 curriculum graph v1 real PostgreSQL', () => {
   })
 
   afterAll(async () => client?.end())
+
+  it('seeds only the internal AYT-SOZ literature graph and refuses conflicting replay', async () => {
+    // Strip only this migration's outer transaction to isolate the whole proof.
+    const sql = literatureMigration.replace(/^BEGIN;$/m,'').replace(/^COMMIT;$/m,'')
+    await client.query('BEGIN')
+    try {
+      const before = (await client.query('SELECT * FROM public.question_outcomes ORDER BY question_id,outcome_id')).rows
+      await client.query(sql)
+      const first = (await client.query("SELECT * FROM public.curriculum_outcomes WHERE code='BA-AYTSOZ-EDB-MAZ-01'")).rows
+      expect(first).toHaveLength(1)
+      expect(first[0]).toMatchObject({ game:'turkce',category:'edebiyat',exam_ref:'AYT-SOZ',taxonomy_version:'ba-ayt-soz-turkce-v1',is_active:true })
+      expect(first[0].description).toContain('resmî MEB kazanım kodu değildir')
+      expect((await client.query("SELECT count(*)::integer n FROM public.curriculum_nodes WHERE taxonomy_version='ba-ayt-soz-turkce-v1'")).rows[0].n).toBe(4)
+      await client.query(sql)
+      expect((await client.query("SELECT * FROM public.curriculum_outcomes WHERE code='BA-AYTSOZ-EDB-MAZ-01'")).rows).toEqual(first)
+      expect((await client.query('SELECT * FROM public.question_outcomes ORDER BY question_id,outcome_id')).rows).toEqual(before)
+      await client.query('SAVEPOINT conflicting_node')
+      await client.query("UPDATE public.curriculum_nodes SET title='Unexpected replacement' WHERE code='ba-ayt-soz-turkce-v1:course'")
+      await expect(client.query(sql)).rejects.toMatchObject({ code:'22023' })
+      await client.query('ROLLBACK TO SAVEPOINT conflicting_node')
+      await client.query('SAVEPOINT conflicting_outcome')
+      await client.query("UPDATE public.curriculum_outcomes SET is_active=false WHERE code='BA-AYTSOZ-EDB-MAZ-01'")
+      await expect(client.query(sql)).rejects.toMatchObject({ code:'22023' })
+      await client.query('ROLLBACK TO SAVEPOINT conflicting_outcome')
+      await expect(client.query("UPDATE public.curriculum_outcomes SET exam_ref='TYT' WHERE code='BA-AYTSOZ-EDB-MAZ-01'")).rejects.toMatchObject({ code:'22023' })
+    } finally { await client.query('ROLLBACK') }
+  })
 
   async function asRole(role, work) {
     await client.query(`SET ROLE ${role}`)
