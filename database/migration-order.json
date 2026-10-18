@@ -253,8 +253,8 @@
     { "file": "223_drop_orphan_disposable_email_trigger.sql", "status": "ledger", "ledger": [{ "version": "20261017195301", "name": "223_drop_orphan_disposable_email_trigger" }] },
     { "file": "224_push_subscriptions_server_only.sql", "status": "ledger", "ledger": [{ "version": "20261018083834", "name": "224_push_subscriptions_server_only" }] },
     { "file": "225_coach_reveal_session_replay.sql", "status": "ledger", "ledger": [{ "version": "20261018114004", "name": "225_coach_reveal_session_replay" }] },
-    { "file": "20261013183312_adaptive_diagnostic_legacy_coverage_repair.sql", "status": "pending" },
-    { "file": "20261013184551_tyt_social_learning_epoch_forward.sql", "status": "pending" },
-    { "file": "20261014183929_revision_bound_turkce_quality_policy.sql", "status": "pending" }
+    { "file": "20261013183312_adaptive_diagnostic_legacy_coverage_repair.sql", "status": "ledger", "ledger": [{ "version": "20261018204344", "name": "adaptive_diagnostic_legacy_coverage_repair" }] },
+    { "file": "20261013184551_tyt_social_learning_epoch_forward.sql", "status": "ledger", "ledger": [{ "version": "20261018204353", "name": "tyt_social_learning_epoch_forward" }] },
+    { "file": "20261014183929_revision_bound_turkce_quality_policy.sql", "status": "ledger", "ledger": [{ "version": "20261018204412", "name": "revision_bound_turkce_quality_policy" }] }
   ]
 }

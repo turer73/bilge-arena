@@ -26,6 +26,7 @@ assert_institution_program_startable(uuid)|68e0769e4363073c29148512a7c48a5d|t|se
 assert_split_question_outcome_integrity(uuid)|0be0474256356fdf71f9948cb207a37d|t|search_path=pg_catalog|{postgres=X/postgres}
 assert_tyt_social_attempt_snapshot_integrity(uuid)|0d652c48743b2c20186d3bbd2c58171b|t|search_path=pg_catalog|{postgres=X/postgres}
 assert_tyt_social_exam_role_approval(text,uuid)|81125ea26c6240f40035958f6e16073b|t|search_path=pg_catalog|{postgres=X/postgres}
+assert_tyt_social_learning_epoch(uuid,text,uuid)|f620fe72557752146e0efb279d63f43a|t|search_path=pg_catalog|{postgres=X/postgres}
 assert_tyt_social_plan_snapshot_integrity(uuid)|f996ce425f2b368cba1059deaff50008|t|search_path=pg_catalog|{postgres=X/postgres}
 audit_free_pilot_institution_request()|acf66088de111ebcd63214d0248ca170|t|search_path=pg_catalog|{postgres=X/postgres}
 audit_institution_pilot_control_change()|fca1f00c832a433c5c0991a9a082804f|t|search_path=pg_catalog|{postgres=X/postgres}
@@ -78,6 +79,7 @@ create_my_institution_role(uuid,text,text,text[],uuid)|56aee9e6f83b3749558eb7b65
 create_question_content_revision(uuid,uuid,uuid,jsonb,uuid)|e2b1a3e49fd20078858cf3a252b75b97|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 create_question_error_incident(uuid,uuid,uuid,uuid,text,uuid)|571dba6403b996b4985d455d6b292d03|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 create_teacher_classroom(uuid,text,uuid)|ceb0a642cf5be96f72b65abfe78fa05a|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}
+create_tyt_social_daily_plan_for_epoch(uuid,date,jsonb,text,uuid)|a3079c22689ba95722f07bdf3953f0cd|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 create_tyt_social_daily_plan_v2(uuid,date,jsonb)|2dbcbb129d731e0b6646b641700e09ba|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 curriculum_graph_integrity()|a376837f18ec91c565f8138f0e2af6d9|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 curriculum_node_parent_guard()|7b86262652eeb3a85b007c570c823c73|t|search_path=pg_catalog|{postgres=X/postgres}
@@ -209,8 +211,10 @@ issue_paper_study_pack(uuid,uuid,uuid)|ad24e63d5e3d98ba1714b9b763cee9b7|t|search
 issue_teacher_classroom_invite(uuid,uuid,text,timestamp with time zone,smallint,uuid)|490ee38ac8b1c52b5c77ccdbeb217ca5|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}
 issue_verified_attempt(uuid,text,text,uuid[],integer)|bc4da7b1e94373d852f3f066f3abd2ca|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 issue_verified_exam_attempt(uuid,text,text,text,jsonb,integer,integer,uuid)|e5f4c3953db54f560ad99372e6be1ad4|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
+issue_verified_tyt_social_attempt_for_epoch(uuid,text,uuid[],integer,uuid,text,uuid)|67e79382588b92ea21b3aaa80e7a969a|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 issue_verified_tyt_social_attempt_with_event(uuid,text,uuid[],integer,uuid,text,uuid,text,uuid)|118c7ea96a3c427f4df7c87bbd28db2c|t|search_path=pg_catalog|{postgres=X/postgres}
 issue_verified_tyt_social_attempt(uuid,text,uuid[],integer,uuid)|e4e95aef749ada1bb5a6bd54fd4e41b7|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
+issue_verified_tyt_social_exam_attempt_for_epoch(uuid,text,jsonb,integer,integer,uuid,text,uuid)|87a264c2be7ba672869ac94b380e1e50|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 issue_verified_tyt_social_exam_attempt(uuid,text,jsonb,integer,integer,uuid)|c83e39f71aeef4a9b989ee9370c46a10|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 issue_verified_tyt_social_plan_attempt(uuid,uuid,text,integer,uuid)|51808ed9925c7cb950b3088d0033641d|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 issue_verified_tyt_social_section_attempt(uuid,uuid[],integer,uuid)|112eaba2a8ffec4c4e38ffefff166238|t|search_path=pg_catalog|{postgres=X/postgres}
@@ -262,7 +266,8 @@ question_outcome_scope_valid(uuid,uuid)|6eff9a1a41d61d34c6d03274f70a7e8c|t|searc
 question_quality_correction_fingerprint(text,integer,text)|36184a3d5ddd9e3fc2f8377d10261feb|f|search_path=pg_catalog|{postgres=X/postgres}
 question_revision_outcomes_valid(uuid)|b8be60cd7f6a9901469889c3393842d8|t|search_path=pg_catalog|{postgres=X/postgres}
 question_revision_single_review_ready(uuid)|f761df70cceb5731ecbc613f90e7f8b2|t|search_path=pg_catalog|{postgres=X/postgres}
-question_revision_validation_policy(uuid)|ca08698d559f6bf3ddbb27163fab072c|t|search_path=pg_catalog|{postgres=X/postgres}
+question_revision_validation_pair_valid(text,text,text,text)|355ca1733f289df4f4c9fe9a134f10c8|f|search_path=pg_catalog|{postgres=X/postgres}
+question_revision_validation_policy(uuid)|9f75e64f36c1984d3f839ce4278449bf|t|search_path=pg_catalog|{postgres=X/postgres}
 question_revision_validation_run_complete(question_validation_revision_policies)|706c0395ad1be5947820102066b8c60a|t|search_path=pg_catalog|{postgres=X/postgres}
 question_source_curriculum_binding_valid(uuid,jsonb)|16c96cc0c626e2153afeae93738f157a|t|search_path=pg_catalog|{postgres=X/postgres}
 question_source_exception_allowances(uuid,jsonb,jsonb)|f21206f03e53665bf048354b47de54c6|t|search_path=pg_catalog|{postgres=X/postgres}
@@ -278,6 +283,7 @@ question_turkish_restoration_string(text,text)|ae5ad90a1a466e7d356212c7334a8c3f|
 question_turkish_restoration_words(jsonb,jsonb)|c6e0f8814fc6d32ddf88eae46ac974ce|t|search_path=pg_catalog|{postgres=X/postgres}
 read_canonical_curriculum_catalog(text,text,text)|fa370867ed8838d4780bf5e1da1653d3|f|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 read_canonical_mastery_context(uuid,text,text,text)|a748ab56000e6b1f27214e3d27cfb06e|f|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
+read_tyt_social_learning_snapshot(uuid,uuid[])|bf087c294f747bbbbc0c5d57ab3b1cc9|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 read_tyt_social_mastery_outcome_state(uuid)|a06e2c61b56edef3f94ff18a941948b5|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 rebuild_review_card(uuid,uuid)|7a5ea8ab92e289102a55bec513616a29|t|search_path=pg_catalog|{postgres=X/postgres}
 record_adaptive_diagnostic_answer_v2(uuid,uuid,uuid,smallint,integer,uuid,uuid)|a652154419a6f4d4c3e245e009941c41|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
@@ -382,7 +388,7 @@ tg_question_outcome_split_scope_row_guard()|b63810863acc844bd77fcff8d5d638b8|t|s
 tg_question_quality_claim_append_only()|0fe97e863a79b960033e8a6832962806|f|search_path=pg_catalog|{postgres=X/postgres}
 tg_question_quality_mission_immutable()|a50bf1e3f84327bf63e193a4f92967c1|f|search_path=pg_catalog|{postgres=X/postgres}
 tg_question_revision_outcome_scope_guard()|175093e1819037dbf6a76321fb2273f5|t|search_path=pg_catalog|{postgres=X/postgres}
-tg_question_revision_policy_guard()|68d7713549a316c08662059698248dee|t|search_path=pg_catalog|{postgres=X/postgres}
+tg_question_revision_policy_guard()|ac7709e735ef16374e66f937dac3e63f|t|search_path=pg_catalog|{postgres=X/postgres}
 tg_questions_content_basic_guard()|28f13b3499e2cb74c6bdd5ae48a43e8a|f|search_path=pg_catalog|{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}
 tg_require_adaptive_diagnostic_release()|21410d2e5019da05783696ab125130bf|t|search_path=pg_catalog|{postgres=X/postgres}
 tg_require_question_validation_decision()|4f70fec5581e929ff63ed064f3fdb85a|t|search_path=pg_catalog|{postgres=X/postgres}
@@ -404,6 +410,7 @@ trg_verified_attempt_reward_integrity()|e8fcb38b39f5bf77a0ed6937995ed194|t|searc
 tyt_social_candidate_policy_integrity()|0dc858bb350648bd1656bec1119738ef|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 tyt_social_combined_release_integrity()|d3df0a86fb0412e898896f253ab54877|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 tyt_social_exam_role_compatible(text,text)|8117b774e01847955c64da3430f0bed8|f|search_path=pg_catalog|{postgres=X/postgres}
+tyt_social_learning_context_at(uuid,timestamp with time zone)|db26fbf4b16b47aa5a2b7dae6699f999|t|search_path=pg_catalog|{postgres=X/postgres}
 tyt_social_mastery_reader_integrity()|0a6ec4df8fc8d83102f76470ad9aaac2|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 tyt_social_mastery_reader_manifest_sha256()|722c1fc3b77d52ab8f3c88a8fe4a155f|t|search_path=pg_catalog|{postgres=X/postgres}
 tyt_social_official_section_composer_integrity()|f4b5a38005b72870f97f2119c81e5686|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
