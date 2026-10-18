@@ -310,6 +310,15 @@ describe('BilgeChanCompanion R2.2', () => {
     expect(screen.getByText(/Olası yanılgı/)).toBeInTheDocument()
   })
 
+  test('karıştırılmış şıkta ekran indeksini veritabanı indeksine çevirip gönderir (Codex F1)', async () => {
+    render(<BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} optionOrder={[2, 0, 3, 1]} />)
+    act(() => vi.advanceTimersByTime(6000))
+    fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
+    fireEvent.click(screen.getByRole('button', { name: 'İlk deneme A: a' }))
+    await flushPromises()
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({ stage: 'hint1', selectedOption: 2 })
+  })
+
   test('yalnız sunucudan açılmış Koç aşamasını Bilge Tahta dialogunda gösterir', async () => {
     const onHelpToggle = vi.fn()
     render(

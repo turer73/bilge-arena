@@ -783,6 +783,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
               quizState={quizStore.state}
               lastIsCorrect={lastAnswer?.isCorrect ?? null}
               question={question}
+              optionOrder={quiz.optionOrderFor(question.id, question.content.options.length)}
               correctOption={lastAnswer?.correctOption ?? null}
               onHelpToggle={quiz.setHelpPaused}
               compact
@@ -820,6 +821,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
           <>
             <ExplanationPanel
               question={question}
+              optionOrder={quiz.optionOrderFor(question.id, question.content.options.length)}
               selectedOption={lastAnswer.selectedOption}
               isCorrect={lastAnswer.isCorrect}
               correctOption={lastAnswer.correctOption}

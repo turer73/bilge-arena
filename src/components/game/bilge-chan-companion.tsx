@@ -37,6 +37,12 @@ interface BilgeChanCompanionProps {
   quizState: string
   lastIsCorrect: boolean | null
   question: PublicQuestion | null
+  /**
+   * Ekrandaki şık sırası (`order[ekran] = veritabanı`). Koç sunucusu ve ilk
+   * seçim kilidi veritabanı indeksiyle çalışır; karıştırılmış ekran indeksi
+   * çevrilmeden gönderilirse doğru cevap yanlış diye kilitlenebiliyordu.
+   */
+  optionOrder?: number[]
   correctOption?: number | null
   height?: number
   compact?: boolean
@@ -83,6 +89,7 @@ export function BilgeChanCompanion({
   quizState,
   lastIsCorrect,
   question,
+  optionOrder,
   correctOption = null,
   height = 240,
   compact = false,
@@ -402,7 +409,7 @@ export function BilgeChanCompanion({
                   <button
                     key={index}
                     type="button"
-                    onClick={() => void requestCoach('hint1', index)}
+                    onClick={() => void requestCoach('hint1', optionOrder?.[index] ?? index)}
                     aria-label={`İlk deneme ${getOptionLetter(index)}: ${option}`}
                     className="min-h-11 rounded-lg border border-[var(--focus-border)] bg-[var(--surface)] px-2 py-2 text-left text-[11px] font-semibold hover:bg-[var(--cardHover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
                   >

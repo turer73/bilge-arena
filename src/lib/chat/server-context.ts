@@ -80,12 +80,29 @@ async function questionContext(
   if (!content) return null
 
   const scope = [data.category, data.subcategory ?? data.topic].filter(Boolean).join(' / ')
+  const displayed = displayedOptions(content.options, context.optionOrder)
   return formatQuestionContext({
     heading: `[${gameName(data.game)}${scope ? ` - ${scope}` : ''}]${data.exam_ref ? ` Sınav: ${data.exam_ref}` : ''}`,
-    content,
-    correctOption: context.shownCorrectOption ?? null,
+    content: { ...content, options: displayed.options },
+    // Ekran indeksi yalnız ekran sırası doğrulandıysa anlamlıdır; aksi hâlde
+    // veritabanı sırasına uygulanıp yanlış şıkkı doğru diye işaretlerdi.
+    correctOption: displayed.trusted ? context.shownCorrectOption ?? null : null,
     correctOptionLabel: 'Öğrencinin ekranında doğru cevap olarak gösterilen şık',
   })
+}
+
+/**
+ * Şıkları öğrencinin gördüğü sıraya dizer. Sıra, şık sayısı kadar uzunlukta ve
+ * her veritabanı indeksini tam bir kez içeren bir permütasyon olmalı. Sıra yoksa
+ * (eski istemci) ya da geçersizse veritabanı sırası kullanılır ve ekran indeksi
+ * güvenilmez sayılır.
+ */
+function displayedOptions(options: string[], order: number[] | undefined): { options: string[]; trusted: boolean } {
+  if (!order) return { options, trusted: false }
+  const isPermutation = order.length === options.length
+    && new Set(order).size === order.length
+    && order.every((index) => index >= 0 && index < options.length)
+  return isPermutation ? { options: order.map((index) => options[index]!), trusted: true } : { options, trusted: false }
 }
 
 /**

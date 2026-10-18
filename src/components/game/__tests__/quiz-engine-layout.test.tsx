@@ -80,6 +80,7 @@ const quizGame = vi.hoisted(() => ({
   setShowReportModal: vi.fn(),
   setHelpPaused: vi.fn(),
   getOptionState: () => 'idle',
+  optionOrderFor: (_questionId: string, optionCount: number) => Array.from({ length: optionCount }, (_, i) => i),
   handleAnswer: vi.fn(),
   handleNext: vi.fn(),
   handleStart: vi.fn(),

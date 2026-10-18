@@ -100,6 +100,12 @@ export interface UseQuizGameReturn {
   handleRestart: () => void
   handleDenemeTimeUp: () => void
   getOptionState: (index: number) => OptionState
+  /**
+   * Ekrandaki şık sırası: `order[ekranIndeksi] = veritabanıIndeksi`. Şıklar
+   * karıştırılmadıysa birim sıra. Koç ve açıklama bağlamı ekran indeksini
+   * sunucuya göndermeden önce bununla çevirir (Codex F1/F2, disc #2612/#2613).
+   */
+  optionOrderFor: (questionId: string, optionCount: number) => number[]
 }
 
 /**
@@ -673,6 +679,11 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     return 'dim'
   }, [quizStore])
 
+  const optionOrderFor = useCallback((questionId: string, optionCount: number): number[] => {
+    const map = shuffleMapRef.current.get(questionId)
+    return map && map.length === optionCount ? [...map] : Array.from({ length: optionCount }, (_, i) => i)
+  }, [])
+
   return {
     screen,
     loadError,
@@ -701,5 +712,6 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     handleRestart,
     handleDenemeTimeUp,
     getOptionState,
+    optionOrderFor,
   }
 }

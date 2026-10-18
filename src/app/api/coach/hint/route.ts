@@ -23,6 +23,7 @@ import {
 import { coachPublicResponseSchema } from '@/lib/coach/public-contract'
 import { toDomainQuestion, toPublicQuestion, type QuestionRow as PublicQuestionRow } from '@/lib/utils/question-public'
 import { recordFirstQuestionAttempt } from '@/lib/questions/attempt-store'
+import { readAssistancePolicy } from '@/lib/assistance-policy/server'
 
 const userLimiter = createRateLimiter('coach-hint-user', 20, 60_000)
 const ipLimiter = createRateLimiter('coach-hint-ip', 40, 60_000)
@@ -318,6 +319,20 @@ export async function POST(request: Request) {
     )
   }
 
+  // Sınav modu: arayüz Koç'u gizliyor ama doğrudan istek ve önceden alınmış
+  // token o kapıyı atlıyordu (Codex F3, #2614). Koç RPC'leri yalnız
+  // service-role'e açık, yani asıl kapı burası; her aşamada, ilk seçim kilidi
+  // ve RPC yazımından önce uygulanır. Okunamazsa fail-closed (503).
+  const assistance = await readAssistancePolicy(user.id)
+  if (!assistance.policy.coach) {
+    return noStoreJson(
+      assistance.status === 503
+        ? { error: 'Yardımcı ayarları şu anda okunamıyor. Lütfen birazdan tekrar dene.' }
+        : { error: 'Sınav modu açıkken Koç kullanılamaz.' },
+      { status: assistance.status === 503 ? 503 : 403 },
+    )
+  }
+
   const parsed = requestSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return noStoreJson({ error: 'Geçersiz istek' }, { status: 400 })
 
@@ -479,6 +494,23 @@ export async function POST(request: Request) {
     const guidance = await resolveGuidance(stage, question, content, initialSelectedOption)
     candidateText = guidance.text
     candidateSource = guidance.source
+  }
+
+  if (stage === 'solution') {
+    // Çözüm cevabı açar. Notlama yolu gibi 7 günlük tekrar XP penceresine
+    // kaydedilir; aksi hâlde Koç'ta görülen cevap başka bir denemede XP
+    // kazandırıyordu (Codex F4, #2615). Kayıt yazılamazsa çözüm açılmaz.
+    const { error: revealError } = await supabase.rpc('record_question_reveal' as never, {
+      p_user_id: user.id,
+      p_attempt_id: attemptId,
+      p_question_id: questionId,
+    } as never)
+    if (revealError?.code === 'PGRST202') {
+      console.error('[CoachHint] record_question_reveal bulunamadı')
+    } else if (revealError) {
+      console.error('[CoachHint] açılış kaydı yazılamadı:', revealError.code)
+      return noStoreJson({ error: 'Koç çözümü şu anda açılamıyor. Birazdan tekrar dene.' }, { status: 503 })
+    }
   }
 
   const contentForHash = stage === 'solution' ? content.solution.trim().slice(0, 2_000) : candidateText!

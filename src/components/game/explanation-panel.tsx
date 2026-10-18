@@ -11,6 +11,8 @@ import { AcademyDialog } from '@/components/academy/academy-dialog'
 
 interface ExplanationPanelProps {
   question: PublicQuestion
+  /** Ekrandaki şık sırası (`order[ekran] = veritabanı`); sohbet bağlamına gider. */
+  optionOrder?: number[]
   selectedOption: number
   isCorrect: boolean
   correctOption: number
@@ -22,6 +24,7 @@ interface ExplanationPanelProps {
 
 export function ExplanationPanel({
   question,
+  optionOrder,
   selectedOption,
   isCorrect,
   correctOption,
@@ -44,11 +47,14 @@ export function ExplanationPanel({
 
   const topic = question.subcategory || question.category
   // Soru metni, öncül ve şıklar sunucuda soru kimliğinden okunur (maskelemeye girmez);
-  // istemci yalnız ekranda gösterilen doğru şıkkın indeksini bildirir.
+  // istemci ekranda gösterilen doğru şıkkın indeksini ve şıkların ekran sırasını
+  // bildirir. Sunucu şıkları bu sırayla yazar; yoksa ekran indeksi veritabanı
+  // sırasına uygulanıp yanlış şık doğru diye işaretleniyordu (Codex F2, #2613).
   const chatContext = {
     kind: 'question' as const,
     questionId: question.id,
     shownCorrectOption: correctText ? correctAnswer : null,
+    ...(optionOrder ? { optionOrder } : {}),
   }
 
   const ResultIcon = isCorrect ? CircleCheckBig : correctText ? CircleX : Clock3
