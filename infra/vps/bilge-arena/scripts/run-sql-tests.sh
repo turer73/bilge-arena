@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Bilge Arena oda DB: bos bir PostgreSQL'e 0..26 migration + tum *_test.sql
+# Bilge Arena oda DB: bos bir PostgreSQL'e 0..27 migration + tum *_test.sql
 # =============================================================================
 # Hedef: sql/ altindaki migration zincirini sifirdan kurmak ve her testi
 #        ON_ERROR_STOP ile kosmak. CI (.github/workflows/rooms-sql-tests.yml)
@@ -15,7 +15,7 @@
 # Sunucu wal_level=logical olmali (25_realtime_publication.sql kontrol eder).
 #
 # Kimin uyguladigi canli calistirma notlarini izler:
-#   superuser       : 0_init_db, 1_realtime_schemas, 0a, 0b, 25, 26
+#   superuser       : 0_init_db, 1_realtime_schemas, 0a, 0b, 25, 26, 27
 #   bilge_arena_app : 2..24 (nesne sahibi bilge_arena_app; SECURITY DEFINER
 #                     fonksiyonlar superuser olarak calismaz)
 #   testler         : superuser (FORCE RLS bypass + SET ROLE anon/authenticated)
@@ -34,7 +34,7 @@ AUTH_PASSWORD="${AUTH_PASSWORD:-ci_only_auth_password}"
 DB=bilge_arena_dev
 
 SUPERUSER_MIGRATIONS=(0_init_db 1_realtime_schemas 0a_auth_schema_usage 0b_authenticated_role_membership)
-SUPERUSER_LATE=(25_realtime_publication 26_rooms_acl_hardening)
+SUPERUSER_LATE=(25_realtime_publication 26_rooms_acl_hardening 27_realtime_room_channel_auth)
 
 psql_super() { psql -X -q -v ON_ERROR_STOP=1 "$@"; }
 psql_app() { PGUSER=bilge_arena_app PGPASSWORD="$APP_PASSWORD" psql -X -q -v ON_ERROR_STOP=1 "$@"; }
@@ -51,6 +51,40 @@ is_superuser_late() {
   local m
   for m in "${SUPERUSER_LATE[@]}"; do [[ "$1" == "$m" ]] && return 0; done
   return 1
+}
+
+# 27 realtime.messages uzerine politika yazar. Tablo ve realtime.topic() canlida
+# Realtime'in tenant migration'larindan gelir; bos sunucuda yoklar. Canli
+# semanin (2026-10-18 olcumu: sutunlar, RLS acik, anon/authenticated/service_role
+# SELECT/INSERT/UPDATE) bolumlenmemis kopyasi kurulur. Gercek Realtime ile
+# prova: infra/test/realtime/run.sh.
+ensure_realtime_messages_stub() {
+  psql_super -d "$DB" <<'SQL'
+DO $$
+BEGIN
+  IF to_regclass('realtime.messages') IS NULL THEN
+    CREATE TABLE realtime.messages (
+      topic          text NOT NULL,
+      extension      text NOT NULL,
+      payload        jsonb,
+      event          text,
+      private        boolean DEFAULT false,
+      updated_at     timestamp without time zone NOT NULL DEFAULT now(),
+      inserted_at    timestamp without time zone NOT NULL DEFAULT now(),
+      id             uuid NOT NULL DEFAULT gen_random_uuid(),
+      binary_payload bytea,
+      skip_broadcast boolean NOT NULL DEFAULT false
+    );
+    ALTER TABLE realtime.messages ENABLE ROW LEVEL SECURITY;
+    GRANT SELECT, INSERT, UPDATE ON realtime.messages TO anon, authenticated, service_role;
+    RAISE NOTICE 'CI: realtime.messages kopyasi kuruldu (Realtime yok)';
+  END IF;
+  IF to_regprocedure('realtime.topic()') IS NULL THEN
+    CREATE FUNCTION realtime.topic() RETURNS text LANGUAGE sql STABLE
+      AS $f$ select nullif(current_setting('realtime.topic', true), '')::text; $f$;
+  END IF;
+END $$;
+SQL
 }
 
 echo "== Sunucu: $(psql_super -d postgres -tAc 'SHOW server_version') wal_level=$(psql_super -d postgres -tAc 'SHOW wal_level')"
@@ -90,6 +124,7 @@ done
 
 while read -r m; do
   if is_superuser_late "$m"; then
+    if [[ "$m" == 27_realtime_room_channel_auth ]]; then ensure_realtime_messages_stub; fi
     echo "== $m.sql (superuser)"
     psql_super -d "$DB" -f "$SQL_DIR/$m.sql" >/dev/null
   else

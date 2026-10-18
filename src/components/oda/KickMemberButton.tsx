@@ -9,7 +9,7 @@
  * (native dialog overhead yok, JS olmadan da form submit calisir —
  * progressive enhancement).
  *
- * Realtime MEMBER_UPDATE event ile UI is_kicked=true opacity dusuk gosterir.
+ * Realtime MEMBER_UPDATE event ile UI is_active=false satiri opacity dusuk gosterir.
  */
 
 import { useActionState } from 'react'

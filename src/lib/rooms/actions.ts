@@ -329,7 +329,7 @@ export type KickMemberActionState = {
 /**
  * Host icin uyeyi odadan cikar. kick_member RPC P0001 sadece host (auth.uid()
  * = host_id) check, P0003 state IN ('completed','archived')'ta yasak. Realtime
- * MEMBER_UPDATE event ile UI is_kicked=true gosterir (member_row opacity).
+ * MEMBER_UPDATE event ile UI is_active=false gosterir (member_row opacity).
  */
 export async function kickMemberAction(
   _prev: KickMemberActionState,

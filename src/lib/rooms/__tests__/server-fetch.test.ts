@@ -295,3 +295,31 @@ describe('fetchPublicRooms (Sprint 2A Task 3)', () => {
     errorSpy.mockRestore()
   })
 })
+
+describe('fetchRoomState scoreboard (inceleme §6: is_kicked alani yok)', () => {
+  test('oyun bitmeden atilan uye tabloda yok, bittikten sonra ayrilan var', async () => {
+    const room = {
+      id: 'r1',
+      state: 'completed',
+      mode: 'sync',
+      current_round_index: 0,
+      question_count: 10,
+      ended_at: '2026-10-18T10:00:00Z',
+    }
+    const members = [
+      { user_id: 'a', score: 300, is_active: true, left_at: null },
+      { user_id: 'kicked', score: 900, is_active: false, left_at: '2026-10-18T09:50:00Z' },
+      { user_id: 'left-after', score: 200, is_active: false, left_at: '2026-10-18T10:02:00Z' },
+    ]
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes('/rooms?')) return ok([room])
+      if (url.includes('/room_members?')) return ok(members)
+      if (url.includes('/room_answers?room_id=')) return ok([])
+      return Promise.reject(new Error(`unexpected ${url}`))
+    })
+
+    const { fetchRoomState } = await import('../server-fetch')
+    const state = await fetchRoomState('jwt', 'r1')
+    expect(state?.scoreboard.map((s) => s.user_id)).toEqual(['a', 'left-after'])
+  })
+})

@@ -13,6 +13,11 @@
  *   - system error
  *
  * Cleanup: caller channel.unsubscribe() yapmalidir (useRoomChannel hook).
+ *
+ * Kanal private: presence ve broadcast icin Realtime, realtime.messages
+ * RLS politikalarini (27_realtime_room_channel_auth.sql) kosar; yalniz odanin
+ * aktif uyeleri katilip yayin yapabilir. Ayni adli public kanal ayri bir
+ * topic'tir, oradaki presence/typing bu kanala karismaz.
  */
 
 import { RealtimeClient, type RealtimeChannel } from '@supabase/supabase-js'
@@ -27,7 +32,7 @@ export function setupRoomChannel(
   onRoundChange?: () => void,
 ): RealtimeChannel {
   const channel = realtime.channel(`room-${roomId}`, {
-    config: { presence: { key: userId } },
+    config: { private: true, presence: { key: userId } },
   })
 
   // postgres_changes: rooms table (UPDATE only)

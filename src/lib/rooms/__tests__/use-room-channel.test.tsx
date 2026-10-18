@@ -121,3 +121,32 @@ describe('useRoomChannel', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('useRoomChannel broadcastTyping', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  test('kanal katilmadan yayin gondermez (REST yedegine dusmez), katilinca gonderir', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 500 }))
+    const send = vi.fn().mockResolvedValue('ok')
+    const channelMock = { unsubscribe: vi.fn(), send, state: 'joining' }
+    mockSetupChannel.mockReturnValue(channelMock)
+    mockCreateOdaClient.mockResolvedValue({ disconnect: vi.fn() })
+
+    const { result, unmount } = renderHook(() => useRoomChannel('r1', 'u1', dummyInitial))
+    await act(async () => {})
+
+    act(() => result.current.broadcastTyping())
+    expect(send).not.toHaveBeenCalled()
+
+    channelMock.state = 'joined'
+    act(() => result.current.broadcastTyping())
+    expect(send).toHaveBeenCalledWith({
+      type: 'broadcast',
+      event: 'typing_start',
+      payload: { user_id: 'u1' },
+    })
+    unmount()
+  })
+})

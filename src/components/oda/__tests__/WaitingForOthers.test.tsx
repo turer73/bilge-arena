@@ -28,7 +28,7 @@ const member = (overrides: Partial<Member>): Member => ({
   display_name: 'Player',
   joined_at: '2026-05-04T00:00:00Z',
   is_host: false,
-  is_kicked: false,
+  is_active: true,
   ...overrides,
 })
 
@@ -141,7 +141,7 @@ describe('WaitingForOthers', () => {
     expect(screen.getByText(/Hâlâ oynayan oyuncular \(1\)/)).toBeInTheDocument()
   })
 
-  test('5) is_kicked uyeler dahil edilmez', () => {
+  test('5) atilan (is_active=false) uyeler dahil edilmez', () => {
     const me = member({
       user_id: 'me',
       score: 500,
@@ -151,7 +151,7 @@ describe('WaitingForOthers', () => {
     const kicked = member({
       user_id: 'kp',
       display_name: 'Kicked',
-      is_kicked: true,
+      is_active: false,
       finished_at: null,
       current_round_index: 3,
     })

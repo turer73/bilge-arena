@@ -29,7 +29,9 @@ export type Member = {
   emoji?: string
   joined_at: string
   is_host: boolean
-  is_kicked: boolean
+  /** room_members.is_active: FALSE = atildi ya da ayrildi (member-status.ts) */
+  is_active?: boolean
+  left_at?: string | null
   score?: number
   /** Sprint 2B Task 4: bot rakipler (solo mode) */
   is_bot?: boolean

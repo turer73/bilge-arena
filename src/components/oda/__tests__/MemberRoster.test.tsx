@@ -17,7 +17,7 @@ const member = (overrides: Partial<Member> = {}): Member => ({
   display_name: 'A',
   joined_at: '2026-04-30T00:00:00Z',
   is_host: false,
-  is_kicked: false,
+  is_active: true,
   ...overrides,
 })
 

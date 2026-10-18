@@ -15,6 +15,7 @@
  */
 
 import type { Member, Room } from '@/lib/rooms/room-state-reducer'
+import { isActiveMember } from '@/lib/rooms/member-status'
 
 interface WaitingForOthersProps {
   room: Room
@@ -28,8 +29,8 @@ export function WaitingForOthers({
   viewerUserId,
 }: WaitingForOthersProps) {
   const me = members.find((m) => m.user_id === viewerUserId)
-  // Aktif (kicked olmayan, bot olmayan) uyeler
-  const activeMembers = members.filter((m) => !m.is_kicked)
+  // Aktif (atilmamis, ayrilmamis) uyeler
+  const activeMembers = members.filter(isActiveMember)
   const finishedMembers = activeMembers.filter(
     (m) => m.finished_at != null,
   )
