@@ -44,6 +44,7 @@ describe('repo migration manifesti', () => {
       '20261013183312_adaptive_diagnostic_legacy_coverage_repair.sql',
       '20261013184551_tyt_social_learning_epoch_forward.sql',
       '20261014183929_revision_bound_turkce_quality_policy.sql',
+      '224_push_subscriptions_server_only.sql',
     ])
     expect(repo.migrations.slice(-pending.length).map((e) => e.file)).toEqual(pending)
   })

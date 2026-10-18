@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { pushSubscribeSchema, pushUnsubscribeSchema } from '@/lib/validations/schemas'
 
@@ -8,6 +9,10 @@ const pushLimiter = createRateLimiter('push-subscribe', 5, 60_000)
 /**
  * POST /api/push — Push bildirim aboneligi kaydet
  * DELETE /api/push — Aboneligi kaldir
+ *
+ * push_subscriptions'a tarayici rolleri erisemez (migration 224). Kullanici
+ * oturumdan dogrulanir, yazma service-role ile yapilir; RLS atlandigi icin her
+ * sorgu user_id'yi kendisi sabitler.
  */
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -24,7 +29,7 @@ export async function POST(req: Request) {
   }
   const { endpoint, p256dh, auth } = parsed.data
 
-  const { error } = await supabase
+  const { error } = await createServiceRoleClient()
     .from('push_subscriptions')
     .upsert(
       { user_id: user.id, endpoint, p256dh, auth },
@@ -51,11 +56,16 @@ export async function DELETE(req: Request) {
   }
   const { endpoint } = parsed.data
 
-  await supabase
+  const { error } = await createServiceRoleClient()
     .from('push_subscriptions')
     .delete()
     .eq('user_id', user.id)
     .eq('endpoint', endpoint)
+
+  if (error) {
+    console.error('[Push API] Silme hatası:', error)
+    return NextResponse.json({ error: 'Silme başarısız' }, { status: 500 })
+  }
 
   return NextResponse.json({ status: 'unsubscribed' })
 }
