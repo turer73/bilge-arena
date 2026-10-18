@@ -47,6 +47,98 @@ const proposal = (over = {}) => ({
   changeKind: 'edit', patch: { question: 'Aşağıdakilerden hangisi doğru yazılmıştır?' }, rationale: 'Yalniz yazim.', ...over,
 })
 
+describe('sinav etiketi olmayan WordQuest eski esleme kaldirma beyani', () => {
+  const example = () => {
+    const c = { ...current(), metadata: { ...current().metadata, game: 'wordquest', category: 'vocabulary', examRef: undefined },
+      content: { question: 'Choose the word meaning examine in detail.', options: ['memorize', 'analyze'], answer: 1, solution: '' } }
+    const p = proposal({ patch: { solution: 'Analyze means examine in detail.' },
+      expectedBase: { revisionId: c.baseRevisionId, contentFingerprint: contentFingerprint(c.content) },
+      legacyOutcomeRemoval: { expectedOutcomes: c.outcomes, reason: 'Live scope check rejected inherited YDT outcome on a question with no exam label; draft remains unmapped.' } })
+    return { c, p }
+  }
+  const run = (c, p, extra = {}) => buildBatch({ proposals: [p], currentById: new Map([[Q,c]]), mappingPendingDrafts: true, ...extra })[0]
+  it('yalniz taslaktaki exact eski eslemeyi kaldirir ve gorunur fark kaydeder', async () => {
+    const { c, p } = example(); const before = structuredClone(c)
+    expect(validateProposal(p)).toEqual([])
+    const item = run(c,p)
+    expect(item).toMatchObject({ status: 'ready', lane: 'draft', mappingRequired: true, payload: { outcomes: [] } })
+    expect(item.diff).toContainEqual({ field: 'outcomes (draft only)', before: c.outcomes, after: [] })
+    expect(c).toEqual(before)
+    expect(item.payload.metadata.examRef).toBeUndefined()
+    const calls=[]
+    await applyRevisionItems({ db: { rpc: async (name,args) => { calls.push({name,args}); return { data: {revisionId:Q}, error:null } } }, userId:Q, items:[item], draftOnly:true })
+    expect(calls.map(c=>c.name)).toEqual(['create_question_content_revision'])
+    expect(calls[0].args.p_payload.outcomes).toEqual([])
+  })
+  it('normal mod, yeni esleme, farkli kapsam/taban/icerik veya esleme degeri reddedilir', () => {
+    const { c,p }=example()
+    expect(run(c,p,{mappingPendingDrafts:false,draftOnly:true}).status).toBe('blocked')
+    for(const [cur,prop] of [
+      [c,{...p,expectedBase:undefined}], [c,{...p,outcomes:[]}],
+      [{...c,baseRevisionId:Q},p], [{...c,content:{...c.content,answer:0}},p],
+      [{...c,metadata:{...c.metadata,examRef:'YDT'}},p],
+      [{...c,metadata:{...c.metadata,game:'turkce'}},p],
+      [{...c,outcomes:[]},p], [{...c,outcomes:[{...c.outcomes[0],weight:0.5}]},p],
+      [{...c,outcomes:[{...c.outcomes[0],outcomeId:Q}]},p],
+      [c,{...p,legacyOutcomeRemoval:{...p.legacyOutcomeRemoval,expectedOutcomes:null}}],
+      [c,{...p,legacyOutcomeRemoval:{...p.legacyOutcomeRemoval,unreviewed:true}}],
+    ]) expect(run(cur,prop).status).toBe('blocked')
+    expect(run(c,{...p,legacyOutcomeRemoval:undefined,outcomes:[]}).status).toBe('blocked')
+  })
+})
+
+describe('pinli legacy alan normalizasyonu', () => {
+  const example = () => {
+    const c = { ...current(), metadata: { ...current().metadata, game: 'wordquest', category: 'vocabulary' },
+      content: { question: 'Choose the word meaning examine in detail.', options: ['memorize', 'analyze'], answer: 1, correct: 1, structure: null, solution: '' } }
+    const p = proposal({ patch: { solution: 'Analyze means examine in detail.' },
+      expectedBase: { revisionId: c.baseRevisionId, contentFingerprint: contentFingerprint(c.content) },
+      legacyNormalization: { remove: { correct: 1, structure: null }, reason: 'Canonical answer 1 was checked against the question and options; structure is empty.' } })
+    return { c, p }
+  }
+  it('exact inceleme kaydi varsa iki legacy alani kaldirir ve kanonik cevabi korur', () => {
+    const { c, p } = example()
+    expect(validateProposal(p)).toEqual([])
+    const built = buildRevisionPayload({ current: c, proposal: p })
+    expect(built.errors).toEqual([])
+    expect(built.removedFields).toEqual(['correct', 'structure'])
+    expect(built.payload.content).toEqual({ ...c.content, ...p.patch, correct: undefined, structure: undefined })
+    const item = buildBatch({ proposals: [p], currentById: new Map([[Q,c]]), draftOnly: true })[0]
+    expect(item.status).toBe('ready')
+    expect(item.diff.filter(d => ['correct','structure'].includes(d.field))).toHaveLength(2)
+    expect(item.notes.join(' ')).toContain('kanonik answer=1')
+  })
+  it('beyan yoksa, pin/eski deger degismisse veya yeni foreign alan varsa engeller', () => {
+    const { c, p } = example()
+    for (const [cur, prop] of [
+      [c, { ...p, legacyNormalization: undefined }],
+      [c, { ...p, expectedBase: undefined }],
+      [{ ...c, baseRevisionId: Q }, p],
+      [{ ...c, content: { ...c.content, correct: 0 } }, p],
+      [{ ...c, content: { ...c.content, structure: { rule: 'must keep' } } }, p],
+      [{ ...c, content: { ...c.content, asset: 'diagram' } }, p],
+      [{ ...c, metadata: { ...c.metadata, game: 'matematik' } }, p],
+      [{ ...c, content: { ...c.content, answer: undefined } }, p],
+    ]) expect(buildRevisionPayload({ current: cur, proposal: prop }).errors.length).toBeGreaterThan(0)
+  })
+  it('key genisletme, dolu structure, yanlis deger turu ve gerekcesiz beyan gecmez', () => {
+    const { p } = example()
+    for (const n of [null, {}, { ...p.legacyNormalization, extra: true },
+      { ...p.legacyNormalization, reason: '' }, { ...p.legacyNormalization, remove: { correct: '1' } },
+      { ...p.legacyNormalization, remove: { structure: {} } }, { ...p.legacyNormalization, remove: { coach: null } }]) {
+      expect(validateProposal({ ...p, legacyNormalization: n }).some(e => e.includes('legacyNormalization'))).toBe(true)
+    }
+  })
+  it('yeniden pinlense bile correct ve answer celiskisi otomatik normalizasyona alinmaz', () => {
+    const { c, p } = example()
+    c.content.correct = 0
+    p.expectedBase.contentFingerprint = contentFingerprint(c.content)
+    p.legacyNormalization.remove.correct = 0
+    expect(validateProposal(p)).toEqual([])
+    expect(buildRevisionPayload({ current: c, proposal: p }).errors.join(' ')).toContain('kanonik answer')
+  })
+})
+
 describe('tam-paket uygulama on kontrolu', () => {
   const ready = (n = 1, over = {}) => ({ ref: `R-${n}`, questionId: `${String(n).padStart(8, '0')}-1111-4111-8111-111111111111`,
     baseRevisionId: current().baseRevisionId, requestId: `request-${n}`, status: 'ready', lane: 'draft',
@@ -380,6 +472,10 @@ describe('buildBatch / renderReviewSheet', () => {
       const previewPreflight = JSON.parse(readFileSync(join(dir, 'out', 'report.json'), 'utf8'))
       expect(previewPreflight.applyPreflight).toMatchObject({ requiredAllReady: true, draftOnly: true, passed: false, blockingRefs: ['T-1'] })
       expect(previewPreflight.items[0].status).toBe('preview')
+      expect(run('--offline', '--rows', rowsPath, '--draft-only').status).toBe(1)
+      const draftReport = JSON.parse(readFileSync(join(dir, 'out', 'report.json'), 'utf8'))
+      expect(draftReport.draftOnly).toBe(true)
+      expect(draftReport.applyPreflight).toMatchObject({ requiredAllReady: true, draftOnly: true, passed: false })
       expect(run('--offline', '--rows', rowsPath, '--apply').status).toBe(2)
       expect(run('--offline').status).toBe(2)
     } finally { rmSync(dir, { recursive: true, force: true }) }
@@ -472,6 +568,20 @@ describe('Turkce harf duzeltmesi hatti (migration 215)', () => {
   })
   const restore = { question: 'Aşağıdaki ifadelerden hangisi doğrudur?', options: ['Öğrenci sınıfta ölçüm yapar.', 'Gunes batar.', 'Deney yapilir.', 'Hepsi'] }
   const run = (cur, patch = restore, over = {}) => buildBatch({ proposals: [proposal({ changeKind: 'edit', patch, ...over })], currentById: new Map([[Q, cur]]) })[0]
+
+  it('draftOnly pin gerektirir ve 215 adayini yayin yerine taslak olarak kurar', async () => {
+    const c = fen({ content: { question: 'Asagidaki ifadelerden hangisi dogrudur?', options: ['Ölçüm', 'Deney', 'Madde', 'Işık'], answer: 0, solution: 'Ölçüm.' } })
+    const patch = { question: restore.question }
+    const p = proposal({ patch, expectedBase: { revisionId: c.baseRevisionId, contentFingerprint: contentFingerprint(c.content) } })
+    expect(run(c, patch).lane).toBe('turkish_restoration')
+    const items = buildBatch({ proposals: [p], currentById: new Map([[Q,c]]), draftOnly: true })
+    expect(items[0]).toMatchObject({ status: 'ready', lane: 'draft', words: null })
+    const calls=[]
+    await applyRevisionItems({ db: { rpc: async name => { calls.push(name); return { data: { revisionId: Q }, error: null } } }, userId: Q, items, draftOnly: true, requireAllReady: true })
+    expect(calls).toEqual(['create_question_content_revision'])
+    expect(buildBatch({ proposals: [proposal({ patch })], currentById: new Map([[Q,c]]), draftOnly: true })[0].status).toBe('blocked')
+    expect(buildBatch({ proposals: [p], currentById: new Map([[Q,{ ...c, source: null }]]), draftOnly: true })[0].reasons.join(' ')).toContain('INTERNAL kaynak uydurulamaz')
+  })
 
   it('yalniz listelenmis govdelerin harf duzeltmesi 215 hattina gider; kazanim eksigi bu hatti engellemez', () => {
     const it1 = run(fen())

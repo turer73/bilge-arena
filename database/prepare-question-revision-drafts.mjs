@@ -5,8 +5,9 @@
  * Antigravity pilotlari (1-4) ve deterministik tarama, yayimli sorularda kusur
  * adaylari uretir. Bu adaylar YAYIN degil, TASLAKTIR: migration 106/142
  * yonetisimine gore bir sorunun icerigi yalniz `create_question_content_revision`
- * ile taslak olur, iki BAGIMSIZ insan `review_question_content_revision` ile
- * (stage 1, stage 2) onaylar ve `publish_question_content_revision` yayimlar.
+ * ile taslak olur. Kabul, kaynak/kalite ve yayin kapilari ayri islenir;
+ * standart bagimsiz inceleme veya uygun AI hazirligi + yetkili sahip kabulu
+ * icin docs/quality/ai-prepared-owner-acceptance.md esas alinir.
  * Pasife alma da bir revizyondur: changeKind='retire' (is_active elle
  * degistirilmez; `trg_question_content_direct_mutation_guard` bunu 42501 ile
  * zaten reddeder).
@@ -20,15 +21,14 @@
  * payload'i kurar, deterministik taramadan gecirir ve:
  *   - varsayilan (kuru calisma): payload'lari, inceleme sayfasini ve raporu
  *     out-dir'e yazar; DB'ye DOKUNMAZ.
- *   - --apply: yalniz "ready" ogeler icin taslak acar.
- *     Inceleme, yayin, karantina ve is_active bu betigin yetkisinde DEGILDIR.
+ *   - --apply: "ready" ogeler icin secilen hatti uygular; 215 istisnasi
+ *     asagidadir. Yalniz taslak icin --draft-only kullanin.
  * Cevrimici her iki modda --user-id (content.prepare yetkili hazirlayan) gerekir;
  * RPC okumasi da bu kimlikle yapilir.
  *
  * YETKI SINIRI: Hicbir LLM ciktisi (pilot cozucusu, oneri metni) tek basina
- * yayin, ret veya karantina otoritesi degildir. Bu betik yalniz taslak acar;
- * iki insan onayi RPC tarafinda zorunludur (hazirlayan kendi taslagini
- * inceleyemez, stage 1 ve stage 2 ayni kisi olamaz).
+ * yayin, ret veya karantina otoritesi degildir. Taslak hazirlamak kaynak
+ * kabulunun, kalite kararinin veya yayin yetkisinin yerine gecmez.
  * Tek istisna (migration 215, owner karari): degisikligi YALNIZ listelenmis
  * govdelerin Turkce harf geri getirmesi olan `edit` ogeleri (hat
  * turkish_restoration) --apply ile `publish_question_turkish_restoration`
@@ -42,6 +42,8 @@
  *   npm run revision:drafts -- --proposals ... --user-id <uuid> --apply                 # taslaklari ac; 215 hattini yayimla
  * Secenekler: --env .env.local  --out-dir secure/revision-drafts/<batch>
  *   --offline --rows <dosya>: ortamda DB anahtari olsa da ag baglantisi kurmaz.
+ *   --draft-only: expectedBase zorunlu, 215 yayin hatti kapali. Tam paket
+ *     hazir olmadan hicbir mutation cagrilmaz (--require-all-ready dahildir).
  *   --mapping-pending-drafts: migration 164'e uygun esleme bekleyen revizyon
  *     TASLAGI acabilir. expectedBase zorunlu; 215 hizli yayin hatti kapali.
  *     Yeni soru yaratmaz, stage 2/yayin kapilarini veya kaynak kabulunu asmaz.
@@ -144,6 +146,34 @@ export function validateProposal(p, index = 0) {
       || typeof b.revisionId !== 'string' || !UUID_RE.test(b.revisionId)
       || typeof b.contentFingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(b.contentFingerprint)) {
       errors.push(`${at}.expectedBase: revisionId uuid ve contentFingerprint (canonical JSON SHA-256) zorunlu`)
+    }
+  }
+  if (p.legacyNormalization !== undefined) {
+    const n = p.legacyNormalization
+    if (!n || typeof n !== 'object' || Array.isArray(n)
+      || Object.keys(n).sort().join(',') !== 'reason,remove'
+      || typeof n.reason !== 'string' || n.reason.trim().length < 20 || n.reason.length > 1000
+      || !n.remove || typeof n.remove !== 'object' || Array.isArray(n.remove)
+      || !Object.keys(n.remove).length
+      || Object.keys(n.remove).some(k => !['correct', 'structure'].includes(k))
+      || ('correct' in n.remove && (!Number.isInteger(n.remove.correct) || n.remove.correct < 0 || n.remove.correct > 4))
+      || ('structure' in n.remove && n.remove.structure !== null)
+      || p.expectedBase === undefined || p.changeKind === 'retire') {
+      errors.push(`${at}.legacyNormalization: pinli edit/correct_answer, acik gerekce ve yalniz exact correct (0-4)/structure:null degerleri gerekir`)
+    }
+  }
+  if (p.legacyOutcomeRemoval !== undefined) {
+    const n = p.legacyOutcomeRemoval
+    if (!n || typeof n !== 'object' || Array.isArray(n)
+      || Object.keys(n).sort().join(',') !== 'expectedOutcomes,reason'
+      || typeof n.reason !== 'string' || n.reason.trim().length < 20 || n.reason.length > 1000
+      || !Array.isArray(n.expectedOutcomes) || n.expectedOutcomes.length < 1 || n.expectedOutcomes.length > 5
+      || n.expectedOutcomes.some(o => !o || Object.keys(o).sort().join(',') !== 'outcomeId,primary,weight'
+        || typeof o.outcomeId !== 'string' || !UUID_RE.test(o.outcomeId)
+        || typeof o.weight !== 'number' || o.weight <= 0 || !WEIGHT_RE.test(String(o.weight))
+        || typeof o.primary !== 'boolean')
+      || p.expectedBase === undefined || p.outcomes !== undefined) {
+      errors.push(`${at}.legacyOutcomeRemoval: pin, exact expectedOutcomes ve acik gerekce zorunlu; yeni esleme birlikte verilemez`)
     }
   }
   const f = p.finding
@@ -250,7 +280,26 @@ export function buildRevisionPayload({ current, proposal, allowUnmapped = false 
   if (!current) return { payload: null, errors: ['mevcut yayimli revizyon bulunamadi'], notes }
   if (!current.content || typeof current.content !== 'object') errors.push('mevcut icerik yok')
   const foreign = Object.keys(current.content ?? {}).filter((k) => !CONTENT_KEYS.includes(k))
-  if (foreign.length) errors.push(`mevcut icerikte sozlesme disi alan: ${foreign.join(', ')} (payload'da tasinamaz, yayinda kaybolurdu; once insan incelesin)`)
+  const normalization = proposal.legacyNormalization
+  const removedFields = []
+  if (normalization !== undefined) {
+    const validDeclaration = !validateProposal(proposal).some(e => e.includes('.legacyNormalization:') || e.includes('.expectedBase:'))
+    const pinMatches = current.content && proposal.expectedBase && uid(proposal.expectedBase.revisionId) === uid(current.baseRevisionId)
+      && proposal.expectedBase.contentFingerprint === contentFingerprint(current.content)
+    const canonicalAnswer = Number.isInteger(current.content?.answer) && current.content.answer >= 0
+      && Array.isArray(current.content.options) && current.content.answer < current.content.options.length
+      && (!Object.hasOwn(normalization?.remove ?? {}, 'correct') || current.content.correct === current.content.answer)
+    const valuesMatch = sameContent(Object.keys(normalization?.remove ?? {}).sort(), [...foreign].sort())
+      && foreign.every(k => sameContent(current.content[k], normalization?.remove?.[k]))
+    if (!validDeclaration || !pinMatches || !canonicalAnswer || !valuesMatch || current.metadata?.game !== 'wordquest') {
+      errors.push('legacyNormalization: incelenen WordQuest tabani, kanonik answer veya kaldirilacak exact alan/degerler uyusmuyor')
+    } else {
+      removedFields.push(...foreign)
+      notes.push(`acik legacy normalizasyonu: ${JSON.stringify(normalization.remove)} kaldirilir; incelenen kanonik answer=${current.content.answer}. ${normalization.reason}`)
+    }
+  }
+  const unreviewed = foreign.filter(k => !removedFields.includes(k))
+  if (unreviewed.length) errors.push(`mevcut icerikte sozlesme disi alan: ${unreviewed.join(', ')} (payload'da tasinamaz, yayinda kaybolurdu; once insan incelesin)`)
   const before = pick(current.content ?? {}, CONTENT_KEYS)
   const patch = proposal.patch ?? {}
   const content = { ...before }
@@ -272,6 +321,21 @@ export function buildRevisionPayload({ current, proposal, allowUnmapped = false 
 
   const metadata = pick(current.metadata ?? {}, METADATA_KEYS)
   let outcomes = (current.outcomes ?? []).map((o) => ({ outcomeId: uid(o.outcomeId), weight: o.weight, primary: o.primary === true }))
+  let removedOutcomes = null
+  if (proposal.legacyOutcomeRemoval !== undefined) {
+    const n = proposal.legacyOutcomeRemoval
+    const validDeclaration = !validateProposal(proposal).some(e => e.includes('.legacyOutcomeRemoval:') || e.includes('.expectedBase:'))
+    const pinMatches = current.content && proposal.expectedBase && uid(proposal.expectedBase.revisionId) === uid(current.baseRevisionId)
+      && proposal.expectedBase.contentFingerprint === contentFingerprint(current.content)
+    if (!validDeclaration || !pinMatches || !allowUnmapped || metadata.game !== 'wordquest' || metadata.examRef !== undefined
+      || !sameContent(sortOutcomes(outcomes), sortOutcomes(n?.expectedOutcomes ?? []))) {
+      errors.push('legacyOutcomeRemoval: yalniz esleme bekleyen taslak modunda, sinav etiketi olmayan WordQuest ve incelenen exact taban/eslemeler icin')
+    } else {
+      removedOutcomes = outcomes
+      outcomes = []
+      notes.push(`eski kapsam uyumsuzlugu icin acik taslak esleme kaldirma: ${n.reason}; canli soru eslemeleri degismez, yeni sinav etiketi atanmaz`)
+    }
+  }
   if (Array.isArray(proposal.outcomes)) {
     // Kazanim degisikligi icerik paketinin kapsami disinda: yalniz eslemesi
     // olmayan (legacy) sorularda oneri esleme verebilir (Codex #526).
@@ -283,7 +347,7 @@ export function buildRevisionPayload({ current, proposal, allowUnmapped = false 
   const source = pick(current.source ?? DEFAULT_SOURCE, SOURCE_KEYS)
   const payload = { changeKind: proposal.changeKind, content, metadata, outcomes, source, summary: buildSummary(proposal) }
   errors.push(...validatePayloadShape(payload, { allowUnmapped }))
-  return { payload, errors, notes, before, after: content }
+  return { payload, errors, notes, before, after: content, removedFields, removedOutcomes }
 }
 
 /** 106 + 110 coach aynasi. allowUnmapped yalniz mevcut soru revizyonu icin
@@ -366,7 +430,8 @@ export function diffContent(before, after) {
 // ── Paket: ogeleri kur ───────────────────────────────────────────────────────
 /** currentById: Map<questionId (kucuk harf), current>; offline=true ise
  * kazanim/kaynak eksigi blok degil "pending_db" notudur ve oge "preview" kalir. */
-export function buildBatch({ proposals, currentById, offline = false, mappingPendingDrafts = false }) {
+export function buildBatch({ proposals, currentById, offline = false, mappingPendingDrafts = false, draftOnly = false }) {
+  const onlyDrafts = draftOnly || mappingPendingDrafts
   return proposals.map((proposal) => {
     const qid = uid(proposal.questionId)
     const current = currentById.get(qid) ?? null
@@ -374,8 +439,8 @@ export function buildBatch({ proposals, currentById, offline = false, mappingPen
     if (proposal.expectedBase !== undefined) item.expectedBase = proposal.expectedBase
     if (proposal.status === 'needs_patch') { item.status = 'needs_patch'; item.questionId = proposal.questionId ?? null; item.reasons.push('oneri henuz doldurulmadi (status: needs_patch)'); return item }
     if (!current) { item.status = 'blocked'; item.reasons.push('soru bulunamadi (DB veya --rows)'); return item }
-    if (mappingPendingDrafts && proposal.expectedBase === undefined) {
-      item.status = 'blocked'; item.reasons.push('esleme bekleyen taslak modunda expectedBase zorunlu'); return item
+    if (onlyDrafts && proposal.expectedBase === undefined) {
+      item.status = 'blocked'; item.reasons.push('yalniz taslak modunda expectedBase zorunlu'); return item
     }
     if (proposal.expectedBase !== undefined) {
       const pinErrors = validateProposal(proposal).filter(e => e.includes('.expectedBase:'))
@@ -388,16 +453,18 @@ export function buildBatch({ proposals, currentById, offline = false, mappingPen
     if (current.isActive === false && proposal.changeKind !== 'retire') item.notes.push('soru zaten pasif')
     const built = buildRevisionPayload({ current, proposal, allowUnmapped: mappingPendingDrafts })
     item.payload = built.payload; item.diff = diffContent(built.before, built.after); item.notes.push(...built.notes)
+    for (const field of built.removedFields ?? []) item.diff.push({ field, before: current.content[field], after: '[removed: explicit legacyNormalization]' })
+    if (built.removedOutcomes) item.diff.push({ field: 'outcomes (draft only)', before: built.removedOutcomes, after: [] })
     let errors = built.errors
     if (mappingPendingDrafts) {
       item.mappingRequired = built.payload.outcomes.length === 0
       item.notes.push('yalniz taslak modu (164): hizli yayin kapali; stage 2/yayin icin gecerli kazanimin ayrica eslenmesi gerekir')
-      if (!offline && !current.source) errors.push('kaynak kaydi yok: taslak modunda INTERNAL kaynak uydurulamaz')
     }
+    if (onlyDrafts && !offline && !current.source) errors.push('kaynak kaydi yok: taslak modunda INTERNAL kaynak uydurulamaz')
     // Turkce harf duzeltmesi hatti (215): kazanim ve kaynak taban revizyondan
     // tasindigi icin esleme eksigi bu hatti engellemez.
     const mappingError = (x) => x.startsWith('kazanim eslemesi yok') || x.startsWith('outcomes:')
-    const words = !mappingPendingDrafts && proposal.changeKind === 'edit' && built.payload && errors.every(mappingError)
+    const words = !onlyDrafts && proposal.changeKind === 'edit' && built.payload && errors.every(mappingError)
       ? turkishRestorationWords(current.content, built.payload.content)
       : null
     if (words?.length) {
@@ -442,7 +509,7 @@ export function renderReviewSheet({ batch, items, mode = 'dry-run' }) {
   lines.push(`# Taslak revizyon paketi: ${batch?.title ?? ''}`, '')
   const lanes = items.filter((i) => i.lane === 'turkish_restoration').length
   lines.push(`Mod: ${mode}. Ogeler: ${items.length} (ready ${counts.ready ?? 0}, preview ${counts.preview ?? 0}, blocked ${counts.blocked ?? 0}, needs_patch ${counts.needs_patch ?? 0}${counts.applied ? `, applied ${counts.applied}` : ''}${counts.published ? `, published ${counts.published}` : ''}).`, '')
-  lines.push('Bu sayfadaki hicbir oneri karar degildir. Her taslak icin iki bagimsiz insan onayi', '(stage 1 ve stage 2, hazirlayandan ve birbirinden farkli kisiler) ve ardindan yayin', 'RPC\'si gerekir. Pasife alma yalniz `retire` taslaginin yayimiyla olur.', '')
+  lines.push('Bu sayfadaki hicbir oneri kaynak kabulu, kalite karari veya yayin onayi degildir.', 'Standart yolda iki bagimsiz insan onayi (stage 1 ve stage 2) gerekir.', 'Uygun AI hazirligi + yetkili sahip kabulu alternatifi icin', '`docs/quality/ai-prepared-owner-acceptance.md` uygulanir. Pasife alma yalniz `retire` taslaginin yayimiyla olur.', '')
   if (lanes) lines.push(`Istisna: "Turkce harf duzeltmesi (215)" hattindaki ${lanes} oge --apply ile iki onaysiz yayimlanir.`, 'DB degisikligin yalniz listelenmis govdelerin ASCII->Turkce harf geri getirmesi oldugunu harf harf', 'kanitlar; kanitlanamazsa oge reddedilir ve iki onayli yola doner.', '')
   if (batch?.sourceRef) lines.push(`Kaynak: ${batch.sourceRef}`, '')
   for (const it of items) {
@@ -550,7 +617,8 @@ if (isMain) {
   const proposalsPath = opt('--proposals'); const rowsPath = opt('--rows'); const apply = argv.includes('--apply'); const userId = uid(opt('--user-id'))
   const forceOffline = argv.includes('--offline')
   const mappingPendingDrafts = argv.includes('--mapping-pending-drafts')
-  const requireAllReady = argv.includes('--require-all-ready')
+  const draftOnly = argv.includes('--draft-only') || mappingPendingDrafts
+  const requireAllReady = argv.includes('--require-all-ready') || argv.includes('--draft-only')
   if (forceOffline && (!rowsPath || apply)) { console.error('--offline --rows gerektirir ve --apply ile kullanilamaz'); process.exit(2) }
   if (!proposalsPath) { console.error('--proposals <dosya> zorunlu'); process.exit(2) }
   const { batch, proposals, errors } = parseProposals(JSON.parse(readFileSync(proposalsPath, 'utf8')))
@@ -579,7 +647,7 @@ if (isMain) {
     if (apply) { console.error('--apply icin DB baglantisi gerekir (.env.local)'); process.exit(2) }
   } else { console.error('DB (.env.local) ya da --rows <dis aktarim> gerekir'); process.exit(2) }
 
-  const items = buildBatch({ proposals, currentById, offline, mappingPendingDrafts })
+  const items = buildBatch({ proposals, currentById, offline, mappingPendingDrafts, draftOnly })
   if (apply && snapshot) {
     // Dis aktarim ile canli icerik ayrismissa (baska bir revizyon yayimlanmis) taslagi acma.
     for (const it of items) {
@@ -587,10 +655,10 @@ if (isMain) {
       if (it.status === 'ready' && s?.content && c?.content && !sameContent(s.content, c.content)) { it.status = 'blocked'; it.reasons.push('canli icerik --rows dis aktarimindan farkli: once dis aktarimi yenileyin') }
     }
   }
-  const applyPreflight = revisionApplyPreflight(items, { requireAllReady, draftOnly: mappingPendingDrafts })
-  if (apply) await applyRevisionItems({ db, userId, items, requireAllReady, draftOnly: mappingPendingDrafts })
+  const applyPreflight = revisionApplyPreflight(items, { requireAllReady, draftOnly })
+  if (apply) await applyRevisionItems({ db, userId, items, requireAllReady, draftOnly })
   const mode = apply ? 'apply' : offline ? 'offline-preview' : 'dry-run'
-  const report = { schemaVersion: 'question-revision-drafts-report@1', mode, mappingPendingDrafts, applyPreflight, batch, generatedAt: new Date().toISOString(), items }
+  const report = { schemaVersion: 'question-revision-drafts-report@1', mode, mappingPendingDrafts, draftOnly, applyPreflight, batch, generatedAt: new Date().toISOString(), items }
   writeFileSync(join(outDir, 'report.json'), JSON.stringify(report, null, 2) + '\n')
   writeFileSync(join(outDir, 'payloads.json'), JSON.stringify(items.filter((i) => i.payload).map((i) => ({ ref: i.ref, questionId: i.questionId, baseRevisionId: i.baseRevisionId, requestId: i.requestId, status: i.status, payload: i.payload })), null, 2) + '\n')
   writeFileSync(join(outDir, 'review-sheet.md'), renderReviewSheet({ batch, items, mode }))
