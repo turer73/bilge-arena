@@ -38,14 +38,26 @@ describe('repo migration manifesti', () => {
       .toBeLessThan(order.indexOf('20261009200000_question_source_evidence_exceptions.sql'))
   })
 
-  it('uretime uygulanmamis dosyalar pending ve en sonda', () => {
+  it('uclu yayin sonrasi pending kalmaz; son uc dosya gercek uretim defterine baglidir', () => {
     const pending = repo.migrations.filter((e) => e.status === 'pending').map((e) => e.file)
-    expect(pending).toEqual([
-      '20261013183312_adaptive_diagnostic_legacy_coverage_repair.sql',
-      '20261013184551_tyt_social_learning_epoch_forward.sql',
-      '20261014183929_revision_bound_turkce_quality_policy.sql',
+    expect(pending).toEqual([])
+    expect(repo.migrations.slice(-3).map(({ file, status, ledger: rows }) => ({ file, status, ledger: rows }))).toEqual([
+      {
+        file: '20261013183312_adaptive_diagnostic_legacy_coverage_repair.sql',
+        status: 'ledger',
+        ledger: [ledger('20261018204344', 'adaptive_diagnostic_legacy_coverage_repair')],
+      },
+      {
+        file: '20261013184551_tyt_social_learning_epoch_forward.sql',
+        status: 'ledger',
+        ledger: [ledger('20261018204353', 'tyt_social_learning_epoch_forward')],
+      },
+      {
+        file: '20261014183929_revision_bound_turkce_quality_policy.sql',
+        status: 'ledger',
+        ledger: [ledger('20261018204412', 'revision_bound_turkce_quality_policy')],
+      },
     ])
-    expect(repo.migrations.slice(-pending.length).map((e) => e.file)).toEqual(pending)
   })
 
   it('sozluk sirasi istisnalari donduruldu; yeni migration istisnaya eklenmez, yeniden adlandirilir', () => {
@@ -56,10 +68,10 @@ describe('repo migration manifesti', () => {
     expect(computed).toEqual([...LEXICAL_ORDER_EXCEPTIONS])
   })
 
-  it('2026-10-18 defterindeki 174 satirin (225 dahil) her biri tam bir kez tasinir', () => {
+  it('2026-10-18 uclu yayin sonrasi 177 defter satirinin her biri tam bir kez tasinir', () => {
     const rows = repo.migrations.flatMap((e) => e.ledger ?? [])
-    expect(rows).toHaveLength(174)
-    expect(new Set(rows.map((r) => r.version)).size).toBe(174)
+    expect(rows).toHaveLength(177)
+    expect(new Set(rows.map((r) => r.version)).size).toBe(177)
   })
 })
 

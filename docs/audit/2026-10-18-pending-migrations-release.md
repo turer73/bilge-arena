@@ -50,6 +50,10 @@ işlevlerden yalnız `question_revision_validation_policy` ve
   beklenen şekilde başarısızdır; yeni tip dosyasında yalnız yedi yeni işlevin
   sözleşmeleri (60 satır) eklenir. Son eşitlik kontrolü güncellenmiş commit üzerinde
   ayrıca yapılır.
+- İlk PR CI koşusu, eski 439 işlev / 174 defter kaydı / üç pending dosya
+  beklentilerinde durdu. Bu snapshot testleri yeni canlı duruma eşitlendi;
+  yedi yeni tam işlev imzası ve üç gerçek ledger kaydı açıkça sabitlendi.
+  Sıra, çift kayıt ve bilinmeyen farkları reddeden negatif testler korundu.
 
 ## Sınırlar ve geri dönüş
 
