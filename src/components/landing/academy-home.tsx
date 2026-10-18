@@ -24,6 +24,7 @@ export interface AcademyHomeProps {
   gameCounts: Record<string, number>
   featuredResources?: ReactNode
   institutionPartnership?: ReactNode
+  faq?: ReactNode
 }
 
 const modes = [
@@ -44,7 +45,7 @@ function cta(value: unknown, fallback: { text: string; href: string }) {
   return { text: text(input.text, fallback.text), href }
 }
 
-export function AcademyHome({ sections, elements, gameCounts, featuredResources, institutionPartnership }: AcademyHomeProps) {
+export function AcademyHome({ sections, elements, gameCounts, featuredResources, institutionPartnership, faq }: AcademyHomeProps) {
   const { character, setCharacter, persisted } = useBilgeCharacter()
   const { user, loading } = useAuthStore()
   const hero = sections.hero
@@ -141,6 +142,7 @@ export function AcademyHome({ sections, elements, gameCounts, featuredResources,
 
       {featuredResources}
       {institutionPartnership}
+      {faq}
       <SectionWrapper section="cta" elements={elements}>
         {sections.cta ? <div className={styles.managed}><CTASection config={sections.cta} /></div> : <div className={styles.personalize}>
           <div><Palette size={22} aria-hidden="true" /><p><strong>Bu dünya senin renklerinle güzel.</strong><span>Temanı, arka planını ve Bilge rehberini kendine göre seç.</span></p></div><Link href="/arena/kisisellestir">Kişiselleştir <ArrowRight size={17} aria-hidden="true" /></Link>

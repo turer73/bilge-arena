@@ -24,7 +24,7 @@ export async function generateMetadata({
   if (!s) return {}
   const ogImage = `${siteUrl}/og?title=${encodeURIComponent(s.title)}&subtitle=${encodeURIComponent(s.description.slice(0, 80))}`
   return {
-    title: `${s.title} | Bilge Arena`,
+    title: { absolute: s.seoTitle ?? `${s.title} | Bilge Arena` },
     description: s.description,
     alternates: { canonical: `${siteUrl}/cozumlu-soru/${slug}` },
     openGraph: {
@@ -104,6 +104,27 @@ export default async function CozumluSoruDetailPage({
         <h1 className="text-3xl font-bold leading-tight tracking-tight">{s.title}</h1>
       </header>
 
+      {/* Formul ozeti: formulu arayan okuyucu ilk ekranda yanitini gorur */}
+      {s.formulas && s.formulas.length > 0 && (
+        <section aria-labelledby="formul-ozeti" className="mb-8 rounded-2xl border border-[var(--focus)]/20 bg-[var(--focus-bg)] p-6">
+          <h2 id="formul-ozeti" className="mb-4 text-xl font-bold">Formül Özeti</h2>
+          <dl className="space-y-4">
+            {s.formulas.map((f) => (
+              <div key={f.label}>
+                <dt className="text-sm font-bold text-[var(--text-sub)]">{f.label}</dt>
+                <dd className="mt-1">
+                  <code className="text-lg font-bold text-[var(--focus)]">{f.formula}</code>
+                  <p className="mt-1 text-sm leading-relaxed text-[var(--text-sub)]">{f.note}</p>
+                </dd>
+              </div>
+            ))}
+          </dl>
+          {s.formulaLegend && (
+            <p className="mt-4 text-xs text-[var(--text-muted)]">{s.formulaLegend}</p>
+          )}
+        </section>
+      )}
+
       {/* Soru */}
       <section className="mb-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
         <h2 className="mb-3 text-sm font-bold text-[var(--text-muted)]">Soru</h2>
@@ -135,6 +156,23 @@ export default async function CozumluSoruDetailPage({
         <h2 className="mb-1 text-sm font-bold text-[var(--text-muted)]">Doğru Cevap</h2>
         <p className="text-lg font-bold text-[var(--focus)]">{s.correctAnswer}</p>
       </section>
+
+      {/* Ayni konunun diger soru tipleri */}
+      {s.examples?.map((example) => (
+        <section key={example.title} className="mb-8">
+          <h2 className="mb-3 text-xl font-bold">Örnek: {example.title}</h2>
+          <p className="mb-4 text-[15px] leading-relaxed">{example.problem}</p>
+          <ol className="mb-3 space-y-2">
+            {example.steps.map((step, i) => (
+              <li key={i} className="flex gap-3 text-[15px] leading-relaxed text-[var(--text-sub)]">
+                <span className="shrink-0 font-bold text-[var(--focus)]">{i + 1}.</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="text-[15px] font-bold">Cevap: {example.answer}</p>
+        </section>
+      ))}
 
       {/* Sik yapilan hata */}
       <section className="mb-8">
