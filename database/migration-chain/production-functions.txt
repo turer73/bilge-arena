@@ -247,7 +247,7 @@ provision_free_pilot_institution(uuid,text,uuid,text,smallint,smallint,smallint,
 provision_pilot_institution(uuid,text,uuid,uuid)|0cd903921d53cbde8374f52100271bb1|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}
 prune_institution_request_ledgers(timestamp with time zone)|d56484e5a44cc19660f6577a8cf671af|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 publish_institution_study_program(uuid,text,uuid)|dd44ebb31fa7d71a5a6d8384c752bcb8|t|search_path=pg_catalog|{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}
-publish_question_content_revision(uuid,uuid,uuid)|2d01ed00ed810936b9b0d1a3c5610ac4|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
+publish_question_content_revision(uuid,uuid,uuid)|b959719e3f3fcbe76cc3e17b0b24c5b8|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 publish_question_turkish_restoration(uuid,uuid,uuid,jsonb,uuid)|97cdde6ce09f6aeea17dba7bca76344b|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 publish_teacher_assignment(uuid,uuid,text,jsonb,timestamp with time zone,timestamp with time zone,uuid)|6503d9ad012a846b729d9cfc9d2bf118|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}
 purchase_avatar_decoration(uuid,text,integer)|64075e3d6818cd49e312bd7d2df9dad9|t|search_path=public|{postgres=X/postgres,service_role=X/postgres}
@@ -319,7 +319,7 @@ resolve_released_institution_scope(text,text)|1f528780f3337546e3b3687187234f9c|t
 resolve_tyt_social_exam_policy_for_user(uuid)|eac9c9c8b33899ed562b3d3ad6427003|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 resolve_tyt_social_mastery_read_context(uuid)|63e2040ad1b40be1dce31e6c9893ccbd|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 review_institution_study_program(uuid,text,text,text,uuid)|6b7d08591416009ef06e97cca45d1639|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
-review_question_content_revision(uuid,uuid,smallint,text,text,uuid)|38448d917a10433a908a6631fba0c262|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
+review_question_content_revision(uuid,uuid,smallint,text,text,uuid)|f7698e345d95d0c8a25fd86a76f356f3|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 review_tyt_social_exam_role(uuid,uuid,smallint,text,text,uuid)|d96027789c0a3e4cbb9c30703c68c3e4|t|search_path=pg_catalog|{postgres=X/postgres,authenticated=X/postgres}
 revoke_my_institution_support_access(uuid,uuid)|d0266b439c677e83a230fe3936fa74d9|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}
 revoke_teacher_classroom_invite(uuid,text,uuid)|8327434f60b023dd848a0d2a859473d1|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}
