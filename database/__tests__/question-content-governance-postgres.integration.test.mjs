@@ -1425,4 +1425,72 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
         { reward_key:'accepted_correction', amount:125 },
       ])
   }, 15_000)
+
+  it('retires an unchanged quarantined split-scope question without inventing outcomes and still needs two reviewers', async () => {
+    const sql = (name) => readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', name), 'utf8')
+    await client.query(sql('20261011203500_revision_bound_fen_quality_policy.sql'))
+    await client.query(sql('227_quarantined_retirement_scope.sql'))
+    const q = (await client.query(`SELECT id,published_revision_id,content,is_active,
+      jsonb_strip_nulls(jsonb_build_object('game',game,'category',category,'subcategory',subcategory,
+        'topic',topic,'difficulty',difficulty,'levelTag',level_tag,'examRef',exam_ref,'isBoss',is_boss)) AS metadata
+      FROM public.questions WHERE id=$1`, [ydtQuestion])).rows[0]
+    expect(q.is_active).toBe(true)
+    const retirement = { content:q.content,metadata:q.metadata,outcomes:[],
+      source:{ kind:'original',title:'Fixture original source',licenseCode:'INTERNAL' },
+      changeKind:'retire',summary:'Already quarantined question needs formal retirement' }
+    const create = (value=retirement) => rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',
+      [author,q.id,q.published_revision_id,JSON.stringify(value),randomUUID()])
+    const review = (id,stage,user) => rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)',
+      [user,id,stage,'approved','Independent fixture review.',randomUUID()])
+    const publish = (id,request=randomUUID()) => rpc('public.publish_question_content_revision($1,$2,$3)',[publisher,id,request])
+    const draft = await create()
+    await review(draft.revisionId,1,reviewer1)
+    // Active, unmapped content never gets the retirement exception.
+    await err(() => review(draft.revisionId,2,reviewer2),'22023')
+    await rpc('public.quarantine_question_content($1,$2,$3,$4)',[publisher,q.id,'Fixture containment before retirement.',randomUUID()])
+    await err(() => publish(draft.revisionId),'22023') // One approval still cannot retire.
+    await err(() => review(draft.revisionId,2,reviewer1),'22023') // Reviewer independence is retained.
+    const authorDraft=await create()
+    await err(() => review(authorDraft.revisionId,1,author),'22023')
+
+    for (const [label,change] of [
+      ['edit',{ changeKind:'edit' }],
+      ['answer',{ content:{ ...q.content,answer:((q.content.answer??q.content.correct)+1)%q.content.options.length } }],
+      ['solution',{ content:{ ...q.content,solution:'Unreviewed changed solution' } }],
+      ['category',{ metadata:{ ...q.metadata,category:'grammar' } }],
+      ['exam',{ metadata:{ ...q.metadata,examRef:'TYT' } }],
+      ['difficulty',{ metadata:{ ...q.metadata,difficulty:q.metadata.difficulty===1?2:1 } }],
+    ]) {
+      const bad=await create({ ...retirement,...change,summary:'Reject retirement bypass '+label })
+      await review(bad.revisionId,1,reviewer1)
+      await err(() => review(bad.revisionId,2,reviewer2),'22023')
+      expect((await client.query('SELECT status FROM public.question_content_revisions WHERE id=$1',[bad.revisionId])).rows[0].status).toBe('stage1_approved')
+    }
+    // Retain a second approved base to prove stale retirement cannot publish later.
+    const stale=await create()
+    await review(stale.revisionId,1,reviewer1);await review(stale.revisionId,2,reviewer2)
+    await review(draft.revisionId,2,reviewer2)
+    expect((await client.query('SELECT public.question_revision_outcomes_valid($1) valid',[draft.revisionId])).rows[0].valid).toBe(false)
+    // A state change after review cannot reuse the exception at publication.
+    await client.query('BEGIN')
+    await client.query("SELECT public.content_governance_authorize_question_write($1,'publish')",[q.id])
+    await client.query('UPDATE public.questions SET is_active=true WHERE id=$1',[q.id])
+    await client.query('SELECT public.content_governance_clear_question_write($1)',[q.id])
+    await client.query('COMMIT')
+    await err(() => publish(draft.revisionId),'22023')
+    await rpc('public.quarantine_question_content($1,$2,$3,$4)',[publisher,q.id,'Fixture containment restored.',randomUUID()])
+    const request=randomUUID()
+    expect(await publish(draft.revisionId,request)).toEqual(expect.objectContaining({ status:'published',replayed:false }))
+    expect(await publish(draft.revisionId,request)).toEqual(expect.objectContaining({ status:'published',replayed:true }))
+    await err(() => publish(stale.revisionId),'22023')
+    const after=(await client.query('SELECT content,is_active,published_revision_id FROM public.questions WHERE id=$1',[q.id])).rows[0]
+    expect(after).toEqual({ content:q.content,is_active:false,published_revision_id:draft.revisionId })
+    expect((await client.query('SELECT count(*)::int n FROM public.question_outcomes WHERE question_id=$1',[q.id])).rows[0].n).toBe(0)
+    expect((await client.query('SELECT count(*)::int n FROM public.question_validation_decisions WHERE revision_id=$1',[draft.revisionId])).rows[0].n).toBe(0)
+    expect((await client.query(`SELECT has_function_privilege('anon','public.publish_question_content_revision(uuid,uuid,uuid)','EXECUTE') anon,
+      has_function_privilege('authenticated','public.review_question_content_revision(uuid,uuid,smallint,text,text,uuid)','EXECUTE') authenticated,
+      has_function_privilege('service_role','public.publish_question_content_revision(uuid,uuid,uuid)','EXECUTE') service`,[])).rows[0]).toEqual({ anon:false,authenticated:false,service:true })
+    await client.query(sql('227_quarantined_retirement_scope.sql'))
+    expect((await client.query('SELECT content,is_active,published_revision_id FROM public.questions WHERE id=$1',[q.id])).rows[0]).toEqual(after)
+  }, 20_000)
 })
