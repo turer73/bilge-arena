@@ -57,6 +57,40 @@ beforeEach(() => {
 })
 
 describe('ContentGovernancePanel', () => {
+  it('opens a revision outside the newest50 through the authenticated read endpoint without writing', async () => {
+    const originalFetch = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/admin/content-quality?limit=50') return Promise.resolve({
+        ok: true, status: 200, json: () => Promise.resolve({ items: [], nextCursor: 'older-page' }),
+      })
+      return originalFetch(input, init)
+    })
+    render(<ContentGovernancePanel />)
+    await screen.findByText('Bekleyen revizyon yok.')
+    expect(screen.getByRole('button', { name: 'Revizyonu aç' })).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('Revizyon kimliği'), { target: { value: `  ${OLD.toUpperCase()}  ` } })
+    fireEvent.click(screen.getByRole('button', { name: 'Revizyonu aç' }))
+    expect(await screen.findByText('Eski soru')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith(`/api/admin/content-quality?revisionId=${OLD}`, expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) }))
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+  })
+
+  it('rejects malformed lookup IDs locally and shows a failed read without a stale revision', async () => {
+    render(<ContentGovernancePanel />)
+    fireEvent.click(await screen.findByText('Eski revizyon'))
+    await screen.findByText('Eski soru')
+    const readCount = fetchMock.mock.calls.length
+    fireEvent.change(screen.getByLabelText('Revizyon kimliği'), { target: { value: '../publish' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Revizyonu aç' }))
+    expect(screen.getByText('Geçerli bir revizyon kimliği girin')).toHaveAttribute('role', 'alert')
+    expect(fetchMock.mock.calls).toHaveLength(readCount)
+    fireEvent.change(screen.getByLabelText('Revizyon kimliği'), { target: { value: CURRENT } })
+    fireEvent.click(screen.getByRole('button', { name: 'Revizyonu aç' }))
+    expect(await screen.findByText('Revizyon ayrıntısı alınamadı')).toHaveAttribute('role', 'alert')
+    expect(screen.queryByText('Eski soru')).not.toBeInTheDocument()
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+  })
+
   it('otomatik karar ve kaniti revizyon detayinda gosterir', async () => {
     render(<ContentGovernancePanel />)
     fireEvent.click(await screen.findByText('Eski revizyon'))

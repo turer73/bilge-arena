@@ -64,8 +64,8 @@ describe('kayitli uretim parmak izi ve bilinen sapmalar', () => {
     readFileSync(join(DATABASE_DIR, 'migration-chain', 'production-functions.txt'), 'utf8'),
   )
 
-  it('2026-10-18 uclu yayin sonrasi 446 public fonksiyonu tasir; eski 044 imzasi ve yetim trigger yok', () => {
-    expect(production.size).toBe(446)
+  it('228 sonrasi olculen 451 public fonksiyonu tasir; eski 044 imzasi ve yetim trigger yok', () => {
+    expect(production.size).toBe(451)
     for (const signature of [
       'assert_tyt_social_learning_epoch(uuid,text,uuid)',
       'create_tyt_social_daily_plan_for_epoch(uuid,date,jsonb,text,uuid)',
@@ -74,11 +74,24 @@ describe('kayitli uretim parmak izi ve bilinen sapmalar', () => {
       'question_revision_validation_pair_valid(text,text,text,text)',
       'read_tyt_social_learning_snapshot(uuid,uuid[])',
       'tyt_social_learning_context_at(uuid,timestamp with time zone)',
+      'accept_question_revision_retirement_review(uuid,uuid,jsonb,text,uuid,jsonb)',
+      'get_question_revision_retirement_review(uuid,uuid)',
+      'question_retirement_fingerprint(uuid)',
+      'question_retirement_evidence_valid(uuid,jsonb)',
+      'question_revision_retirement_review_ready(uuid)',
     ]) expect(production.has(signature), signature).toBe(true)
     expect(production.has('block_disposable_emails()')).toBe(false)
     expect([...production.keys()].filter((s) => s.startsWith('select_random_questions('))).toEqual([
       'select_random_questions(text,integer,text,integer,uuid[],text)',
     ])
+    for (const signature of ['accept_question_revision_retirement_review(uuid,uuid,jsonb,text,uuid,jsonb)','get_question_revision_retirement_review(uuid,uuid)']) {
+      const definition=production.get(signature)
+      expect(definition?.acl).toBe('{postgres=X/postgres,service_role=X/postgres}')
+      expect(definition?.config).toBe('search_path=pg_catalog')
+    }
+    for (const signature of ['question_retirement_fingerprint(uuid)','question_retirement_evidence_valid(uuid,jsonb)','question_revision_retirement_review_ready(uuid)']) {
+      expect(production.get(signature)?.acl).toBe('{postgres=X/postgres}')
+    }
   })
 
   it('her bilinen sapma uretimdeki bir imzaya ve kayitli govde ozetine baglidir', () => {

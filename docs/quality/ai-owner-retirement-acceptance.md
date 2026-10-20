@@ -1,6 +1,6 @@
 # AI hazırlığı ile tek sorumlu pasife alma kabulü
 
-20 Ekim 2026. Kullanıcı bu görev için uygulamayı Codex'e devretti ve içerik incelemesini kendisinin yapacağını bildirdi. Bu tercih tek başına hiçbir sorunun kabul edildiği anlamına gelmez. Migration 228 henüz canlıya uygulanmadı; rol, soru, karar ve onay verisi yazmaz.
+20 Ekim 2026. Kullanıcı bu görev için uygulamayı Codex'e devretti ve içerik incelemesini kendisinin yapacağını bildirdi. Ardından PR merge, 228'in canlı uygulanması ve dağıtım/şema doğrulamasını ayrıca onayladı. PR #677 `2109cb47` ile merge edildi. Migration 228 canlı ledger `20261020200911 / 228_ai_owner_retirement_acceptance` olarak uygulandı; rol, soru, karar ve onay verisi yazmadı.
 
 523 pasife alma taslağı mevcut tek kaynak kabulü yolunun dışında kalıyordu. Yeni yol gerçek hazırlayıcı hesabının kaldırma gerekçesini açık sorumluluk beyanıyla kabul etmesine izin verir. Kayıt `ai_assisted_owner_retirement` olarak tutulur; bağımsız insan incelemesi veya içerik doğruluğu kararı değildir. Eski iki aşamalı yol değişmez. İçerik değişikliklerinin kaynak/kalite kapıları korunur.
 
@@ -57,4 +57,8 @@ Yerel bağımlılıklar önceki worktree'nin kurulu node_modules junction'ını 
 3. Gemini/DeepSeek sonuçları tamamlanır; uyuşmazlıklar görünür tutulur. Gerçek yetkili kişi soru bazında kanıtı inceleyerek kabul verir. Yayın/pasife alma ayrı işlemdir. Güncel taban ve kanıt her yazımda yeniden denetlenir.
 4. Acil durdurmada yeni kabul RPC'sinin EXECUTE izni geri alınabilir. `database/rollback/228_ai_owner_retirement_acceptance.sql` eski readiness/publisher yordamlarını geri getirir ve yeni RPC'leri kapatır. Kanıt tablosu, imzalar ve daha önce gerçekleşmiş pasife almalar silinmez veya geri çevrilmez. Bekleyen tek yetkili kabulleri rollback sonrası yayınlanamaz. Eski kabul hiçbir zaman bağımsız inceleme olarak yeniden etiketlenmez.
 
-Canlı migration, deploy, insan kabulü ve içerik yayını bu yerel kod paketinde yapılmadı. 694 model doğrulaması ayrı işlem olarak sürmektedir.
+20:09 UTC canlı geri okumasında yeni tabloda RLS açık, anon/authenticated/service_role doğrudan tablo erişimi kapalı; yalnız iki yeni RPC service_role için açık, üç yardımcı kapalı. Yeni kabul 0. Hedef 694 taslak ve bütün hash/tabanlar aynı, onay/kaynak kabulü/kalite kararı 0. Soru projeksiyonu SHA-256 `743176d34f8e97e274d903c3acc731993d23de4a35bc7472f0d783f991b77497` uygulama öncesi/sonrası aynı; canlı runtime `question-quality@2`, enforcement açık kaldı. Security advisor WARN sayıları değişmedi; yalnız özel deny-all tabloda beklenen yeni RLS/no-policy INFO oluştu. Bu tabloya istemci politikası açılmadı.
+
+PR #677, `2109cb4799d00c6625dbcd5d88d73670de36efec` ile birleşti. Vercel üretim dağıtımı `dpl_9NP2BCgAhv453B6sBCjtxkPCkZEf` Ready oldu ve bilgearena.com alias'ı bu sürüme bağlandı. Gerçek yönetici oturumunda kalite sayfası açıldı. İlk kontrolde kuyruk yalnız son 50 revizyonu gösterdiğinden eski pasife alma taslaklarına erişilemediği görüldü. Mevcut yetkili GET endpoint'ini kullanan revizyon kimliği araması eklendi; bu alan kabul veya yayın yazmaz. Boş kuyruk dışında eski revizyon açma, bozuk UUID ve başarısız okuma sırasında eski ayrıntının temizlenmesi test edildi. Yeni arayüzün dağıtım sonrası gerçek oturum kontrolü özel yayın kaydına eklenir.
+
+İnsan kabulü veya soru yayını yapılmadı. 694 model doğrulaması ayrı işlem olarak sürmektedir.

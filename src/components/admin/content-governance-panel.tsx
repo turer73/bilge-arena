@@ -58,6 +58,7 @@ const validationLabel: Record<string, string> = {
 export function ContentGovernancePanel() {
   const [enabled, setEnabled] = useState<boolean | null>(null)
   const [items, setItems] = useState<QueueItem[]>([])
+  const [revisionLookup, setRevisionLookup] = useState('')
   const [detail, setDetail] = useState<RevisionDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -314,6 +315,21 @@ export function ContentGovernancePanel() {
         <button onClick={() => void loadQueue()} className="min-h-11 rounded-lg border border-[var(--border)] px-4 text-xs font-bold">Yenile</button>
       </div>
       {error && <p role="alert" className="mt-3 rounded-lg border border-[var(--urgency-border)] bg-[var(--urgency-bg)] p-3 text-xs text-[var(--urgency)]">{error}</p>}
+      <form onSubmit={(event) => {
+        event.preventDefault()
+        const revisionId = revisionLookup.trim().toLowerCase()
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(revisionId)) {
+          setError('Geçerli bir revizyon kimliği girin'); return
+        }
+        void openRevision(revisionId)
+      }} className="my-3 flex flex-wrap items-end gap-2">
+        <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-bold">
+          Revizyon kimliği
+          <input value={revisionLookup} onChange={(event) => setRevisionLookup(event.target.value)} maxLength={100} autoCapitalize="none" spellCheck={false} className="min-h-11 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 font-mono" aria-describedby="revision-lookup-help" />
+        </label>
+        <button type="submit" disabled={busy || !revisionLookup.trim()} className="min-h-11 rounded-lg border border-[var(--focus)] px-4 text-xs font-bold disabled:opacity-50">Revizyonu aç</button>
+        <p id="revision-lookup-help" className="w-full text-xs text-[var(--text-sub)]">Kuyruk son 50 kaydı gösterir. Daha eski bir revizyonu kimliğiyle açabilirsiniz.</p>
+      </form>
       {loading ? <p className="mt-4 text-sm text-[var(--text-sub)]">Yükleniyor…</p> : (
         <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.2fr)]">
           <div className="space-y-2" aria-label="Revizyon kuyruğu">
