@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { FiveModelReviewReport } from './five-model-review-report'
+import { ContentRetirementReview } from './content-retirement-review'
 import { aiPreparationDeclarationSchema } from '@/lib/content-governance/source-review-contract'
 
 interface QueueItem { revisionId: string; questionId: string; status: string; createdAt: string }
@@ -60,6 +61,7 @@ export function ContentGovernancePanel() {
   const [detail, setDetail] = useState<RevisionDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [retirementAccepted, setRetirementAccepted] = useState(false)
   const [error, setError] = useState('')
   const [incidentType, setIncidentType] = useState<'wrong_key' | 'ambiguous' | 'invalid_content' | 'outcome_mismatch'>('wrong_key')
   const [outcomeOptions, setOutcomeOptions] = useState<OutcomeOption[]>([])
@@ -102,7 +104,7 @@ export function ContentGovernancePanel() {
     revisionRequestRef.current = controller
     visibleRevisionRef.current = revisionId
     reportReadRef.current++
-    setSourceReview(null); setSourceReport(null); setSourceReportName('')
+    setSourceReview(null); setSourceReport(null); setSourceReportName(''); setRetirementAccepted(false)
     setAiOwnerMode(false); setAiAgent(''); setAiEvidenceRef(''); setAiEvidenceHash(''); setAiResponsibility(false)
     setError('')
     setDetail(null)
@@ -396,7 +398,8 @@ export function ContentGovernancePanel() {
                   <button disabled={busy} onClick={() => void createIncident()} className="min-h-11 rounded-lg bg-[var(--urgency)] px-4 text-xs font-bold text-white disabled:opacity-50">Etki önizlemesi oluştur</button>
                 </div>}
                 <div className="flex flex-wrap gap-2">
-                  {detail.status === 'draft' && sourceReview !== null && <div className="w-full rounded-lg border border-[var(--border)] p-3">
+                  {detail.changeKind === 'retire' && <ContentRetirementReview key={detail.revisionId + ':' + detail.status} revisionId={detail.revisionId} questionId={detail.questionId} onAccepted={setRetirementAccepted} onRefresh={async () => { await openRevision(detail.revisionId); await loadQueue() }} />}
+                  {detail.status === 'draft' && detail.changeKind !== 'retire' && sourceReview !== null && <div className="w-full rounded-lg border border-[var(--border)] p-3">
                     <label className="block text-xs font-bold">Kaynak karşılaştırma raporu (JSON)
                       <input key={detail.revisionId} type="file" accept=".json,application/json" disabled={busy} onChange={(event) => void uploadSourceReport(event.target.files?.[0])} className="mt-2 block max-w-full text-xs" />
                     </label>
@@ -415,7 +418,7 @@ export function ContentGovernancePanel() {
                   </div>}
                   {sourceReview?.accepted && <p className="w-full text-xs text-[var(--text-sub)]">{sourceReview.acceptanceMode === 'ai_assisted_owner' ? 'AI hazırlığı için yetkili kabulü kayıtlı; bağımsız insan incelemesi değildir.' : 'Kaynak karşılaştırmalı tek onay kayıtlı.'} {sourceReview.readyToPublish ? 'Yayın kanıtları hazır.' : 'Güncel kalite kararı veya diğer yayın kanıtları henüz tamamlanmadı.'}</p>}
                   {detail.status === 'draft' && <><button disabled={busy} onClick={() => void review(1, 'approved')} className="min-h-11 rounded-lg bg-[var(--focus)] px-4 text-xs font-bold text-white disabled:opacity-50">1. aşama onayla</button><button disabled={busy} onClick={() => void review(1, 'rejected')} className="min-h-11 rounded-lg border border-[var(--urgency)] px-4 text-xs font-bold text-[var(--urgency)]">Reddet</button></>}
-                  {detail.status === 'stage1_approved' && !sourceReview?.accepted && <><button disabled={busy || (detail.outcomes?.length ?? 0) === 0 || detail.outcomes?.some((outcome) => outcome.scopeValid === false)} onClick={() => void review(2, 'approved')} className="min-h-11 rounded-lg bg-[var(--focus)] px-4 text-xs font-bold text-white disabled:opacity-50">2. aşama onayla</button><button disabled={busy} onClick={() => void review(2, 'rejected')} className="min-h-11 rounded-lg border border-[var(--urgency)] px-4 text-xs font-bold text-[var(--urgency)]">Reddet</button></>}
+                  {detail.status === 'stage1_approved' && !sourceReview?.accepted && !retirementAccepted && <><button disabled={busy || (detail.outcomes?.length ?? 0) === 0 || detail.outcomes?.some((outcome) => outcome.scopeValid === false)} onClick={() => void review(2, 'approved')} className="min-h-11 rounded-lg bg-[var(--focus)] px-4 text-xs font-bold text-white disabled:opacity-50">2. aşama onayla</button><button disabled={busy} onClick={() => void review(2, 'rejected')} className="min-h-11 rounded-lg border border-[var(--urgency)] px-4 text-xs font-bold text-[var(--urgency)]">Reddet</button></>}
                   {(detail.status === 'stage2_approved' || (detail.status === 'stage1_approved' && sourceReview?.readyToPublish)) && <button disabled={busy} onClick={() => void post(`/api/admin/content-quality/revisions/${detail.revisionId}/publish`, { requestId: crypto.randomUUID() })} className="min-h-11 rounded-lg bg-[var(--growth)] px-4 text-xs font-bold text-white disabled:opacity-50">Yayınla</button>}
                   <button disabled={busy} onClick={() => void refreshPsychometrics()} className="min-h-11 rounded-lg border border-[var(--focus)] px-4 text-xs font-bold text-[var(--focus)] disabled:opacity-50">Psikometriyi yenile</button>
                   <button onClick={() => { visibleRevisionRef.current = null; revisionRequestRef.current?.abort(); setDetail(null); setSourceReport(null) }} className="min-h-11 rounded-lg border border-[var(--border)] px-4 text-xs font-bold">Kapat</button>
