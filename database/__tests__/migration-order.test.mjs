@@ -40,10 +40,11 @@ describe('repo migration manifesti', () => {
 
   it('the literature seed and prior three releases retain their actual ledger pins', () => {
     const pending = repo.migrations.filter((e) => e.status === 'pending').map((e) => e.file)
-    expect(pending).toEqual([])
-    expect(repo.migrations.at(-2)).toEqual({ file:'226_ayt_literature_internal_outcome.sql',status:'ledger',ledger:[ledger('20261018230450','226_ayt_literature_internal_outcome')] })
-    expect(repo.migrations.at(-1)).toEqual({ file:'227_quarantined_retirement_scope.sql',status:'ledger',ledger:[ledger('20261019045923','227_quarantined_retirement_scope')] })
-    expect(repo.migrations.slice(-5,-2).map(({ file, status, ledger: rows }) => ({ file, status, ledger: rows }))).toEqual([
+    expect(pending).toEqual(['228_ai_owner_retirement_acceptance.sql'])
+    const applied=repo.migrations.filter(e=>e.status!=='pending')
+    expect(applied.at(-2)).toEqual({ file:'226_ayt_literature_internal_outcome.sql',status:'ledger',ledger:[ledger('20261018230450','226_ayt_literature_internal_outcome')] })
+    expect(applied.at(-1)).toEqual({ file:'227_quarantined_retirement_scope.sql',status:'ledger',ledger:[ledger('20261019045923','227_quarantined_retirement_scope')] })
+    expect(applied.slice(-5,-2).map(({ file, status, ledger: rows }) => ({ file, status, ledger: rows }))).toEqual([
       {
         file: '20261013183312_adaptive_diagnostic_legacy_coverage_repair.sql',
         status: 'ledger',
