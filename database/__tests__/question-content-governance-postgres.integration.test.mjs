@@ -1515,6 +1515,14 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     const accept=async(id,e,p,user=author,request=randomUUID(),rationale='Actual fixture owner inspected retirement')=>rpc('public.accept_question_revision_retirement_review($1,$2,$3::jsonb,$4,$5,$6::jsonb)',[user,id,JSON.stringify(e),rationale,request,JSON.stringify(p)])
     const publish=id=>rpc('public.publish_question_content_revision($1,$2,$3)',[author,id,randomUUID()])
     const ready=async id=>(await client.query('SELECT public.question_revision_single_review_ready($1) value',[id])).rows[0].value
+    // Most production candidates are active: exercise a real active->inactive transition,
+    // rather than relying only on the pre-existing quarantined fixture state.
+    await client.query('BEGIN')
+    await client.query("SELECT public.content_governance_authorize_question_write($1,'publish')",[question])
+    await client.query('UPDATE public.questions SET is_active=true WHERE id=$1',[question])
+    await client.query('SELECT public.content_governance_clear_question_write($1)',[question])
+    await client.query('COMMIT')
+    expect((await readQuestion(question)).is_active).toBe(true)
     const draft=await make(),e=await evidence(draft.revisionId),p=await preparation(draft.revisionId)
     await err(()=>accept(draft.revisionId,e,p),'42501')
     await client.query('INSERT INTO public.user_roles(user_id,role_id) VALUES($1,$2)',[author,ownerRole])
