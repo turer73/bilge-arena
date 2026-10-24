@@ -11,7 +11,7 @@ const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').t
  */
 export function HomeFaq() {
   return (
-    <section className="mx-auto w-full max-w-[1200px] px-6 py-14 lg:px-8" aria-labelledby="home-faq-title">
+    <section className="w-full py-14" aria-labelledby="home-faq-title">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
