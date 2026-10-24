@@ -49,7 +49,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Navbar institution panel entry', () => {
-  it.each(['/arena', '/arena/calisma', '/arena/kisisellestir', '/arena/magaza', '/oda', '/oda/ABC123', '/arena/matematik', '/arena/turkce', '/arena/fen', '/arena/sosyal', '/arena/wordquest', '/arena/kule', '/arena/fethet', '/arena/profil', '/arena/siralama', '/arena/arkadaslar', '/arena/yanlislarim', '/nasil-calisir', '/hakkinda'])('keeps the academy header on %s without unmounting theme synchronization', (route) => {
+  it.each(['/arena', '/arena/calisma', '/arena/kisisellestir', '/arena/magaza', '/oda', '/oda/ABC123', '/arena/matematik', '/arena/turkce', '/arena/fen', '/arena/sosyal', '/arena/wordquest', '/arena/kule', '/arena/fethet', '/arena/profil', '/arena/siralama', '/arena/arkadaslar', '/arena/yanlislarim', '/nasil-calisir', '/hakkinda', '/arena/duello', '/arena/kurum', '/arena/kurum/roller', '/arena/kurum/demo', '/arena/kurum/sinif/abc'])('keeps the academy header on %s without unmounting theme synchronization', (route) => {
     mockUsePathname.mockReturnValue(route)
     vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
     render(<Navbar />)
@@ -57,7 +57,7 @@ describe('Navbar institution panel entry', () => {
     expect(screen.getByRole('link', { name: 'Bilge Arena ana sayfa' }).querySelector('img')).toHaveAttribute('src', '/academy/brand-crest-orbit.png')
   })
 
-  it.each(['/iletisim', '/arena/kurum', '/arena/sinif', '/odak'])('keeps the existing header on unrelated route %s', (route) => {
+  it.each(['/iletisim', '/arena/sinif', '/arena/kurumsal', '/odak'])('keeps the existing header on unrelated route %s', (route) => {
     mockUsePathname.mockReturnValue(route)
     vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
     render(<Navbar />)
@@ -65,6 +65,22 @@ describe('Navbar institution panel entry', () => {
     expect(screen.getByText('Bilge Arena')).toBeInTheDocument()
   })
 
+  it('keeps desktop links on one row and moves secondary links into an accessible Diger menu', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
+    render(<Navbar />)
+    const more = screen.getByRole('button', { name: /Diğer/ })
+    expect(more).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('link', { name: 'Hakkında' })).not.toBeInTheDocument()
+    const user = userEvent.setup()
+    await user.click(more)
+    expect(more).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('link', { name: 'Hakkında' })).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(more).toHaveAttribute('aria-expanded', 'false')
+    await user.click(more)
+    await user.click(document.body)
+    expect(more).toHaveAttribute('aria-expanded', 'false')
+  })
   it('shows the Academy brand on the mobile home page', () => {
     mockUsePathname.mockReturnValue('/')
     mockUseWideStudy.mockReturnValue(false)
