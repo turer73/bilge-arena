@@ -63,6 +63,8 @@ export function CookieBanner() {
       {view !== 'hidden' && (
         <motion.div
           data-cookie-banner
+          role="region"
+          aria-label="Çerez tercihleri"
           initial={{ y: '100%' }}
           animate={{ y: 0 }}
           exit={{ y: '100%' }}

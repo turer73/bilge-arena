@@ -194,7 +194,6 @@ function PathStep({ step, subject }: { step: PathStepModel; subject: Subject }) 
   return (
     <Link
       href={step.href}
-      aria-label={`${step.label} dersini aç`}
       aria-disabled={locked || undefined}
       tabIndex={locked ? -1 : undefined}
       onClick={(event) => {
@@ -220,8 +219,11 @@ function PathStep({ step, subject }: { step: PathStepModel; subject: Subject }) 
         <span className="block text-[9px] font-black uppercase tracking-[0.08em]" style={{ color: current ? subjectTextColor(subject.color) : done ? 'var(--app-success)' : 'var(--app-text-muted)' }}>
           {current ? 'Sıradaki' : done ? 'Tamamlandı' : exam ? 'Ünite sonu' : `${step.index + 1}. ders`}
         </span>
+        {' '}
         <span className={`mt-0.5 block text-[11px] font-extrabold leading-[13px] md:text-xs md:leading-4 ${locked ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text)]'}`}>{step.label}</span>
       </span>
+      {/* Ad görünen metinle başlar ("Sıradaki Sayılar"), eylem yalnız ekran okuyucuya. */}
+      {' '}<span className="sr-only">dersini aç</span>
     </Link>
   )
 }
@@ -313,6 +315,7 @@ export function MobileHomeDemo({
   const isLivePath = mode === 'live'
     && !isSocialTytProgressPreparing
     && progress.topics.length > 0
+  const MainLandmark = mode === 'live' ? 'div' : 'main'
 
   const steps: PathStepModel[] = (() => {
     if (isSocialTytProgressPreparing) return []
@@ -475,7 +478,6 @@ export function MobileHomeDemo({
           <div className="relative">
             <button
               type="button"
-              aria-label="Sınav kapsamını değiştir"
               aria-expanded={examPickerOpen}
               aria-controls="exam-scope-picker"
               onClick={() => setExamPickerOpen((current) => !current)}
@@ -483,7 +485,8 @@ export function MobileHomeDemo({
             >
               <AcademyIcon name="quality" size={24} />
               <span className="max-w-[72px] truncate text-xs font-black">{selectedHeaderExamLabel}</span>
-              <ChevronDown size={14} strokeWidth={3} className={examPickerOpen ? 'rotate-180' : ''} />
+              <span className="sr-only">, sınav kapsamını değiştir</span>
+              <ChevronDown size={14} strokeWidth={3} aria-hidden="true" className={examPickerOpen ? 'rotate-180' : ''} />
             </button>
             {examPickerOpen && (
               <div
@@ -531,7 +534,9 @@ export function MobileHomeDemo({
         </div>
       </header>
 
-      <main inert={coachOpen} data-subject-swipe {...subjectSwipe}>
+      {/* Arenada (live) sayfanın <main>'i arena düzenindedir; iç içe ikinci main
+          landmark-unique ihlali verir. Tek başına demo sayfasında main kalır. */}
+      <MainLandmark inert={coachOpen} data-subject-swipe {...subjectSwipe}>
         <p className="sr-only" aria-live="polite" aria-atomic="true">Seçili ders: {subject.label}</p>
         <section aria-label="Ders seçimi" className="border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)] px-3 py-2.5">
           <div
@@ -626,8 +631,9 @@ export function MobileHomeDemo({
                 </>
               )}
             </div>
-            <button onClick={openCoach} className="absolute right-3 top-3 z-10 flex min-h-8 items-center gap-1 rounded-xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-2 py-1 text-[10px] font-extrabold text-[var(--app-text-sub)] shadow-[0_3px_0_var(--app-border)] active:translate-y-0.5" aria-label="Bilge Chan mesajlarını aç">
-              <MessageCircle size={13} fill="var(--app-accent-border)" className="text-[var(--app-accent-text)]" /> Hazırsın!
+            <button onClick={openCoach} className="absolute right-3 top-3 z-10 flex min-h-8 items-center gap-1 rounded-xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-2 py-1 text-[10px] font-extrabold text-[var(--app-text-sub)] shadow-[0_3px_0_var(--app-border)] active:translate-y-0.5">
+              <MessageCircle size={13} fill="var(--app-accent-border)" aria-hidden="true" className="text-[var(--app-accent-text)]" /> Hazırsın!
+              {' '}<span className="sr-only">Bilge Chan mesajlarını aç</span>
             </button>
             <button onClick={openCoach} className="absolute -bottom-10 -right-1 h-[160px] w-[116px]" aria-label="Bilge Chan koç penceresini aç">
               <Image src="/chan/chan-wave.webp" alt="" width={140} height={192} priority className="h-auto w-[112px] drop-shadow-[0_7px_8px_rgba(31,41,55,.14)]" />
@@ -711,7 +717,7 @@ export function MobileHomeDemo({
           </div>
         </section>}
         </div>
-      </main>
+      </MainLandmark>
 
       {showBottomNav && <div inert={coachOpen}><BottomNav activeOverride="learn" appearance="learning" /></div>}
 

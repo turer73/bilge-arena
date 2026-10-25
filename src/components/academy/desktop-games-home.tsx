@@ -11,7 +11,6 @@ import { useBilgeCharacter } from '@/lib/bilge/use-bilge-character'
 import { bilgeImage } from '@/lib/bilge/characters'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { AcademyTabletNav } from './academy-tablet-nav'
-import { getPreparationLabel } from '@/lib/utils/lobby-presentation'
 import { studyHref } from '@/lib/utils/study-href'
 import styles from './academy.module.css'
 
@@ -59,7 +58,7 @@ export function DesktopGamesHome() {
           <Image src={mode.image} alt="" fill loading="eager" sizes={modeImageSizes} />
         </div>
         <div className={styles.modeCopy}><p className={styles.eyebrow}>{mode.subtitle}</p><h3>{mode.title}</h3><p>{mode.description}</p><small>{mode.detail}</small></div>
-        {loading && mode.auth ? <span role="status" className={styles.modeAction}>Hesabın kontrol ediliyor…</span> : <Link className={styles.modeAction} href={mode.auth && !user ? `/giris?next=${encodeURIComponent(mode.href)}` : mode.href} aria-label={`${mode.title}${mode.auth && !user ? ' için giriş yap' : ' modunu aç'}`}>{mode.auth && !user ? 'Giriş yap ve oyna' : 'Modu aç'}<ChevronRight size={18} /></Link>}
+        {loading && mode.auth ? <span role="status" className={styles.modeAction}>Hesabın kontrol ediliyor…</span> : <Link className={styles.modeAction} href={mode.auth && !user ? `/giris?next=${encodeURIComponent(mode.href)}` : mode.href}>{mode.auth && !user ? 'Giriş yap ve oyna' : 'Modu aç'}<span className="sr-only">: {mode.title}</span><ChevronRight size={18} aria-hidden="true" /></Link>}
       </article>)}</div>
     </section>
     <section className={styles.subjectGames} aria-label="Ders oyunları">
@@ -74,7 +73,6 @@ export function DesktopGamesHome() {
           data-pressed={pressedSubject === game.slug ? 'true' : undefined}
           style={{ '--subject-color': game.colorHex } as CSSProperties}
           href={studyHref(game.slug, examRef)}
-          aria-label={`${getPreparationLabel(game.slug)} · ${EXAM_LABELS[examRef]}`}
           onPointerDown={event => {
             if (event.pointerType === 'touch' || event.pointerType === 'pen') setPressedSubject(game.slug)
           }}
@@ -86,8 +84,9 @@ export function DesktopGamesHome() {
           <span className={styles.subjectGameArt} aria-hidden="true">
             <Image src={SUBJECT_ART[game.slug]} alt="" fill loading={game.slug === 'matematik' ? 'eager' : 'lazy'} sizes="(min-width: 1440px) 322px, (min-width: 1051px) 25vw, 50vw" />
           </span>
-          <span className={styles.subjectGameScope}>{EXAM_LABELS[examRef]}</span>
-          <span className={styles.subjectGameCopy}><strong>{game.name}</strong></span>
+          {/* Ad içerikten gelir: "TYT Matematik Turunu hazırla" (görünen sırayla). */}
+          <span className={styles.subjectGameScope}>{EXAM_LABELS[examRef]}</span>{' '}
+          <span className={styles.subjectGameCopy}><strong>{game.name}</strong></span>{' '}
           <span className={styles.subjectGameAction}>Turunu hazırla <span><ChevronRight size={18} aria-hidden="true" /></span></span>
         </Link>
       })}</div>
