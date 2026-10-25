@@ -13,6 +13,9 @@ vi.mock('next/image', () => ({
     const { fill: _fill, priority: _priority, loading: _loading, sizes: _sizes, alt, ...rest } = props
     return <img alt={typeof alt === 'string' ? alt : ''} {...rest} />
   },
+  getImageProps: (props: { src: string; alt: string; sizes?: string; loading?: string }) => ({
+    props: { src: props.src, alt: props.alt, sizes: props.sizes, loading: props.loading, srcSet: `${props.src}?w=1920 1920w` },
+  }),
 }))
 vi.mock('@/components/privacy/document-boundary-link', () => ({
   DocumentBoundaryLink: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
@@ -32,6 +35,10 @@ vi.mock('../section-wrapper', () => ({
 }))
 
 import { AcademyHome } from '../academy-home'
+import styles from '../academy-home.module.css'
+import { FeaturedLearningResources } from '../featured-learning-resources'
+import { InstitutionPartnership } from '../institution-partnership'
+import { HomeFaq } from '../home-faq'
 
 const baseProps = { sections: {}, elements: [], gameCounts: {} }
 beforeEach(() => {
@@ -98,6 +105,45 @@ describe('AcademyHome', () => {
     render(<AcademyHome {...baseProps} featuredResources={<Link href="/rehber">Rehber</Link>} institutionPartnership={<Link href="/kurumlar">Kurumlar</Link>} />)
     expect(screen.getByRole('link', { name: 'Rehber' })).toHaveAttribute('href', '/rehber')
     expect(screen.getByRole('link', { name: 'Kurumlar' })).toHaveAttribute('href', '/kurumlar')
+  })
+
+  it('mobilde gizli manzara için ağ isteği atmayan kaynak seçer, masaüstü srcset korunur', () => {
+    const { container } = render(<AcademyHome {...baseProps} />)
+    const picture = container.querySelector('picture')
+    const source = picture?.querySelector('source')
+    expect(source).toHaveAttribute('media', '(max-width: 767px)')
+    expect(source?.getAttribute('srcset')).toMatch(/^data:image\/gif;base64,/)
+    const img = picture?.querySelector('img')
+    expect(img).toHaveAttribute('alt', '')
+    expect(img).toHaveAttribute('loading', 'eager')
+    expect(img?.getAttribute('srcset')).toContain('/academy/academy-landscape.png')
+  })
+
+  it('dışarıdan gelen bölümleri tek dikey ritim kapsayıcısına alır', () => {
+    const { container } = render(<AcademyHome {...baseProps}
+      featuredResources={<p>Rehber bölümü</p>}
+      institutionPartnership={<p>Kurum bölümü</p>}
+      faq={<p>SSS bölümü</p>} />)
+    const root = container.querySelector('[data-academy-home]')!
+    for (const label of ['Rehber bölümü', 'Kurum bölümü', 'SSS bölümü']) {
+      const wrapper = screen.getByText(label).parentElement!
+      expect(wrapper.parentElement).toBe(root)
+      expect(wrapper.className).toBe(styles.slot)
+    }
+  })
+
+  it('verilmeyen dış bölüm için boş kapsayıcı bırakmaz', () => {
+    const { container } = render(<AcademyHome {...baseProps} />)
+    expect(container.querySelectorAll(`[data-academy-home] > .${CSS.escape(styles.slot || 'slot')}`)).toHaveLength(0)
+  })
+
+  it('rehber, kurum ve SSS bölümleri kendi dikey dolgusunu taşımaz', () => {
+    for (const element of [<FeaturedLearningResources key="f" />, <InstitutionPartnership key="i" />, <HomeFaq key="h" />]) {
+      const { container, unmount } = render(element)
+      const section = container.querySelector('section')!
+      expect(section.className).not.toMatch(/(^|\s)(py|pt|pb|my|mt|mb)-/)
+      unmount()
+    }
   })
 
   it('CMS hero configini ve SectionWrapper bölümlerini korur', () => {

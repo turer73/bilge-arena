@@ -49,6 +49,13 @@ const MORE_NAV_LINKS = [
 
 const NAV_LINKS = [...PRIMARY_NAV_LINKS, ...MORE_NAV_LINKS]
 
+// Ana sayfada logo ve hesap eylemleri içerikle aynı dikey çizgide durur:
+// academy-home.module.css .root yatay dolgusunun (16/20/24/40) aynısı.
+// Yalnız keyfi min-[…] kesme noktaları: Tailwind v4 bunları md/lg'den önce
+// yazdığı için karıştırılınca adlı kesme noktası kazanır (eski lg:px-8 +
+// min-[1101px]:px-10 çiftinde 40px hiç uygulanmıyordu).
+const HOME_NAV_GUTTER = 'px-4 min-[768px]:px-5 min-[851px]:px-6 min-[1101px]:px-10'
+
 // Düello ve kurum paneli ortak Academy üst barını kullanır (geniş görünümde).
 function isAcademyShellRoute(pathname: string) {
   return pathname === '/arena/duello' || pathname === '/arena/kurum' || pathname.startsWith('/arena/kurum/')
@@ -174,7 +181,7 @@ export function Navbar({ variant }: NavbarProps = {}) {
           : 'bg-transparent backdrop-blur-none border-transparent'
       }`}
     >
-      <div className={`mx-auto flex h-[var(--navbar-h)] items-center justify-between px-6 lg:px-8 ${pathname === '/' ? 'min-[1101px]:px-10' : ''} ${academyVisualArea ? 'max-w-[1440px]' : 'max-w-[1200px]'}`}>
+      <div className={`mx-auto flex h-[var(--navbar-h)] items-center justify-between ${pathname === '/' ? HOME_NAV_GUTTER : 'px-6 lg:px-8'} ${academyVisualArea ? 'max-w-[1440px]' : 'max-w-[1200px]'}`}>
         {/* Logo */}
         {academyVisualArea ? <AcademyLogo /> : <Logo size={36} />}
 

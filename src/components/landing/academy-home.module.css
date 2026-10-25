@@ -1,5 +1,8 @@
 .root {
   --home-line: color-mix(in srgb, var(--focus) 26%, var(--border));
+  /* Ana bölümler arasındaki tek dikey ritim. Dışarıdan gelen bölümler
+     (rehberler, kurum, SSS) kendi dikey dolgusunu taşımaz; aralığı .slot verir. */
+  --home-section-gap: 48px;
   max-width: 1440px;
   margin: 0 auto;
   padding: calc(var(--navbar-h, 72px) + 28px) 40px 28px;
@@ -66,7 +69,8 @@
 .path a { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-top: 16px; border-top: 1px solid #cedcff30; font-size: 13px; font-weight: 750; color: #d0caff; }
 .path[data-path="study"] a { color: #9deddf; }
 .path:focus-within .pathArt img, .path:hover .pathArt img { transform: scale(1.035); }
-.modesSection { margin-top: 48px; }
+.modesSection { margin-top: var(--home-section-gap); }
+.slot { margin-top: var(--home-section-gap); }
 .modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .mode { overflow: hidden; border: 1px solid var(--border); border-radius: 17px; background: color-mix(in srgb, var(--card) 94%, transparent); transition: transform .2s, border-color .2s; }
 .mode:hover { transform: translateY(-4px); border-color: var(--focus-text); }
@@ -78,7 +82,7 @@
 .modeCopy h3 { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 20px; font-weight: 750; letter-spacing: -.02em; }
 .modeCopy h3 svg { color: var(--focus-text); }
 .modeCopy p { margin-top: 8px; color: var(--text-sub); font-size: 12px; line-height: 1.8; }
-.journey { display: grid; grid-template-columns: .85fr 1.15fr; align-items: center; gap: 50px; margin-top: 45px; padding: 34px; border: 1px solid var(--border); border-radius: 20px; background: linear-gradient(120deg, var(--focus-bg), transparent 70%); }
+.journey { display: grid; grid-template-columns: .85fr 1.15fr; align-items: center; gap: 50px; margin-top: var(--home-section-gap); padding: 34px; border: 1px solid var(--border); border-radius: 20px; background: linear-gradient(120deg, var(--focus-bg), transparent 70%); }
 .journey .eyebrow { font-size: 9px; }
 .journey h2 { font-size: 31px; line-height: 1.4; }
 .journey a { display: inline-flex; align-items: center; gap: 8px; margin-top: 22px; color: var(--focus-text); font-size: 12px; }
@@ -87,13 +91,13 @@
 .journey li > span { flex-shrink: 0; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; border: 1px solid var(--focus-border); background: var(--focus-bg); color: var(--focus-text); font-size: 12px; font-weight: 750; }
 .journey h3 { font-size: 14px; font-weight: 750; }
 .journey li p { margin-top: 4px; color: var(--text-sub); font-size: 12px; line-height: 1.75; }
-.together { display: grid; grid-template-columns: auto 1fr auto; align-items: center; column-gap: 22px; row-gap: 14px; padding: 32px; margin-top: 28px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); }
+.together { display: grid; grid-template-columns: auto 1fr auto; align-items: center; column-gap: 22px; row-gap: 14px; padding: 32px; margin-top: var(--home-section-gap); border: 1px solid var(--border); border-radius: 20px; background: var(--surface); }
 .togetherIcon { display: grid; place-items: center; width: 68px; height: 68px; border-radius: 20px; color: var(--wisdom-text); background: var(--wisdom-bg); }
 .together h2 { margin-top: 4px; font-size: 24px; font-weight: 750; letter-spacing: -.03em; }
 .together p:not(.eyebrow) { color: var(--text-sub); margin-top: 8px; font-size: 12px; }
 .together .eyebrow { font-size: 9px; }
 .textLink { grid-column: 3; justify-self: center; display: inline-flex; align-items: center; gap: 7px; font-size: 11px; color: var(--focus-text); }
-.personalize { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 28px 4px; margin-top: 10px; border-bottom: 1px solid var(--border); }
+.personalize { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 28px 4px; margin-top: calc(var(--home-section-gap) - 28px); border-bottom: 1px solid var(--border); }
 .personalize > div { display: flex; align-items: center; gap: 15px; }
 .personalize svg { color: var(--focus-text); flex-shrink: 0; }
 .personalize strong { display: block; font-size: 14px; font-weight: 650; }
@@ -142,7 +146,7 @@
   .together .primary { padding: 12px; font-size: 12px; }
 }
 @media (max-width: 767px) {
-  .root { padding: calc(var(--navbar-h, 72px) + 12px) 16px 24px; }
+  .root { --home-section-gap: 35px; padding: calc(var(--navbar-h, 72px) + 12px) 16px 24px; }
   .hero { display: block; min-height: 0; border-radius: 20px; }
   .hero::before { background: linear-gradient(180deg, #0a112bf5 0%, #101c39e8 52%, #0c1737a8 100%); }
   .landscape { display: none; }
@@ -170,12 +174,11 @@
   .pathCopy { padding: 23px; }
   .path h3 { font-size: 22px; }
   .path a { min-height: 48px; }
-  .modesSection { margin-top: 35px; }
   .modeArt { height: 150px; }
   .modeCopy h3 { font-size: 19px; }
-  .journey { grid-template-columns: minmax(0, 1fr); gap: 25px; margin-top: 35px; padding: 24px; }
+  .journey { grid-template-columns: minmax(0, 1fr); gap: 25px; padding: 24px; }
   .journey ol { gap: 18px; }
-  .together { grid-template-columns: minmax(0, 1fr); margin-top: 22px; padding: 23px; }
+  .together { grid-template-columns: minmax(0, 1fr); padding: 23px; }
   .togetherIcon { width: 48px; height: 48px; }
   .together .primary { width: 100%; min-height: 48px; }
   .textLink { grid-column: 1; justify-self: start; min-height: 44px; }

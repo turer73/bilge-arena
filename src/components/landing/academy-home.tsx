@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import Image from 'next/image'
+import Image, { getImageProps } from 'next/image'
 import dynamic from 'next/dynamic'
 import { ArrowDown, ArrowRight, BookOpenText, Compass, Flag, Gamepad2, Palette, Sparkles, Swords, Users } from 'lucide-react'
 import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
@@ -17,6 +17,18 @@ import styles from './academy-home.module.css'
 const HowItWorks = dynamic(() => import('./how-it-works').then(module => module.HowItWorks))
 const LeaderboardPreview = dynamic(() => import('./leaderboard-preview').then(module => module.LeaderboardPreview))
 const CTASection = dynamic(() => import('./cta-section').then(module => module.CTASection))
+
+// Manzara mobilde CSS ile gizli; display:none + eager görsel yine indirilir.
+// <picture> mobilde ağ isteği atmayan tek pikselik kaynağı seçer.
+const BLANK_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+const LANDSCAPE_MOBILE_MEDIA = '(max-width: 767px)'
+const { props: landscapeImage } = getImageProps({
+  src: '/academy/academy-landscape.png',
+  alt: '',
+  fill: true,
+  sizes: '(min-width: 1440px) 1360px, 100vw',
+  loading: 'eager',
+})
 
 export interface AcademyHomeProps {
   sections: Partial<Record<HomepageSection, Record<string, unknown>>>
@@ -61,7 +73,10 @@ export function AcademyHome({ sections, elements, gameCounts, featuredResources,
       <SectionWrapper section="hero" elements={elements}>
         <section className={styles.hero} aria-labelledby="home-title">
           <div className={styles.landscape} aria-hidden="true">
-            <Image src="/academy/academy-landscape.png" alt="" fill sizes="(min-width: 1440px) 1360px, 100vw" loading="eager" />
+            <picture>
+              <source media={LANDSCAPE_MOBILE_MEDIA} srcSet={BLANK_PIXEL} />
+              <img {...landscapeImage} alt="" />
+            </picture>
           </div>
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>{customLogo ? <Image src={customLogo} alt="" width={36} height={36} sizes="36px" /> : <Sparkles size={16} aria-hidden="true" />} {text(hero?.badge, 'BİLGİN, EN BÜYÜK GÜCÜN')}</p>
@@ -140,9 +155,9 @@ export function AcademyHome({ sections, elements, gameCounts, featuredResources,
         </section>}
       </SectionWrapper>
 
-      {featuredResources}
-      {institutionPartnership}
-      {faq}
+      {featuredResources && <div className={styles.slot}>{featuredResources}</div>}
+      {institutionPartnership && <div className={styles.slot}>{institutionPartnership}</div>}
+      {faq && <div className={styles.slot}>{faq}</div>}
       <SectionWrapper section="cta" elements={elements}>
         {sections.cta ? <div className={styles.managed}><CTASection config={sections.cta} /></div> : <div className={styles.personalize}>
           <div><Palette size={22} aria-hidden="true" /><p><strong>Bu dünya senin renklerinle güzel.</strong><span>Temanı, arka planını ve Bilge rehberini kendine göre seç.</span></p></div><Link href="/arena/kisisellestir">Kişiselleştir <ArrowRight size={17} aria-hidden="true" /></Link>
