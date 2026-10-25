@@ -82,7 +82,7 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
 
     expect(screen.getByRole('heading', { name: 'Matematik Yolu' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Öğrenme yolu' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Sayılar dersini aç' }))
+    expect(screen.getByRole('link', { name: / Sayılar dersini aç$/ }))
       .toHaveAttribute('href', '/arena/matematik?exam_ref=TYT&category=sayilar')
     expect(screen.getByRole('link', { name: /Mağaza/ })).toHaveAttribute('href', '/arena/magaza')
 
@@ -272,7 +272,7 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Planı incele' }))
     expect(screen.getByRole('button', { name: 'Planı Başlat · 12 Soru' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Pencereyi kapat' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Sınav kapsamını değiştir' }))
+    fireEvent.click(screen.getByRole('button', { name: /, sınav kapsamını değiştir$/ }))
     fireEvent.click(screen.getByRole('button', { name: 'AYT Eşit Ağırlık' }))
     expect(screen.queryByRole('button', { name: 'Planı Başlat · 12 Soru' })).not.toBeInTheDocument()
     expect(await screen.findByRole('progressbar', { name: 'Günlük plan ilerlemesi' })).toHaveAttribute('aria-valuemax', '8')

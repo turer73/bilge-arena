@@ -12,7 +12,7 @@ beforeEach(()=>{auth.user=null;auth.profile=null;auth.loading=false;useGameStore
 describe('Desktop games discovery',()=>{
   it('resets the visual touch press on release, cancelled scroll, and blur without changing navigation',()=>{
     render(<DesktopGamesHome />)
-    const link=screen.getByRole('link',{name:'Matematik turunu hazırla · TYT'})
+    const link=screen.getByRole('link',{name:'TYT Matematik Turunu hazırla'})
     const press=()=>{
       const event=new Event('pointerdown',{bubbles:true})
       Object.defineProperty(event,'pointerType',{value:'touch'})
@@ -35,7 +35,7 @@ describe('Desktop games discovery',()=>{
     ]
     expect(within(subjects).getAllByRole('link')).toHaveLength(4)
     for(const game of expected){
-      const link=within(subjects).getByRole('link',{name:`${game.name} turunu hazırla · TYT`})
+      const link=within(subjects).getByRole('link',{name:`TYT ${game.name} Turunu hazırla`})
       expect(link).toHaveAttribute('href',`/arena/${game.slug}?exam_ref=TYT`)
       expect(link).toHaveAttribute('data-subject',game.slug)
       expect(link.style.getPropertyValue('--subject-color')).toBe(game.color)
@@ -52,7 +52,7 @@ describe('Desktop games discovery',()=>{
     render(<DesktopGamesHome />)
     const subjects=screen.getByRole('region',{name:'Ders oyunları'})
     expect(within(subjects).getAllByRole('link')).toHaveLength(1)
-    expect(within(subjects).getByRole('link',{name:'İngilizce turunu hazırla · YDT'})).toHaveAttribute('href','/arena/wordquest')
+    expect(within(subjects).getByRole('link',{name:'YDT İngilizce Turunu hazırla'})).toHaveAttribute('href','/arena/wordquest')
     expect(subjects.querySelector('[data-count]')).toHaveAttribute('data-count','1')
     expect(subjects.querySelector('a img')).toHaveAttribute('src','/academy/modes/wordquest-v1.png')
   })
@@ -76,18 +76,18 @@ describe('Desktop games discovery',()=>{
     expect(screen.getByRole('heading',{name:'Bugün hangi mücadele?'})).toBeInTheDocument()
     expect(screen.queryByRole('heading',{name:'Öğrenme yolun'})).not.toBeInTheDocument()
     expect(screen.queryByText(/günlük seri/)).not.toBeInTheDocument()
-    expect(screen.getByRole('link',{name:'Kule Modu için giriş yap'})).toHaveAttribute('href','/giris?next=%2Farena%2Fkule')
-    expect(screen.getByRole('link',{name:'Bil ve Fethet için giriş yap'})).toHaveAttribute('href','/giris?next=%2Farena%2Ffethet')
-    expect(screen.getByRole('link',{name:'WordQuest modunu aç'})).toHaveAttribute('href','/arena/wordquest')
+    expect(screen.getByRole('link',{name:'Giriş yap ve oyna: Kule Modu'})).toHaveAttribute('href','/giris?next=%2Farena%2Fkule')
+    expect(screen.getByRole('link',{name:'Giriş yap ve oyna: Bil ve Fethet'})).toHaveAttribute('href','/giris?next=%2Farena%2Ffethet')
+    expect(screen.getByRole('link',{name:'Modu aç: WordQuest'})).toHaveAttribute('href','/arena/wordquest')
     expect(screen.getByRole('navigation',{name:'Tablet gezinmesi'})).toBeInTheDocument()
   })
   it('links signed-in players to existing modes and updates after sign-out',()=>{
     auth.user={id:'student'}
     const {rerender}=render(<DesktopGamesHome />)
-    expect(screen.getByRole('link',{name:'Kule Modu modunu aç'})).toHaveAttribute('href','/arena/kule')
-    expect(screen.getByRole('link',{name:'Bil ve Fethet modunu aç'})).toHaveAttribute('href','/arena/fethet')
+    expect(screen.getByRole('link',{name:'Modu aç: Kule Modu'})).toHaveAttribute('href','/arena/kule')
+    expect(screen.getByRole('link',{name:'Modu aç: Bil ve Fethet'})).toHaveAttribute('href','/arena/fethet')
     auth.user=null;rerender(<DesktopGamesHome />)
-    expect(screen.getByRole('link',{name:'Kule Modu için giriş yap'})).toHaveAttribute('href','/giris?next=%2Farena%2Fkule')
+    expect(screen.getByRole('link',{name:'Giriş yap ve oyna: Kule Modu'})).toHaveAttribute('href','/giris?next=%2Farena%2Fkule')
   })
   it('does not offer a protected start while auth is loading',()=>{
     auth.loading=true;render(<DesktopGamesHome />)
@@ -98,7 +98,7 @@ describe('Desktop games discovery',()=>{
     auth.profile={exam_type:'lgs'};useGameStore.setState({selectedExamRef:'AYT-SAY'})
     const {rerender}=render(<DesktopGamesHome />)
     expect(screen.getByRole('heading',{name:'WordQuest'})).toBeInTheDocument()
-    expect(screen.getByRole('link',{name:'WordQuest modunu aç'})).toHaveAttribute('href','/arena/wordquest')
+    expect(screen.getByRole('link',{name:'Modu aç: WordQuest'})).toHaveAttribute('href','/arena/wordquest')
     const modeImages=screen.getByRole('region',{name:'Oyun modları'}).querySelectorAll('article img')
     expect(modeImages).toHaveLength(3)
     for(const image of modeImages) expect(image).toHaveAttribute('sizes',expect.stringContaining('36vw'))

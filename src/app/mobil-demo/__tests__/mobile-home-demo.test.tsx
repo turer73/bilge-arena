@@ -61,7 +61,7 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
     render(<MobileHomeDemo />)
     fireEvent.click(await screen.findByRole('button', { name: 'Koç penceresini kapat' }))
 
-    fireEvent.click(screen.getByRole('button', { name: 'Bilge Chan mesajlarını aç' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hazırsın! Bilge Chan mesajlarını aç' }))
     expect(screen.getByRole('dialog')).toBeVisible()
 
     fireEvent.keyDown(window, { key: 'Escape' })
@@ -150,7 +150,7 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
     expect(profileLink).toHaveAttribute('href', '/arena/profil')
     expect(profileLink.querySelector('img')).toHaveAttribute('src', 'https://lh3.googleusercontent.com/avatar.png')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sınav kapsamını değiştir' }))
+    fireEvent.click(screen.getByRole('button', { name: /, sınav kapsamını değiştir$/ }))
     expect(screen.getByRole('dialog', { name: 'Sınav kapsamı seç' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'AYT Sayısal' }))
     expect(onExamRefChange).toHaveBeenCalledWith('AYT-SAY')
@@ -179,7 +179,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
     fireEvent.touchStart(tabs, { touches: [{ identifier: 1, clientX: 280, clientY: 90 }] })
     fireEvent.touchEnd(tabs, { touches: [], changedTouches: [{ identifier: 1, clientX: 100, clientY: 90 }] })
     expect(screen.getByRole('button', { name: 'Mat' })).toHaveAttribute('aria-pressed', 'true')
-    fireEvent.click(screen.getByRole('button', { name: 'Bilge Chan mesajlarını aç' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hazırsın! Bilge Chan mesajlarını aç' }))
     const message = screen.getByRole('heading', { name: 'Hazırsın, Bilgin!' })
     fireEvent.touchStart(message, { touches: [{ identifier: 1, clientX: 280, clientY: 200 }] })
     fireEvent.touchEnd(message, { touches: [], changedTouches: [{ identifier: 1, clientX: 100, clientY: 200 }] })
@@ -218,9 +218,9 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
     render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['matematik']} />)
 
     // Sabit "Ünite 3" metni yerine gercek konu adlari
-    expect(await screen.findByRole('link', { name: 'Sayılar dersini aç' })).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Problemler dersini aç' })).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Olasılık dersini aç' })).toBeVisible()
+    expect(await screen.findByRole('link', { name: / Sayılar dersini aç$/ })).toBeVisible()
+    expect(screen.getByRole('link', { name: / Problemler dersini aç$/ })).toBeVisible()
+    expect(screen.getByRole('link', { name: / Olasılık dersini aç$/ })).toBeVisible()
 
     // 6 konudan 1'i tamamlandi -> 0/6 sabit degil
     expect(screen.getAllByText('1 / 6').length).toBeGreaterThan(0)
@@ -229,7 +229,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
   test('adımlar ilgili konuya derin bağlantı verir ve kilitli değildir', async () => {
     render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['matematik']} />)
 
-    const step = await screen.findByRole('link', { name: 'Olasılık dersini aç' })
+    const step = await screen.findByRole('link', { name: / Olasılık dersini aç$/ })
     expect(step).toHaveAttribute('href', '/arena/matematik?exam_ref=TYT&category=olasilik')
     expect(step).not.toHaveAttribute('aria-disabled')
 
@@ -240,7 +240,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
 
   test('AYT öğrenme yolundan hazırlığa geçerken sınav ve konu bağlantıda korunur', async () => {
     render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['matematik']} examRef="AYT-SAY" />)
-    const step = await screen.findByRole('link', { name: 'Olasılık dersini aç' })
+    const step = await screen.findByRole('link', { name: / Olasılık dersini aç$/ })
     const url = new URL(step.getAttribute('href')!, 'https://bilgearena.com')
     expect(url.pathname).toBe('/arena/matematik')
     expect(url.searchParams.get('exam_ref')).toBe('AYT-SAY')
@@ -253,7 +253,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
     const path = container.querySelector('[data-learning-path-hero]')
     const selfChoice = container.querySelector('[data-self-choice-lesson]')
 
-    await screen.findByRole('link', { name: 'Sayılar dersini aç' })
+    await screen.findByRole('link', { name: / Sayılar dersini aç$/ })
     expect(primary).toBeInTheDocument()
     expect(primary?.parentElement).toHaveClass('max-w-[1180px]', 'px-4', 'md:px-5')
     expect((primary as Element).compareDocumentPosition(path as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -322,7 +322,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Bilge Chan mesajlarını aç' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hazırsın! Bilge Chan mesajlarını aç' }))
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByRole('heading', { name: 'Sosyal öğrenme yolu hazırlanıyor' })).toBeVisible()
     expect(dialog).not.toHaveTextContent('10 soruluk kısa dersin hazır')
@@ -352,26 +352,26 @@ describe('MobileHomeDemo koç penceresi davranışı', () => {
     await act(async () => { render(<MobileHomeDemo mode="live" userId="user-1" />) })
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Bilge Chan mesajlarını aç' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hazırsın! Bilge Chan mesajlarını aç' }))
     expect(screen.getByRole('dialog')).toBeVisible()
   })
 
   test('açılınca odak pencereye taşınır ve arka plan inert olur', async () => {
     render(<MobileHomeDemo mode="live" userId="user-1" />)
-    fireEvent.click(screen.getByRole('button', { name: 'Bilge Chan mesajlarını aç' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hazırsın! Bilge Chan mesajlarını aç' }))
 
     const dialog = await screen.findByRole('dialog')
     await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true))
-    expect(document.querySelector('main')).toHaveAttribute('inert')
+    expect(document.querySelector('[data-subject-swipe]')).toHaveAttribute('inert')
   })
 
   test('kapanınca arka plandaki inert kalkar', async () => {
     render(<MobileHomeDemo mode="live" userId="user-1" />)
-    fireEvent.click(screen.getByRole('button', { name: 'Bilge Chan mesajlarını aç' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Hazırsın! Bilge Chan mesajlarını aç' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Koç penceresini kapat' }))
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(document.querySelector('main')).not.toHaveAttribute('inert')
+    expect(document.querySelector('[data-subject-swipe]')).not.toHaveAttribute('inert')
   })
 
   test('demo koçu açık başlar, canlı koç ise başlangıçta kapalıdır', async () => {
@@ -381,5 +381,29 @@ describe('MobileHomeDemo koç penceresi davranışı', () => {
 
     await act(async () => { render(<MobileHomeDemo mode="live" userId="user-2" />) })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+})
+
+describe('MobileHomeDemo erişilebilir adlar ve yer işaretleri', () => {
+  test('adlar görünen metinle başlar; eylem bağlamı yalnız ekran okuyucuya eklenir', async () => {
+    render(<MobileHomeDemo />)
+    expect(await screen.findByRole('link', { name: 'Sıradaki Bölme ve Bölünebilme dersini aç' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '4. ders EBOB · EKOK dersini aç' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'YKS, sınav kapsamını değiştir' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hazırsın! Bilge Chan mesajlarını aç' })).toBeInTheDocument()
+    // Ad görünen metni barındırsın diye bu denetimlerde aria-label kullanılmaz.
+    expect(screen.getByRole('button', { name: 'Hazırsın! Bilge Chan mesajlarını aç' })).not.toHaveAttribute('aria-label')
+    expect(screen.getByRole('button', { name: 'YKS, sınav kapsamını değiştir' })).not.toHaveAttribute('aria-label')
+  })
+
+  test('tek başına demo sayfasında main çizer, arenada (live) düzenin main’ine bırakır', async () => {
+    const { unmount } = render(<MobileHomeDemo />)
+    await screen.findAllByRole('link')
+    expect(screen.getAllByRole('main')).toHaveLength(1)
+    unmount()
+    render(<MobileHomeDemo mode="live" userId="user-1" />)
+    await screen.findAllByRole('button')
+    expect(screen.queryByRole('main')).not.toBeInTheDocument()
+    expect(document.querySelector('[data-subject-swipe]')?.tagName).toBe('DIV')
   })
 })
