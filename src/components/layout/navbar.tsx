@@ -49,9 +49,24 @@ const MORE_NAV_LINKS = [
 
 const NAV_LINKS = [...PRIMARY_NAV_LINKS, ...MORE_NAV_LINKS]
 
-// Düello ve kurum paneli ortak Academy üst barını kullanır (geniş görünümde).
+// Ana sayfada logo ve hesap eylemleri içerikle aynı dikey çizgide durur:
+// academy-home.module.css .root yatay dolgusunun (16/20/24/40) aynısı.
+// Yalnız keyfi min-[…] kesme noktaları: Tailwind v4 bunları md/lg'den önce
+// yazdığı için karıştırılınca adlı kesme noktası kazanır (eski lg:px-8 +
+// min-[1101px]:px-10 çiftinde 40px hiç uygulanmıyordu).
+const HOME_NAV_GUTTER = 'px-4 min-[768px]:px-5 min-[851px]:px-6 min-[1101px]:px-10'
+
+function isInstitutionRoute(pathname: string) {
+  return pathname === '/arena/kurum' || pathname.startsWith('/arena/kurum/')
+}
+
+function isDuelRoute(pathname: string) {
+  return pathname === '/arena/duello' || pathname.startsWith('/arena/duello/')
+}
+
+// Düello ve kurum paneli ortak Academy üst barını kullanır.
 function isAcademyShellRoute(pathname: string) {
-  return pathname === '/arena/duello' || pathname === '/arena/kurum' || pathname.startsWith('/arena/kurum/')
+  return isDuelRoute(pathname) || isInstitutionRoute(pathname)
 }
 
 interface NavbarProps {
@@ -71,20 +86,26 @@ export function Navbar({ variant }: NavbarProps = {}) {
   const [moreOpen, setMoreOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const moreRef = useRef<HTMLDivElement>(null)
+  const mobileButtonRef = useRef<HTMLButtonElement>(null)
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
   const routerPathname = usePathname()
   const pathname = variant === 'home' ? '/' : routerPathname
   const wide = useWideStudy()
-  const academyArea = pathname === '/arena' || pathname === '/arena/calisma' || pathname === '/arena/kisisellestir' || pathname === '/oda' || pathname.startsWith('/oda/') || (wide && (WIDE_ACADEMY_ROUTES.has(pathname) || isAcademyShellRoute(pathname)))
+  const academyArea = pathname === '/arena' || pathname === '/arena/calisma' || pathname.startsWith('/arena/calisma/') || pathname === '/arena/kisisellestir' || pathname === '/oda' || pathname.startsWith('/oda/') || isInstitutionRoute(pathname) || (wide && (WIDE_ACADEMY_ROUTES.has(pathname) || isAcademyShellRoute(pathname)))
   const academyMarketingRoute = pathname === '/nasil-calisir' || pathname === '/hakkinda' || pathname === '/kurumlar'
   const academyMarketingArea = wide && academyMarketingRoute
   const academyVisualArea = pathname === '/' || academyArea || academyMarketingArea
-  const activeNavHref = pathname === '/arena/calisma'
+  const activeNavHref = pathname === '/arena/calisma' || pathname.startsWith('/arena/calisma/')
     ? '/arena/calisma'
-    : pathname === '/arena/siralama'
+    : pathname === '/arena/siralama' || pathname.startsWith('/arena/siralama/')
       ? '/arena/siralama'
-      : pathname === '/arena' || pathname.startsWith('/arena/')
-        ? '/arena'
-        : pathname
+      : pathname === '/oda' || pathname.startsWith('/oda/')
+        ? '/oda'
+        : pathname === '/kurumlar' || pathname.startsWith('/kurumlar/') || isInstitutionRoute(pathname)
+          ? '/kurumlar'
+          : pathname === '/arena' || pathname.startsWith('/arena/')
+            ? '/arena'
+            : pathname
   const academyMarketingStyle = academyMarketingArea
     ? ({
         '--app-text': '#f6f8ff',
@@ -149,8 +170,14 @@ export function Navbar({ variant }: NavbarProps = {}) {
       if (e.key !== 'Escape') return
       if (moreRef.current?.contains(document.activeElement)) {
         moreRef.current.querySelector<HTMLButtonElement>('button[aria-haspopup]')?.focus()
+      } else if (dropdownRef.current?.contains(document.activeElement)) {
+        dropdownRef.current.querySelector<HTMLButtonElement>('button[aria-haspopup]')?.focus()
+      } else if (mobileMenuRef.current?.contains(document.activeElement)) {
+        mobileButtonRef.current?.focus()
       }
       setMoreOpen(false)
+      setDropdownOpen(false)
+      setMobileOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleEscape)
@@ -174,7 +201,7 @@ export function Navbar({ variant }: NavbarProps = {}) {
           : 'bg-transparent backdrop-blur-none border-transparent'
       }`}
     >
-      <div className={`mx-auto flex h-[var(--navbar-h)] items-center justify-between px-6 lg:px-8 ${pathname === '/' ? 'min-[1101px]:px-10' : ''} ${academyVisualArea ? 'max-w-[1440px]' : 'max-w-[1200px]'}`}>
+      <div className={`mx-auto flex h-[var(--navbar-h)] items-center justify-between ${pathname === '/' ? HOME_NAV_GUTTER : 'px-6 lg:px-8'} ${academyVisualArea ? 'max-w-[1440px]' : 'max-w-[1200px]'}`}>
         {/* Logo */}
         {academyVisualArea ? <AcademyLogo /> : <Logo size={36} />}
 
@@ -202,7 +229,10 @@ export function Navbar({ variant }: NavbarProps = {}) {
           <div className="relative shrink-0" ref={moreRef}>
             <button
               type="button"
-              onClick={() => setMoreOpen(open => !open)}
+              onClick={() => {
+                setMoreOpen(open => !open)
+                setDropdownOpen(false)
+              }}
               aria-haspopup="true"
               aria-expanded={moreOpen}
               aria-controls="more-navigation"
@@ -265,9 +295,14 @@ export function Navbar({ variant }: NavbarProps = {}) {
               {/* User dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <button
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-[var(--card)]"
+                  type="button"
+                  onClick={() => {
+                    setDropdownOpen(open => !open)
+                    setMoreOpen(false)
+                  }}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-[var(--card)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
                   aria-label="Kullanıcı menüsü"
+                  aria-haspopup="true"
                   aria-expanded={dropdownOpen}
                 >
                   {academyVisualArea ? (
@@ -355,6 +390,7 @@ export function Navbar({ variant }: NavbarProps = {}) {
                     </Link>
                     <Link
                       href="/arena/duello"
+                      aria-current={isDuelRoute(pathname) ? 'page' : undefined}
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--reward)] transition-colors hover:bg-[var(--reward-bg)]"
                     >
                       <Swords size={14} />
@@ -371,6 +407,7 @@ export function Navbar({ variant }: NavbarProps = {}) {
                         {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- AAL2 kapisi tam sayfa gezinme gerektiriyor */}
                         <a
                           href="/arena/kurum"
+                          aria-current={isInstitutionRoute(pathname) ? 'page' : undefined}
                           className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-sky-300 transition-colors hover:bg-sky-400/10"
                         >
                           <Building2 size={14} />
@@ -416,6 +453,8 @@ export function Navbar({ variant }: NavbarProps = {}) {
 
           {/* Mobile hamburger */}
           <button
+            ref={mobileButtonRef}
+            type="button"
             onClick={() => setMobileOpen(!mobileOpen)}
             className="flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] xl:hidden"
             aria-label={mobileOpen ? 'Menüyü kapat' : 'Menüyü aç'}
@@ -429,12 +468,13 @@ export function Navbar({ variant }: NavbarProps = {}) {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div id="mobile-navigation" key="mobile-menu" className="animate-slideDown border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl xl:hidden">
+        <div ref={mobileMenuRef} id="mobile-navigation" key="mobile-menu" className="animate-slideDown border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl xl:hidden">
           <div className="flex flex-col gap-1 px-6 py-4">
             {NAV_LINKS.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
+                aria-current={activeNavHref === href ? 'page' : undefined}
                 className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--card)] ${
                   activeNavHref === href
                     ? 'text-[var(--focus)] bg-[var(--focus-bg)]'
@@ -449,6 +489,7 @@ export function Navbar({ variant }: NavbarProps = {}) {
               // eslint-disable-next-line @next/next/no-html-link-for-pages -- AAL2 kapisi tam sayfa gezinme gerektiriyor
               <a
                 href="/arena/kurum"
+                aria-current={isInstitutionRoute(pathname) ? 'page' : undefined}
                 className="mt-2 flex min-h-11 items-center gap-2 rounded-lg border border-sky-400/20 bg-sky-400/10 px-4 py-2.5 text-sm font-bold text-sky-200"
               >
                 <Building2 size={16} />

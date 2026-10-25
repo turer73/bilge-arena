@@ -3,7 +3,7 @@ import { FEATURED_LEARNING_RESOURCES } from '@/lib/content/featured-learning-res
 
 export function FeaturedLearningResources() {
   return (
-    <section className="w-full py-14" aria-labelledby="featured-learning-title">
+    <section className="w-full" aria-labelledby="featured-learning-title">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">Ücretsiz öğrenme kaynakları</p>
