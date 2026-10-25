@@ -352,6 +352,10 @@
   --app-text-sub: var(--text-sub);
   --app-text-muted: var(--text-muted);
   --app-disabled: var(--border-strong);
+  /* Ders rengiyle yazılan metinde ders renginin payı; kalanı --app-text.
+     Beş ders rengi bu payla her temada 4.5:1 üstünde kalır (ölçülen en düşük:
+     okyanus 4.99, gün ışığı 4.96). */
+  --app-subject-text-share: 65%;
 
   /* Vurgu (focus ailesi) */
   --app-accent: var(--focus);
@@ -398,6 +402,7 @@
   --app-text: #45494e;
   --app-text-sub: #69717a;
   --app-text-muted: #8b949e;
+  --app-subject-text-share: 40%;
   --app-disabled: #cbd0d6;
 
   --app-accent: #2563eb;

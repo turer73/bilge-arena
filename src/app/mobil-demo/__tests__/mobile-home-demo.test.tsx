@@ -32,6 +32,20 @@ beforeEach(() => {
   mockUsePathname.mockReturnValue('/mobil-demo')
 })
 
+describe('MobileHomeDemo ders rengiyle yazılan metin', () => {
+  test('etiketler ve etkin sekme ham ders rengini değil tema payıyla karışmış rengi kullanır', async () => {
+    render(<MobileHomeDemo />)
+    const mixed = /^color-mix\(in srgb, #2563eb var\(--app-subject-text-share, 65%\), var\(--app-text\)\)$/
+    for (const label of ['Kendi seçimin', 'Ünite planı']) {
+      expect((await screen.findByText(label)).style.color).toMatch(mixed)
+    }
+    const activeTab = screen.getByRole('button', { name: 'Mat', pressed: true })
+    expect(activeTab.style.color).toMatch(mixed)
+    // Kenarlık ve dolgu ham ders rengini korur.
+    expect(activeTab.style.borderColor).toMatch(/^(#2563eb|rgb\(37, 99, 235\))$/)
+  })
+})
+
 describe('MobileHomeDemo Bilge Chan koç balonu', () => {
   test('ilk mesajla açılır ve kapatma düğmesiyle kapanır', async () => {
     render(<MobileHomeDemo />)

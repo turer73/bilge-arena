@@ -33,7 +33,9 @@ test.describe('home page production hydration', () => {
         const nav = root.querySelector('nav[data-app-navbar]')
         if (!nav) return null
         return {
-          academyLogo: Boolean(nav.querySelector('a[aria-label="Bilge Arena ana sayfa"] img[src*="brand-crest-orbit"]')),
+          // Erişilebilir ada değil veri özniteliğine bağlı: logo adı aria-label'dan
+          // sr-only metne taşındığında (#687) bu kapı yanlışlıkla kırılmasın.
+          academyLogo: Boolean(nav.querySelector('a[data-academy-logo] img[src*="brand-crest-orbit"]')),
           legacyLogo: Boolean(nav.querySelector('img[src*="/logo/icon-dark.svg"]')),
           themeClass: nav.querySelector('[data-navbar-theme]')?.getAttribute('class') ?? null,
           currentHref: nav.querySelector('a[aria-current="page"]')?.getAttribute('href') ?? null,
