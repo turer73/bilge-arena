@@ -49,7 +49,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Navbar institution panel entry', () => {
-  it.each(['/arena', '/arena/calisma', '/arena/kisisellestir', '/arena/magaza', '/oda', '/oda/ABC123', '/arena/matematik', '/arena/turkce', '/arena/fen', '/arena/sosyal', '/arena/wordquest', '/arena/kule', '/arena/fethet', '/arena/profil', '/arena/siralama', '/arena/arkadaslar', '/arena/yanlislarim', '/nasil-calisir', '/hakkinda', '/arena/duello', '/arena/kurum', '/arena/kurum/roller', '/arena/kurum/demo', '/arena/kurum/sinif/abc'])('keeps the academy header on %s without unmounting theme synchronization', (route) => {
+  it.each(['/arena', '/arena/calisma', '/arena/kisisellestir', '/arena/magaza', '/oda', '/oda/ABC123', '/arena/matematik', '/arena/turkce', '/arena/fen', '/arena/sosyal', '/arena/wordquest', '/arena/kule', '/arena/fethet', '/arena/profil', '/arena/siralama', '/arena/arkadaslar', '/arena/yanlislarim', '/nasil-calisir', '/hakkinda', '/arena/duello', '/arena/duello/abc', '/arena/kurum', '/arena/kurum/roller', '/arena/kurum/demo', '/arena/kurum/sinif/abc'])('keeps the academy header on %s without unmounting theme synchronization', (route) => {
     mockUsePathname.mockReturnValue(route)
     vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
     render(<Navbar />)
@@ -109,12 +109,40 @@ describe('Navbar institution panel entry', () => {
     expect(accountMenu.querySelector('img')).not.toBeInTheDocument()
   })
 
-  it('marks Oyunlar as the active top-level area on Yanlışlarım', () => {
-    mockUsePathname.mockReturnValue('/arena/yanlislarim')
+  it('marks Oyunlar as the active top-level area on Yanlışlarım and Duello routes', () => {
+    mockUsePathname.mockReturnValue('/arena/duello/duel-42')
     vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
     render(<Navbar />)
 
     expect(screen.getAllByRole('link', { name: 'Oyunlar' }).some((link) => link.getAttribute('aria-current') === 'page')).toBe(true)
+  })
+
+  it('matches institution panel routes with institution context instead of Oyunlar and closes user menu on Escape', async () => {
+    mockUsePathname.mockReturnValue('/arena/kurum/sinif/abc')
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json(workspace))
+    const user = userEvent.setup()
+    render(<Navbar />)
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled())
+    expect(screen.getAllByRole('link', { name: 'Oyunlar' }).every((link) => link.getAttribute('aria-current') !== 'page')).toBe(true)
+
+    await user.click(screen.getByRole('button', { name: /Diğer/ }))
+    expect(screen.getByRole('link', { name: 'Kurumlar' })).toHaveAttribute('aria-current', 'page')
+
+    const accountBtn = screen.getByRole('button', { name: 'Kullanıcı menüsü' })
+    await user.click(accountBtn)
+    expect(screen.getByRole('link', { name: 'Kurum Paneli' })).toHaveAttribute('aria-current', 'page')
+
+    await user.keyboard('{Escape}')
+    expect(accountBtn).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('marks Oda Modu as active on room sub-routes', () => {
+    mockUsePathname.mockReturnValue('/oda/ABC123')
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
+    render(<Navbar />)
+
+    expect(screen.getAllByRole('link', { name: 'Oda Modu' }).some((link) => link.getAttribute('aria-current') === 'page')).toBe(true)
   })
 
   it('uses native anchors for public links while a sensitive document is active', async () => {

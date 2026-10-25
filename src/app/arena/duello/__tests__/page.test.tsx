@@ -45,6 +45,7 @@ describe('DuelloPage', () => {
     expect(screen.getByRole('heading', { name: 'Bilgini rakibinle karşılaştır.' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Giriş yap ve düelloya katıl/ })).toHaveAttribute('href', '/giris?next=%2Farena%2Fduello')
     expect(container.querySelector('[data-duel-hero]')).toBeInTheDocument()
+    expect(container.querySelector('style')?.textContent).toContain('@media (max-width: 767px)')
   })
 
   test('boş durumda rakip seçme adımını görünür yapar', async () => {

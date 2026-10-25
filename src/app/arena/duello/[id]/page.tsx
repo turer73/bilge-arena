@@ -26,7 +26,7 @@ import type { Question, Challenge } from '@/types/database'
 import type { OptionState } from '@/components/game/option-button'
 
 const MOBILE_ARENA_STYLE = `
-  @media (max-width: 1023px) {
+  @media (max-width: 767px) {
     [data-app-navbar] { display: none !important; }
     [data-arena-main] { background: var(--app-bg) !important; padding: 0 !important; }
   }
@@ -34,7 +34,7 @@ const MOBILE_ARENA_STYLE = `
 
 function DuelStage({ children }: { children: ReactNode }) {
   return (
-    <div data-duel-game className="mx-auto min-h-dvh w-full max-w-[1060px] overflow-x-clip bg-[var(--app-bg)] px-3 pb-28 pt-3 text-[var(--app-text)] sm:px-4 md:px-5 md:pt-5 lg:bg-transparent lg:px-6 lg:pb-10 lg:pt-8">
+    <div data-duel-game className="mx-auto min-h-dvh w-full max-w-[1060px] overflow-x-clip bg-[var(--app-bg)] px-3 pb-28 pt-3 text-[var(--app-text)] sm:px-4 md:bg-transparent md:px-6 md:pb-10 md:pt-6 lg:pt-8">
       <style>{MOBILE_ARENA_STYLE}</style>
       {children}
     </div>

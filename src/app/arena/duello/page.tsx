@@ -23,7 +23,7 @@ import { GAMES, type GameSlug } from '@/lib/constants/games'
 import type { Challenge } from '@/types/database'
 
 const MOBILE_ARENA_STYLE = `
-  @media (max-width: 1023px) {
+  @media (max-width: 767px) {
     [data-app-navbar] { display: none !important; }
     [data-arena-main] { background: var(--app-bg) !important; padding: 0 !important; }
   }
@@ -113,7 +113,7 @@ export default function DuelloPage() {
 
   if (!user) {
     return (
-      <div data-duel-screen className="mx-auto min-h-dvh w-full max-w-[1180px] overflow-x-clip bg-[var(--app-bg)] px-3 pb-28 pt-3 text-[var(--app-text)] sm:px-4 md:px-5 md:pt-5 lg:bg-transparent lg:px-6 lg:pb-10 lg:pt-8">
+      <div data-duel-screen className="mx-auto min-h-dvh w-full max-w-[1180px] overflow-x-clip bg-[var(--app-bg)] px-3 pb-28 pt-3 text-[var(--app-text)] sm:px-4 md:bg-transparent md:px-6 md:pb-10 md:pt-6 lg:pt-8">
         <style>{MOBILE_ARENA_STYLE}</style>
         <section data-duel-hero className="relative min-h-[430px] overflow-hidden rounded-[28px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-5 shadow-[0_7px_0_var(--app-accent-border)] md:min-h-[480px] md:p-9">
           <Image src="/academy/academy-landscape.png" alt="" fill priority sizes="(min-width: 1024px) 1120px, 100vw" className="pointer-events-none object-cover object-center opacity-45" />
