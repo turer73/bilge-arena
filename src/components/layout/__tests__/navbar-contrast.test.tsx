@@ -29,6 +29,8 @@ describe('AcademyLogo erişilebilir adı', () => {
     render(<AcademyLogo />)
     const link = screen.getByRole('link', { name: 'Bilge Arena ana sayfa' })
     expect(link).not.toHaveAttribute('aria-label')
+    // e2e/home-hydration.prod.spec.ts logoyu bu öznitelikle tanır.
+    expect(link).toHaveAttribute('data-academy-logo')
     const wordmark = link.querySelector('[aria-hidden="true"]')!
     expect(wordmark).toHaveTextContent('BİLGE ARENA')
     // Dar ekran gizlemesi yalnız yazıyı hedefler; adı taşıyan sr-only metni değil.
