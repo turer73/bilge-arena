@@ -86,6 +86,8 @@ export function Navbar({ variant }: NavbarProps = {}) {
   const [moreOpen, setMoreOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const moreRef = useRef<HTMLDivElement>(null)
+  const mobileButtonRef = useRef<HTMLButtonElement>(null)
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
   const routerPathname = usePathname()
   const pathname = variant === 'home' ? '/' : routerPathname
   const wide = useWideStudy()
@@ -170,6 +172,8 @@ export function Navbar({ variant }: NavbarProps = {}) {
         moreRef.current.querySelector<HTMLButtonElement>('button[aria-haspopup]')?.focus()
       } else if (dropdownRef.current?.contains(document.activeElement)) {
         dropdownRef.current.querySelector<HTMLButtonElement>('button[aria-haspopup]')?.focus()
+      } else if (mobileMenuRef.current?.contains(document.activeElement)) {
+        mobileButtonRef.current?.focus()
       }
       setMoreOpen(false)
       setDropdownOpen(false)
@@ -449,6 +453,8 @@ export function Navbar({ variant }: NavbarProps = {}) {
 
           {/* Mobile hamburger */}
           <button
+            ref={mobileButtonRef}
+            type="button"
             onClick={() => setMobileOpen(!mobileOpen)}
             className="flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] xl:hidden"
             aria-label={mobileOpen ? 'Menüyü kapat' : 'Menüyü aç'}
@@ -462,7 +468,7 @@ export function Navbar({ variant }: NavbarProps = {}) {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div id="mobile-navigation" key="mobile-menu" className="animate-slideDown border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl xl:hidden">
+        <div ref={mobileMenuRef} id="mobile-navigation" key="mobile-menu" className="animate-slideDown border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl xl:hidden">
           <div className="flex flex-col gap-1 px-6 py-4">
             {NAV_LINKS.map(({ href, label }) => (
               <Link

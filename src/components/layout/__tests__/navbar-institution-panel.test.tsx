@@ -131,10 +131,23 @@ describe('Navbar institution panel entry', () => {
 
     const accountBtn = screen.getByRole('button', { name: 'Kullanıcı menüsü' })
     await user.click(accountBtn)
-    expect(screen.getByRole('link', { name: 'Kurum Paneli' })).toHaveAttribute('aria-current', 'page')
+    const kurumLink = screen.getByRole('link', { name: 'Kurum Paneli' })
+    expect(kurumLink).toHaveAttribute('aria-current', 'page')
+    kurumLink.focus()
 
     await user.keyboard('{Escape}')
     expect(accountBtn).toHaveAttribute('aria-expanded', 'false')
+    expect(document.activeElement).toBe(accountBtn)
+
+    const mobileToggle = screen.getByRole('button', { name: 'Menüyü aç' })
+    await user.click(mobileToggle)
+    const mobileMenu = document.getElementById('mobile-navigation')!
+    const mobileLink = mobileMenu.querySelector<HTMLAnchorElement>('a[href="/arena"]')!
+    mobileLink.focus()
+
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: 'Menüyü aç' })).toHaveAttribute('aria-expanded', 'false')
+    expect(document.activeElement).toBe(mobileToggle)
   })
 
   it('marks Oda Modu as active on room sub-routes', () => {
