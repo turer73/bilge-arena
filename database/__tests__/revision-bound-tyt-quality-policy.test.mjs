@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs'
 import {randomUUID} from 'node:crypto'
 import pg from 'pg'
 import {startSourceReviewPostgres} from './helpers/isolated-source-review-postgres.mjs'
+import {SUPABASE_DEFAULT_PRIVILEGES_SQL} from './supabase-default-privileges.mjs'
 const bin=process.env.SOURCE_REVIEW_PG_BIN
 if(process.env.SOURCE_REVIEW_PG_REQUIRED==='1'&&!bin) throw Error('SOURCE_REVIEW_PG_BIN required')
 const suite=bin?describe:describe.skip
@@ -75,6 +76,7 @@ suite.each([['fen','LGS'],['turkce','LGS'],['fen','TYT'],['turkce','TYT'],['mate
    CREATE FUNCTION public.question_source_report_valid(uuid,jsonb) RETURNS boolean LANGUAGE sql STABLE AS $$SELECT accepted FROM public.test_source$$;`)
   await db.exec(func('136_question_validation_pipeline.sql','tg_require_question_validation_decision'))
   await db.exec('CREATE TRIGGER validation BEFORE UPDATE OF published_revision_id ON public.questions FOR EACH ROW EXECUTE FUNCTION public.tg_require_question_validation_decision()')
+  await db.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
   await db.exec(migration);await db.exec(migration)
   await db.exec(nativeTurkishMigration);await db.exec(nativeTurkishMigration);await db.exec(tytMigration);await db.exec(tytMigration)
   await db.query('UPDATE public.curriculum_scope_releases SET game=$1',[game])
