@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import type { CSSProperties } from 'react'
 import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
 import { usePathname } from 'next/navigation'
-import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords, Palette, ShoppingBag, BookX, GraduationCap, Building2, Settings } from 'lucide-react'
+import { Zap, Menu, X, ChevronDown, User, LogOut, Trophy, Shield, Users, Swords, Palette, ShoppingBag, BookX, GraduationCap, Building2, Settings } from 'lucide-react'
 import { Logo } from './logo'
 import { AcademyLogo } from '@/components/academy/academy-logo'
 import { ThemeToggle } from './theme-toggle'
@@ -31,16 +31,28 @@ const WIDE_ACADEMY_ROUTES = new Set([
   '/arena/magaza',
 ])
 
-const NAV_LINKS = [
+// Masaüstünde öncelikli bağlantılar görünür kalır; ikincil bağlantılar tek satırı
+// korumak için "Diğer" açılır menüsüne taşınır. Mobil menü ikisini birlikte listeler.
+const PRIMARY_NAV_LINKS = [
   { href: '/', label: 'Ana Sayfa' },
   { href: '/arena', label: 'Oyunlar' },
   { href: '/arena/calisma', label: 'Ders Çalış' },
   { href: '/oda', label: 'Oda Modu' },
   { href: '/arena/siralama', label: 'Sıralama' },
+]
+
+const MORE_NAV_LINKS = [
   { href: '/nasil-calisir', label: 'Nasıl Çalışır' },
   { href: '/kurumlar', label: 'Kurumlar' },
   { href: '/hakkinda', label: 'Hakkında' },
 ]
+
+const NAV_LINKS = [...PRIMARY_NAV_LINKS, ...MORE_NAV_LINKS]
+
+// Düello ve kurum paneli ortak Academy üst barını kullanır (geniş görünümde).
+function isAcademyShellRoute(pathname: string) {
+  return pathname === '/arena/duello' || pathname === '/arena/kurum' || pathname.startsWith('/arena/kurum/')
+}
 
 interface NavbarProps {
   /**
@@ -56,11 +68,13 @@ export function Navbar({ variant }: NavbarProps = {}) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [institutionPanelVisible, setInstitutionPanelVisible] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const moreRef = useRef<HTMLDivElement>(null)
   const routerPathname = usePathname()
   const pathname = variant === 'home' ? '/' : routerPathname
   const wide = useWideStudy()
-  const academyArea = pathname === '/arena' || pathname === '/arena/calisma' || pathname === '/arena/kisisellestir' || pathname === '/oda' || pathname.startsWith('/oda/') || (wide && WIDE_ACADEMY_ROUTES.has(pathname))
+  const academyArea = pathname === '/arena' || pathname === '/arena/calisma' || pathname === '/arena/kisisellestir' || pathname === '/oda' || pathname.startsWith('/oda/') || (wide && (WIDE_ACADEMY_ROUTES.has(pathname) || isAcademyShellRoute(pathname)))
   const academyMarketingRoute = pathname === '/nasil-calisir' || pathname === '/hakkinda' || pathname === '/kurumlar'
   const academyMarketingArea = wide && academyMarketingRoute
   const academyVisualArea = pathname === '/' || academyArea || academyMarketingArea
@@ -97,6 +111,7 @@ export function Navbar({ variant }: NavbarProps = {}) {
   useEffect(() => {
     setMobileOpen(false)
     setDropdownOpen(false)
+    setMoreOpen(false)
   }, [routerPathname])
 
   useEffect(() => {
@@ -126,9 +141,23 @@ export function Navbar({ variant }: NavbarProps = {}) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false)
       }
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false)
+      }
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return
+      if (moreRef.current?.contains(document.activeElement)) {
+        moreRef.current.querySelector<HTMLButtonElement>('button[aria-haspopup]')?.focus()
+      }
+      setMoreOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
   }, [])
 
   return (
@@ -145,18 +174,18 @@ export function Navbar({ variant }: NavbarProps = {}) {
           : 'bg-transparent backdrop-blur-none border-transparent'
       }`}
     >
-      <div className={`mx-auto flex h-[var(--navbar-h)] items-center justify-between px-6 lg:px-8 ${academyVisualArea ? 'max-w-[1440px]' : 'max-w-[1200px]'}`}>
+      <div className={`mx-auto flex h-[var(--navbar-h)] items-center justify-between px-6 lg:px-8 ${pathname === '/' ? 'min-[1101px]:px-10' : ''} ${academyVisualArea ? 'max-w-[1440px]' : 'max-w-[1200px]'}`}>
         {/* Logo */}
         {academyVisualArea ? <AcademyLogo /> : <Logo size={36} />}
 
         {/* Desktop nav links */}
-        <div className="hidden items-center gap-0.5 xl:flex">
-          {NAV_LINKS.map(({ href, label }) => (
+        <div className="hidden min-w-0 items-center gap-0.5 xl:flex">
+          {PRIMARY_NAV_LINKS.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
               aria-current={activeNavHref === href ? 'page' : undefined}
-              className={`rounded-lg px-3 py-2 text-[13px] font-semibold transition-colors ${
+              className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-[13px] font-semibold transition-colors ${
                 academyMarketingArea
                   ? pathname === href
                     ? 'bg-blue-500/15 text-blue-300'
@@ -169,6 +198,45 @@ export function Navbar({ variant }: NavbarProps = {}) {
               {label}
             </Link>
           ))}
+          {/* İkincil bağlantılar: tek satırı korumak için "Diğer" menüsü */}
+          <div className="relative shrink-0" ref={moreRef}>
+            <button
+              type="button"
+              onClick={() => setMoreOpen(open => !open)}
+              aria-haspopup="true"
+              aria-expanded={moreOpen}
+              aria-controls="more-navigation"
+              className={`flex items-center gap-1 whitespace-nowrap rounded-lg px-3 py-2 text-[13px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)] ${
+                MORE_NAV_LINKS.some(({ href }) => (academyMarketingArea ? pathname === href : activeNavHref === href))
+                  ? academyMarketingArea ? 'bg-blue-500/15 text-blue-300' : 'text-[var(--focus)]'
+                  : academyMarketingArea
+                    ? 'text-slate-300 hover:bg-white/[0.07] hover:text-white'
+                    : 'text-[var(--text-sub)] hover:bg-[var(--card)] hover:text-[var(--text)]'
+              }`}
+            >
+              Diğer
+              <ChevronDown size={14} aria-hidden="true" className={`transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {moreOpen && (
+              <div
+                id="more-navigation"
+                className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-xl"
+              >
+                {MORE_NAV_LINKS.map(({ href, label }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    aria-current={activeNavHref === href ? 'page' : undefined}
+                    className={`block whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--card)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)] ${
+                      activeNavHref === href ? 'text-[var(--focus)]' : 'text-[var(--text-sub)] hover:text-[var(--text)]'
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Actions */}

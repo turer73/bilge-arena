@@ -26,7 +26,7 @@ const trackingAreas = [
 
 export function InstitutionPartnership() {
   return (
-    <section id="kurumsal-isbirligi" aria-labelledby="institution-partnership-title" className="mx-auto w-full max-w-[1200px] scroll-mt-24 px-6 py-14 lg:px-8">
+    <section id="kurumsal-isbirligi" aria-labelledby="institution-partnership-title" className="w-full scroll-mt-24 py-14">
       <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-8 lg:p-10">
         <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--focus-text)]">Sınav koçları · Küçük dershaneler · Etüt grupları</p>
         <h2 id="institution-partnership-title" className="mt-3 max-w-3xl text-2xl font-bold leading-tight text-[var(--text)] sm:text-3xl">

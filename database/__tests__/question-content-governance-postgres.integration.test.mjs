@@ -1493,4 +1493,140 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(sql('227_quarantined_retirement_scope.sql'))
     expect((await client.query('SELECT content,is_active,published_revision_id FROM public.questions WHERE id=$1',[q.id])).rows[0]).toEqual(after)
   }, 20_000)
+  it('228: explicit owner retirement preserves source history, permission, hash, CAS, separate publish and rollback boundaries', async () => {
+    const sql=name=>readFileSync(join(dirname(fileURLToPath(import.meta.url)),'..','migrations',name),'utf8')
+    const before=(await client.query('SELECT count(*)::int n FROM public.question_revision_approvals')).rows[0].n
+    await client.query(sql('228_ai_owner_retirement_acceptance.sql'))
+    await client.query(sql('228_ai_owner_retirement_acceptance.sql'))
+    expect((await client.query('SELECT count(*)::int n FROM public.question_revision_approvals')).rows[0].n).toBe(before)
+    const ownerRole=randomUUID()
+    await client.query("INSERT INTO public.roles(id,slug,name,is_system) VALUES($1,'owner-retirement-fixture','Owner fixture',true)",[ownerRole])
+    await client.query("INSERT INTO public.role_permissions(role_id,permission) VALUES($1,'content.publish')",[ownerRole])
+    const readQuestion=async id=>(await client.query(`SELECT q.*,
+      jsonb_strip_nulls(jsonb_build_object('game',game,'category',category,'subcategory',subcategory,'topic',topic,'difficulty',difficulty,'levelTag',level_tag,'examRef',exam_ref,'isBoss',is_boss)) metadata,
+      (SELECT COALESCE(jsonb_agg(jsonb_build_object('outcomeId',outcome_id,'weight',weight,'primary',is_primary)),'[]'::jsonb)
+       FROM public.question_outcomes WHERE question_id=q.id) outcomes FROM public.questions q WHERE id=$1`,[id])).rows[0]
+    const make=async(id=question,patch={})=>{const q=await readQuestion(id);return rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',
+      [author,q.id,q.published_revision_id,JSON.stringify({content:q.content,metadata:q.metadata,outcomes:q.outcomes,
+        source:{kind:'original',title:'Isolated retirement fixture',licenseCode:'INTERNAL',provenanceRef:'fixture:owner-retirement'},
+        changeKind:'retire',summary:'Isolated explicit owner retirement fixture',...patch}),randomUUID()])}
+    const evidence=async(id,reason='invalid_content',survivor=null)=>{const r=(await client.query('SELECT * FROM public.question_content_revisions WHERE id=$1',[id])).rows[0];return {version:'retirement-evidence@1',questionId:r.question_id,revisionId:r.id,contentSha256:r.content_sha256,baseRevisionId:r.base_revision_id,reason,evidenceRef:'fixture:retirement',evidenceSha256:'c'.repeat(64),survivor}}
+    const preparation=async id=>({version:'ai-preparation-declaration@1',agent:'Isolated test fixture AI',evidenceRef:'fixture:retirement',evidenceSha256:'c'.repeat(64),revisionEvidenceFingerprint:(await client.query('SELECT public.question_retirement_fingerprint($1) value',[id])).rows[0].value,acknowledgesNonIndependentReview:true,acceptsResponsibility:true})
+    const accept=async(id,e,p,user=author,request=randomUUID(),rationale='Actual fixture owner inspected retirement')=>rpc('public.accept_question_revision_retirement_review($1,$2,$3::jsonb,$4,$5,$6::jsonb)',[user,id,JSON.stringify(e),rationale,request,JSON.stringify(p)])
+    const publish=id=>rpc('public.publish_question_content_revision($1,$2,$3)',[author,id,randomUUID()])
+    const ready=async id=>(await client.query('SELECT public.question_revision_single_review_ready($1) value',[id])).rows[0].value
+    // Most production candidates are active: exercise a real active->inactive transition,
+    // rather than relying only on the pre-existing quarantined fixture state.
+    await client.query('BEGIN')
+    await client.query("SELECT public.content_governance_authorize_question_write($1,'publish')",[question])
+    await client.query('UPDATE public.questions SET is_active=true WHERE id=$1',[question])
+    await client.query('SELECT public.content_governance_clear_question_write($1)',[question])
+    await client.query('COMMIT')
+    expect((await readQuestion(question)).is_active).toBe(true)
+    const draft=await make(),e=await evidence(draft.revisionId),p=await preparation(draft.revisionId)
+    await err(()=>accept(draft.revisionId,e,p),'42501')
+    await client.query('INSERT INTO public.user_roles(user_id,role_id) VALUES($1,$2)',[author,ownerRole])
+    await err(()=>accept(draft.revisionId,e,p,publisher),'42501')
+    for(const changed of [{acceptsResponsibility:false},{acknowledgesNonIndependentReview:false},{revisionEvidenceFingerprint:'f'.repeat(64)},{evidenceSha256:'d'.repeat(64)}]) await err(()=>accept(draft.revisionId,e,{...p,...changed}),'22023')
+    for(const changed of [{revisionId:randomUUID()},{baseRevisionId:randomUUID()},{contentSha256:'f'.repeat(64)},{reason:'duplicate'},{survivor:{}},{unexpected:true}]) await err(()=>accept(draft.revisionId,{...e,...changed},p),'22023')
+    expect(await ready(draft.revisionId)).toBe(false)
+    await err(()=>publish(draft.revisionId),'22023')
+    // Content and metadata changes cannot be smuggled under a retirement label.
+    const q=await readQuestion(question)
+    for(const patch of [{content:{...q.content,solution:'Changed unreviewed solution'}},{metadata:{...q.metadata,difficulty:q.difficulty===1?2:1}},{changeKind:'edit',content:{...q.content,solution:'Changed edit fixture'}}]){
+      const bad=await make(question,patch);const badE=await evidence(bad.revisionId),badP=await preparation(bad.revisionId);await err(()=>accept(bad.revisionId,badE,badP),'22023')
+    }
+    const request=randomUUID(),call='public.accept_question_revision_retirement_review($1,$2,$3::jsonb,$4,$5,$6::jsonb)'
+    const [first,replay]=await concurrentReplay(call,[author,draft.revisionId,JSON.stringify(e),'Actual fixture owner inspected retirement',request,JSON.stringify(p)])
+    expect(first).toMatchObject({status:'stage1_approved',acceptanceMode:'ai_assisted_owner_retirement',replayed:false})
+    expect(replay.replayed).toBe(true)
+    await err(()=>accept(draft.revisionId,e,p,author,request,'Different request payload'),'22023')
+    expect(await ready(draft.revisionId)).toBe(true)
+    expect((await readQuestion(question)).published_revision_id).toBe(q.published_revision_id)
+    expect((await client.query('SELECT count(*)::int n FROM public.question_revision_approvals WHERE revision_id=$1',[draft.revisionId])).rows[0].n).toBe(1)
+    expect((await client.query('SELECT count(*)::int n FROM public.question_validation_decisions WHERE revision_id=$1',[draft.revisionId])).rows[0].n).toBe(0)
+    // Evidence is immutable even for the owner; source drift invalidates readiness.
+    await err(()=>client.query("UPDATE public.question_revision_retirement_reviews SET acceptance_mode=acceptance_mode WHERE revision_id=$1",[draft.revisionId]),'42501')
+    await client.query('BEGIN')
+    await client.query("UPDATE public.question_revision_sources SET provenance_ref='fixture:changed' WHERE revision_id=$1",[draft.revisionId])
+    expect(await ready(draft.revisionId)).toBe(false)
+    await err(()=>client.query('SELECT public.publish_question_content_revision($1,$2,$3)',[author,draft.revisionId,randomUUID()]),'22023')
+    await client.query('ROLLBACK')
+    expect(await ready(draft.revisionId)).toBe(true)
+    expect(await publish(draft.revisionId)).toMatchObject({status:'published'})
+    expect(await readQuestion(question)).toMatchObject({content:q.content,is_active:false,published_revision_id:draft.revisionId})
+    const history=(await client.query('SELECT * FROM public.question_revision_retirement_reviews WHERE revision_id=$1',[draft.revisionId])).rows[0]
+    expect(history.ai_preparation.acceptsResponsibility).toBe(true)
+    expect((await client.query("SELECT public_reason FROM public.question_governance_events WHERE revision_id=$1 AND event_type='published'",[draft.revisionId])).rows[0].public_reason).toContain('not independent review')
+    // Duplicate evidence pins a distinct survivor, its current base and exact content.
+    const duplicate=await make(),survivor=await readQuestion(candidateQuestion)
+    const survivorPin={questionId:survivor.id,publishedRevisionId:survivor.published_revision_id,contentSha256:(await client.query("SELECT encode(extensions.digest(content::text,'sha256'),'hex') value FROM public.questions WHERE id=$1",[survivor.id])).rows[0].value}
+    const dupE=await evidence(duplicate.revisionId,'duplicate',survivorPin),dupP=await preparation(duplicate.revisionId)
+    for(const change of [{questionId:question},{publishedRevisionId:randomUUID()},{contentSha256:'f'.repeat(64)}]) await err(()=>accept(duplicate.revisionId,{...dupE,survivor:{...survivorPin,...change}},dupP),'22023')
+    await accept(duplicate.revisionId,dupE,dupP);expect(await ready(duplicate.revisionId)).toBe(true)
+    // Simultaneously retiring the protected survivor through this path is forbidden.
+    const protectedDraft=await make(candidateQuestion),protectedE=await evidence(protectedDraft.revisionId),protectedP=await preparation(protectedDraft.revisionId)
+    await err(()=>accept(protectedDraft.revisionId,protectedE,protectedP),'22023')
+    await client.query('BEGIN')
+    await client.query("SELECT public.content_governance_authorize_question_write($1,'publish')",[survivor.id])
+    await client.query("UPDATE public.questions SET content=content||jsonb_build_object('solution','Changed survivor') WHERE id=$1",[survivor.id])
+    await client.query('SELECT public.content_governance_clear_question_write($1)',[survivor.id])
+    expect(await ready(duplicate.revisionId)).toBe(false)
+    await err(()=>client.query('SELECT public.publish_question_content_revision($1,$2,$3)',[author,duplicate.revisionId,randomUUID()]),'22023')
+    await client.query('ROLLBACK')
+    expect(await ready(duplicate.revisionId)).toBe(true)
+    // A different fully privileged account still cannot accept the author's own draft.
+    await client.query("INSERT INTO public.role_permissions(role_id,permission) VALUES($1,'content.prepare'),($1,'content.review.stage1')",[ownerRole])
+    await client.query('INSERT INTO public.user_roles(user_id,role_id) VALUES($1,$2)',[learner,ownerRole])
+    const foreign=await make(),foreignE=await evidence(foreign.revisionId),foreignP=await preparation(foreign.revisionId)
+    await err(()=>accept(foreign.revisionId,foreignE,foreignP,learner),'22023')
+    // A valid acceptance cannot be reused after another base wins publication.
+    await client.query('BEGIN')
+    await client.query("SELECT public.content_governance_authorize_question_write($1,'publish')",[question])
+    await client.query('UPDATE public.questions SET published_revision_id=$2 WHERE id=$1',[question,foreign.revisionId])
+    await client.query('SELECT public.content_governance_clear_question_write($1)',[question])
+    expect(await ready(duplicate.revisionId)).toBe(false)
+    await err(()=>client.query('SELECT public.publish_question_content_revision($1,$2,$3)',[author,duplicate.revisionId,randomUUID()]),'22023')
+    await client.query('ROLLBACK')
+    // Source presence alone is insufficient if provenance is still a legacy marker.
+    const missing=await make(question,{source:{kind:'original',title:'Fixture incomplete provenance',licenseCode:'INTERNAL'}})
+    const missingE=await evidence(missing.revisionId),missingP=await preparation(missing.revisionId)
+    await err(()=>accept(missing.revisionId,missingE,missingP),'22023')
+    // The accepted survivor row remains locked through publication's readiness check.
+    const other=new pg.Client({connectionString:url});await other.connect()
+    try{
+      await client.query('BEGIN')
+      await client.query('SELECT public.publish_question_content_revision($1,$2,$3)',[author,duplicate.revisionId,randomUUID()])
+      await other.query("SET lock_timeout='100ms'")
+      await err(()=>other.query('SELECT id FROM public.questions WHERE id=$1 FOR UPDATE',[survivor.id]),'55P03')
+    }finally{await client.query('ROLLBACK');await other.end()}
+    // The unchanged already-inactive, unmapped 227 path still works without invented outcomes.
+    const inactive=await make(ydtQuestion),inactiveE=await evidence(inactive.revisionId),inactiveP=await preparation(inactive.revisionId)
+    expect((await readQuestion(ydtQuestion)).is_active).toBe(false)
+    // No broad exception for active unmapped questions or partial invalid mappings.
+    await client.query('BEGIN')
+    await client.query("SELECT public.content_governance_authorize_question_write($1,'publish')",[ydtQuestion])
+    await client.query('UPDATE public.questions SET is_active=true WHERE id=$1',[ydtQuestion])
+    await client.query('SELECT public.content_governance_clear_question_write($1)',[ydtQuestion])
+    expect((await client.query('SELECT public.question_retirement_evidence_valid($1,$2::jsonb) value',[inactive.revisionId,JSON.stringify(inactiveE)])).rows[0].value).toBe(false)
+    await client.query('ROLLBACK')
+    await client.query('BEGIN')
+    // Withdraw the node behind an existing valid, nonempty mapping. Inactivity is not a bypass for partial/invalid mappings.
+    expect((await client.query('SELECT count(*)::int n FROM public.question_revision_outcomes WHERE revision_id=$1',[foreign.revisionId])).rows[0].n).toBeGreaterThan(0)
+    await client.query('UPDATE public.curriculum_nodes SET is_active=false WHERE id IN (SELECT o.node_id FROM public.question_revision_outcomes ro JOIN public.curriculum_outcomes o ON o.id=ro.outcome_id WHERE ro.revision_id=$1)',[foreign.revisionId])
+    expect((await client.query('SELECT public.question_retirement_evidence_valid($1,$2::jsonb) value',[foreign.revisionId,JSON.stringify(foreignE)])).rows[0].value).toBe(false)
+    await client.query('ROLLBACK')
+    await accept(inactive.revisionId,inactiveE,inactiveP);expect(await ready(inactive.revisionId)).toBe(true)
+    // Rollback disables new and pending owner acceptances without erasing history.
+    await client.query(readFileSync(join(dirname(fileURLToPath(import.meta.url)),'..','rollback','228_ai_owner_retirement_acceptance.sql'),'utf8'))
+    expect(await ready(inactive.revisionId)).toBe(false)
+    await err(()=>accept(inactive.revisionId,inactiveE,inactiveP),'42501')
+    expect((await client.query('SELECT * FROM public.question_revision_retirement_reviews WHERE revision_id=$1',[draft.revisionId])).rows[0]).toEqual(history)
+    await client.query(sql('228_ai_owner_retirement_acceptance.sql'))
+    expect(await ready(inactive.revisionId)).toBe(true)
+    for(const role of ['anon','authenticated']){
+      expect((await client.query("SELECT has_function_privilege($1,'public.accept_question_revision_retirement_review(uuid,uuid,jsonb,text,uuid,jsonb)','EXECUTE') allowed",[role])).rows[0].allowed).toBe(false)
+      expect((await client.query("SELECT has_table_privilege($1,'public.question_revision_retirement_reviews','SELECT,INSERT,UPDATE,DELETE') allowed",[role])).rows[0].allowed).toBe(false)
+    }
+  },60_000)
 })
