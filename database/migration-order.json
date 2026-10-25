@@ -258,6 +258,7 @@
     { "file": "20261014183929_revision_bound_turkce_quality_policy.sql", "status": "ledger", "ledger": [{ "version": "20261018204412", "name": "revision_bound_turkce_quality_policy" }] },
     { "file": "226_ayt_literature_internal_outcome.sql", "status": "ledger", "ledger": [{ "version": "20261018230450", "name": "226_ayt_literature_internal_outcome" }] },
     { "file": "227_quarantined_retirement_scope.sql", "status": "ledger", "ledger": [{ "version": "20261019045923", "name": "227_quarantined_retirement_scope" }] },
-    { "file": "228_ai_owner_retirement_acceptance.sql", "status": "ledger", "ledger": [{ "version": "20261020200911", "name": "228_ai_owner_retirement_acceptance" }] }
+    { "file": "228_ai_owner_retirement_acceptance.sql", "status": "ledger", "ledger": [{ "version": "20261020200911", "name": "228_ai_owner_retirement_acceptance" }] },
+    { "file": "229_revision_bound_tyt_quality_policy.sql", "status": "pending" }
   ]
 }
