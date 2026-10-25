@@ -83,28 +83,28 @@ const PRINCIPLES = [
     icon: Target,
     title: 'Pratiğe odaklan',
     desc: 'Her ekranın öğrenciyi bir sonraki anlamlı çalışmaya götürmesi gerektiğine inanıyoruz.',
-    color: 'var(--focus-light)',
+    color: 'var(--focus-text)',
     background: 'var(--focus-bg)',
   },
   {
     icon: Gamepad2,
     title: 'Motivasyonu tasarla',
     desc: 'XP, seri ve rozetleri amaç değil; düzenli çalışmayı görünür kılan yardımcı araçlar olarak kullanıyoruz.',
-    color: 'var(--reward-light)',
+    color: 'var(--reward-text)',
     background: 'var(--reward-bg)',
   },
   {
     icon: Eye,
     title: 'Açık ve anlaşılır ol',
     desc: 'Üyelik, kullanım sınırları, veri işleme ve platformun kapsamı hakkında sürpriz oluşturmamayı hedefliyoruz.',
-    color: 'var(--growth-light)',
+    color: 'var(--growth-text)',
     background: 'var(--growth-bg)',
   },
   {
     icon: MessageSquareWarning,
     title: 'Hataları düzeltilebilir kıl',
     desc: 'Kullanıcıların tartışmalı veya hatalı gördükleri soruları bildirebilmesi, içerik kalitesinin temel parçasıdır.',
-    color: 'var(--urgency-light)',
+    color: 'var(--urgency-text)',
     background: 'color-mix(in srgb, var(--urgency) 14%, transparent)',
   },
 ]
@@ -211,58 +211,58 @@ const jsonLd = {
 
 export default function HakkindaPage() {
   return (
-    <div className={`${styles.page} overflow-hidden`} data-academy-marketing="about">
+    <div className={styles.page} data-academy-marketing="about">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
 
-      <section className={`${styles.hero} relative border-b border-[var(--border)] px-6 py-16 sm:py-20 lg:px-8 lg:py-24`}>
+      <section className={styles.hero}>
         <div className={styles.heroBackdrop} aria-hidden="true">
           <Image
             src="/academy/academy-landscape.png"
             alt=""
             fill
-            sizes="(min-width: 1440px) 1360px, 100vw"
+            sizes="(min-width: 1440px) 1360px, (min-width: 1101px) calc(100vw - 80px), (min-width: 768px) calc(100vw - 48px), calc(100vw - 32px)"
             priority
           />
         </div>
-        <div className={`${styles.heroGrid} relative mx-auto grid max-w-[1200px] items-center gap-12`}>
+        <div className={styles.heroGrid}>
           <div className={styles.heroCopy}>
-            <nav aria-label="Sayfa yolu" className={`${styles.breadcrumb} mb-7 flex items-center gap-2 text-xs`}>
-              <Link href="/" className="transition-colors hover:text-[var(--focus-light)]">Ana Sayfa</Link>
+            <nav aria-label="Sayfa yolu" className={styles.breadcrumb}>
+              <Link href="/" className="transition-colors hover:text-[var(--focus-text)]">Ana Sayfa</Link>
               <ChevronRight size={13} aria-hidden="true" />
               <span aria-current="page">Hakkımızda</span>
             </nav>
-            <div className={`${styles.eyebrow} mb-5 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold`}>
+            <div className={styles.eyebrow}>
               <Sparkles size={14} aria-hidden="true" />
               Bilge Arena’yı tanı
             </div>
-            <h1 className={`${styles.heroTitle} font-black`}>
+            <h1 className={styles.heroTitle}>
               Çalışmayı bir yük değil,
-              <span className="mt-2 block text-[var(--focus-light)]">ilerleme hissi yapan arena.</span>
+              <span>ilerleme hissi yapan arena.</span>
             </h1>
-            <p className={`${styles.heroDescription} mt-6 max-w-[690px] text-base leading-8 sm:text-lg`}>
+            <p className={styles.heroDescription}>
               Bilge Arena; nitelikli soruyu, öğrencinin kazanım kanıtını ve öğretmenin
               müdahalesini aynı öğrenme döngüsünde buluşturan Türkiye odaklı bir eğitim
               teknolojisi projesidir. Oyunlaştırma görünen yüzüdür; soru kalitesi,
               açıklanabilir adaptasyon ve ilerleme takibi sistemin omurgasıdır.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <TrackedCtaLink href="/nasil-calisir" page="hakkinda" placement="hero_how" className="w-full sm:w-auto">Nasıl çalıştığını gör <ArrowRight size={17} /></TrackedCtaLink>
-              <TrackedCtaLink href="/iletisim" page="hakkinda" placement="hero_contact" variant="ghost" className="w-full sm:w-auto">Bize ulaş</TrackedCtaLink>
+            <div className={styles.actions}>
+              <TrackedCtaLink href="/nasil-calisir" page="hakkinda" placement="hero_how" className={styles.primaryButton}>Nasıl çalıştığını gör <ArrowRight size={17} /></TrackedCtaLink>
+              <TrackedCtaLink href="/iletisim" page="hakkinda" placement="hero_contact" variant="ghost" className={styles.secondaryButton}>Bize ulaş</TrackedCtaLink>
             </div>
           </div>
 
           <div className="relative mx-auto flex w-full max-w-[460px] items-center justify-center">
             <div className="absolute h-72 w-72 rounded-full bg-[var(--focus-bg)] blur-3xl" />
-            <div className={`${styles.brandCard} ${styles.glassCard} relative w-full rounded-[28px]`}>
+            <div className={`${styles.brandCard} ${styles.glassCard} relative w-full`}>
               <div className={styles.brandCrest}>
                 <Image src="/academy/brand-crest-orbit.png" alt="Bilge Arena logosu" fill sizes="118px" />
               </div>
               <div className="mt-4 text-center">
-                <p className="text-2xl font-black tracking-tight">Bilge Arena</p>
-                <p className="mt-1 text-sm leading-6 text-[#aebddd]">Öğren · Kazan · Yüksel</p>
+                <p className="text-2xl font-bold tracking-tight">Bilge Arena</p>
+                <p className="mt-1 text-sm leading-6 text-[var(--text-sub)]">Öğren · Kazan · Yüksel</p>
               </div>
               <div className={styles.companions} aria-label="Bilge rehberleri">
                 <div className={styles.companion}>
@@ -287,7 +287,7 @@ export default function HakkindaPage() {
                   ['TR', 'Türkiye odaklı'],
                 ].map(([value, label]) => (
                   <div key={label} className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 text-center">
-                    <p className="font-display text-lg font-black text-[var(--focus-light)]">{value}</p>
+                    <p className="text-lg font-bold text-[var(--focus-text)]">{value}</p>
                     <p className="mt-1 text-[10px] text-[var(--text-muted)]">{label}</p>
                   </div>
                 ))}
@@ -297,12 +297,12 @@ export default function HakkindaPage() {
         </div>
       </section>
 
-      <section className="px-6 py-20 lg:px-8" aria-labelledby="neden-baslik">
-        <div className="mx-auto grid max-w-[1100px] gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+      <section className={styles.section} aria-labelledby="neden-baslik">
+        <div className="mx-auto grid max-w-full gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
           <div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--focus-bg)] text-[var(--focus-light)]"><Lightbulb size={24} aria-hidden="true" /></div>
-            <p className="mt-5 text-sm font-bold uppercase tracking-[0.18em] text-[var(--focus-light)]">Neden varız?</p>
-            <h2 id="neden-baslik" className="mt-3 font-display text-3xl font-black sm:text-4xl">Başlama eşiğini küçültmek için</h2>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--focus-bg)] text-[var(--focus-text)]"><Lightbulb size={24} aria-hidden="true" /></div>
+            <p className={`${styles.sectionLabel} mt-5`}>Neden varız?</p>
+            <h2 id="neden-baslik" className="mt-3 text-3xl font-bold sm:text-4xl">Başlama eşiğini küçültmek için</h2>
           </div>
           <div className="space-y-5 text-base leading-8 text-[var(--text-sub)]">
             <p>Sınava hazırlık çoğu zaman “nereden başlayacağım?” sorusunda tıkanır. Büyük hedefler ve uzun konu listeleri öğrencinin ilk adımı atmasını zorlaştırabilir.</p>
@@ -312,25 +312,25 @@ export default function HakkindaPage() {
         </div>
       </section>
 
-      <section className="border-y border-[var(--border)] bg-[var(--surface)] px-6 py-20 lg:px-8" aria-labelledby="sistem-baslik">
-        <div className="mx-auto max-w-[1200px]">
+      <section className={`${styles.section} ${styles.panel}`} aria-labelledby="sistem-baslik">
+        <div className="mx-auto max-w-full">
           <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--wisdom-light)]">Bir soru sitesinin ötesinde</p>
-              <h2 id="sistem-baslik" className="mt-3 font-display text-3xl font-black sm:text-4xl">Öğrenmeyi kanıta dönüştüren sistem</h2>
+              <p className={styles.sectionLabel}>Bir soru sitesinin ötesinde</p>
+              <h2 id="sistem-baslik" className="mt-3 text-3xl font-bold sm:text-4xl">Öğrenmeyi kanıta dönüştüren sistem</h2>
             </div>
             <div>
               <p className="leading-8 text-[var(--text-sub)]">Bilge Arena’nın hedefi daha çok soru göstermek değil; doğru soruyu güvenilir biçimde yayınlamak, öğrencinin hangi kazanımda ne kadar kanıt ürettiğini anlamak ve sıradaki çalışmayı bu kanıta göre düzenlemektir.</p>
-              <Link href="/rehber/bilge-arena-ogrenme-sistemi" className="mt-5 inline-flex items-center gap-2 font-bold text-[var(--focus-light)] hover:underline">
+              <Link href="/rehber/bilge-arena-ogrenme-sistemi" className="mt-5 inline-flex items-center gap-2 font-bold text-[var(--focus-text)] hover:underline">
                 Bilimsel ve teknik mimariyi oku <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </div>
           </div>
           <div className="mt-10 grid gap-5 md:grid-cols-2">
             {SYSTEM_PILLARS.map(({ icon: Icon, title, desc }) => (
-              <article key={title} className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 sm:p-7">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--wisdom-bg)] text-[var(--wisdom-light)]"><Icon size={23} aria-hidden="true" /></div>
-                <h3 className="mt-5 text-lg font-black">{title}</h3>
+              <article key={title} className={styles.card}>
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--wisdom-bg)] text-[var(--wisdom-text)]"><Icon size={23} aria-hidden="true" /></div>
+                <h3 className="mt-5 text-lg font-bold">{title}</h3>
                 <p className="mt-2 text-sm leading-7 text-[var(--text-sub)]">{desc}</p>
               </article>
             ))}
@@ -338,17 +338,17 @@ export default function HakkindaPage() {
         </div>
       </section>
 
-      <section className="border-y border-[var(--border)] bg-[var(--surface)] px-6 py-20 lg:px-8" aria-labelledby="kimin-icin-baslik">
-        <div className="mx-auto max-w-[1200px]">
-          <div className="mx-auto mb-12 max-w-[680px] text-center">
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--growth-light)]">Kimin için?</p>
-            <h2 id="kimin-icin-baslik" className="mt-3 font-display text-3xl font-black sm:text-4xl">Farklı çalışma biçimlerine açık</h2>
+      <section className={`${styles.section} ${styles.panel}`} aria-labelledby="kimin-icin-baslik">
+        <div className="mx-auto max-w-full">
+          <div className={styles.sectionHeading}>
+            <p className={styles.sectionLabel}>Kimin için?</p>
+            <h2 id="kimin-icin-baslik" className="mt-3 text-3xl font-bold sm:text-4xl">Farklı çalışma biçimlerine açık</h2>
           </div>
           <div className="grid gap-5 md:grid-cols-3">
             {AUDIENCES.map(({ icon: Icon, title, desc }) => (
-              <article key={title} className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--growth-bg)] text-[var(--growth-light)]"><Icon size={23} aria-hidden="true" /></div>
-                <h3 className="mt-5 text-lg font-black">{title}</h3>
+              <article key={title} className={styles.card}>
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--growth-bg)] text-[var(--growth-text)]"><Icon size={23} aria-hidden="true" /></div>
+                <h3 className="mt-5 text-lg font-bold">{title}</h3>
                 <p className="mt-3 text-sm leading-7 text-[var(--text-sub)]">{desc}</p>
               </article>
             ))}
@@ -356,19 +356,19 @@ export default function HakkindaPage() {
         </div>
       </section>
 
-      <section className="px-6 py-20 lg:px-8" aria-labelledby="ilkeler-baslik">
-        <div className="mx-auto max-w-[1200px]">
-          <div className="mb-12 max-w-[720px]">
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--reward-light)]">Çalışma ilkelerimiz</p>
-            <h2 id="ilkeler-baslik" className="mt-3 font-display text-3xl font-black sm:text-4xl">Ürünü nasıl düşünüyoruz?</h2>
+      <section className={styles.section} aria-labelledby="ilkeler-baslik">
+        <div className="mx-auto max-w-full">
+          <div className={styles.sectionHeading}>
+            <p className={styles.sectionLabel}>Çalışma ilkelerimiz</p>
+            <h2 id="ilkeler-baslik" className="mt-3 text-3xl font-bold sm:text-4xl">Ürünü nasıl düşünüyoruz?</h2>
             <p className="mt-4 leading-7 text-[var(--text-sub)]">Bir özelliğin yalnızca ilgi çekici olması yetmez; öğrencinin ne yaptığını ve neden yaptığını anlamasına da yardım etmelidir.</p>
           </div>
           <div className="grid gap-5 md:grid-cols-2">
             {PRINCIPLES.map(({ icon: Icon, title, desc, color, background }) => (
-              <article key={title} className="flex gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-7">
+              <article key={title} className={`${styles.card} flex gap-4`}>
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ color, background }}><Icon size={23} aria-hidden="true" /></div>
                 <div>
-                  <h3 className="text-lg font-black">{title}</h3>
+                  <h3 className="text-lg font-bold">{title}</h3>
                   <p className="mt-2 text-sm leading-7 text-[var(--text-sub)]">{desc}</p>
                 </div>
               </article>
@@ -377,33 +377,33 @@ export default function HakkindaPage() {
         </div>
       </section>
 
-      <section id="icerik-sorumlulugu" className="scroll-mt-24 border-y border-[var(--border)] bg-[var(--surface)] px-6 py-20 lg:px-8" aria-labelledby="icerik-baslik">
-        <div className="mx-auto grid max-w-[1100px] gap-8 lg:grid-cols-2">
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 sm:p-8">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--wisdom-bg)] text-[var(--wisdom-light)]"><BookOpenCheck size={24} aria-hidden="true" /></div>
-            <h2 id="icerik-baslik" className="mt-5 text-2xl font-black">İçerik sorumluluğu</h2>
+      <section id="icerik-sorumlulugu" className={`${styles.section} scroll-mt-24`} aria-labelledby="icerik-baslik">
+        <div className="mx-auto grid max-w-full gap-8 lg:grid-cols-2">
+          <div className={styles.card}>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--wisdom-bg)] text-[var(--wisdom-text)]"><BookOpenCheck size={24} aria-hidden="true" /></div>
+            <h2 id="icerik-baslik" className="mt-5 text-2xl font-bold">İçerik sorumluluğu</h2>
             <p className="mt-4 text-sm leading-7 text-[var(--text-sub)]">Soru ve açıklamaların anlaşılır, tutarlı ve çalışılan kapsama uygun olması temel beklentimizdir. Buna rağmen eğitim içeriğinde hata olasılığını sıfır kabul etmiyoruz.</p>
             <p className="mt-4 text-sm leading-7 text-[var(--text-sub)]">Bu nedenle kullanıcıların soru ekranından hata bildirebilmesini sağlıyor; bildirimleri içerik iyileştirme sürecinin parçası olarak ele alıyoruz.</p>
           </div>
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 sm:p-8">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--growth-bg)] text-[var(--growth-light)]"><ShieldCheck size={24} aria-hidden="true" /></div>
-            <h2 className="mt-5 text-2xl font-black">Gizlilik ve güven</h2>
+          <div className={styles.card}>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--growth-bg)] text-[var(--growth-text)]"><ShieldCheck size={24} aria-hidden="true" /></div>
+            <h2 className="mt-5 text-2xl font-bold">Gizlilik ve güven</h2>
             <p className="mt-4 text-sm leading-7 text-[var(--text-sub)]">Hangi verilerin neden işlendiğini, çerez tercihlerini ve hesap kullanım koşullarını erişilebilir yasal sayfalarda açıklıyoruz.</p>
             <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm">
-              <Link href="/gizlilik-politikasi" className="font-semibold text-[var(--focus-light)] hover:underline">Gizlilik politikası</Link>
-              <Link href="/kvkk" className="font-semibold text-[var(--focus-light)] hover:underline">KVKK aydınlatma</Link>
-              <Link href="/cerez-politikasi" className="font-semibold text-[var(--focus-light)] hover:underline">Çerez politikası</Link>
+              <Link href="/gizlilik-politikasi" className="font-semibold text-[var(--focus-text)] hover:underline">Gizlilik politikası</Link>
+              <Link href="/kvkk" className="font-semibold text-[var(--focus-text)] hover:underline">KVKK aydınlatma</Link>
+              <Link href="/cerez-politikasi" className="font-semibold text-[var(--focus-text)] hover:underline">Çerez politikası</Link>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="px-6 py-20 lg:px-8" aria-labelledby="kimlik-baslik">
-        <div className="mx-auto max-w-[1100px]">
+      <section className={styles.section} aria-labelledby="kimlik-baslik">
+        <div className="mx-auto max-w-full">
           <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
             <div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--reward-bg)] text-[var(--reward-light)]"><Flag size={24} aria-hidden="true" /></div>
-              <h2 id="kimlik-baslik" className="mt-5 font-display text-3xl font-black">Platform bilgileri</h2>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--reward-bg)] text-[var(--reward-text)]"><Flag size={24} aria-hidden="true" /></div>
+              <h2 id="kimlik-baslik" className="mt-5 text-3xl font-bold">Platform bilgileri</h2>
               <p className="mt-4 leading-7 text-[var(--text-sub)]">Bir reklamı veya arama sonucunu tıklamadan önce hizmetin kim tarafından, kimin için ve hangi kapsamda sunulduğunu görebilmelisin.</p>
             </div>
             <dl className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
@@ -418,17 +418,17 @@ export default function HakkindaPage() {
         </div>
       </section>
 
-      <section className="border-y border-[var(--border)] bg-[var(--surface)] px-6 py-20 lg:px-8" aria-labelledby="sinirlar-baslik">
-        <div className="mx-auto max-w-[1100px] rounded-[28px] border border-[var(--border)] bg-[var(--card)] p-7 sm:p-10">
+      <section className={`${styles.section} ${styles.panel}`} aria-labelledby="sinirlar-baslik">
+        <div className="w-full">
           <div className="grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:items-center">
             <div>
               <div
-                className="flex h-12 w-12 items-center justify-center rounded-xl text-[var(--urgency-light)]"
+                className="flex h-12 w-12 items-center justify-center rounded-xl text-[var(--urgency-text)]"
                 style={{ background: 'color-mix(in srgb, var(--urgency) 10%, transparent)' }}
               >
                 <Scale size={24} aria-hidden="true" />
               </div>
-              <h2 id="sinirlar-baslik" className="mt-5 font-display text-3xl font-black">Ne değildir?</h2>
+              <h2 id="sinirlar-baslik" className="mt-5 text-3xl font-bold">Ne değildir?</h2>
             </div>
             <ul className="space-y-4">
               {[
@@ -437,21 +437,21 @@ export default function HakkindaPage() {
                 'Belirli bir puan, sıralama, okul yerleşimi veya sınav başarısı garantisi vermez.',
                 'Oyun puanı ve sıralamalar, resmî sınav puanı ya da akademik yeterlilik belgesi değildir.',
               ].map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm leading-7 text-[var(--text-sub)]"><Check size={17} className="mt-1 shrink-0 text-[var(--growth-light)]" aria-hidden="true" />{item}</li>
+                <li key={item} className="flex items-start gap-3 text-sm leading-7 text-[var(--text-sub)]"><Check size={17} className="mt-1 shrink-0 text-[var(--growth-text)]" aria-hidden="true" />{item}</li>
               ))}
             </ul>
           </div>
         </div>
       </section>
 
-      <section className="px-6 py-24 lg:px-8">
-        <div className="mx-auto max-w-[1100px] overflow-hidden rounded-[28px] border border-[var(--focus-border)] bg-[var(--focus-bg)] p-8 text-center sm:p-12">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--card)] text-[var(--focus-light)]"><Mail size={23} aria-hidden="true" /></div>
-          <h2 className="mt-5 font-display text-3xl font-black sm:text-4xl">Sorun, önerin veya iş birliği fikrin mi var?</h2>
+      <section className={`${styles.section} ${styles.cta}`}>
+        <div className="w-full">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--card)] text-[var(--focus-text)]"><Mail size={23} aria-hidden="true" /></div>
+          <h2 className="mt-5 text-3xl font-bold sm:text-4xl">Sorun, önerin veya iş birliği fikrin mi var?</h2>
           <p className="mx-auto mt-4 max-w-[650px] leading-7 text-[var(--text-sub)]">Ürün, içerik, teknik destek, okul ve kurum iş birlikleri hakkında bize ulaşabilirsin.</p>
-          <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-            <TrackedCtaLink href="/iletisim" page="hakkinda" placement="final_contact" className="w-full sm:w-auto">İletişim kanallarını gör <ArrowRight size={17} /></TrackedCtaLink>
-            <a href="mailto:iletisim@bilgearena.com" className="btn-ghost inline-flex min-h-12 w-full items-center justify-center rounded-xl px-8 py-4 text-lg font-semibold transition-all duration-200 active:scale-[0.97] sm:w-auto">iletisim@bilgearena.com</a>
+          <div className={styles.actions}>
+            <TrackedCtaLink href="/iletisim" page="hakkinda" placement="final_contact" className={styles.primaryButton}>İletişim kanallarını gör <ArrowRight size={17} /></TrackedCtaLink>
+            <a href="mailto:iletisim@bilgearena.com" className={`${styles.secondaryButton} inline-flex items-center justify-center`}>iletisim@bilgearena.com</a>
           </div>
         </div>
       </section>

@@ -83,7 +83,7 @@ const STEPS = [
     title: 'Hedefini ve dersini seç',
     desc: 'Matematik, Türkçe, Fen, Sosyal veya İngilizce alanlarından çalışmak istediğini seç. Ders sayfasında kapsamı ve sınav etiketlerini görebilirsin.',
     note: 'TYT · AYT · LGS · YDT kapsamları derslere göre değişir.',
-    color: 'var(--focus)',
+    color: 'var(--focus-text)',
     background: 'var(--focus-bg)',
   },
   {
@@ -92,7 +92,7 @@ const STEPS = [
     title: 'Çalışma biçimini belirle',
     desc: 'Klasik ve Pratik ile başlayabilir; tempo istediğinde Blitz, Maraton veya Boss modlarını açabilirsin.',
     note: 'Modlar soru sayısı, süre ve zorluk yapısına göre farklılaşır.',
-    color: 'var(--reward)',
+    color: 'var(--reward-text)',
     background: 'var(--reward-bg)',
   },
   {
@@ -101,7 +101,7 @@ const STEPS = [
     title: 'Soruyu çöz, anında dönüt al',
     desc: 'Cevabını verdikten sonra doğru seçeneği ve mevcutsa çözüm açıklamasını incele. Tartışmalı bir içerik görürsen hata bildirimi oluştur.',
     note: 'Amaç yalnızca skoru değil, yanlışın nedenini de görünür kılmak.',
-    color: 'var(--growth)',
+    color: 'var(--growth-text)',
     background: 'var(--growth-bg)',
   },
   {
@@ -110,7 +110,7 @@ const STEPS = [
     title: 'Sonucunu gör ve tekrar et',
     desc: 'Oturum sonunda doğruluk oranını, XP sonucunu ve performans özetini gör. Hesapla giriş yaptığında ilerlemeni saklayıp sonraki çalışmalarına taşı.',
     note: 'Misafir deneyimi hızlı deneme içindir; kalıcı ilerleme için hesap gerekir.',
-    color: 'var(--wisdom)',
+    color: 'var(--wisdom-text)',
     background: 'var(--wisdom-bg)',
   },
 ]
@@ -197,60 +197,60 @@ const jsonLd = {
 
 export default function NasilCalisirPage() {
   return (
-    <div className={`${styles.page} overflow-hidden`} data-academy-marketing="how">
+    <div className={styles.page} data-academy-marketing="how">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
 
-      <section className={`${styles.hero} relative border-b border-[var(--border)] px-6 py-16 sm:py-20 lg:px-8 lg:py-24`}>
+      <section className={styles.hero}>
         <div className={styles.heroBackdrop} aria-hidden="true">
           <Image
             src="/academy/academy-landscape.png"
             alt=""
             fill
-            sizes="(min-width: 1440px) 1360px, 100vw"
+            sizes="(min-width: 1440px) 1360px, (min-width: 1101px) calc(100vw - 80px), (min-width: 768px) calc(100vw - 48px), calc(100vw - 32px)"
             priority
           />
         </div>
-        <div className={`${styles.heroGrid} relative mx-auto grid max-w-[1200px] items-center gap-12`}>
+        <div className={styles.heroGrid}>
           <div className={styles.heroCopy}>
-            <nav aria-label="Sayfa yolu" className={`${styles.breadcrumb} mb-7 flex items-center gap-2 text-xs`}>
-              <Link href="/" className="transition-colors hover:text-[var(--focus-light)]">Ana Sayfa</Link>
+            <nav aria-label="Sayfa yolu" className={styles.breadcrumb}>
+              <Link href="/" className="transition-colors hover:text-[var(--focus-text)]">Ana Sayfa</Link>
               <ChevronRight size={13} aria-hidden="true" />
               <span aria-current="page">Nasıl Çalışır</span>
             </nav>
-            <div className={`${styles.eyebrow} mb-5 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold`}>
+            <div className={styles.eyebrow}>
               <Sparkles size={14} aria-hidden="true" />
               Soru pratiği, adım adım
             </div>
-            <h1 className={`${styles.heroTitle} font-black`}>
+            <h1 className={styles.heroTitle}>
               Çalışma hedefini seç.
-              <span className="mt-2 block text-[var(--focus-light)]">Pratiğe hemen başla.</span>
+              <span>Pratiğe hemen başla.</span>
             </h1>
-            <p className={`${styles.heroDescription} mt-6 max-w-[650px] text-base leading-8 sm:text-lg`}>
+            <p className={styles.heroDescription}>
               Bilge Arena; TYT, AYT, LGS ve YDT için soru çözmeyi kısa oturumlar,
               anında geri bildirim ve oyun öğeleriyle daha takip edilebilir hale getirir.
               Başlamak için önce dersini, sonra çalışma biçimini seçersin.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <TrackedCtaLink href="/arena" page="nasil-calisir" placement="hero_try" className="w-full sm:w-auto">
+            <div className={styles.actions}>
+              <TrackedCtaLink href="/arena" page="nasil-calisir" placement="hero_try" className={styles.primaryButton}>
                 Ücretsiz dene
                 <ArrowRight size={17} />
               </TrackedCtaLink>
-              <TrackedCtaLink href="/konular" page="nasil-calisir" placement="hero_topics" variant="ghost" className="w-full sm:w-auto">
+              <TrackedCtaLink href="/konular" page="nasil-calisir" placement="hero_topics" variant="ghost" className={styles.secondaryButton}>
                 Ders kapsamlarını incele
               </TrackedCtaLink>
             </div>
-            <p className={`${styles.heroNote} mt-4 flex items-center gap-2 text-xs`}>
-              <Check size={14} className="text-[var(--growth-light)]" aria-hidden="true" />
+            <p className={styles.heroNote}>
+              <Check size={14} className="text-[var(--growth-text)]" aria-hidden="true" />
               Kredi kartı gerekmez · Misafir önizlemesi vardır · Başarı garantisi verilmez
             </p>
           </div>
 
           <div className="relative mx-auto w-full max-w-[520px]">
             <div className="absolute -inset-6 rounded-[40px] bg-[var(--focus-bg)] blur-3xl" />
-            <div className={`${styles.glassCard} relative rounded-[28px] p-5 sm:p-7`}>
+            <div className={`${styles.glassCard} relative`}>
               <div className={styles.guideChip}>
                 <div className={styles.guideAvatar}>
                   <Image
@@ -267,24 +267,24 @@ export default function NasilCalisirPage() {
               </div>
               <div className="mb-5 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--focus-light)]">Örnek akış</p>
-                  <h2 className="mt-1 text-xl font-black">Bugünkü Matematik pratiği</h2>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--focus-text)]">Örnek akış</p>
+                  <h2 className="mt-1 text-xl font-bold">Bugünkü Matematik pratiği</h2>
                 </div>
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--reward-bg)] text-[var(--reward-light)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--reward-bg)] text-[var(--reward-text)]">
                   <Medal size={22} aria-hidden="true" />
                 </div>
               </div>
               <div className="space-y-3">
                 {SAMPLE_FLOW.map(([label, value, Icon]) => (
                   <div key={label} className={`${styles.flowRow} flex items-center gap-3 rounded-xl border p-4`}>
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--focus-bg)] text-[var(--focus-light)]">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--focus-bg)] text-[var(--focus-text)]">
                       <Icon size={17} aria-hidden="true" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">{label}</p>
-                      <p className="truncate text-sm font-semibold text-[var(--text)]">{value}</p>
+                      <p className="text-sm font-semibold text-[var(--text)]">{value}</p>
                     </div>
-                    <Check size={17} className="text-[var(--growth-light)]" aria-hidden="true" />
+                    <Check size={17} className="text-[var(--growth-text)]" aria-hidden="true" />
                   </div>
                 ))}
               </div>
@@ -346,25 +346,25 @@ export default function NasilCalisirPage() {
         </div>
       </section>
 
-      <section className="px-6 py-20 lg:px-8" aria-labelledby="adimlar-baslik">
-        <div className="mx-auto max-w-[1200px]">
-          <div className="mx-auto mb-12 max-w-[680px] text-center">
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--reward-light)]">Dört temel adım</p>
-            <h2 id="adimlar-baslik" className="mt-3 font-display text-3xl font-black sm:text-4xl">İlk sorudan sonuç ekranına</h2>
+      <section className={styles.section} aria-labelledby="adimlar-baslik">
+        <div className="mx-auto max-w-full">
+          <div className={styles.sectionHeading}>
+            <p className={styles.sectionLabel}>Dört temel adım</p>
+            <h2 id="adimlar-baslik" className="mt-3 text-3xl font-bold sm:text-4xl">İlk sorudan sonuç ekranına</h2>
             <p className="mt-4 leading-7 text-[var(--text-sub)]">Her adımın ne yaptığını ve senden ne beklediğini başlamadan önce gör.</p>
           </div>
           <div className="grid gap-5 lg:grid-cols-2">
             {STEPS.map((step, index) => {
               const Icon = step.icon
               return (
-                <article id={`adim-${index + 1}`} key={step.num} className="group rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 transition-colors hover:border-[var(--focus-border)] sm:p-7">
+                <article id={`adim-${index + 1}`} key={step.num} className={styles.card}>
                   <div className="flex items-start gap-4">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: step.background, color: step.color }}>
                       <Icon size={23} aria-hidden="true" />
                     </div>
                     <div>
-                      <p className="text-xs font-black tracking-[0.16em]" style={{ color: step.color }}>ADIM {step.num}</p>
-                      <h3 className="mt-1 text-xl font-black">{step.title}</h3>
+                      <p className="text-xs font-bold tracking-[0.16em]" style={{ color: step.color }}>ADIM {step.num}</p>
+                      <h3 className="mt-1 text-xl font-bold">{step.title}</h3>
                     </div>
                   </div>
                   <p className="mt-5 text-sm leading-7 text-[var(--text-sub)]">{step.desc}</p>
@@ -376,15 +376,15 @@ export default function NasilCalisirPage() {
         </div>
       </section>
 
-      <section className="border-y border-[var(--border)] bg-[var(--surface)] px-6 py-20 lg:px-8" aria-labelledby="kapsam-baslik">
-        <div className="mx-auto max-w-[1200px]">
+      <section className={`${styles.section} ${styles.panel}`} aria-labelledby="kapsam-baslik">
+        <div className="mx-auto max-w-full">
           <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
             <div className="max-w-[720px]">
-              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--growth-light)]">Ders ve sınav kapsamı</p>
-              <h2 id="kapsam-baslik" className="mt-3 font-display text-3xl font-black sm:text-4xl">Hangi alanda pratik yapabilirsin?</h2>
+              <p className={styles.sectionLabel}>Ders ve sınav kapsamı</p>
+              <h2 id="kapsam-baslik" className="mt-3 text-3xl font-bold sm:text-4xl">Hangi alanda pratik yapabilirsin?</h2>
               <p className="mt-4 leading-7 text-[var(--text-sub)]">Her dersin sınav kapsamı farklıdır. Ayrıntılı konu başlıkları için ilgili ders sayfasına geçebilirsin.</p>
             </div>
-            <Link href="/konular" className="inline-flex items-center gap-2 text-sm font-bold text-[var(--focus-light)] hover:underline">
+            <Link href="/konular" className="inline-flex items-center gap-2 text-sm font-bold text-[var(--focus-text)] hover:underline">
               Tüm konuları gör <ArrowRight size={15} />
             </Link>
           </div>
@@ -392,33 +392,33 @@ export default function NasilCalisirPage() {
             {GAME_LIST.map((game) => (
               <Link key={game.slug} href={`/konular/${game.slug}`} className="group rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 transition-all hover:-translate-y-0.5 hover:border-[var(--focus-border)]">
                 <div className="mb-5 h-1.5 w-12 rounded-full" style={{ backgroundColor: game.colorHex }} />
-                <h3 className="font-black">{game.name}</h3>
+                <h3 className="font-bold">{game.name}</h3>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {game.examTags.map((tag) => (
                     <span key={tag} className="rounded-md bg-[var(--bg-secondary)] px-2 py-1 text-[10px] font-bold text-[var(--text-sub)]">{tag}</span>
                   ))}
                 </div>
                 <p className="mt-4 line-clamp-3 text-xs leading-6 text-[var(--text-muted)]">{game.description}</p>
-                <span className="mt-5 inline-flex items-center gap-1 text-xs font-bold text-[var(--focus-light)]">Kapsamı incele <ArrowRight size={13} /></span>
+                <span className="mt-5 inline-flex items-center gap-1 text-xs font-bold text-[var(--focus-text)]">Kapsamı incele <ArrowRight size={13} /></span>
               </Link>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="px-6 py-20 lg:px-8" aria-labelledby="faydalar-baslik">
-        <div className="mx-auto max-w-[1200px]">
-          <div className="mx-auto mb-12 max-w-[680px] text-center">
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--wisdom-light)]">Deneyimin içinde</p>
-            <h2 id="faydalar-baslik" className="mt-3 font-display text-3xl font-black sm:text-4xl">Bir soru ekranından fazlası</h2>
+      <section className={styles.section} aria-labelledby="faydalar-baslik">
+        <div className="mx-auto max-w-full">
+          <div className={styles.sectionHeading}>
+            <p className={styles.sectionLabel}>Deneyimin içinde</p>
+            <h2 id="faydalar-baslik" className="mt-3 text-3xl font-bold sm:text-4xl">Bir soru ekranından fazlası</h2>
           </div>
-          <div className="grid gap-px overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--border)] md:grid-cols-2 lg:grid-cols-3">
+          <div className={styles.benefitGrid}>
             {BENEFITS.map(({ icon: Icon, title, desc }) => (
-              <article key={title} className="bg-[var(--surface)] p-6 sm:p-7">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--focus-bg)] text-[var(--focus-light)]">
+              <article key={title} className={styles.card}>
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--focus-bg)] text-[var(--focus-text)]">
                   <Icon size={21} aria-hidden="true" />
                 </div>
-                <h3 className="mt-5 font-black">{title}</h3>
+                <h3 className="mt-5 font-bold">{title}</h3>
                 <p className="mt-2 text-sm leading-7 text-[var(--text-sub)]">{desc}</p>
               </article>
             ))}
@@ -426,13 +426,13 @@ export default function NasilCalisirPage() {
         </div>
       </section>
 
-      <section className="border-y border-[var(--border)] bg-[var(--surface)] px-6 py-20 lg:px-8" aria-labelledby="seffaflik-baslik">
-        <div className="mx-auto grid max-w-[1100px] gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+      <section className={`${styles.section} ${styles.panel}`} aria-labelledby="seffaflik-baslik">
+        <div className="mx-auto grid max-w-full gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--growth-bg)] text-[var(--growth-light)]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--growth-bg)] text-[var(--growth-text)]">
               <ShieldCheck size={24} aria-hidden="true" />
             </div>
-            <h2 id="seffaflik-baslik" className="mt-5 font-display text-3xl font-black">Başlamadan önce bilmen gerekenler</h2>
+            <h2 id="seffaflik-baslik" className="mt-5 text-3xl font-bold">Başlamadan önce bilmen gerekenler</h2>
             <p className="mt-4 leading-7 text-[var(--text-sub)]">Google’dan, bir reklamdan veya doğrudan geldiğinde aynı açık bilgilerle karşılaşırsın.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -443,26 +443,26 @@ export default function NasilCalisirPage() {
               ['Sonuç beklentisi', 'Düzenli pratiğe yardımcı olur; sınav puanı veya başarı garantisi vermez.'],
             ].map(([title, desc]) => (
               <div key={title} className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
-                <div className="flex items-center gap-2 font-bold"><Check size={16} className="text-[var(--growth-light)]" />{title}</div>
+                <div className="flex items-center gap-2 font-bold"><Check size={16} className="text-[var(--growth-text)]" />{title}</div>
                 <p className="mt-2 text-xs leading-6 text-[var(--text-muted)]">{desc}</p>
               </div>
             ))}
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm lg:col-start-2">
-            <Link href="/arena/premium" className="font-semibold text-[var(--focus-light)] hover:underline">Plan ve limitleri incele</Link>
-            <Link href="/gizlilik-politikasi" className="font-semibold text-[var(--focus-light)] hover:underline">Gizlilik politikası</Link>
-            <Link href="/kullanim-kosullari" className="font-semibold text-[var(--focus-light)] hover:underline">Kullanım koşulları</Link>
+            <Link href="/arena/premium" className="font-semibold text-[var(--focus-text)] hover:underline">Plan ve limitleri incele</Link>
+            <Link href="/gizlilik-politikasi" className="font-semibold text-[var(--focus-text)] hover:underline">Gizlilik politikası</Link>
+            <Link href="/kullanim-kosullari" className="font-semibold text-[var(--focus-text)] hover:underline">Kullanım koşulları</Link>
           </div>
         </div>
       </section>
 
-      <section className="px-6 py-20 lg:px-8" aria-labelledby="sss-baslik">
-        <div className="mx-auto grid max-w-[1100px] gap-10 lg:grid-cols-[0.7fr_1.3fr]">
+      <section className={styles.section} aria-labelledby="sss-baslik">
+        <div className="mx-auto grid max-w-full gap-10 lg:grid-cols-[0.7fr_1.3fr]">
           <div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--reward-bg)] text-[var(--reward-light)]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--reward-bg)] text-[var(--reward-text)]">
               <CircleHelp size={24} aria-hidden="true" />
             </div>
-            <h2 id="sss-baslik" className="mt-5 font-display text-3xl font-black">Sık sorulan sorular</h2>
+            <h2 id="sss-baslik" className="mt-5 text-3xl font-bold">Sık sorulan sorular</h2>
             <p className="mt-4 leading-7 text-[var(--text-sub)]">Karar vermeden önce en çok merak edilen yanıtlar.</p>
           </div>
           <div className="space-y-3">
@@ -470,7 +470,7 @@ export default function NasilCalisirPage() {
               <details key={item.q} className="group rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 open:border-[var(--focus-border)]">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-bold marker:hidden">
                   {item.q}
-                  <span className="text-[var(--focus-light)] transition-transform group-open:rotate-90"><ChevronRight size={18} /></span>
+                  <span className="text-[var(--focus-text)] transition-transform group-open:rotate-90"><ChevronRight size={18} /></span>
                 </summary>
                 <p className="mt-4 border-t border-[var(--border)] pt-4 text-sm leading-7 text-[var(--text-sub)]">{item.a}</p>
               </details>
@@ -479,13 +479,13 @@ export default function NasilCalisirPage() {
         </div>
       </section>
 
-      <section className="px-6 pb-24 lg:px-8">
-        <div className="mx-auto max-w-[1100px] overflow-hidden rounded-[28px] border border-[var(--focus-border)] bg-[var(--focus-bg)] p-8 text-center sm:p-12">
-          <h2 className="font-display text-3xl font-black sm:text-4xl">İlk oturumunu şimdi başlat</h2>
+      <section className={`${styles.section} ${styles.cta}`}>
+        <div className="w-full">
+          <h2 className="text-3xl font-bold sm:text-4xl">İlk oturumunu şimdi başlat</h2>
           <p className="mx-auto mt-4 max-w-[620px] leading-7 text-[var(--text-sub)]">Dersini seç, çalışma biçimini belirle ve ilk sorunu gör. Devam etmek isteyip istemediğine deneyimden sonra karar ver.</p>
-          <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-            <TrackedCtaLink href="/arena" page="nasil-calisir" placement="final_arena" className="w-full sm:w-auto">Arena’ya gir <ArrowRight size={17} /></TrackedCtaLink>
-            <TrackedCtaLink href="/rehber" page="nasil-calisir" placement="final_guides" variant="ghost" className="w-full sm:w-auto">Çalışma rehberlerini oku</TrackedCtaLink>
+          <div className={styles.actions}>
+            <TrackedCtaLink href="/arena" page="nasil-calisir" placement="final_arena" className={styles.primaryButton}>Arena’ya gir <ArrowRight size={17} /></TrackedCtaLink>
+            <TrackedCtaLink href="/rehber" page="nasil-calisir" placement="final_guides" variant="ghost" className={styles.secondaryButton}>Çalışma rehberlerini oku</TrackedCtaLink>
           </div>
         </div>
       </section>
