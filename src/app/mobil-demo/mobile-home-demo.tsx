@@ -107,6 +107,14 @@ const SUBJECTS: Subject[] = [
   },
 ]
 
+// Ders rengi dolgu ve kenarlık içindir. Metinde temanın metin rengiyle
+// karıştırılır: karanlık kartta açılır, açık kartta koyulaşır. Ham renk
+// karanlık temada Matematik 3,0 / Sosyal 3,7, gün ışığında Fen, Türkçe ve
+// İngilizce 2,3–2,6 kontrastta kalıyordu. Pay temaya göre globals.css'te.
+function subjectTextColor(color: string) {
+  return `color-mix(in srgb, ${color} var(--app-subject-text-share, 65%), var(--app-text))`
+}
+
 const COACH_MESSAGES = [
   {
     eyebrow: 'Bugünkü rota',
@@ -209,7 +217,7 @@ function PathStep({ step, subject }: { step: PathStepModel; subject: Subject }) 
         {done && <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[var(--app-card)] bg-[var(--app-success-solid)]"><Check size={10} strokeWidth={4} /></span>}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[9px] font-black uppercase tracking-[0.08em]" style={{ color: current ? subject.color : done ? 'var(--app-success)' : 'var(--app-text-muted)' }}>
+        <span className="block text-[9px] font-black uppercase tracking-[0.08em]" style={{ color: current ? subjectTextColor(subject.color) : done ? 'var(--app-success)' : 'var(--app-text-muted)' }}>
           {current ? 'Sıradaki' : done ? 'Tamamlandı' : exam ? 'Ünite sonu' : `${step.index + 1}. ders`}
         </span>
         <span className={`mt-0.5 block text-[11px] font-extrabold leading-[13px] md:text-xs md:leading-4 ${locked ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text)]'}`}>{step.label}</span>
@@ -543,7 +551,7 @@ export function MobileHomeDemo({
                   aria-pressed={active}
                   className="flex min-h-11 shrink-0 snap-start items-center gap-1.5 rounded-2xl border-2 px-3 text-xs font-extrabold transition-transform hover:-translate-y-0.5 active:scale-95 md:min-h-12 md:px-4 md:text-sm"
                   style={{
-                    color: active ? item.color : 'var(--app-text-muted)', borderColor: active ? item.color : 'var(--app-border)',
+                    color: active ? subjectTextColor(item.color) : 'var(--app-text-muted)', borderColor: active ? item.color : 'var(--app-border)',
                     background: active ? `${item.color}10` : 'var(--app-card)', boxShadow: active ? `0 3px 0 ${item.color}35` : '0 3px 0 var(--app-border)',
                   }}
                 >
@@ -601,7 +609,7 @@ export function MobileHomeDemo({
             <div className="relative z-10 max-w-[64%]">
               {isSocialTytProgressPreparing ? (
                 <div role="status">
-                  <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>İlerleme durumu</div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subjectTextColor(subject.color) }}>İlerleme durumu</div>
                   <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">Öğrenme yolu hazırlanıyor</h2>
                   <p className="mt-2 text-[11px] font-semibold leading-5 text-[var(--app-text-sub)]">
                     Hazır olmayan bir ders veya başarı bilgisi göstermiyoruz.
@@ -609,7 +617,7 @@ export function MobileHomeDemo({
                 </div>
               ) : (
                 <>
-                  <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Kendi seçimin</div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subjectTextColor(subject.color) }}>Kendi seçimin</div>
                   <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">{pathComplete ? 'Karışık tekrar' : currentStep?.label ?? subject.label}</h2>
                   <p className="mt-2 text-[11px] font-bold leading-5 text-[var(--app-text-sub)]">İstersen bu konudan bağımsız çalış.</p>
                   <Link href={primaryHref} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black text-white active:translate-y-1" style={{ background: subject.color, boxShadow: `0 5px 0 ${subject.shadow}` }}>
@@ -630,7 +638,7 @@ export function MobileHomeDemo({
         <section aria-label={`${subject.label} öğrenme yolu`} className="relative mx-4 mt-4 rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] p-2.5 shadow-[0_5px_0_var(--app-border)] md:col-start-1 md:row-start-2 md:row-span-2 md:mx-0 md:mt-0 md:rounded-[28px] md:p-5">
           <div className="mb-2 flex items-center justify-between md:mb-4">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Ünite planı</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subjectTextColor(subject.color) }}>Ünite planı</div>
               <h2 className="text-[15px] font-black md:text-xl">Öğrenme yolu</h2>
             </div>
             <div className="rounded-xl bg-[var(--app-card)] px-2.5 py-1.5 text-[10px] font-black text-[var(--app-text-sub)] shadow-[0_2px_0_var(--app-shadow)]">
@@ -771,7 +779,7 @@ export function MobileHomeDemo({
                         aria-pressed={active}
                         className="flex min-h-10 shrink-0 items-center gap-1 rounded-xl border-2 px-2 text-[10px] font-black transition-transform hover:-translate-y-0.5 active:scale-95"
                         style={{
-                          color: active ? item.color : 'var(--app-text-muted)',
+                          color: active ? subjectTextColor(item.color) : 'var(--app-text-muted)',
                           borderColor: active ? item.color : 'var(--app-border)',
                           background: active ? `${item.color}10` : 'var(--app-card)',
                         }}

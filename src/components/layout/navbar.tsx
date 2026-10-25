@@ -218,7 +218,7 @@ export function Navbar({ variant }: NavbarProps = {}) {
                     ? 'bg-blue-500/15 text-blue-300'
                     : 'text-slate-300 hover:bg-white/[0.07] hover:text-white'
                   : activeNavHref === href
-                    ? 'text-[var(--focus)]'
+                    ? 'text-[var(--focus-text)]'
                     : 'text-[var(--text-sub)] hover:bg-[var(--card)] hover:text-[var(--text)]'
               }`}
             >
@@ -238,7 +238,7 @@ export function Navbar({ variant }: NavbarProps = {}) {
               aria-controls="more-navigation"
               className={`flex items-center gap-1 whitespace-nowrap rounded-lg px-3 py-2 text-[13px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)] ${
                 MORE_NAV_LINKS.some(({ href }) => (academyMarketingArea ? pathname === href : activeNavHref === href))
-                  ? academyMarketingArea ? 'bg-blue-500/15 text-blue-300' : 'text-[var(--focus)]'
+                  ? academyMarketingArea ? 'bg-blue-500/15 text-blue-300' : 'text-[var(--focus-text)]'
                   : academyMarketingArea
                     ? 'text-slate-300 hover:bg-white/[0.07] hover:text-white'
                     : 'text-[var(--text-sub)] hover:bg-[var(--card)] hover:text-[var(--text)]'
@@ -258,7 +258,7 @@ export function Navbar({ variant }: NavbarProps = {}) {
                     href={href}
                     aria-current={activeNavHref === href ? 'page' : undefined}
                     className={`block whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--card)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)] ${
-                      activeNavHref === href ? 'text-[var(--focus)]' : 'text-[var(--text-sub)] hover:text-[var(--text)]'
+                      activeNavHref === href ? 'text-[var(--focus-text)]' : 'text-[var(--text-sub)] hover:text-[var(--text)]'
                     }`}
                   >
                     {label}
@@ -383,7 +383,7 @@ export function Navbar({ variant }: NavbarProps = {}) {
                     </Link>
                     <Link
                       href="/oda"
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)]"
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--focus-text)] transition-colors hover:bg-[var(--focus-bg)]"
                     >
                       <Users size={14} />
                       Oda Modu
@@ -477,7 +477,7 @@ export function Navbar({ variant }: NavbarProps = {}) {
                 aria-current={activeNavHref === href ? 'page' : undefined}
                 className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--card)] ${
                   activeNavHref === href
-                    ? 'text-[var(--focus)] bg-[var(--focus-bg)]'
+                    ? 'text-[var(--focus-text)] bg-[var(--focus-bg)]'
                     : 'text-[var(--text-sub)]'
                 }`}
               >
