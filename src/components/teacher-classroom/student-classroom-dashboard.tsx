@@ -96,7 +96,7 @@ export function StudentClassroomDashboard() {
   if (!user) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <GraduationCap className="mx-auto h-11 w-11 text-[var(--focus)]" aria-hidden="true" />
+        <GraduationCap className="mx-auto h-11 w-11 text-[var(--focus-text)]" aria-hidden="true" />
         <h1 className="mt-4 text-xl font-black">Sınıfların için giriş yap</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">
           Davetlerin ve ödevlerin yalnız doğrulanmış hesabına gösterilir.
@@ -157,7 +157,7 @@ export function StudentClassroomDashboard() {
               </Link>
               <Link
                 href="/arena/sinif/ogretmen"
-                className="inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold text-[var(--focus)] hover:bg-[var(--focus)]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+                className="inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold text-[var(--focus-text)] hover:bg-[var(--focus)]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
               >
                 Öğretmen paneli
               </Link>
@@ -246,7 +246,7 @@ export function StudentClassroomDashboard() {
                 <article key={item.id} className="flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs font-bold text-[var(--focus)]">{item.classroom.name}</p>
+                      <p className="text-xs font-bold text-[var(--focus-text)]">{item.classroom.name}</p>
                       <h3 className="mt-1 font-black">{item.title}</h3>
                     </div>
                     <span className="rounded-full bg-[var(--surface)] px-2.5 py-1 text-[10px] font-extrabold">

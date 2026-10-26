@@ -143,7 +143,7 @@ export function StudentAssignmentClient({ assignmentId }: { assignmentId: string
           </div>
           <Link
             href="/arena/sinif"
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-bold text-[var(--focus)] hover:bg-[var(--focus)]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-bold text-[var(--focus-text)] hover:bg-[var(--focus)]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Sınıflarıma dön
           </Link>

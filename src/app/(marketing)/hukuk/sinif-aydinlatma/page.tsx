@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function ClassroomNoticePage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
-      <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-[var(--focus)]">Sürüm: notice-v1</p>
+      <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-[var(--focus-text)]">Sürüm: notice-v1</p>
       <h1 className="mb-2 text-3xl font-bold">Sınıf Katılımı Aydınlatma Metni</h1>
       <p className="mb-10 text-sm text-[var(--text-sub)]">Son güncelleme: 20 Ağustos 2026</p>
 
@@ -22,7 +22,7 @@ export default function ClassroomNoticePage() {
             Bu metin, Bilge Arena hesabınızla bir kurum sınıfına katılmanız halinde sınıf üyeliğinizin ve
             katılım sonrasındaki öğrenme göstergelerinizin nasıl işlendiğini açıklar. Veri sorumlusu Bilge
             Arena&apos;dır. Genel veri işleme faaliyetleri için{' '}
-            <a href="/kvkk" className="font-bold text-[var(--focus)] underline underline-offset-2">KVKK Aydınlatma Metni</a>
+            <a href="/kvkk" className="font-bold text-[var(--focus-text)] underline underline-offset-2">KVKK Aydınlatma Metni</a>
             {' '}ayrıca geçerlidir.
           </p>
         </section>
@@ -88,7 +88,7 @@ export default function ClassroomNoticePage() {
             KVKK&apos;nın 11. maddesindeki haklarınızı kullanmak veya sınıf verileriniz hakkında bilgi istemek için{' '}
             <strong>iletisim@bilgearena.com</strong> adresine başvurabilirsiniz. Ayrı paylaşım tercihinizin kapsamı
             için{' '}
-            <a href="/hukuk/sinif-paylasim-rizasi" className="font-bold text-[var(--focus)] underline underline-offset-2">
+            <a href="/hukuk/sinif-paylasim-rizasi" className="font-bold text-[var(--focus-text)] underline underline-offset-2">
               Sınıf İlerleme Paylaşımı Açık Rıza Metni
             </a>
             &apos;ni inceleyin.
@@ -102,7 +102,7 @@ export default function ClassroomNoticePage() {
             href="https://www.kvkk.gov.tr/Icerik/2033/Aydinlatma-Yukumlulugu-"
             target="_blank"
             rel="noreferrer"
-            className="font-bold text-[var(--focus)] underline underline-offset-2"
+            className="font-bold text-[var(--focus-text)] underline underline-offset-2"
           >
             aydınlatma yükümlülüğü açıklamasına
           </a>

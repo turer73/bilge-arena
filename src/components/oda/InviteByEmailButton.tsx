@@ -58,7 +58,7 @@ export function InviteByEmailButton({ roomId, disabled }: InviteByEmailButtonPro
         type="button"
         onClick={() => dialogRef.current?.showModal()}
         disabled={disabled}
-        className="rounded-lg border border-[var(--focus)]/30 bg-[var(--focus-bg)] px-4 py-2 text-sm font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus)]/15 disabled:cursor-not-allowed disabled:opacity-40"
+        className="rounded-lg border border-[var(--focus)]/30 bg-[var(--focus-bg)] px-4 py-2 text-sm font-bold text-[var(--focus-text)] transition-colors hover:bg-[var(--focus)]/15 disabled:cursor-not-allowed disabled:opacity-40"
       >
         ✉️ Email Davet
       </button>

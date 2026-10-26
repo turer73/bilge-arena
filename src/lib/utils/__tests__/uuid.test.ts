@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { UUID_STRICT_PATTERN, isValidUuid, filterValidUuids } from '../uuid'
+import { UUID_STRICT_PATTERN, isValidUuid, filterValidUuids, canonicalUuid } from '../uuid'
 
 describe('UUID_STRICT_PATTERN', () => {
   it('accepts valid v4 UUIDs', () => {
@@ -76,5 +76,19 @@ describe('filterValidUuids', () => {
 
   it('returns empty array when no valid UUIDs', () => {
     expect(filterValidUuids(['x', 'y', 'z'])).toEqual([])
+  })
+})
+
+describe('canonicalUuid', () => {
+  const id = '3f2a9c1e-7b4d-4e8a-9c21-5d6e7f8a9b0c'
+  it('büyük ve karışık harfli yazımları tek kanonik küçük harfli değere indirir', () => {
+    expect(canonicalUuid(id.toUpperCase())).toBe(id)
+    expect(canonicalUuid('3F2a9C1e-7B4d-4E8a-9C21-5D6e7F8a9B0c')).toBe(id)
+    expect(canonicalUuid(id)).toBe(id)
+  })
+  it('PostgreSQL\'in kabul ettiği ama metin anahtarda ayrı sayılacak yazımları reddeder', () => {
+    for (const value of [id.replaceAll('-', ''), `{${id}}`, `${id}&limit=1`, ` ${id}`, 42, null, undefined]) {
+      expect(canonicalUuid(value)).toBeNull()
+    }
   })
 })

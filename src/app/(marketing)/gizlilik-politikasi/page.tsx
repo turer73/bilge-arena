@@ -67,7 +67,7 @@ export default function GizlilikPolitikasiPage() {
           <p>
             Platform, oturum yönetimi ve kullanıcı tercihlerini hatırlamak için çerezler
             kullanır. Detaylı bilgi için{' '}
-            <a href="/cerez-politikasi" className="text-[var(--focus)] underline">
+            <a href="/cerez-politikasi" className="text-[var(--focus-text)] underline">
               Çerez Politikası
             </a>{' '}
             sayfamızı inceleyebilirsiniz.
@@ -83,7 +83,7 @@ export default function GizlilikPolitikasiPage() {
             sonra IP adresi tek yönlü kriptografik özet ile takma adlandırılır, 90 gün sonra
             tamamen silinir. Veri ihlali tespit edildiğinde KVKK Madde 12 kapsamında 72 saat
             içinde bildirim yapılır. Geçmiş yetkili iç güvenlik testinin sınıflandırması için bkz.{' '}
-            <a href="/kvkk" className="text-[var(--focus)] underline">KVKK aydınlatma metni Madde 9</a>.
+            <a href="/kvkk" className="text-[var(--focus-text)] underline">KVKK aydınlatma metni Madde 9</a>.
           </p>
         </section>
 

@@ -26,7 +26,7 @@ import type {
   RoomState as RoomFullState,
 } from './room-state-reducer'
 import { isScoreboardMember } from './member-status'
-import { isValidUuid } from '@/lib/utils/uuid'
+import { canonicalUuid, isValidUuid } from '@/lib/utils/uuid'
 
 const RPC_URL =
   process.env.BILGE_ARENA_RPC_URL ?? 'http://127.0.0.1:3001'
@@ -288,11 +288,16 @@ export async function verifyRoomFirstPlace(
 ): Promise<{ finished: boolean; isFirstPlace: boolean }> {
   const headers = { Authorization: `Bearer ${jwt}` }
   const opts = { headers, cache: 'no-store' as const }
+  // Kimlik URL'ye kodlanmadan girerse ek PostgREST parametresi (ör. &limit=1)
+  // tasiyabilir; UUID disi deger fail-closed reddedilir.
+  const id = canonicalUuid(roomId)
+  if (!id) return { finished: false, isFirstPlace: false }
+  const encodedId = encodeURIComponent(id)
 
   try {
     const [roomRes, membersRes] = await Promise.all([
-      fetch(`${RPC_URL}/rooms?id=eq.${roomId}&select=state&limit=1`, opts),
-      fetch(`${RPC_URL}/room_members?room_id=eq.${roomId}&select=user_id,score`, opts),
+      fetch(`${RPC_URL}/rooms?id=eq.${encodedId}&select=state&limit=1`, opts),
+      fetch(`${RPC_URL}/room_members?room_id=eq.${encodedId}&select=user_id,score`, opts),
     ])
 
     if (!roomRes.ok || !membersRes.ok) return { finished: false, isFirstPlace: false }

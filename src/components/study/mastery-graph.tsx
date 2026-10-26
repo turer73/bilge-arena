@@ -72,7 +72,7 @@ function OutcomeLeaf({
         <button
           type="button"
           onClick={() => onPractice(outcome)}
-          className="mt-3 w-full rounded-lg border border-[var(--border)] px-3 py-1.5 text-[10px] font-bold text-[var(--focus)] transition-colors hover:bg-[var(--bg-secondary)]"
+          className="mt-3 w-full rounded-lg border border-[var(--border)] px-3 py-1.5 text-[10px] font-bold text-[var(--focus-text)] transition-colors hover:bg-[var(--bg-secondary)]"
         >
           Bu kazanımı çalış
         </button>
@@ -123,7 +123,7 @@ export function MasteryGraph({ graph, coverage, discovery, outcomes, onPractice 
         <div className="rounded-xl border border-[var(--focus)]/25 bg-[var(--focus)]/5 p-4" aria-label="Keşif seviyesi">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[9px] font-extrabold tracking-[0.18em] text-[var(--focus)]">KEŞİF SEVİYESİ {discovery.level}/3</p>
+              <p className="text-[9px] font-extrabold tracking-[0.18em] text-[var(--focus-text)]">KEŞİF SEVİYESİ {discovery.level}/3</p>
               <p className="mt-1 text-sm font-bold text-[var(--text)]">
                 {discovery.stage === 'estimate'
                   ? 'Başlangıç tahmini bekleniyor'
@@ -132,7 +132,7 @@ export function MasteryGraph({ graph, coverage, discovery, outcomes, onPractice 
                     : 'İlk hâkimiyet haritası hazır'}
               </p>
             </div>
-            <span className="text-sm font-black tabular-nums text-[var(--focus)]">%{discovery.journeyPercentage}</span>
+            <span className="text-sm font-black tabular-nums text-[var(--focus-text)]">%{discovery.journeyPercentage}</span>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--border)]" role="progressbar" aria-label="Keşif ilerlemesi" aria-valuemin={0} aria-valuemax={100} aria-valuenow={discovery.journeyPercentage}>
             <div className="h-full rounded-full bg-[var(--focus)]" style={{ width: `${discovery.journeyPercentage}%` }} />
