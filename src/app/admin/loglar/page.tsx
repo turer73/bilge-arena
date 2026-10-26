@@ -14,7 +14,7 @@ interface LogEntry {
 }
 
 const ACTION_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
-  update_question: { label: 'Soru guncelle', icon: '📝', color: 'var(--focus)' },
+  update_question: { label: 'Soru guncelle', icon: '📝', color: 'var(--focus-text)' },
   update_user_role: { label: 'Rol degistir', icon: '👥', color: 'var(--wisdom)' },
   update_report: { label: 'Rapor guncelle', icon: '🐛', color: 'var(--reward)' },
   update_setting: { label: 'Ayar degistir', icon: '⚙️', color: 'var(--growth)' },

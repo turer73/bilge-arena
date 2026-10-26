@@ -35,7 +35,7 @@ function LeagueAvatar({ name, avatarUrl }: { name: string; avatarUrl: string | n
 function PrivacyNote() {
   return (
     <div className="flex gap-2 rounded-xl bg-[var(--bg-secondary)] p-3 text-xs leading-relaxed text-[var(--text-sub)]">
-      <LockKeyhole aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-[var(--focus)]" />
+      <LockKeyhole aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-[var(--focus-text)]" />
       <p>
         Başka oyuncuların düşme bölgesi gizlidir. Puan yalnız doğrulanmış öğrenmeden gelir;
         oturum başına 15, gün başına 30 puanla sınırlıdır.
@@ -115,7 +115,7 @@ export function WeeklyLearningLeagueView({
     >
       <div className="border-b border-[var(--border)] bg-[var(--bg-secondary)] p-4 sm:p-5">
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--focus-bg)] text-[var(--focus)]">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--focus-bg)] text-[var(--focus-text)]">
             <Users aria-hidden="true" className="h-5 w-5" />
           </span>
           <div>
@@ -160,7 +160,7 @@ export function WeeklyLearningLeagueView({
         ) : result.status === 'waiting' && !week ? (
           <>
             <div className="flex gap-3 rounded-xl bg-[var(--focus-bg)] p-4">
-              <Clock3 aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--focus)]" />
+              <Clock3 aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--focus-text)]" />
               <div>
                 <h3 className="text-sm font-bold">Yakın rakiplerin hazırlanıyor</h3>
                 <p className="mt-1 text-xs leading-relaxed text-[var(--text-sub)]">

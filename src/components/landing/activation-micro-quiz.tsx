@@ -282,9 +282,9 @@ export function ActivationMicroQuiz() {
               className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--focus)]"
             />
             <span className="text-xs leading-5 text-[var(--text-sub)]">
-              <Link href="/kullanim-kosullari" target="_blank" className="font-medium text-[var(--focus)] underline underline-offset-2">Kullanım Koşullarını</Link>
+              <Link href="/kullanim-kosullari" target="_blank" className="font-medium text-[var(--focus-text)] underline underline-offset-2">Kullanım Koşullarını</Link>
               {' '}kabul ediyorum ve{' '}
-              <Link href="/kvkk" target="_blank" className="font-medium text-[var(--focus)] underline underline-offset-2">KVKK Aydınlatma Metni</Link>
+              <Link href="/kvkk" target="_blank" className="font-medium text-[var(--focus-text)] underline underline-offset-2">KVKK Aydınlatma Metni</Link>
               {' '}kapsamında bilgilendirildim.
             </span>
           </label>

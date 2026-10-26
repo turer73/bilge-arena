@@ -154,7 +154,7 @@ export function StoreClient() {
             onClick={() => setCategory(c.id)}
             className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
               category === c.id
-                ? 'border-[var(--focus)] bg-[var(--focus-bg)] text-[var(--focus)]'
+                ? 'border-[var(--focus)] bg-[var(--focus-bg)] text-[var(--focus-text)]'
                 : 'border-[var(--border)] bg-[var(--card-bg)] text-[var(--text-sub)] hover:border-[var(--focus-border)]'
             }`}
           >
@@ -263,7 +263,7 @@ export function StoreClient() {
                     onClick={() => pickResolution(r)}
                     className={`rounded-md border px-2 py-0.5 text-[11px] font-bold transition-colors ${
                       resolution === r
-                        ? 'border-[var(--focus)] bg-[var(--focus-bg)] text-[var(--focus)]'
+                        ? 'border-[var(--focus)] bg-[var(--focus-bg)] text-[var(--focus-text)]'
                         : 'border-[var(--border)] text-[var(--text-sub)] hover:border-[var(--focus-border)]'
                     }`}
                   >

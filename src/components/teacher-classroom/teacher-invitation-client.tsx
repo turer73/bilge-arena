@@ -103,7 +103,7 @@ export function TeacherInvitationClient() {
   if (!user) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <LockKeyhole className="mx-auto h-10 w-10 text-[var(--focus)]" aria-hidden="true" />
+        <LockKeyhole className="mx-auto h-10 w-10 text-[var(--focus-text)]" aria-hidden="true" />
         <h1 className="mt-4 text-xl font-black">Davet için giriş yap</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">
           Davet yalnız doğrulanmış hesabına bağlanır. Girişten sonra öğretmeninin bağlantısını yeniden aç.
@@ -156,7 +156,7 @@ export function TeacherInvitationClient() {
             <RefreshCw className="h-4 w-4" aria-hidden="true" /> Yeniden dene
           </button>
         )}
-        <Link href="/arena/sinif" className="mt-5 inline-flex min-h-11 items-center rounded-xl px-4 font-bold text-[var(--focus)]">
+        <Link href="/arena/sinif" className="mt-5 inline-flex min-h-11 items-center rounded-xl px-4 font-bold text-[var(--focus-text)]">
           Sınıflarıma dön
         </Link>
       </div>
@@ -187,7 +187,7 @@ export function TeacherInvitationClient() {
             <legend className="text-base font-black">1. Aydınlatma</legend>
             <p className="text-sm leading-6 text-[var(--text-sub)]">
               Veri işleme hakkında bilgi edinmek için{' '}
-              <a href={preview.notice.href} target="_blank" rel="noreferrer" className="font-bold text-[var(--focus)] underline underline-offset-2">
+              <a href={preview.notice.href} target="_blank" rel="noreferrer" className="font-bold text-[var(--focus-text)] underline underline-offset-2">
                 aydınlatma metnini yeni sekmede aç
               </a>.
             </p>
@@ -206,7 +206,7 @@ export function TeacherInvitationClient() {
             <legend className="text-base font-black">2. Öğretmenle ilerleme paylaşımı</legend>
             <p className="text-sm leading-6 text-[var(--text-sub)]">
               Ayrı paylaşım koşullarını görmek için{' '}
-              <a href={preview.sharingConsent.href} target="_blank" rel="noreferrer" className="font-bold text-[var(--focus)] underline underline-offset-2">
+              <a href={preview.sharingConsent.href} target="_blank" rel="noreferrer" className="font-bold text-[var(--focus-text)] underline underline-offset-2">
                 paylaşım rızası metnini yeni sekmede aç
               </a>.
             </p>

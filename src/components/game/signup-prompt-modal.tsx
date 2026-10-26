@@ -265,9 +265,9 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
             className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--focus)]"
           />
           <span className="text-xs leading-5 text-[var(--text-sub)]">
-            <a href="/kullanim-kosullari" target="_blank" rel="noreferrer" className="font-medium text-[var(--focus)] underline underline-offset-2">Kullanım Koşullarını</a>
+            <a href="/kullanim-kosullari" target="_blank" rel="noreferrer" className="font-medium text-[var(--focus-text)] underline underline-offset-2">Kullanım Koşullarını</a>
             {' '}kabul ediyorum ve{' '}
-            <a href="/kvkk" target="_blank" rel="noreferrer" className="font-medium text-[var(--focus)] underline underline-offset-2">KVKK Aydınlatma Metni</a>
+            <a href="/kvkk" target="_blank" rel="noreferrer" className="font-medium text-[var(--focus-text)] underline underline-offset-2">KVKK Aydınlatma Metni</a>
             {' '}kapsamında bilgilendirildim.
           </span>
         </label>
@@ -297,7 +297,7 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
             <button
               type="button"
               onClick={handleRevealMagicLink}
-              className="w-full text-center text-sm text-[var(--text-sub)] transition-colors hover:text-[var(--focus)] hover:underline"
+              className="w-full text-center text-sm text-[var(--text-sub)] transition-colors hover:text-[var(--focus-text)] hover:underline"
             >
               Google yok mu? <span className="font-semibold">Email ile giris yap →</span>
             </button>
@@ -369,7 +369,7 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
                 type="button"
                 onClick={handleResend}
                 disabled={cooldownRemaining > 0 || !legalConsentAccepted || creatingConsentIntent}
-                className="text-center text-xs text-[var(--text-sub)] transition-colors enabled:hover:text-[var(--focus)] enabled:hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                className="text-center text-xs text-[var(--text-sub)] transition-colors enabled:hover:text-[var(--focus-text)] enabled:hover:underline disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {cooldownRemaining > 0
                   ? `${cooldownRemaining}s sonra tekrar gonderilebilir`

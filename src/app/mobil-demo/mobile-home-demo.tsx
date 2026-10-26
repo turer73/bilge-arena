@@ -1,9 +1,10 @@
 'use client'
 
-import Image from 'next/image'
+import Image, { getImageProps } from 'next/image'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { preload } from 'react-dom'
 import { DocumentBoundaryLink } from '@/components/privacy/document-boundary-link'
 import {
   BookOpenText,
@@ -230,6 +231,36 @@ function PathStep({ step, subject }: { step: PathStepModel; subject: Subject }) 
 
 function compactNumber(value: number) {
   return new Intl.NumberFormat('tr-TR', { notation: value >= 1000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value)
+}
+
+// /arena mobilinde LCP ogesi bu manzara (Lighthouse 2026-10-26: LCP 5,7 s; 4,3 s'si
+// loading="lazy" yuzunden istek gecikmesi). Sunucu useWideStudy=false ile mobil agaci
+// masaustune de basar; bu yuzden yuksek oncelik yalniz dar ekranda, media'li preload
+// ile verilir. img eager: tembel yukleme LCP'yi geciktiriyordu.
+export const HERO_LANDSCAPE_SRC = '/academy/academy-landscape.png'
+export const HERO_LANDSCAPE_SIZES = '(max-width: 767px) calc(100vw - 32px), 640px'
+export const HERO_LANDSCAPE_MEDIA = '(max-width: 767px)'
+
+function MobileHeroLandscape() {
+  const { props } = getImageProps({ src: HERO_LANDSCAPE_SRC, alt: '', fill: true, sizes: HERO_LANDSCAPE_SIZES })
+  preload(props.src, {
+    as: 'image',
+    imageSrcSet: props.srcSet,
+    imageSizes: props.sizes,
+    fetchPriority: 'high',
+    media: HERO_LANDSCAPE_MEDIA,
+  })
+  return (
+    <Image
+      data-mobile-landscape
+      src={HERO_LANDSCAPE_SRC}
+      alt=""
+      fill
+      sizes={HERO_LANDSCAPE_SIZES}
+      loading="eager"
+      className="pointer-events-none -z-20 object-cover object-right"
+    />
+  )
 }
 
 export function MobileHomeDemo({
@@ -587,7 +618,7 @@ export function MobileHomeDemo({
         <div data-responsive-arena-grid className="mx-auto grid w-full max-w-[1180px] grid-cols-1 md:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)] md:gap-x-5 md:gap-y-5 md:px-5 md:py-5 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-x-7 xl:px-6">
         <section data-learning-path-hero className="px-4 pt-4 md:col-start-1 md:row-start-1 md:px-0 md:pt-0">
           <div className="relative isolate overflow-hidden rounded-[22px] border bg-[#0a1b32] p-4 text-white md:min-h-[168px] md:rounded-[28px] md:p-6" style={{ borderColor: `${subject.color}55`, boxShadow: '0 3px 0 var(--app-border)' }}>
-            <Image data-mobile-landscape src="/academy/academy-landscape.png" alt="" fill sizes="(max-width: 767px) calc(100vw - 32px), 640px" className="pointer-events-none -z-20 object-cover object-right" />
+            <MobileHeroLandscape />
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(90deg,#0a1b32f2_8%,#0a1b32cc_48%,#0a1b324d_100%)]" />
             <div className="relative flex items-start justify-between gap-3">
               <div className="min-w-0">
