@@ -30,7 +30,7 @@ export async function POST(
   const result = await fetchShareableResult(auth.jwt, id, auth.userId)
   if (!result) {
     return NextResponse.json(
-      { error: 'Paylasilabilir sonuc bulunamadi', code: 'P0002' },
+      { error: 'Paylaşılabilir sonuç bulunamadı', code: 'P0002' },
       { status: 404 },
     )
   }
