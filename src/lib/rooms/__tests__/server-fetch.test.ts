@@ -16,6 +16,7 @@ import {
   fetchRoomByCode,
   fetchLobbyPreviewQuestion,
   fetchPublicRooms,
+  fetchShareableResult,
 } from '../server-fetch'
 
 const ORIGINAL_FETCH = globalThis.fetch
@@ -321,5 +322,34 @@ describe('fetchRoomState scoreboard (inceleme §6: is_kicked alani yok)', () => 
     const { fetchRoomState } = await import('../server-fetch')
     const state = await fetchRoomState('jwt', 'r1')
     expect(state?.scoreboard.map((s) => s.user_id)).toEqual(['a', 'left-after'])
+  })
+})
+
+describe('fetchShareableResult (disc #2950)', () => {
+  const ROOM = '3f2a9c1e-7b4d-4e8a-9c21-5d6e7f8a9b0c'
+  const USER = 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d'
+  const routeBy = (room: unknown[], member: unknown[]) => (url: string) =>
+    url.includes('/rooms?') ? ok(room) : url.includes('/room_members?') ? ok(member) : ok([])
+
+  test('tamamlanmış odada üyenin kendi skoruyla değerleri döndürür', async () => {
+    mockFetch.mockImplementation(routeBy([{ code: 'BLZGE2', title: 'Oda', category: 'matematik', state: 'completed' }], [{ score: 850 }]))
+    expect(await fetchShareableResult('jwt', ROOM.toUpperCase(), USER)).toEqual({ code: 'BLZGE2', title: 'Oda', category: 'matematik', score: 850 })
+    const urls = mockFetch.mock.calls.map(([url]) => String(url))
+    expect(urls.some((url) => url.includes(`/rooms?id=eq.${ROOM}&`))).toBe(true)
+    expect(urls.some((url) => url.includes(`room_id=eq.${ROOM}&user_id=eq.${USER}&`))).toBe(true)
+  })
+
+  test('oda bitmemişse veya çağıran üye değilse null', async () => {
+    mockFetch.mockImplementation(routeBy([{ code: 'BLZGE2', title: 'Oda', category: 'matematik', state: 'active' }], [{ score: 10 }]))
+    expect(await fetchShareableResult('jwt', ROOM, USER)).toBeNull()
+    mockFetch.mockImplementation(routeBy([{ code: 'BLZGE2', title: 'Oda', category: 'matematik', state: 'completed' }], []))
+    expect(await fetchShareableResult('jwt', ROOM, USER)).toBeNull()
+  })
+
+  test('UUID olmayan kimlikte oda-DB\'ye hiç sormaz', async () => {
+    for (const bad of [`${ROOM}&limit=1`, 'BLZGE2', '']) {
+      expect(await fetchShareableResult('jwt', bad, USER)).toBeNull()
+    }
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 })

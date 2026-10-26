@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { GameCompleted } from '../GameCompleted'
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
 
@@ -75,28 +75,60 @@ describe('GameCompleted', () => {
     expect(screen.getByText(/arşivlendi.*30/i)).toBeInTheDocument()
   })
 
-  test('4) T8 PR3: ShareButton URL og_title/og_score/og_category querystring', () => {
-    const stateWithScore: RoomState = {
-      ...completedState(),
-      scoreboard: [
-        {
-          user_id: 'u1',
-          display_name: 'Ali',
-          score: 850,
-          correct_count: 8,
-          response_ms_total: 60000,
-        },
-      ],
+  test('4) disc #2950: paylasim URL\'si istemcide baslik/skor tasimaz, imzali yolu sunucudan alir', async () => {
+    const signedPath = '/p/BLZGE2?og_title=Test+Bitti&og_score=850&og_sig=abc'
+    const fetchSpy = vi.fn(async (url: string) =>
+      url.endsWith('/share-link')
+        ? { ok: true, json: async () => ({ path: signedPath, signed: true }) }
+        : { ok: true, json: async () => ({}) },
+    )
+    vi.stubGlobal('fetch', fetchSpy)
+    try {
+      const { container } = render(<GameCompleted state={completedState()} userId="u1" />)
+      expect(container.querySelector('[data-testid="share-button"]')).not.toBeNull()
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith('/api/rooms/r1/share-link', expect.objectContaining({ method: 'POST' }))
+      })
+      // Istemci kendi basina og_title/og_score uretmez; yalniz sunucu yolunu kullanir.
+      const urls = fetchSpy.mock.calls.map(([url]) => String(url))
+      expect(urls.some((url) => url.includes('og_title'))).toBe(false)
+    } finally {
+      vi.unstubAllGlobals()
     }
-    const { container } = render(<GameCompleted state={stateWithScore} userId="u1" />)
-    // ShareButton var (data-testid="share-button")
-    const shareButton = container.querySelector('[data-testid="share-button"]')
-    expect(shareButton).not.toBeNull()
-    // Buton click sonrasi sosyal link href'leri querystring icermeli
-    // Ama burada inline test sadece URL pattern kontrol ediyor — ShareButton'a
-    // gecirilen url prop'u og_title=Test+Bitti og_score=850 og_category=genel-kultur
-    // icermeli. Nested mock yapmadan dogrulayamiyoruz, bu yuzden URL yapisi
-    // GameCompleted source'da inline; integration testi (manuel preview) yeterli.
+  })
+
+  test('4c) NEXT_PUBLIC_SITE_URL yoksa da imzali yol tam adresle paylasilir (sosyal aglar goreli adres alamaz)', async () => {
+    const signedPath = '/p/BLZGE2?og_title=Test+Bitti&og_sig=abc'
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', '')
+    vi.stubGlobal('fetch', vi.fn(async (url: string) =>
+      url.endsWith('/share-link')
+        ? { ok: true, json: async () => ({ path: signedPath, signed: true }) }
+        : { ok: true, json: async () => ({}) },
+    ))
+    try {
+      render(<GameCompleted state={completedState()} userId="u1" />)
+      const expected = encodeURIComponent(`https://bilgearena.com${signedPath}`)
+      // Menü bir kez açılır; imzalı yol gelince açık menüdeki bağlantı güncellenir.
+      fireEvent.click(screen.getByRole('button', { name: /Paylaş/ }))
+      await waitFor(() => {
+        expect(screen.getByTestId('share-telegram').getAttribute('href')).toContain(expected)
+      })
+    } finally {
+      vi.unstubAllGlobals()
+      vi.unstubAllEnvs()
+    }
+  })
+
+  test('4b) arsivlenmis odada paylasim baglantisi istenmez', async () => {
+    const fetchSpy = vi.fn(async () => ({ ok: true, json: async () => ({}) }))
+    vi.stubGlobal('fetch', fetchSpy)
+    try {
+      render(<GameCompleted state={completedState({ state: 'archived' })} userId="u1" />)
+      await new Promise((r) => setTimeout(r, 30))
+      expect(fetchSpy).not.toHaveBeenCalledWith('/api/rooms/r1/share-link', expect.anything())
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   describe('Faz 3: grant-stats + badges fetch (PR #117)', () => {
