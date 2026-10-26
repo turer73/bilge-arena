@@ -97,7 +97,7 @@ export default async function CozumluSoruDetailPage({
 
       {/* Baslik */}
       <header className="mb-8">
-        <div className="mb-3 flex items-center gap-2 text-[11px] font-bold text-[var(--focus)]">
+        <div className="mb-3 flex items-center gap-2 text-[11px] font-bold text-[var(--focus-text)]">
           <span className="rounded-md bg-[var(--focus-bg)] px-2 py-0.5">{s.ders}</span>
           <span className="text-[var(--text-muted)]">{s.readingMinutes} dk okuma</span>
         </div>
@@ -113,7 +113,7 @@ export default async function CozumluSoruDetailPage({
               <div key={f.label}>
                 <dt className="text-sm font-bold text-[var(--text-sub)]">{f.label}</dt>
                 <dd className="mt-1">
-                  <code className="text-lg font-bold text-[var(--focus)]">{f.formula}</code>
+                  <code className="text-lg font-bold text-[var(--focus-text)]">{f.formula}</code>
                   <p className="mt-1 text-sm leading-relaxed text-[var(--text-sub)]">{f.note}</p>
                 </dd>
               </div>
@@ -144,7 +144,7 @@ export default async function CozumluSoruDetailPage({
         <ol className="space-y-3">
           {s.steps.map((step, i) => (
             <li key={i} className="flex gap-3 text-[15px] leading-relaxed text-[var(--text-sub)]">
-              <span className="shrink-0 font-bold text-[var(--focus)]">{i + 1}.</span>
+              <span className="shrink-0 font-bold text-[var(--focus-text)]">{i + 1}.</span>
               <span>{step}</span>
             </li>
           ))}
@@ -154,7 +154,7 @@ export default async function CozumluSoruDetailPage({
       {/* Dogru cevap */}
       <section className="mb-8 rounded-2xl border border-[var(--focus)]/20 bg-[var(--focus-bg)] p-5">
         <h2 className="mb-1 text-sm font-bold text-[var(--text-muted)]">Doğru Cevap</h2>
-        <p className="text-lg font-bold text-[var(--focus)]">{s.correctAnswer}</p>
+        <p className="text-lg font-bold text-[var(--focus-text)]">{s.correctAnswer}</p>
       </section>
 
       {/* Ayni konunun diger soru tipleri */}
@@ -165,7 +165,7 @@ export default async function CozumluSoruDetailPage({
           <ol className="mb-3 space-y-2">
             {example.steps.map((step, i) => (
               <li key={i} className="flex gap-3 text-[15px] leading-relaxed text-[var(--text-sub)]">
-                <span className="shrink-0 font-bold text-[var(--focus)]">{i + 1}.</span>
+                <span className="shrink-0 font-bold text-[var(--focus-text)]">{i + 1}.</span>
                 <span>{step}</span>
               </li>
             ))}
@@ -188,7 +188,7 @@ export default async function CozumluSoruDetailPage({
           {s.tipLinkHref && s.tipLinkLabel && (
             <>
               {' '}
-              <Link href={s.tipLinkHref} className="font-semibold text-[var(--focus)] hover:underline">
+              <Link href={s.tipLinkHref} className="font-semibold text-[var(--focus-text)] hover:underline">
                 {s.tipLinkLabel}
               </Link>
               {' '}konusuna göz at.

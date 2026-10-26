@@ -58,7 +58,7 @@ export default function RehberPage() {
             href={`/rehber/${a.slug}`}
             className="group block rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 transition-colors hover:border-[var(--focus)]/40"
           >
-            <div className="mb-2 flex items-center gap-2 text-[11px] font-bold text-[var(--focus)]">
+            <div className="mb-2 flex items-center gap-2 text-[11px] font-bold text-[var(--focus-text)]">
               <span className="rounded-md bg-[var(--focus-bg)] px-2 py-0.5">{a.category}</span>
               <span className="text-[var(--text-muted)]">{a.readingMinutes} dk okuma</span>
             </div>
@@ -73,7 +73,7 @@ export default function RehberPage() {
         <p className="mb-4 text-sm text-[var(--text-sub)]">
           Beş dersin konu başlıklarını incele ve ücretsiz soru çözmeye başla.
         </p>
-        <Link href="/konular" className="text-sm font-semibold text-[var(--focus)] hover:underline">
+        <Link href="/konular" className="text-sm font-semibold text-[var(--focus-text)] hover:underline">
           Konulara göz at →
         </Link>
       </section>

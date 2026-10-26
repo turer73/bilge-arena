@@ -206,7 +206,7 @@ export function ErrorReportModal({
                     aria-pressed={selectedType === type.value}
                     className={`flex min-h-11 items-center gap-1.5 rounded-lg border px-3 py-2 text-left text-xs transition-all ${
                       selectedType === type.value
-                        ? 'border-[var(--focus)] bg-[var(--focus-bg)] text-[var(--focus)] font-bold'
+                        ? 'border-[var(--focus)] bg-[var(--focus-bg)] text-[var(--focus-text)] font-bold'
                         : 'border-[var(--border)] text-[var(--text-sub)] hover:border-[var(--focus)] hover:bg-[var(--surface)]'
                     }`}
                   >

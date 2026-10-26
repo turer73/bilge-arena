@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function ClassroomSharingConsentPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
-      <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-[var(--focus)]">Sürüm: sharing-v1</p>
+      <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-[var(--focus-text)]">Sürüm: sharing-v1</p>
       <h1 className="mb-2 text-3xl font-bold">Sınıf İlerleme Paylaşımı Açık Rıza Metni</h1>
       <p className="mb-10 text-sm text-[var(--text-sub)]">Son güncelleme: 20 Ağustos 2026</p>
 
@@ -22,7 +22,7 @@ export default function ClassroomSharingConsentPage() {
             Davet ekranındaki ayrı açık rıza kutusunu seçip “Sınıfa katıl” düğmesine basmanız halinde, sınıfa
             katıldıktan sonra oluşan öğrenme göstergelerinizin aşağıdaki sınırlar içinde paylaşılmasına rıza
             vermiş olursunuz. Bu metin, bilgi verme amaçlı{' '}
-            <a href="/hukuk/sinif-aydinlatma" className="font-bold text-[var(--focus)] underline underline-offset-2">
+            <a href="/hukuk/sinif-aydinlatma" className="font-bold text-[var(--focus-text)] underline underline-offset-2">
               Sınıf Katılımı Aydınlatma Metni
             </a>
             &apos;nden ayrıdır.
@@ -85,7 +85,7 @@ export default function ClassroomSharingConsentPage() {
             href="https://www.kvkk.gov.tr/Icerik/8710/veri-sorumlulari-tarafindan-acik-riza-ve-aydinlatma-metinlerinin-ayri-ayri-duzenlenmesi-gerektigi-hakkinda-kisisel-verileri-koruma-kurulunun-18-02-2026-tarihli-ve-2026-347-sayili-ilke-kararina-iliskin-kamuoyu-duyurusu"
             target="_blank"
             rel="noreferrer"
-            className="font-bold text-[var(--focus)] underline underline-offset-2"
+            className="font-bold text-[var(--focus-text)] underline underline-offset-2"
           >
             2026/347 sayılı ilke kararı duyurusunu
           </a>

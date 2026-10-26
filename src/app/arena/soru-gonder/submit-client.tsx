@@ -159,7 +159,7 @@ export function SubmitQuestionClient() {
         ))}
         <div className="flex gap-2">
           {options.length < 5 && (
-            <button type="button" onClick={() => setOptions((p) => [...p, ''])} className="text-xs text-[var(--focus)]">
+            <button type="button" onClick={() => setOptions((p) => [...p, ''])} className="text-xs text-[var(--focus-text)]">
               + 5. şık ekle
             </button>
           )}
