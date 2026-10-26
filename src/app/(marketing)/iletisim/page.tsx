@@ -125,7 +125,7 @@ export default function IletisimPage() {
               <div>
                 <div className="mb-1 font-bold">{item.title}</div>
                 <div className="mb-3 text-xs leading-relaxed text-[var(--text-sub)]">{item.desc}</div>
-                <div className="text-sm font-medium text-[var(--focus)]">{item.value}</div>
+                <div className="text-sm font-medium text-[var(--focus-text)]">{item.value}</div>
               </div>
             </a>
           ))}
@@ -190,7 +190,7 @@ export default function IletisimPage() {
           Teknik sorunlar ve hata bildirimleri öncelikli olarak değerlendirilir.
           Hafta sonları ve resmi tatillerde yanıt süresi uzayabilir.
         </p>
-        <p className="mt-4 text-sm font-medium text-[var(--focus)]">
+        <p className="mt-4 text-sm font-medium text-[var(--focus-text)]">
           iletisim@bilgearena.com
         </p>
       </section>

@@ -75,7 +75,7 @@ function PaperPackAnswerContent({ packId }: { packId: string }) {
             <p className="text-[10px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">KAĞIT PAKETİ · {pack.packId.slice(0, 8).toUpperCase()}</p>
             <h1 className="mt-1 text-2xl font-black">Cevaplarını gir</h1>
           </div>
-          <Link href={`/arena/kagit/${pack.packId}`} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-bold text-[var(--focus)] hover:bg-[var(--focus)]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]">
+          <Link href={`/arena/kagit/${pack.packId}`} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-bold text-[var(--focus-text)] hover:bg-[var(--focus)]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Pakete dön
           </Link>
         </div>

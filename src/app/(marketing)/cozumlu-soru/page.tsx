@@ -58,7 +58,7 @@ export default function CozumluSoruPage() {
             href={`/cozumlu-soru/${s.slug}`}
             className="group block rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 transition-colors hover:border-[var(--focus)]/40"
           >
-            <div className="mb-2 flex items-center gap-2 text-[11px] font-bold text-[var(--focus)]">
+            <div className="mb-2 flex items-center gap-2 text-[11px] font-bold text-[var(--focus-text)]">
               <span className="rounded-md bg-[var(--focus-bg)] px-2 py-0.5">{s.ders}</span>
               <span className="text-[var(--text-muted)]">{s.readingMinutes} dk okuma</span>
             </div>
@@ -73,7 +73,7 @@ export default function CozumluSoruPage() {
         <p className="mb-4 text-sm text-[var(--text-sub)]">
           Bilge Arena&#39;da bu tipte onlarca soruyu oyunlaştırılmış modda çözerek puan kazan.
         </p>
-        <Link href="/arena" className="text-sm font-semibold text-[var(--focus)] hover:underline">
+        <Link href="/arena" className="text-sm font-semibold text-[var(--focus-text)] hover:underline">
           Oynamaya başla →
         </Link>
       </section>

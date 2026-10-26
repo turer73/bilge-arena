@@ -40,7 +40,7 @@ export function MasteryMapCard({ outcomes, discovery, diagnosticAvailable, loadi
           <span className="text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
             KEŞİF SEVİYESİ {discovery.level}/3
           </span>
-          <span className="text-[10px] font-bold text-[var(--focus)]">
+          <span className="text-[10px] font-bold text-[var(--focus-text)]">
             %{discovery.journeyPercentage}
           </span>
         </div>
@@ -71,7 +71,7 @@ export function MasteryMapCard({ outcomes, discovery, diagnosticAvailable, loadi
           </div>
           <Link
             href={diagnosticEstimate ? diagnosticHref : estimateStage ? practiceHref : mapHref}
-            className="mt-2 inline-flex min-h-10 items-center text-[10px] font-extrabold text-[var(--focus)] hover:underline"
+            className="mt-2 inline-flex min-h-10 items-center text-[10px] font-extrabold text-[var(--focus-text)] hover:underline"
           >
             {diagnosticEstimate
               ? '8 dakikalık keşif turunu başlat'

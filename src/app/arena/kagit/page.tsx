@@ -22,7 +22,7 @@ export default async function PaperModePage({
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
         <h1 className="text-xl font-black">Kağıt modu henüz kapalı</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">Bu özellik kontrollü pilot tamamlandıktan sonra açılacak.</p>
-        <Link href="/arena/calisma" className="mt-5 inline-flex min-h-11 items-center rounded-xl px-4 font-bold text-[var(--focus)]">Çalışmaya dön</Link>
+        <Link href="/arena/calisma" className="mt-5 inline-flex min-h-11 items-center rounded-xl px-4 font-bold text-[var(--focus-text)]">Çalışmaya dön</Link>
       </div>
     )
   }
@@ -35,7 +35,7 @@ export default async function PaperModePage({
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
         <h1 className="text-xl font-black">Plan bağlantısı geçersiz</h1>
         <p className="mt-2 text-sm text-[var(--text-sub)]">Kağıt paketini “Bugünün 15’i” kartından açmayı dene.</p>
-        <Link href="/arena/calisma" className="mt-5 inline-flex min-h-11 items-center rounded-xl px-4 font-bold text-[var(--focus)]">Çalışmaya dön</Link>
+        <Link href="/arena/calisma" className="mt-5 inline-flex min-h-11 items-center rounded-xl px-4 font-bold text-[var(--focus-text)]">Çalışmaya dön</Link>
       </div>
     )
   }

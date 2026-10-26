@@ -16,7 +16,7 @@ export default async function PaperPackPage({ params }: { params: Promise<{ pack
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
         <h1 className="text-xl font-black">Paket kullanılamıyor</h1>
         <p className="mt-2 text-sm text-[var(--text-sub)]">Kağıt modu kapalı veya paket bağlantısı geçersiz.</p>
-        <Link href="/arena/calisma" className="mt-5 inline-flex min-h-11 items-center rounded-xl px-4 font-bold text-[var(--focus)]">Çalışmaya dön</Link>
+        <Link href="/arena/calisma" className="mt-5 inline-flex min-h-11 items-center rounded-xl px-4 font-bold text-[var(--focus-text)]">Çalışmaya dön</Link>
       </div>
     )
   }

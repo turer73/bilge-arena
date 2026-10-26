@@ -40,7 +40,7 @@ export default function SocialPilotClient() {
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-6 md:px-6 md:py-8">
       <header className="space-y-2">
-        <Link href="/arena/sosyal" className="inline-flex min-h-11 items-center text-sm font-bold text-[var(--focus)]">Sosyal çalışmasına dön</Link>
+        <Link href="/arena/sosyal" className="inline-flex min-h-11 items-center text-sm font-bold text-[var(--focus-text)]">Sosyal çalışmasına dön</Link>
         <h1 className="text-xl font-bold text-[var(--text)]">{SOCIAL_DISCOVERY_LABEL}</h1>
         <p className="text-sm leading-6 text-[var(--text-sub)]">{SOCIAL_DISCOVERY_DESCRIPTION}</p>
       </header>
@@ -51,7 +51,7 @@ export default function SocialPilotClient() {
         </section>
       ) : pilot.error && !pilot.response ? (
         <section className={card}><p role="alert">Keşif şu an yüklenemedi.</p>
-          <button className="mt-3 min-h-11 font-bold text-[var(--focus)]" onClick={() => void pilot.refresh()}>Yeniden dene</button></section>
+          <button className="mt-3 min-h-11 font-bold text-[var(--focus-text)]" onClick={() => void pilot.refresh()}>Yeniden dene</button></section>
       ) : pilot.response && !pilot.response.supported ? (
         <p className={card}>Sosyal başlangıç keşfi henüz yayınlanmadı.</p>
       ) : pilot.response ? (

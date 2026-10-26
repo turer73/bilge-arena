@@ -296,7 +296,7 @@ export default function AdminUsersPage() {
                     <div className="flex items-center justify-center">
                       <button
                         onClick={() => openRoleModal(u)}
-                        className="rounded-lg bg-[var(--focus-bg)] px-2.5 py-1.5 text-[10px] font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-border)]"
+                        className="rounded-lg bg-[var(--focus-bg)] px-2.5 py-1.5 text-[10px] font-bold text-[var(--focus-text)] transition-colors hover:bg-[var(--focus-border)]"
                         title="Rol Yönet"
                       >
                         🔐 Rol Ata
@@ -408,7 +408,7 @@ export default function AdminUsersPage() {
                           <p className="mt-0.5 text-[10px] text-[var(--text-sub)]">{role.description}</p>
                         )}
                       </div>
-                      <span className="text-xs font-bold text-[var(--focus)]">
+                      <span className="text-xs font-bold text-[var(--focus-text)]">
                         {roleModalLoading ? '...' : '+ Ata'}
                       </span>
                     </button>

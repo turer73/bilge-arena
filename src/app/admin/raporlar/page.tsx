@@ -14,7 +14,7 @@ const REPORT_TYPE_LABELS: Record<ReportType, { label: string; icon: string }> = 
 
 const STATUS_CONFIG: Record<ReportStatus, { label: string; color: string; bg: string }> = {
   pending: { label: 'Bekliyor', color: 'var(--reward)', bg: 'var(--reward-bg)' },
-  reviewed: { label: 'Incelendi', color: 'var(--focus)', bg: 'var(--focus-bg)' },
+  reviewed: { label: 'Incelendi', color: 'var(--focus-text)', bg: 'var(--focus-bg)' },
   resolved: { label: 'Cozuldu', color: 'var(--growth)', bg: 'var(--growth-bg)' },
   rejected: { label: 'Reddedildi', color: 'var(--text-sub)', bg: 'var(--surface)' },
 }
@@ -174,7 +174,7 @@ export default function AdminReportsPage() {
                     </div>
 
                     {report.admin_note && (
-                      <div className="mb-3 rounded-lg border border-[var(--focus-border)] bg-[var(--focus-bg)] px-3 py-2 text-xs text-[var(--focus)]">
+                      <div className="mb-3 rounded-lg border border-[var(--focus-border)] bg-[var(--focus-bg)] px-3 py-2 text-xs text-[var(--focus-text)]">
                         Admin: {report.admin_note}
                       </div>
                     )}
@@ -206,7 +206,7 @@ export default function AdminReportsPage() {
                       </button>
                       <button
                         onClick={() => updateStatus(report.id, 'reviewed')}
-                        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-[10px] font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)]"
+                        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-[10px] font-bold text-[var(--focus-text)] transition-colors hover:bg-[var(--focus-bg)]"
                       >
                         Incelendi
                       </button>
