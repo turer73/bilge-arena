@@ -92,15 +92,15 @@ export default function GirisClient({
             className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[var(--focus)]"
           />
           <span className="text-xs leading-relaxed text-[var(--text-muted)]">
-            <Link href="/kullanim-kosullari" target="_blank" className="font-medium text-[var(--focus)] underline underline-offset-2">
+            <Link href="/kullanim-kosullari" target="_blank" className="font-medium text-[var(--focus-text)] underline underline-offset-2">
               Kullanım Koşullarını
             </Link>
             {' '}ve{' '}
-            <Link href="/gizlilik-politikasi" target="_blank" className="font-medium text-[var(--focus)] underline underline-offset-2">
+            <Link href="/gizlilik-politikasi" target="_blank" className="font-medium text-[var(--focus-text)] underline underline-offset-2">
               Gizlilik Politikasını
             </Link>
             {' '}okudum, kabul ediyorum.{' '}
-            <Link href="/kvkk" target="_blank" className="font-medium text-[var(--focus)] underline underline-offset-2">
+            <Link href="/kvkk" target="_blank" className="font-medium text-[var(--focus-text)] underline underline-offset-2">
               KVKK Aydınlatma Metni
             </Link>
             {' '}kapsamında bilgilendirildim.

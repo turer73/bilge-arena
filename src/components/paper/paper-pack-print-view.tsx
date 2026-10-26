@@ -71,7 +71,7 @@ export function PaperPackPrintView({ pack }: { pack: PaperPackView }) {
   return (
     <div className="paper-print-root mx-auto max-w-4xl px-4 py-5 text-[var(--text)] md:px-6 md:py-8">
       <nav aria-label="Kağıt paketi işlemleri" className="paper-screen-only mb-5 flex flex-wrap items-center justify-between gap-3">
-        <Link href="/arena/calisma" className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-bold text-[var(--focus)] hover:bg-[var(--focus)]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]">
+        <Link href="/arena/calisma" className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-bold text-[var(--focus-text)] hover:bg-[var(--focus)]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Çalışmaya dön
         </Link>
         <div className="flex flex-wrap gap-2">

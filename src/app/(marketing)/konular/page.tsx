@@ -82,7 +82,7 @@ export default function KonularPage() {
             <p className="mb-3 text-sm leading-relaxed text-[var(--text-sub)]">
               {SUBJECT_CONTENT[g.slug].tagline}
             </p>
-            <span className="mt-auto text-sm font-semibold text-[var(--focus)] group-hover:underline">
+            <span className="mt-auto text-sm font-semibold text-[var(--focus-text)] group-hover:underline">
               Konuyu incele →
             </span>
           </Link>
@@ -95,7 +95,7 @@ export default function KonularPage() {
         <p className="mb-4 text-sm text-[var(--text-sub)]">
           YKS · LGS çalışma yöntemleri ve sınav sistemi hakkında ücretsiz rehber yazıları.
         </p>
-        <Link href="/rehber" className="text-sm font-semibold text-[var(--focus)] hover:underline">
+        <Link href="/rehber" className="text-sm font-semibold text-[var(--focus-text)] hover:underline">
           Rehberi keşfet →
         </Link>
       </section>

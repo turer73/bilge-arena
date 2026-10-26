@@ -133,7 +133,7 @@ export default function PremiumClient() {
             <div className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-center">
               <div className="text-xs text-[var(--text-sub)]">
                 Lansman sonrası satın alma için{' '}
-                <a href="/giris" className="font-bold text-[var(--focus)] hover:underline">
+                <a href="/giris" className="font-bold text-[var(--focus-text)] hover:underline">
                   giriş yapman
                 </a>{' '}
                 gerekecek. Şimdi sadece email yeterli.

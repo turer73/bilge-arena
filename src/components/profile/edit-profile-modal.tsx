@@ -141,7 +141,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setGalleryOpen((v) => !v)}
-                className="rounded-lg border border-[var(--border)] px-3 py-1 text-[11px] font-bold text-[var(--focus)] transition-colors hover:border-[var(--focus)]"
+                className="rounded-lg border border-[var(--border)] px-3 py-1 text-[11px] font-bold text-[var(--focus-text)] transition-colors hover:border-[var(--focus)]"
               >
                 🎨 Hazır Avatar
               </button>
