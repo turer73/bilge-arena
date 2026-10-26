@@ -192,7 +192,10 @@ export function GameCompleted({ state, userId }: GameCompletedProps) {
       {!isArchived && (() => {
         const me = ranked.find((r) => r.user_id === userId)
         const score = me?.score ?? 0
-        const shareUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}${sharePath}`
+        // Sosyal ağlar göreli adresi paylaşamaz; env yoksa kanonik alan adına düş
+        // (klipper code-review bulgusu; depodaki siteUrl kalıbıyla aynı).
+        const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim().replace(/\/+$/, '')
+        const shareUrl = `${siteUrl}${sharePath}`
         const shareText =
           score > 0
             ? `Bilge Arena'da "${room.title}" oyununu bitirdim, ${score} puan topladım!`

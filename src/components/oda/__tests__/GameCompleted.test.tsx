@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { GameCompleted } from '../GameCompleted'
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
 
@@ -94,6 +94,28 @@ describe('GameCompleted', () => {
       expect(urls.some((url) => url.includes('og_title'))).toBe(false)
     } finally {
       vi.unstubAllGlobals()
+    }
+  })
+
+  test('4c) NEXT_PUBLIC_SITE_URL yoksa da imzali yol tam adresle paylasilir (sosyal aglar goreli adres alamaz)', async () => {
+    const signedPath = '/p/BLZGE2?og_title=Test+Bitti&og_sig=abc'
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', '')
+    vi.stubGlobal('fetch', vi.fn(async (url: string) =>
+      url.endsWith('/share-link')
+        ? { ok: true, json: async () => ({ path: signedPath, signed: true }) }
+        : { ok: true, json: async () => ({}) },
+    ))
+    try {
+      render(<GameCompleted state={completedState()} userId="u1" />)
+      const expected = encodeURIComponent(`https://bilgearena.com${signedPath}`)
+      // Menü bir kez açılır; imzalı yol gelince açık menüdeki bağlantı güncellenir.
+      fireEvent.click(screen.getByRole('button', { name: /Paylaş/ }))
+      await waitFor(() => {
+        expect(screen.getByTestId('share-telegram').getAttribute('href')).toContain(expected)
+      })
+    } finally {
+      vi.unstubAllGlobals()
+      vi.unstubAllEnvs()
     }
   })
 
