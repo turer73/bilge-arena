@@ -1,6 +1,6 @@
 'use client'
 
-import { useId } from 'react'
+import { useId, type Ref } from 'react'
 import {
   BookOpenText,
   Calculator,
@@ -9,6 +9,7 @@ import {
   FlaskConical,
   Globe2,
   Languages,
+  MessageCircleQuestion,
   type LucideIcon,
 } from 'lucide-react'
 import type { PublicQuestion } from '@/lib/utils/question-public'
@@ -37,6 +38,8 @@ interface QuestionCardProps {
   currentIndex: number
   totalQuestions: number
   onReport?: () => void // Oyun sırasında soruyu raporla (cevaptan bağımsız)
+  coachControl?: { open: boolean; id: string; onToggle: () => void }
+  coachTriggerRef?: Ref<HTMLButtonElement> // Yardım kapanınca odak bu düğmeye döner
   children?: React.ReactNode // Burst particles slot
 }
 
@@ -45,6 +48,8 @@ export function QuestionCard({
   currentIndex,
   totalQuestions,
   onReport,
+  coachControl,
+  coachTriggerRef,
   children,
 }: QuestionCardProps) {
   const diff = DIFF_CONFIG[question.difficulty] || DIFF_CONFIG[2]
@@ -76,7 +81,7 @@ export function QuestionCard({
         </span>
 
         <span
-          className="rounded-md px-2 py-1 text-xs font-extrabold tracking-wider"
+          className="shrink-0 rounded-md px-2 py-1 text-xs font-extrabold tracking-wider"
           style={{
             backgroundColor: `color-mix(in srgb, ${diff.color} 15%, transparent)`,
             color: diff.text,
@@ -88,7 +93,9 @@ export function QuestionCard({
 
         {question.subcategory && (
           <span
-            className="rounded-md px-2 py-1 text-xs font-semibold text-[var(--text-sub)]"
+            data-quiz-subcategory
+            title={question.subcategory}
+            className="min-w-0 truncate rounded-md px-2 py-1 text-xs font-semibold text-[var(--text-sub)]"
             style={{
               backgroundColor: `color-mix(in srgb, ${game?.colorHex || 'var(--app-accent)'} 10%, transparent)`,
               border: `1px solid color-mix(in srgb, ${game?.colorHex || 'var(--app-accent)'} 20%, transparent)`,
@@ -99,6 +106,14 @@ export function QuestionCard({
         )}
 
         <div className="flex-1" />
+
+        {coachControl && (
+          <button ref={coachTriggerRef} type="button" className={styles.mobileCoachToggle}
+            aria-label="Bilge Çan yardımı" aria-expanded={coachControl.open}
+            aria-controls={coachControl.id} onClick={coachControl.onToggle}>
+            <MessageCircleQuestion size={18} aria-hidden="true" /> Yardım
+          </button>
+        )}
 
         {/* Soruyu raporla — cevaptan bağımsız, oyun sırasında (Ensar 06-16:
             denemede bozuk soruyu cevaplamadan bildirememe sorunu) */}
@@ -140,15 +155,16 @@ export function QuestionCard({
           korunur (I. / II. / III. alt alta). Eksikse soru "Yukarıdaki ifadeler..."
           deyip boş görünüyordu (Ensar 06-16). */}
       {question.content.passage && (
-        <p className="mb-4 whitespace-pre-line text-[15px] leading-7 text-[var(--app-text-sub)]">
+        <p data-quiz-passage className="mb-4 whitespace-pre-line text-[15px] leading-7 text-[var(--app-text-sub)]">
           {renderRichText(question.content.passage)}
         </p>
       )}
 
       {/* Soru metni — <u>...</u> markup'i altcizili render edilir (alti cizili sozcuk sorulari) */}
-      <h2 id={questionTextId} className="text-[17px] font-extrabold leading-7 text-[var(--app-text)]">
+      <h2 id={questionTextId} className="sr-only">Soru {currentIndex + 1}</h2>
+      <p data-quiz-prompt className="whitespace-pre-line text-[17px] font-medium leading-7 text-[var(--app-text)]">
         {renderRichText(question.content.question || question.content.sentence)}
-      </h2>
+      </p>
 
       {/* Burst particles slot */}
       {children}

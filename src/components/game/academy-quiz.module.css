@@ -40,7 +40,7 @@
   .root .header [data-quiz-progress-label] span { color: var(--app-text-sub); }
   .root .header [role='progressbar'] { height: 8px; padding: 0; background: var(--app-border); }
   .root .header [role='progressbar'] > div { background: var(--app-accent) !important; }
-  .root .header [data-quiz-exit], .root .header [data-quiz-timer] {
+  .root .header [data-quiz-exit], .root .header [data-quiz-timer], .root .header [data-quiz-reading-toggle] {
     border: 1px solid var(--app-border);
     background: var(--app-card);
     color: var(--app-text);
@@ -67,14 +67,14 @@
     box-shadow: 0 8px 30px color-mix(in srgb, var(--app-shadow) 20%, transparent);
     overflow-wrap: anywhere;
   }
-  .root [data-quiz-question] > h2 { font-size: 21px; font-weight: 700; line-height: 1.65; }
-  .root [data-quiz-question] > p { font-size: 16px; line-height: 1.85; }
+  .root [data-quiz-question] [data-quiz-prompt] { font-size: calc(1.3125rem * var(--quiz-font-scale, 1)); line-height: 1.6; }
+  .root [data-quiz-question] [data-quiz-passage] { font-size: calc(1rem * var(--quiz-font-scale, 1)); line-height: 1.85; }
   .root [data-quiz-question-meta] { flex-wrap: wrap; padding-bottom: 14px; margin-bottom: 18px; border-bottom: 1px solid var(--app-border); }
   .root [data-quiz-question-number] { color: var(--app-accent-text); font-size: 11px; font-weight: 800; letter-spacing: .1em; }
   .root .options { gap: 10px; }
   .root [data-quiz-option] { min-height: 64px; padding: 12px 18px; gap: 14px; border-width: 1px; border-radius: 14px; box-shadow: none; overflow-wrap: anywhere; }
   .root [data-quiz-option]:is([data-quiz-option='correct'], [data-quiz-option='wrong'], [data-quiz-option='selected']) { border-width: 2px; padding: 11px 17px; }
-  .root [data-quiz-option] > span:nth-child(2) { font-size: 16px; font-weight: 600; min-width: 0; }
+  .root [data-quiz-option] [data-quiz-option-text] { font-size: calc(1rem * var(--quiz-font-scale, 1)); font-weight: 600; min-width: 0; }
   .root [data-quiz-option] > span:first-child { border-width: 1px; border-radius: 10px; }
   .root [data-quiz-feedback] { border-width: 1px; border-radius: 18px; padding: 22px 24px; box-shadow: none; scroll-margin-top: calc(var(--navbar-h, 72px) + 16px); }
   .root [data-quiz-feedback-actions] { flex-wrap: wrap; }
@@ -129,7 +129,7 @@
   .root .examColumns { grid-template-columns: minmax(0, 1fr); }
   .root .header { padding: 14px 16px 12px; margin-bottom: 18px; }
   .root [data-quiz-question] { padding: 18px; }
-  .root [data-quiz-question] > h2 { font-size: 19px; }
+  .root [data-quiz-question] [data-quiz-prompt] { font-size: calc(1.1875rem * var(--quiz-font-scale, 1)); }
   .portrait { height: 170px; }
   .root [data-quiz-feedback] { scroll-margin-top: 16px; padding: 18px; }
 }
@@ -271,4 +271,83 @@
 }
 .root[data-game='wordquest'] [data-quiz-solution-summary] {
   color: #f4f8ff;
+}
+
+/* Okuma: soru, şık ve çözüm metni rem tabanlıdır; tarayıcı yazı tercihine ve Aa ölçeğine birlikte uyar. */
+.root [data-quiz-passage] { font-size: calc(1rem * var(--quiz-font-scale, 1)); line-height: 1.65; }
+.root [data-quiz-prompt] { font-size: calc(1.0625rem * var(--quiz-font-scale, 1)); line-height: 1.6; }
+.root [data-quiz-option-text] { font-size: calc(.9375rem * var(--quiz-font-scale, 1)); line-height: 1.5; min-width: 0; overflow-wrap: anywhere; }
+.root [data-quiz-solution-question] { font-size: calc(1rem * var(--quiz-font-scale, 1)); line-height: 1.65; }
+.root [data-quiz-solution-text] { font-size: calc(.9375rem * var(--quiz-font-scale, 1)); line-height: 1.75; }
+
+.readingToggle {
+  display: flex;
+  height: 44px;
+  min-width: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, .3);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .15);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  box-shadow: 0 3px 0 rgba(15, 23, 42, .14);
+}
+.readingToggle:focus-visible, .mobileCoachToggle:focus-visible, .mobileCoachClose:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.readingSettings { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 0; border: 0; color: var(--app-text); font-size: 14px; line-height: 1.5; }
+.readingSettings legend { margin-bottom: 4px; padding: 0; font-size: 15px; font-weight: 800; }
+.readingSettings p { color: var(--app-text-sub); }
+.fontChoices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.fontChoices label { position: relative; display: flex; min-height: 56px; cursor: pointer; }
+.fontChoices input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.fontChoices span { display: flex; width: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 2px solid var(--app-border); border-radius: 14px; background: var(--app-card-sunken); font-weight: 800; }
+.fontChoices label:nth-child(1) span { font-size: 14px; }
+.fontChoices label:nth-child(2) span { font-size: 16px; }
+.fontChoices label:nth-child(3) span { font-size: 18px; }
+.fontChoices small { color: var(--app-text-muted); font-size: 11px; font-weight: 700; }
+.fontChoices input:checked + span { border-color: var(--app-accent); background: var(--app-accent-tint); color: var(--app-accent-ink); }
+.fontChoices input:focus-visible + span { outline: 3px solid var(--app-accent); outline-offset: 2px; }
+.readingSound { display: flex; min-height: 48px; align-items: center; justify-content: space-between; gap: 12px; padding: 2px 4px 2px 12px; border: 1px solid var(--app-border); border-radius: 14px; font-weight: 700; }
+.readingDone { display: flex; width: 100%; min-height: 48px; align-items: center; justify-content: center; margin-top: 16px; border-radius: 16px; background: var(--app-accent); color: #fff; font-size: 14px; font-weight: 900; }
+
+/* Mobil oyun: sorudan önceki alanı boşaltır. Can üst barda kalır; seri, XP ve ses Aa menüsündedir.
+   Bilge Çan karşılaması yer kaplamaz, Yardım düğmesiyle açılır ve ipucu akışı aynen sürer. */
+.mobileCoachToggle, .mobileCoachClose { display: none; }
+@media (max-width: 767px) {
+  .root [data-quiz-resources] { display: none; }
+  .root .coachSlot:not([data-mobile-open='true']) { display: none; }
+  .root .coachSlot { scroll-margin-top: 96px; }
+  /* Ders adı üst barda yazılı; simge yerine konu etiketi ve Yardım sığsın. */
+  .root [data-question-subject-icon] { display: none; }
+  .mobileCoachToggle {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 5px;
+    padding: 0 10px;
+    border: 1px solid var(--app-accent-border);
+    border-radius: 14px;
+    background: var(--app-accent-tint);
+    color: var(--app-accent-text);
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .mobileCoachToggle[aria-expanded='true'] { border-color: var(--app-accent); background: var(--app-accent); color: #fff; }
+  .mobileCoachClose {
+    display: flex;
+    width: 100%;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    border: 1px solid var(--app-border);
+    border-radius: 14px;
+    background: var(--app-card);
+    color: var(--app-text-sub);
+    font-size: 13px;
+    font-weight: 800;
+  }
 }

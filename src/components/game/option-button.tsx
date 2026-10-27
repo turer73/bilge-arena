@@ -112,7 +112,7 @@ export const OptionButton = memo(function OptionButton({ index, text, state, onC
       </span>
 
       {/* Metin */}
-      <span className={cn('text-[15px] font-semibold leading-6', s.text)}>
+      <span data-quiz-option-text className={cn('text-[15px] font-semibold leading-6', s.text)}>
         {renderRichText(text)}
       </span>
 

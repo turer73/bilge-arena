@@ -50,6 +50,8 @@ interface BilgeChanCompanionProps {
   onHelpToggle?: (open: boolean) => void
   className?: string
   appearance?: 'legacy' | 'academy'
+  /** A collapsed mobile coach retains its progress but must not pause the quiz. */
+  active?: boolean
 }
 
 type GuidanceStage = 'hint1' | 'hint2' | 'hint3'
@@ -97,6 +99,7 @@ export function BilgeChanCompanion({
   onHelpToggle,
   className,
   appearance = 'legacy',
+  active = true,
 }: BilgeChanCompanionProps) {
   const wide = useWideStudy()
   const academy = appearance === 'academy' && wide
@@ -129,6 +132,13 @@ export function BilgeChanCompanion({
   const coachEnabled = process.env.NEXT_PUBLIC_COACH_ENABLED === 'true'
     && canUseHelper(assistance, 'coach')
   const boardEnabled = useBilgeTahtaEnabled() && canUseHelper(assistance, 'board')
+
+  const helpInProgress = quizState === 'playing'
+    && ['attempt', 'loading', 'hint1', 'hint2', 'hint3', 'solution', 'transfer', 'transferResult', 'error'].includes(phase)
+  useEffect(() => {
+    onHelpToggle?.(active && helpInProgress)
+    if (!active) stopChanSpeech()
+  }, [active, helpInProgress, onHelpToggle])
 
   useEffect(() => {
     if (!coachEnabled || !attemptId || phase !== 'intro' || quizState !== 'playing'

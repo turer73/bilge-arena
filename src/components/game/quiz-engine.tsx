@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, type CSSProperties } from 'react'
+import { useState, useEffect, useRef, useCallback, useId, type CSSProperties } from 'react'
 import { useQuizStore } from '@/stores/quiz-store'
 import { useGameStore } from '@/stores/game-store'
 import { useAuthStore } from '@/stores/auth-store'
@@ -20,6 +20,8 @@ import { useMockStrategyResult } from '@/lib/hooks/use-mock-strategy-result'
 import { toast } from '@/stores/toast-store'
 import { Clock3, Flame, Heart, Pause, Play, Sparkles, X } from 'lucide-react'
 import { useGameAutoPause } from '@/lib/hooks/use-game-auto-pause'
+import { useQuizReading } from '@/lib/hooks/use-quiz-reading'
+import { useWideStudy } from '@/lib/hooks/use-wide-study'
 
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
 import { useTodayPlan } from '@/lib/hooks/use-today-plan'
@@ -37,6 +39,7 @@ import { XPPopup } from './xp-popup'
 import { ExplanationPanel } from './explanation-panel'
 import { BilgeChan } from '@/components/ui/bilge-chan'
 import { BilgeChanCompanion } from './bilge-chan-companion'
+import { QuizReadingSettings } from './quiz-reading-settings'
 import quizStyles from './academy-quiz.module.css'
 
 const BurstParticles = dynamic(
@@ -100,6 +103,19 @@ export function QuizEngine({ game }: QuizEngineProps) {
     : undefined
   const [showPremiumModal, setShowPremiumModal] = useState(false)
   const [verifiedExamAttemptId, setVerifiedExamAttemptId] = useState<string | null>(null)
+  const { fontSize, fontScale, setFontSize } = useQuizReading()
+  const wideQuiz = useWideStudy()
+  const coachRegionId = useId()
+  const coachTriggerRef = useRef<HTMLButtonElement>(null)
+  const [openCoachQuestionId, setOpenCoachQuestionId] = useState<string | null>(null)
+  const coachRegionRef = useRef<HTMLElement>(null)
+  // Mobilde acilan yardim sorunun ustunde belirir; gorunume getir ve odagi kapatma dugmesine ver.
+  useEffect(() => {
+    if (!openCoachQuestionId || wideQuiz) return
+    const region = coachRegionRef.current
+    region?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
+    region?.querySelector<HTMLButtonElement>('[data-mobile-coach-close]')?.focus({ preventScroll: true })
+  }, [openCoachQuestionId, wideQuiz])
   // "Bugunun 15'i" plani oynanirken true. Plan, yalnizca dogrulanmis oturum
   // basariyla kaydedilince tamamlanir; lobby'ye donunce sifirlanir.
   const planActiveRef = useRef(false)
@@ -652,6 +668,11 @@ export function QuizEngine({ game }: QuizEngineProps) {
   if (!question) return null
 
   const lastAnswer = quizStore.answers[quizStore.answers.length - 1]
+  const coachOpen = openCoachQuestionId === question.id
+  const closeCoach = () => {
+    setOpenCoachQuestionId(null)
+    coachTriggerRef.current?.focus()
+  }
   const questionProgress = ((quizStore.currentIndex + 1) / Math.max(1, quizStore.questions.length)) * 100
 
 
@@ -686,7 +707,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
     {/* Can kaybi kirmizi flash */}
     {quiz.showLifeLost && <LifeLostOverlay />}
 
-    <div data-responsive-quiz-shell data-quiz-design="academy" data-game={game} style={{ '--quiz-color': gameDef.colorHex } as CSSProperties} className={`${quizStyles.root} relative mx-auto min-h-[100dvh] w-full max-w-[440px] bg-[var(--app-bg)] p-3 text-[var(--app-text)] md:max-w-[720px] md:p-5 lg:my-6 lg:min-h-0 lg:max-w-[1120px] lg:rounded-[32px] lg:border-2 lg:border-[var(--app-border)] lg:shadow-[0_8px_0_var(--app-shadow)] ${autoPaused ? 'game-auto-paused' : ''}`}>
+    <div data-responsive-quiz-shell data-quiz-design="academy" data-game={game} data-quiz-font-size={fontSize} data-quiz-mode={quiz.isDeneme ? 'exam' : 'practice'} style={{ '--quiz-color': gameDef.colorHex, '--quiz-font-scale': fontScale } as CSSProperties} className={`${quizStyles.root} relative mx-auto min-h-[100dvh] w-full max-w-[440px] bg-[var(--app-bg)] p-3 text-[var(--app-text)] md:max-w-[720px] md:p-5 lg:my-6 lg:min-h-0 lg:max-w-[1120px] lg:rounded-[32px] lg:border-2 lg:border-[var(--app-border)] lg:shadow-[0_8px_0_var(--app-shadow)] ${autoPaused ? 'game-auto-paused' : ''}`}>
       {autoPaused && (
         <div className="fixed inset-0 z-[180] flex items-center justify-center bg-[var(--app-overlay)] px-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="auto-pause-title">
           <section className="w-full max-w-sm rounded-[26px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-5 text-center shadow-[0_8px_0_rgba(15,23,42,.18)]">
@@ -724,7 +745,14 @@ export function QuizEngine({ game }: QuizEngineProps) {
           <div className="min-w-0 flex-1">
             <div data-quiz-progress-label className="mb-1.5 flex items-center justify-between gap-2 text-[10px] font-black uppercase tracking-[0.1em]">
               <span className="truncate text-white">{gameDef.name} · {quiz.mode.name}</span>
-              <span className="shrink-0 text-white/80">{quizStore.currentIndex + 1} / {quizStore.questions.length}</span>
+              <span className="flex shrink-0 items-center gap-2 text-white/80">
+                {!quiz.isDeneme && quizStore.livesEnabled && (
+                  <span data-quiz-lives-compact aria-label={`${quizStore.lives} can`} className="flex items-center gap-0.5 text-white md:hidden">
+                    <Heart size={11} fill="currentColor" aria-hidden="true" />{quizStore.lives}
+                  </span>
+                )}
+                {quizStore.currentIndex + 1} / {quizStore.questions.length}
+              </span>
             </div>
             <div
               role="progressbar"
@@ -752,6 +780,8 @@ export function QuizEngine({ game }: QuizEngineProps) {
               <span className="text-sm font-black tabular-nums">{quiz.timer.seconds}</span>
             </div>
           )}
+          <QuizReadingSettings fontSize={fontSize} onChange={setFontSize} showSound={!quiz.isDeneme}
+            stats={!quiz.isDeneme ? { streak: quizStore.streak, xp: quizStore.xpEarned } : undefined} />
         </div>
 
         {!quiz.isDeneme && (
@@ -777,7 +807,8 @@ export function QuizEngine({ game }: QuizEngineProps) {
       <div className={`${quizStyles.columns} ${quiz.isDeneme ? quizStyles.examColumns : ''} grid grid-cols-1 gap-3 ${!quiz.isDeneme ? 'lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-5' : ''}`}>
         {/* Mobilde sorudan once, bilgisayarda sag yardim panelinde. */}
         {!quiz.isDeneme && (
-          <aside className={`${quizStyles.coachSlot} order-first lg:col-start-2 lg:row-start-1`}>
+          <aside ref={coachRegionRef} id={coachRegionId} data-mobile-open={coachOpen} className={`${quizStyles.coachSlot} order-first lg:col-start-2 lg:row-start-1`}>
+            <button type="button" data-mobile-coach-close className={quizStyles.mobileCoachClose} onClick={closeCoach}>Yardımı kapat ve soruya dön</button>
             <BilgeChanCompanion
               key={`m-${quizStore.currentIndex}`}
               attemptId={quiz.attemptId}
@@ -787,6 +818,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
               optionOrder={quiz.optionOrderFor(question.id, question.content.options.length)}
               correctOption={lastAnswer?.correctOption ?? null}
               onHelpToggle={quiz.setHelpPaused}
+              active={wideQuiz || coachOpen}
               compact
               appearance="academy"
               height={108}
@@ -870,6 +902,12 @@ export function QuizEngine({ game }: QuizEngineProps) {
               currentIndex={quizStore.currentIndex}
               totalQuestions={quizStore.questions.length}
               onReport={() => quiz.setShowReportModal(true)}
+              coachControl={!quiz.isDeneme ? {
+                open: coachOpen,
+                id: coachRegionId,
+                onToggle: () => setOpenCoachQuestionId(coachOpen ? null : question.id),
+              } : undefined}
+              coachTriggerRef={coachTriggerRef}
             >
               {quiz.showBurst && <BurstParticles />}
             </QuestionCard>
