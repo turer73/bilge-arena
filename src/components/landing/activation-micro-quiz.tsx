@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState, type CSSProperties } from 'react'
 import { ArrowRight, CheckCircle2, LoaderCircle, Sparkles, Trophy, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -11,6 +11,9 @@ import { gradeQuestion, type QuestionGradeResult } from '@/lib/questions/grade-q
 import { fetchPreviewQuestions } from '@/lib/supabase/questions'
 import { shufflePublicOptionsWithMap } from '@/lib/utils/question'
 import { renderRichText } from '@/lib/utils/rich-text'
+import { useMobileAnswerSheet } from '@/lib/hooks/use-mobile-answer-sheet'
+import { useQuizReading } from '@/lib/hooks/use-quiz-reading'
+import sheetStyles from '@/components/game/answer-sheet.module.css'
 import { playSound } from '@/lib/utils/sounds'
 import { trackEvent } from '@/lib/utils/plausible'
 import { beginLegalConsentIntent } from '@/lib/consent'
@@ -94,6 +97,12 @@ export function ActivationMicroQuiz() {
   const prepared = questions[currentIndex]
   const correctCount = answers.filter((answer) => answer.isCorrect).length
   const earnedDemoXp = correctCount * 50
+
+  // Mobilde cevap sonucu alttan acilan panelde; soru ve isaretli siklar yerinde kalir.
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const nextRef = useRef<HTMLButtonElement>(null)
+  useMobileAnswerSheet(sheetRef, nextRef, !!gradeResult)
+  const { fontScale } = useQuizReading()
 
   const displayedQuestion = useMemo(() => {
     if (!prepared) return null
@@ -390,7 +399,11 @@ export function ActivationMicroQuiz() {
     : -1
 
   return (
-    <div className="relative w-full rounded-3xl border border-[var(--focus-border)] bg-[color-mix(in_srgb,var(--card-bg)_96%,transparent)] p-3 shadow-2xl backdrop-blur-xl md:p-4">
+    <div
+      className={`relative w-full rounded-3xl border border-[var(--focus-border)] bg-[color-mix(in_srgb,var(--card-bg)_96%,transparent)] p-3 shadow-2xl backdrop-blur-xl md:p-4 ${sheetStyles.host}`}
+      data-answer-sheet-host
+      style={{ '--quiz-font-scale': fontScale } as CSSProperties}
+    >
       {gradeResult?.isCorrect && <ConfettiBurst />}
       <div className="mb-3 flex items-center justify-between gap-3 px-1">
         <div>
@@ -417,8 +430,9 @@ export function ActivationMicroQuiz() {
       </div>
 
       {gradeResult && (
+        <div ref={sheetRef} className={`${sheetStyles.sheet} mt-3`}>
         <div
-          className={`mt-3 rounded-2xl border p-4 ${gradeResult.isCorrect
+          className={`rounded-2xl border p-4 ${gradeResult.isCorrect
             ? 'border-[var(--growth)] bg-[color-mix(in_srgb,var(--growth)_12%,var(--card-bg))]'
             : 'border-[var(--reward-border)] bg-[var(--reward-bg)]'}`}
           role="status"
@@ -437,10 +451,11 @@ export function ActivationMicroQuiz() {
               {renderRichText(gradeResult.solution)}
             </div>
           )}
-          <Button type="button" size="md" className="mt-3 min-h-11 w-full" onClick={continueSession}>
+          <Button ref={nextRef} type="button" size="md" className="mt-3 min-h-11 w-full" onClick={continueSession}>
             {currentIndex >= questions.length - 1 ? 'Sonucumu gör' : 'Sıradaki soru'}
             <ArrowRight size={17} aria-hidden="true" />
           </Button>
+        </div>
         </div>
       )}
 

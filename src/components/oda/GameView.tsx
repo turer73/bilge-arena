@@ -17,7 +17,7 @@
  * (deadline gectikten sonra P0001), UI sadece visual timer.
  */
 
-import { useActionState, useEffect, useRef, useState } from 'react'
+import { useActionState, useEffect, useRef, useState, type CSSProperties } from 'react'
 import {
   submitAnswerAction,
   type SubmitAnswerActionState,
@@ -25,6 +25,7 @@ import {
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
 import { cn } from '@/lib/utils/cn'
 import { renderRichText } from '@/lib/utils/rich-text'
+import { useQuizReading } from '@/lib/hooks/use-quiz-reading'
 
 const initialState: SubmitAnswerActionState = {}
 
@@ -160,6 +161,8 @@ export function GameView({
     current_round?.options,
   ])
 
+  const { fontScale } = useQuizReading()
+
   if (!current_round) {
     return (
       <section
@@ -214,6 +217,7 @@ export function GameView({
     <section
       aria-label="Aktif soru"
       className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6"
+      style={{ '--quiz-font-scale': fontScale } as CSSProperties}
     >
       <header className="mb-4 flex items-center justify-between gap-2">
         <span className="rounded-full bg-blue-500/15 px-3 py-1 text-xs font-bold text-blue-700 dark:text-blue-300">
@@ -241,7 +245,7 @@ export function GameView({
         </div>
       </header>
 
-      <h2 className="mb-4 text-base font-semibold leading-relaxed">
+      <h2 className="mb-4 font-semibold leading-relaxed" style={{ fontSize: 'calc(1.0625rem * var(--quiz-font-scale, 1))' }}>
         {renderRichText(questionText)}
       </h2>
 
@@ -293,7 +297,7 @@ export function GameView({
                   >
                     {String.fromCharCode(65 + idx)}
                   </span>
-                  {renderRichText(opt)}
+                  <span className="min-w-0" style={{ fontSize: 'calc(0.9375rem * var(--quiz-font-scale, 1))' }}>{renderRichText(opt)}</span>
                 </button>
               </li>
             )

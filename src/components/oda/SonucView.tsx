@@ -16,7 +16,7 @@
 
 'use client'
 
-import { useActionState, useEffect, useRef } from 'react'
+import { useActionState, useEffect, useRef, type CSSProperties, type Ref } from 'react'
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
 import {
   advanceRoundForMemberAction,
@@ -25,6 +25,9 @@ import {
 import { cn } from '@/lib/utils/cn'
 import { RevealCountdown } from './RevealCountdown'
 import { renderRichText } from '@/lib/utils/rich-text'
+import { useMobileAnswerSheet } from '@/lib/hooks/use-mobile-answer-sheet'
+import { useQuizReading } from '@/lib/hooks/use-quiz-reading'
+import sheetStyles from '@/components/game/answer-sheet.module.css'
 
 const advanceInitial: AdvanceRoundForMemberActionState = {}
 
@@ -74,6 +77,13 @@ export function SonucView({ state, userId, onAsyncAdvanceSuccess }: SonucViewPro
     }
   }, [advanceState.error])
 
+  // Mobilde tur sonucu (dogru/yanlis, aciklama, devam) alttan acilan panelde;
+  // soru ve isaretli siklar yerinde kalir.
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const nextRef = useRef<HTMLButtonElement>(null)
+  useMobileAnswerSheet(sheetRef, nextRef, !!current_round)
+  const { fontScale } = useQuizReading()
+
   if (!current_round) {
     return (
       <section
@@ -118,7 +128,9 @@ export function SonucView({ state, userId, onAsyncAdvanceSuccess }: SonucViewPro
   return (
     <section
       aria-label="Tur sonucu"
-      className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6"
+      className={cn('rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6', sheetStyles.host)}
+      data-answer-sheet-host
+      style={{ '--quiz-font-scale': fontScale } as CSSProperties}
     >
       <header className="mb-4 flex items-center justify-between">
         <span className="rounded-full bg-purple-500/15 px-3 py-1 text-xs font-bold text-purple-700 dark:text-purple-300">
@@ -131,7 +143,7 @@ export function SonucView({ state, userId, onAsyncAdvanceSuccess }: SonucViewPro
         )}
       </header>
 
-      <h2 className="mb-4 text-base font-semibold leading-relaxed">
+      <h2 className="mb-4 font-semibold leading-relaxed" style={{ fontSize: 'calc(1.0625rem * var(--quiz-font-scale, 1))' }}>
         {renderRichText(questionText)}
       </h2>
 
@@ -143,6 +155,7 @@ export function SonucView({ state, userId, onAsyncAdvanceSuccess }: SonucViewPro
           return (
             <li
               key={idx}
+              data-answer-marked={isCorrect || isMine ? '' : undefined}
               aria-label={
                 isCorrect
                   ? isMine
@@ -174,7 +187,7 @@ export function SonucView({ state, userId, onAsyncAdvanceSuccess }: SonucViewPro
               >
                 {isCorrect ? '✓' : isMine ? '✗' : String.fromCharCode(65 + idx)}
               </span>
-              <span className="flex-1">{renderRichText(opt)}</span>
+              <span className="flex-1" style={{ fontSize: 'calc(0.9375rem * var(--quiz-font-scale, 1))' }}>{renderRichText(opt)}</span>
               {isMine && !isCorrect && (
                 <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                   Senin Cevabın
@@ -190,6 +203,18 @@ export function SonucView({ state, userId, onAsyncAdvanceSuccess }: SonucViewPro
         })}
       </ul>
 
+      <div ref={sheetRef} className={sheetStyles.sheet}>
+      <p role="status" aria-live="polite" className={cn('mb-3 text-base font-bold',
+        myAnswerOption === null ? 'text-amber-700 dark:text-amber-300'
+          : myAnswerOption === correctOption ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300')}>
+        {myAnswerOption === null
+          ? 'Cevap verilmedi.'
+          : myAnswerOption === correctOption ? '✓ Doğru!' : '✗ Yanlış.'}
+        {myAnswerOption !== correctOption && correctOption !== null && (
+          <span className="font-semibold"> Doğru cevap: {renderRichText(correctOption)}</span>
+        )}
+      </p>
+
       {/* PR4f: kullanici cevap vermediyse uyari */}
       {state.my_answer === null && (
         <p className="mb-4 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
@@ -202,7 +227,7 @@ export function SonucView({ state, userId, onAsyncAdvanceSuccess }: SonucViewPro
           <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-[var(--text-sub)]">
             Açıklama
           </h3>
-          <p className="text-sm leading-relaxed">{explanation}</p>
+          <p className="leading-relaxed" style={{ fontSize: 'calc(0.9375rem * var(--quiz-font-scale, 1))' }}>{explanation}</p>
         </div>
       )}
 
@@ -234,8 +259,10 @@ export function SonucView({ state, userId, onAsyncAdvanceSuccess }: SonucViewPro
           isPending={advancePending}
           isLastRound={isLastRound}
           error={advanceState.error}
+          nextRef={nextRef}
         />
       )}
+      </div>
     </section>
   )
 }
@@ -251,6 +278,7 @@ interface AsyncAdvanceControlsProps {
   isPending: boolean
   isLastRound: boolean
   error?: string
+  nextRef?: Ref<HTMLButtonElement>
 }
 
 function AsyncAdvanceControls({
@@ -259,6 +287,7 @@ function AsyncAdvanceControls({
   isPending,
   isLastRound,
   error,
+  nextRef,
 }: AsyncAdvanceControlsProps) {
   // Auto-advance timer: SonucView render'ind (caller cevap submit etti) NOW'dan
   // autoAdvanceSeconds sonra fire. Manuel "Sonraki" butonu da fire edebilir.
@@ -282,6 +311,7 @@ function AsyncAdvanceControls({
           {isLastRound ? 'Son tur — finiş' : `${autoAdvanceSeconds} saniye sonra otomatik devam`}
         </span>
         <button
+          ref={nextRef}
           type="button"
           onClick={onFire}
           disabled={isPending}

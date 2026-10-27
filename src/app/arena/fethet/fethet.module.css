@@ -1132,9 +1132,16 @@
 .quizQuestion {
   margin: 8px 0 0;
   color: #f6faf8;
-  font-size: clamp(1.02rem, 2vw, 1.2rem);
-  font-weight: 780;
+  font-size: calc(clamp(1.02rem, 2vw, 1.2rem) * var(--quiz-font-scale, 1));
+  font-weight: 600;
   line-height: 1.6;
+}
+
+/* Sik ve cozum metni Aa okuma ayariyla (--quiz-font-scale) olceklenir. */
+.optionText {
+  min-width: 0;
+  font-size: calc(0.9375rem * var(--quiz-font-scale, 1));
+  line-height: 1.5;
 }
 
 .quizOptions {
@@ -1243,9 +1250,25 @@
 
 .solutionBox p {
   color: #c8d2ce;
-  font-size: 0.78rem;
-  line-height: 1.55;
+  font-size: calc(0.875rem * var(--quiz-font-scale, 1));
+  line-height: 1.6;
 }
+
+.answerSheet {
+  margin-top: 14px;
+}
+
+.answerResult {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.answerResult[data-result='correct'] { color: #76efbf; }
+.answerResult[data-result='wrong'] { color: #ff8ca0; }
 
 .nextAction {
   width: 100%;
@@ -1582,5 +1605,38 @@
   .loadingState svg,
   .gradeStatus svg {
     animation: none;
+  }
+}
+
+/* Mobil soru penceresi: sefer haritasi sorudan once tek satirlik rota seridine
+   iner; cevap sonucu alttan acilan panelde (answer-sheet.module.css). */
+@media (max-width: 760px) {
+  .conquestBoard,
+  .conquestBoardContent {
+    min-height: 0;
+  }
+
+  .conquestBoard > img,
+  .conquestBoard .conquestKicker,
+  .conquestBrief {
+    display: none;
+  }
+
+  .conquestBoardContent {
+    padding: 10px 12px;
+  }
+
+  .conquestBoard .quizRoute {
+    margin-top: 6px;
+  }
+
+  .quizModal .answerSheet {
+    margin-top: 0;
+    background-color: #0a1f1d;
+  }
+
+  .answerSheet .solutionBox,
+  .answerSheet .nextAction {
+    margin-top: 10px;
   }
 }

@@ -28,6 +28,9 @@ import { renderRichText } from '@/lib/utils/rich-text'
 import { isValidUuid } from '@/lib/utils/uuid'
 import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 import styles from './kule.module.css'
+import sheetStyles from '@/components/game/answer-sheet.module.css'
+import { useMobileAnswerSheet } from '@/lib/hooks/use-mobile-answer-sheet'
+import { useQuizReading } from '@/lib/hooks/use-quiz-reading'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -230,6 +233,12 @@ export function KuleClient() {
       dispatch({ type: 'SET_ERROR', error: (e as Error).message })
     }
   }, [learnerV2Enabled])
+
+  // Mobilde cevap sonucu alttan acilan panelde; soru ve isaretli siklar yerinde kalir.
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const nextRef = useRef<HTMLButtonElement>(null)
+  useMobileAnswerSheet(sheetRef, nextRef, state.phase === 'feedback')
+  const { fontScale } = useQuizReading()
 
   // Yeni kat / yeni oyun → soru çek
   useEffect(() => {
@@ -439,8 +448,8 @@ export function KuleClient() {
   const towerFloors = Array.from({ length: 7 }, (_, index) => towerStart + 6 - index)
 
   return (
-    <div className={styles.root} style={{ '--subject': color } as CSSProperties}>
-      <div className={styles.gameShell}>
+    <div className={styles.root} style={{ '--subject': color, '--quiz-font-scale': fontScale } as CSSProperties}>
+      <div className={`${styles.gameShell} ${sheetStyles.host}`} data-answer-sheet-host>
         <div className={styles.gameTopline}>
           <button onClick={() => dispatch({ type: 'BACK_TO_MENU' })} className={styles.backButton}>
             <ArrowLeft size={15} aria-hidden="true" /> Ders seçimine dön
@@ -591,6 +600,7 @@ export function KuleClient() {
                         className={`${styles.option} flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-all duration-150 disabled:cursor-default`}
                         style={{ background: bg, borderColor, color: textColor }}
                         data-state={answered ? (isCorrect ? 'correct' : isSelected ? 'wrong' : 'answered') : 'idle'}
+                        data-answer-marked={answered && (isCorrect || isSelected) ? '' : undefined}
                       >
                         <span
                           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black"
@@ -598,7 +608,7 @@ export function KuleClient() {
                         >
                           {answered && isCorrect ? '✓' : answered && isSelected ? '✕' : label}
                         </span>
-                        <span>{renderRichText(opt)}</span>
+                        <span className={styles.optionText}>{renderRichText(opt)}</span>
                       </button>
                     )
                   })}
@@ -613,8 +623,10 @@ export function KuleClient() {
                 )}
 
                 {state.phase === 'feedback' && (
-                  <>
+                  <div ref={sheetRef} className={sheetStyles.sheet}>
                     <div
+                      role="status"
+                      aria-live="polite"
                       className={`${styles.feedback} border p-3 text-center text-sm font-bold ${
                         state.lastCorrect ? 'border-[var(--growth-border)] bg-[var(--growth-bg)] text-[var(--growth)]' : 'border-[color-mix(in_srgb,var(--urgency)_30%,transparent)] bg-[color-mix(in_srgb,var(--urgency)_10%,transparent)] text-[var(--urgency)]'
                       }`}
@@ -624,18 +636,19 @@ export function KuleClient() {
                         : `✕ Yanlış! ${state.lives} can kaldı`}
                     </div>
                     {state.solution && (
-                      <p className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[10px] text-[var(--text-sub)]">
+                      <p className={`${styles.solution} mt-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[var(--text-sub)]`}>
                         💡 {state.solution}
                       </p>
                     )}
                     <button
+                      ref={nextRef}
                       onClick={() => dispatch({ type: 'NEXT_FLOOR' })}
                       className={`${styles.nextButton} mt-3 w-full text-sm text-white`}
                       style={{ background: color }}
                     >
                       Sonraki Kat ↑
                     </button>
-                  </>
+                  </div>
                 )}
               </div>
             )}

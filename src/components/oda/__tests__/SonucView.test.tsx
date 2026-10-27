@@ -54,6 +54,28 @@ const baseState = (overrides: Partial<RoomState['current_round']> = {}): RoomSta
 })
 
 describe('SonucView', () => {
+  test('mobil sonuç paneli: sonuç satırı, işaretli şıklar ve açıklama aynı panelde', () => {
+    const wrongState = baseState()
+    wrongState.my_answer = { answer_value: 'İstanbul', is_correct: false, points_awarded: 0, response_ms: 9000 }
+    const { container } = render(<SonucView state={wrongState} userId="u1" />)
+    const status = screen.getByRole('status')
+    expect(status).toHaveTextContent('✗ Yanlış. Doğru cevap: Ankara')
+    const marked = [...container.querySelectorAll('[data-answer-marked]')].map((el) => el.textContent)
+    expect(marked).toHaveLength(2)
+    expect(marked.join(' ')).toMatch(/Ankara/)
+    expect(marked.join(' ')).toMatch(/İstanbul/)
+    const host = container.querySelector('[data-answer-sheet-host]')!
+    expect(host.contains(status)).toBe(true)
+    expect(status.parentElement!.textContent).toMatch(/1923’te başkent/)
+  })
+
+  test('mobil sonuç paneli: doğru cevapta "Doğru!" yazar', () => {
+    const rightState = baseState()
+    rightState.my_answer = { answer_value: 'Ankara', is_correct: true, points_awarded: 10, response_ms: 5000 }
+    render(<SonucView state={rightState} userId="u1" />)
+    expect(screen.getByRole('status')).toHaveTextContent('✓ Doğru!')
+  })
+
   test('1) reveal -> dogru cevap (Ankara) emerald highlight + explanation', () => {
     render(<SonucView state={baseState()} userId="u1" />)
     expect(screen.getByText('Türkiye’nin başkenti neresidir?')).toBeInTheDocument()
