@@ -11,8 +11,10 @@
   .host:has(.sheet),
   .host :has(> .sheet),
   .host :has(.sheet) {
-    backdrop-filter: none !important;
+    /* Sira onemli: lightningcss onekli bildirim sonra gelirse standardi atiyor
+       (uretimde ikisi de dusmustu); once onekli, sonra standart. */
     -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     transform: none !important;
     filter: none !important;
   }
