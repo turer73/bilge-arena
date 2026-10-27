@@ -79,11 +79,15 @@ describe('ContentGovernancePanel', () => {
     render(<ContentGovernancePanel />)
     fireEvent.click(await screen.findByText('Eski revizyon'))
     await screen.findByText('Eski soru')
-    const readCount = fetchMock.mock.calls.length
+    // Yalniz revizyon sorgularini say: ayrinti yuklendikten sonra arkadan gelen
+    // istekler yavas CI'da sayima karisip testi rastgele dusuruyordu.
+    const revisionLookups = () => fetchMock.mock.calls.filter(([url]) => String(url).includes('?revisionId=')).length
+    const lookupCount = revisionLookups()
     fireEvent.change(screen.getByLabelText('Revizyon kimliği'), { target: { value: '../publish' } })
     fireEvent.click(screen.getByRole('button', { name: 'Revizyonu aç' }))
     expect(screen.getByText('Geçerli bir revizyon kimliği girin')).toHaveAttribute('role', 'alert')
-    expect(fetchMock.mock.calls).toHaveLength(readCount)
+    expect(revisionLookups()).toBe(lookupCount)
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('publish'))).toBe(false)
     fireEvent.change(screen.getByLabelText('Revizyon kimliği'), { target: { value: CURRENT } })
     fireEvent.click(screen.getByRole('button', { name: 'Revizyonu aç' }))
     expect(await screen.findByText('Revizyon ayrıntısı alınamadı')).toHaveAttribute('role', 'alert')
