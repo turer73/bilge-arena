@@ -158,7 +158,7 @@ export function ExplanationPanel({
             {question.content.passage && (
               <p className="mb-3 whitespace-pre-line text-sm leading-6 text-[var(--app-text-sub)]">{renderRichText(question.content.passage)}</p>
             )}
-            <p className="text-base font-bold leading-7 text-[var(--app-text)]">
+            <p data-quiz-solution-question className="text-base font-bold leading-7 text-[var(--app-text)]">
               {renderRichText(question.content.question || question.content.sentence)}
             </p>
           </section>
@@ -188,7 +188,7 @@ export function ExplanationPanel({
               <h3 className="flex items-center gap-2 text-sm font-extrabold text-[var(--app-warn-ink)]">
                 <Lightbulb className="h-5 w-5" aria-hidden="true" /> Çözümün mantığı
               </h3>
-              <p className="mt-2 whitespace-pre-line text-[15px] leading-7">{renderRichText(solution)}</p>
+              <p data-quiz-solution-text className="mt-2 whitespace-pre-line text-[15px] leading-7">{renderRichText(solution)}</p>
             </section>
           )}
 

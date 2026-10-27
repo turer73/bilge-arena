@@ -77,4 +77,34 @@ describe('QuestionCard', () => {
     render(<QuestionCard question={makeQ({})} currentIndex={0} totalQuestions={10} />)
     expect(screen.queryByRole('button', { name: "Bilge Asistan'a sor" })).not.toBeInTheDocument()
   })
+
+  test('soru kökü başlık yerine normal ağırlıkta okunur metin; bölüm adı ekran okuyucuda kalır', () => {
+    const { container } = render(
+      <QuestionCard question={makeQ({ passage: 'Öncül' })} currentIndex={2} totalQuestions={10} />,
+    )
+    expect(screen.getByRole('region', { name: 'Soru 3' })).toBeInTheDocument()
+    const prompt = container.querySelector('[data-quiz-prompt]')
+    expect(prompt?.tagName).toBe('P')
+    expect(prompt).toHaveTextContent('Yukarıdaki ifadelerden hangileri doğrudur?')
+    expect(prompt).not.toHaveClass('font-extrabold')
+    expect(container.querySelector('[data-quiz-passage]')).toHaveTextContent('Öncül')
+  })
+
+  test('coachControl verilince Yardım düğmesi bölgeyi açıp kapatır', () => {
+    const onToggle = vi.fn()
+    const { rerender } = render(
+      <QuestionCard question={makeQ({})} currentIndex={0} totalQuestions={10}
+        coachControl={{ open: false, id: 'coach-region', onToggle }} />,
+    )
+    const help = screen.getByRole('button', { name: 'Bilge Çan yardımı' })
+    expect(help).toHaveAttribute('aria-expanded', 'false')
+    expect(help).toHaveAttribute('aria-controls', 'coach-region')
+    fireEvent.click(help)
+    expect(onToggle).toHaveBeenCalledTimes(1)
+    rerender(
+      <QuestionCard question={makeQ({})} currentIndex={0} totalQuestions={10}
+        coachControl={{ open: true, id: 'coach-region', onToggle }} />,
+    )
+    expect(help).toHaveAttribute('aria-expanded', 'true')
+  })
 })

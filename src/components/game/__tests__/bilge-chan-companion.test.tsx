@@ -467,4 +467,20 @@ describe('pickLine', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.999)
     expect(pickLine(CHAN_LINES.greet)).toBe(CHAN_LINES.greet[2])
   })
+
+  test('mobilde kapatılan yardım süreyi serbest bırakır, yeniden açılınca aynı aşamada durdurur', () => {
+    const onHelpToggle = vi.fn()
+    const props = { quizState: 'playing' as const, lastIsCorrect: null, question: makeQuestion(), onHelpToggle }
+    const { rerender } = render(<BilgeChanCompanion {...props} active />)
+    act(() => vi.advanceTimersByTime(6000))
+    fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
+    expect(onHelpToggle).toHaveBeenLastCalledWith(true)
+
+    rerender(<BilgeChanCompanion {...props} active={false} />)
+    expect(onHelpToggle).toHaveBeenLastCalledWith(false)
+    expect(screen.getByRole('group', { name: 'Koç öncesi ilk denemeni seç' })).toBeInTheDocument()
+
+    rerender(<BilgeChanCompanion {...props} active />)
+    expect(onHelpToggle).toHaveBeenLastCalledWith(true)
+  })
 })

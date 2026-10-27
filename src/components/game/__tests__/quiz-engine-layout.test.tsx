@@ -6,7 +6,7 @@
 
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, test, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 
 beforeEach(() => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
@@ -155,9 +155,17 @@ vi.mock('@/lib/mock-strategy/client', () => ({
 
 // --- Ağır çocuk bileşenler: marker/null stub ---
 vi.mock('../question-card', () => ({
-  QuestionCard: ({ children, onReport }: { children?: React.ReactNode; onReport?: () => void }) => (
+  QuestionCard: ({ children, onReport, coachControl, coachTriggerRef }: {
+    children?: React.ReactNode
+    onReport?: () => void
+    coachControl?: { open: boolean; id: string; onToggle: () => void }
+    coachTriggerRef?: React.Ref<HTMLButtonElement>
+  }) => (
     <div data-testid="question-card">
       <button data-testid="qc-report" onClick={onReport} />
+      {coachControl && (
+        <button ref={coachTriggerRef} type="button" aria-expanded={coachControl.open} aria-controls={coachControl.id} onClick={coachControl.onToggle}>Yardım</button>
+      )}
       {children}
     </div>
   ),
@@ -227,7 +235,9 @@ vi.mock('../mastery-map-card', () => ({ MasteryMapCard: () => <div data-testid="
 vi.mock('../topics-panel', () => ({ TopicsPanel: () => <div data-testid="topics-band" /> }))
 vi.mock('../life-lost-overlay', () => ({ LifeLostOverlay: () => null }))
 vi.mock('@/components/ui/bilge-chan', () => ({ BilgeChan: () => null }))
-vi.mock('../bilge-chan-companion', () => ({ BilgeChanCompanion: () => <div data-testid="chan-companion" /> }))
+vi.mock('../bilge-chan-companion', () => ({
+  BilgeChanCompanion: ({ active }: { active?: boolean }) => <div data-testid="chan-companion" data-active={String(active)} />,
+}))
 vi.mock('@/components/premium/premium-gate-modal', () => ({
   PremiumGateModal: ({ isOpen }: { isOpen: boolean }) => isOpen ? <div data-testid="premium-modal" /> : null,
 }))
@@ -331,9 +341,52 @@ describe('QuizEngine yerleşim', () => {
     expect(screen.getByRole('button', { name: 'Oyundan çık' })).toBeInTheDocument()
     expect(screen.getByRole('progressbar', { name: 'Oyun ilerlemesi' })).toHaveAttribute('aria-valuenow', '1')
     expect(screen.getByLabelText('Kalan süre: 24 saniye')).toBeInTheDocument()
-    expect(screen.getByLabelText('3 can')).toBeInTheDocument()
-    expect(screen.getByLabelText('1 seri')).toBeInTheDocument()
-    expect(screen.getByLabelText('10 oturum XP')).toBeInTheDocument()
+    // Mobilde can ilerleme satirinda kalir; seri, XP ve ses satiri yalniz genis ekranda gorunur.
+    const header = document.querySelector('header')!
+    const compactLives = header.querySelector('[data-quiz-progress-label] [data-quiz-lives-compact]')
+    expect(compactLives).toHaveAttribute('aria-label', '3 can')
+    expect(compactLives).toHaveClass('md:hidden')
+    const resources = header.querySelector('[data-quiz-resources]')!
+    expect(within(resources as HTMLElement).getByLabelText('3 can')).toBeInTheDocument()
+    expect(within(resources as HTMLElement).getByLabelText('1 seri')).toBeInTheDocument()
+    expect(within(resources as HTMLElement).getByLabelText('10 oturum XP')).toBeInTheDocument()
+  })
+
+  test('Aa menüsü yazı boyutunu soru kabuğuna uygular ve saklar', () => {
+    window.localStorage.removeItem('bilge-quiz-font-size')
+    const { container } = render(<QuizEngine game="matematik" />)
+    const shell = container.querySelector('[data-responsive-quiz-shell]') as HTMLElement
+    expect(shell).toHaveAttribute('data-quiz-font-size', 'normal')
+    expect(shell.style.getPropertyValue('--quiz-font-scale')).toBe('1')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Yazı boyutu ve ses ayarları' }))
+    const dialog = screen.getByRole('dialog', { name: 'Okuma ayarları' })
+    fireEvent.click(within(dialog).getByRole('radio', { name: /Büyük/ }))
+
+    expect(shell).toHaveAttribute('data-quiz-font-size', 'large')
+    expect(shell.style.getPropertyValue('--quiz-font-scale')).toBe('1.12')
+    expect(window.localStorage.getItem('bilge-quiz-font-size')).toBe('large')
+    expect(within(dialog).getByText('Bu oturum: 1 seri · 10 XP')).toBeInTheDocument()
+    window.localStorage.removeItem('bilge-quiz-font-size')
+  })
+
+  test('mobilde Bilge Çan kapalı başlar, Yardım ile açılır ve yalnız açıkken süreyi durdurabilir', () => {
+    const { container } = render(<QuizEngine game="matematik" />)
+    const aside = container.querySelector('aside[data-mobile-open]') as HTMLElement
+    const toggle = screen.getByRole('button', { name: 'Yardım' })
+    expect(aside).toHaveAttribute('data-mobile-open', 'false')
+    expect(toggle).toHaveAttribute('aria-controls', aside.id)
+    expect(screen.getByTestId('chan-companion')).toHaveAttribute('data-active', 'false')
+
+    fireEvent.click(toggle)
+    expect(aside).toHaveAttribute('data-mobile-open', 'true')
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByTestId('chan-companion')).toHaveAttribute('data-active', 'true')
+    expect(screen.getByRole('button', { name: 'Yardımı kapat ve soruya dön' })).toHaveFocus()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Yardımı kapat ve soruya dön' }))
+    expect(aside).toHaveAttribute('data-mobile-open', 'false')
+    expect(toggle).toHaveFocus()
   })
 
   test('uygulama kabugu CSS mobil ve tablette uygulanir (bilgisayarda navbar kalir)', () => {
