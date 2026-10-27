@@ -24,7 +24,15 @@ const QUESTION = {
   },
 } as unknown as Question
 
-function renderPanel(over: Partial<Parameters<typeof ExplanationPanel>[0]> = {}) {
+function setWide(matches: boolean) {
+  window.matchMedia = vi.fn().mockImplementation(() => ({
+    matches,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  })) as unknown as typeof window.matchMedia
+}
+
+function renderPanel(over: Partial<Parameters<typeof ExplanationPanel>[0]> = {}, container?: HTMLElement) {
   const onNext = vi.fn()
   const utils = render(
     <ExplanationPanel
@@ -37,6 +45,7 @@ function renderPanel(over: Partial<Parameters<typeof ExplanationPanel>[0]> = {})
       onNext={onNext}
       {...over}
     />,
+    container ? { container: container.appendChild(document.createElement('div')) } : undefined,
   )
   return { ...utils, onNext }
 }
@@ -87,12 +96,43 @@ describe('ExplanationPanel', () => {
     expect(screen.queryByRole('dialog', { name: 'Ayrıntılı çözüm' })).not.toBeInTheDocument()
   })
 
-  test('mount: panel kendini görünür kaydırır (scrollIntoView)', () => {
+  test('geniş ekranda mount: panel kendini görünür kaydırır (scrollIntoView)', () => {
+    setWide(true)
     renderPanel()
     expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
       behavior: 'smooth',
       block: 'nearest',
     })
+    expect(screen.getByRole('button', { name: 'Sonraki Soru' })).not.toHaveFocus()
+  })
+
+  test('mobilde alt panel: kabuğa yüksekliğini yazar, işaretli şıkkı panelin üstüne kaydırır, odağı Sonraki Soru düğmesine verir', () => {
+    setWide(false)
+    const scrollBy = vi.fn()
+    window.scrollBy = scrollBy as unknown as typeof window.scrollBy
+    const shell = document.createElement('div')
+    shell.setAttribute('data-responsive-quiz-shell', '')
+    const marked = document.createElement('button')
+    marked.setAttribute('data-quiz-option', 'correct')
+    shell.appendChild(marked)
+    document.body.appendChild(shell)
+    marked.getBoundingClientRect = () => ({ bottom: 600 }) as DOMRect
+    const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function(this: HTMLElement) {
+      if (this === marked) return { bottom: 600 } as DOMRect
+      return { top: 400, height: 240, bottom: 640 } as DOMRect
+    })
+    try {
+      const { unmount } = renderPanel({}, shell)
+      expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled()
+      expect(shell.style.getPropertyValue('--quiz-sheet-h')).toBe('240px')
+      expect(scrollBy).toHaveBeenCalledWith({ top: 212, behavior: 'smooth' })
+      expect(screen.getByRole('button', { name: 'Sonraki Soru' })).toHaveFocus()
+      unmount()
+      expect(shell.style.getPropertyValue('--quiz-sheet-h')).toBe('')
+    } finally {
+      rectSpy.mockRestore()
+      shell.remove()
+    }
   })
 
   test('scrollIntoView yoksa (eski tarayıcı/jsdom) crash etmez', () => {

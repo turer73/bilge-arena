@@ -127,6 +127,12 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const learningUserId = tytSocialStartBlocked ? undefined : user?.id
   const quizLimit = useQuizLimit()
   const quiz = useQuizGame(game, user?.id)
+  // Yorumlar soru kartinin ustunde acilir; mobilde sonuc paneli altta sabit
+  // durdugu icin acilan bolumu gorunume getir.
+  const commentsRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (quiz.showComments) commentsRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
+  }, [quiz.showComments])
   const isExactTytSocialSection = tytSocialV2Enabled && game === 'sosyal'
     && questionExamRef === 'TYT'
     && quiz.isDeneme
@@ -724,7 +730,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
       {/* Mobil odak modu: ilerleme, süre ve oturum kaynakları tek bakışta. */}
       <header
         className={`${quizStyles.header} sticky top-0 z-30 -mx-3 -mt-3 mb-3 overflow-hidden rounded-b-[24px] px-3 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] text-white shadow-[0_5px_0_rgba(29,78,216,.28)] md:-mx-5 md:-mt-5 md:px-5 md:pt-4 lg:top-[var(--navbar-h)] lg:rounded-t-[30px]`}
-        style={{ background: `var(--quiz-header-background, linear-gradient(135deg, ${gameDef.colorHex}, ${gameDef.colorHex}d9))` }}
+        style={{ background: `var(--quiz-header-background, linear-gradient(135deg, ${gameDef.colorHex}, ${gameDef.colorHex}d9)), var(--app-bg)` }}
       >
         <div className="pointer-events-none absolute -right-8 -top-12 h-28 w-28 rounded-full border-[20px] border-white/10" />
         <div className={`${quizStyles.wideOnly} ${quizStyles.heading}`}>
@@ -866,9 +872,11 @@ export function QuizEngine({ game }: QuizEngineProps) {
             />
 
             {quiz.showComments && (
-              <ComponentErrorBoundary label="Yorumlar" variant="inline">
-                <CommentSection questionId={question.id} isLoggedIn={!!user} />
-              </ComponentErrorBoundary>
+              <div ref={commentsRef} className="scroll-mt-24">
+                <ComponentErrorBoundary label="Yorumlar" variant="inline">
+                  <CommentSection questionId={question.id} isLoggedIn={!!user} />
+                </ComponentErrorBoundary>
+              </div>
             )}
           </>
         )}

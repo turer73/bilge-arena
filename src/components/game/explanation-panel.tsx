@@ -8,6 +8,7 @@ import { renderRichText, stripRichText } from '@/lib/utils/rich-text'
 import { LikeButton } from '@/components/social/like-button'
 import { TopicExplanationButton } from '@/components/bilge-tahta/topic-explanation-button'
 import { AcademyDialog } from '@/components/academy/academy-dialog'
+import { useWideStudy } from '@/lib/hooks/use-wide-study'
 
 interface ExplanationPanelProps {
   question: PublicQuestion
@@ -40,12 +41,38 @@ export function ExplanationPanel({
   const correctText = correctAnswer >= 0 ? question.content.options[correctAnswer] : null
   const selectedText = selectedOption >= 0 ? question.content.options[selectedOption] : null
 
-  // Panel soru kartinin USTUNDE render olur; alt siklara tiklayan kullanicinin
-  // viewport'u asagida kalabilir — mount'ta paneli gorunur yap (jsdom guard'li)
+  const wide = useWideStudy()
   const rootRef = useRef<HTMLDivElement>(null)
+  const nextRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
-    rootRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
-  }, [])
+    const root = rootRef.current
+    if (!root) return
+    // Genis ekranda panel soru kartinin USTUNDE akista durur; alt siklara
+    // tiklayan kullanicinin viewport'u asagida kalabilir, paneli gorunur yap.
+    if (wide) {
+      root.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
+      return
+    }
+    // Mobilde panel ekranin altina sabitlenir (CSS): soru yerinde kalir. Kabuk
+    // panel yuksekligi kadar alt bosluk alir ki son sik panelin arkasinda kalmasin.
+    const shell = root.closest<HTMLElement>('[data-responsive-quiz-shell]')
+    const publishHeight = () => shell?.style.setProperty('--quiz-sheet-h', `${Math.ceil(root.getBoundingClientRect().height)}px`)
+    publishHeight()
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(publishHeight) : null
+    observer?.observe(root)
+    // Isaretlenen ve dogru sik panelin ustunde gorunsun.
+    const marked = shell?.querySelectorAll<HTMLElement>('[data-quiz-option="correct"], [data-quiz-option="wrong"]')
+    const lowest = marked?.length ? marked[marked.length - 1] : null
+    if (lowest) {
+      const overlap = lowest.getBoundingClientRect().bottom + 12 - root.getBoundingClientRect().top
+      if (overlap > 0) window.scrollBy?.({ top: overlap, behavior: 'smooth' })
+    }
+    nextRef.current?.focus({ preventScroll: true })
+    return () => {
+      observer?.disconnect()
+      shell?.style.removeProperty('--quiz-sheet-h')
+    }
+  }, [wide])
 
   const topic = question.subcategory || question.category
   // Soru metni, öncül ve şıklar sunucuda soru kimliğinden okunur (maskelemeye girmez);
@@ -102,6 +129,7 @@ export function ExplanationPanel({
       {/* Alt bar: butonlar + sosyal ikonlar */}
       <div data-quiz-feedback-actions className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
+          ref={nextRef}
           type="button"
           onClick={onNext}
           className="min-h-11 w-full rounded-xl bg-[var(--focus)] px-5 py-2.5 text-sm font-bold tracking-wide text-white shadow-[0_4px_0_var(--app-accent-strong)] transition-all hover:bg-[var(--focus-light)] active:translate-y-1 active:shadow-none sm:w-auto"
@@ -111,7 +139,7 @@ export function ExplanationPanel({
         </button>
 
         {/* Aksiyon ikonları */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div data-quiz-feedback-tools className="flex flex-wrap items-center gap-2">
           {(solution || correctText) && (
             <button
               type="button"

@@ -351,3 +351,50 @@
     font-weight: 800;
   }
 }
+
+/* Mobil cevap sonucu: kart sorunun ustune eklenip sayfayi itmez; ekranin altina
+   sabitlenen, arkasi kaydirilabilen bir panel olur. Soru ve isaretli siklar yerinde
+   gorunur, "Sonraki Soru" basparmagin altindadir. --quiz-sheet-h panelin olculen
+   yuksekligi (explanation-panel.tsx); kabuk o kadar alt bosluk alir. */
+@keyframes quizSheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@media (max-width: 767px) {
+  .root:has([data-quiz-feedback]) { padding-bottom: calc(var(--quiz-sheet-h, 45dvh) + 16px); }
+  .root [data-quiz-feedback] {
+    position: fixed;
+    z-index: 40;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-width: 440px;
+    max-height: min(62dvh, 560px);
+    margin: 0 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+    border-width: 2px 2px 0;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -14px 36px rgba(2, 8, 22, .55);
+    animation: quizSheetUp .22s ease-out both;
+  }
+  /* Panel icerigin ustunde durur: yari saydam renk tonu opak kart zeminine bindirilir. */
+  .root [data-quiz-feedback='correct'] { background: linear-gradient(var(--app-success-tint), var(--app-success-tint)), var(--app-card); }
+  .root [data-quiz-feedback='wrong'] { background: linear-gradient(var(--app-danger-tint), var(--app-danger-tint)), var(--app-card); }
+  .root [data-quiz-feedback] [role='status'] { font-size: 1.0625rem; line-height: 1.45; }
+  .root [data-quiz-solution-summary] { font-size: calc(.9375rem * var(--quiz-font-scale, 1)); line-height: 1.6; }
+  .root [data-quiz-feedback-actions] { gap: 10px; }
+  .root [data-quiz-feedback-tools] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px 44px;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  /* Metinli iki dugme kalan alani paylasir; begen ve yorum 44 px dokunma alaninda kalir. */
+  .root [data-quiz-feedback-tools] > :nth-child(-n + 2) { min-width: 0; }
+  .root [data-quiz-feedback-tools] > :nth-child(n + 3) { min-width: 44px; }
+  .root [data-quiz-feedback-tools] > :is(button, div) > button,
+  .root [data-quiz-feedback-tools] > button { justify-content: center; }
+  .root [data-quiz-feedback-tools] :is(button) { white-space: nowrap; }
+}
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .root [data-quiz-feedback] { animation: none; }
+}
