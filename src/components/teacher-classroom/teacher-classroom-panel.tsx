@@ -366,7 +366,7 @@ export function TeacherClassroomPanel() {
   if (!user) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <GraduationCap className="mx-auto h-11 w-11 text-[var(--focus)]" aria-hidden="true" />
+        <GraduationCap className="mx-auto h-11 w-11 text-[var(--focus-text)]" aria-hidden="true" />
         <h1 className="mt-4 text-xl font-black">Öğretmen paneli için giriş yap</h1>
         <Link href="/giris" className="btn-primary mt-5 inline-flex min-h-11 items-center rounded-xl px-6 text-sm font-bold">Giriş yap</Link>
       </div>
@@ -387,7 +387,7 @@ export function TeacherClassroomPanel() {
             <RefreshCw className="h-4 w-4" aria-hidden="true" /> Yeniden dene
           </button>
         )}
-        <Link href="/arena/sinif" className="mt-5 inline-flex min-h-11 items-center rounded-xl px-4 font-bold text-[var(--focus)]">Sınıflarıma dön</Link>
+        <Link href="/arena/sinif" className="mt-5 inline-flex min-h-11 items-center rounded-xl px-4 font-bold text-[var(--focus-text)]">Sınıflarıma dön</Link>
       </div>
     )
   }
@@ -403,7 +403,7 @@ export function TeacherClassroomPanel() {
               Sınıf daveti oluştur, soru bankası filtrelerinden ödev yayımla ve yalnız minimum ilerleme sayılarını izle.
             </p>
           </div>
-          <Link href="/arena/sinif" className="inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold text-[var(--focus)] hover:bg-[var(--focus)]/10">Öğrenci görünümüne dön</Link>
+          <Link href="/arena/sinif" className="inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold text-[var(--focus-text)] hover:bg-[var(--focus)]/10">Öğrenci görünümüne dön</Link>
         </div>
         <div className="mt-4 flex items-start gap-3 rounded-xl border border-[var(--growth)]/30 bg-[var(--growth)]/5 p-4 text-sm leading-6">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[var(--growth)]" aria-hidden="true" />
@@ -453,7 +453,7 @@ export function TeacherClassroomPanel() {
                   setSelectedId(classroom.id)
                 }}
                 aria-current={selectedId === classroom.id ? 'page' : undefined}
-                className="mb-1 flex min-h-12 w-full items-center justify-between gap-2 rounded-xl px-3 text-left text-sm hover:bg-[var(--surface)] aria-[current=page]:bg-[var(--focus)]/10 aria-[current=page]:font-black aria-[current=page]:text-[var(--focus)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+                className="mb-1 flex min-h-12 w-full items-center justify-between gap-2 rounded-xl px-3 text-left text-sm hover:bg-[var(--surface)] aria-[current=page]:bg-[var(--focus)]/10 aria-[current=page]:font-black aria-[current=page]:text-[var(--focus-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
               >
                 <span className="truncate">{classroom.name}</span>
                 <span className="shrink-0 text-xs">{classroom.activeStudentCount} öğrenci</span>
@@ -475,7 +475,7 @@ export function TeacherClassroomPanel() {
                     <h2 className="text-xl font-black">{overview.classroom.name}</h2>
                     <p className="mt-1 text-sm text-[var(--text-sub)]">{overview.classroom.activeStudentCount} görünür aktif öğrenci · {overview.assignments.length} ödev</p>
                   </div>
-                  <button type="button" onClick={() => void loadOverview(selectedId)} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-bold text-[var(--focus)] hover:bg-[var(--focus)]/10">
+                  <button type="button" onClick={() => void loadOverview(selectedId)} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-bold text-[var(--focus-text)] hover:bg-[var(--focus)]/10">
                     <RefreshCw className="h-4 w-4" aria-hidden="true" /> Yenile
                   </button>
                 </div>
@@ -541,7 +541,7 @@ export function TeacherClassroomPanel() {
               </section>
 
               <section aria-labelledby="invite-title" className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-5 md:p-6">
-                <h2 id="invite-title" className="flex items-center gap-2 text-lg font-black"><Link2 className="h-5 w-5 text-[var(--focus)]" aria-hidden="true" /> Özel davet</h2>
+                <h2 id="invite-title" className="flex items-center gap-2 text-lg font-black"><Link2 className="h-5 w-5 text-[var(--focus-text)]" aria-hidden="true" /> Özel davet</h2>
                 <form onSubmit={issueInvite} className="mt-4 grid gap-3 sm:grid-cols-3">
                   <label className="text-sm font-bold">Geçerlilik (saat)
                     <input type="number" min={1} max={168} value={inviteHours} onChange={(event) => { inviteRef.current = null; setInviteHours(Number(event.target.value)) }} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3" />
@@ -575,7 +575,7 @@ export function TeacherClassroomPanel() {
               </section>
 
               <section aria-labelledby="publish-title" className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-5 md:p-6">
-                <h2 id="publish-title" className="flex items-center gap-2 text-lg font-black"><BookPlus className="h-5 w-5 text-[var(--focus)]" aria-hidden="true" /> Filtrelerden ödev yayımla</h2>
+                <h2 id="publish-title" className="flex items-center gap-2 text-lg font-black"><BookPlus className="h-5 w-5 text-[var(--focus-text)]" aria-hidden="true" /> Filtrelerden ödev yayımla</h2>
                 <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">Tarayıcı soru kimliği veya cevap göndermez; aktif soru seçimini sunucu yapar ve veritabanı tekrar doğrular.</p>
                 <form onSubmit={publish} className="mt-4 grid gap-4 sm:grid-cols-2">
                   <label className="text-sm font-bold sm:col-span-2">Ödev başlığı

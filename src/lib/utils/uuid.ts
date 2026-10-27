@@ -23,6 +23,18 @@ export function isValidUuid(value: unknown): value is string {
 }
 
 /**
+ * Gecerli UUID'yi kanonik (kucuk harf, tireli) bicime indirir; degilse null.
+ *
+ * PostgreSQL uuid girdisinde buyuk harf, tiresiz ve {...} yazimlarini ayni
+ * deger sayar. Bir UUID metin (TEXT) anahtar olarak saklaniyorsa bu yazimlar
+ * ayri kayit olur; ornegin oda istatistigi tekrar korumasi bu yolla delinir
+ * (multiplayer_room_stats_log). Metin anahtara yazmadan once bunu kullan.
+ */
+export function canonicalUuid(value: unknown): string | null {
+  return isValidUuid(value) ? value.toLowerCase() : null
+}
+
+/**
  * Bir array'den gecerli UUID'leri filtrele (maksimum N), case-insensitive.
  * Sayi sinirlamasi uuid[] PostgreSQL perf icin onerilir (default 50).
  */

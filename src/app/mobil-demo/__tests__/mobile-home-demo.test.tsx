@@ -14,6 +14,9 @@ vi.mock('next/image', () => ({
   default: ({ priority: _priority, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { priority?: boolean }) => (
     <img alt={alt ?? ''} {...props} />
   ),
+  getImageProps: ({ src, sizes }: { src: string; sizes?: string }) => ({
+    props: { src: `/_next/image?url=${encodeURIComponent(src)}&w=828&q=75`, srcSet: `/_next/image?url=${encodeURIComponent(src)}&w=640&q=75 640w`, sizes },
+  }),
 }))
 vi.mock('@/components/study/today-plan-focus', () => ({
   TodayPlanFocus: (props: { game: string; userId: string; examRef: string | null; selectedCategory: null; showStickyMobileAction: boolean }) => {
@@ -30,6 +33,23 @@ import { MobileHomeDemo } from '../mobile-home-demo'
 beforeEach(() => {
   vi.clearAllMocks()
   mockUsePathname.mockReturnValue('/mobil-demo')
+})
+
+describe('MobileHomeDemo mobil LCP görseli', () => {
+  test('hero manzarası eager yüklenir ve yalnız dar ekran için yüksek öncelikli ön yüklenir', async () => {
+    render(<MobileHomeDemo mode="live" userId="user-1" />)
+    const hero = document.querySelector('img[data-mobile-landscape]')
+    expect(hero).not.toBeNull()
+    // Tembel yükleme LCP isteğini 4,3 s geciktiriyordu.
+    expect(hero).toHaveAttribute('loading', 'eager')
+    expect(hero).not.toHaveAttribute('fetchpriority')
+    await waitFor(() => {
+      const link = document.head.querySelector('link[rel="preload"][as="image"][media="(max-width: 767px)"]')
+      expect(link).not.toBeNull()
+      expect(link).toHaveAttribute('fetchpriority', 'high')
+      expect(link?.getAttribute('imagesrcset')).toContain('academy-landscape.png')
+    })
+  })
 })
 
 describe('MobileHomeDemo ders rengiyle yazılan metin', () => {

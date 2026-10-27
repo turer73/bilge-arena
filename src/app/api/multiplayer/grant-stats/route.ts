@@ -32,12 +32,20 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getAuthAndJwt } from '@/lib/rooms/api-helpers'
 import { verifyRoomFirstPlace } from '@/lib/rooms/server-fetch'
+import { canonicalUuid } from '@/lib/utils/uuid'
 
 const grantLimiter = createRateLimiter('mp-grant-stats', 20, 60_000)
 
 // isFirstPlace geriye-uyum icin kabul edilir ama YOK SAYILIR (server dogrular).
+// roomId: oda-DB'de UUID, tekrar korumasi (multiplayer_room_stats_log.room_id)
+// ise TEXT. Ayni odanin buyuk harf/tiresiz/{...} yazimlari dogrulamadan gecip
+// ayri kayit sayilmasin diye yalniz tireli UUID kabul edilir ve kucuk harfe
+// indirilir (genel tarama 2026-10-26, disc #2949).
 const BodySchema = z.object({
-  roomId: z.string().min(1).max(64),
+  roomId: z
+    .string()
+    .refine((value) => canonicalUuid(value) !== null)
+    .transform((value) => value.toLowerCase()),
   isFirstPlace: z.boolean().optional(),
 })
 

@@ -49,7 +49,7 @@ function IntroCard({
   return (
     <section className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-sm md:p-6">
       <div className="flex items-start gap-4">
-        <div className="rounded-2xl bg-[var(--focus)]/10 p-3 text-[var(--focus)]" aria-hidden="true">
+        <div className="rounded-2xl bg-[var(--focus)]/10 p-3 text-[var(--focus-text)]" aria-hidden="true">
           <BrainCircuit className="h-7 w-7" />
         </div>
         <div className="min-w-0 flex-1">
@@ -101,7 +101,7 @@ function SummaryCard({
           <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--text-sub)]">KEŞİF ADIMI TAMAM · BAŞLANGIÇ TAHMİNİ</p>
           <h2 id="diagnostic-summary-title" className="mt-1 text-lg font-bold text-[var(--text)]">Kazanım özeti</h2>
         </div>
-        <Link href={`/arena/hakimiyet?${new URLSearchParams({ game, exam_ref: examRef })}`} className="text-xs font-bold text-[var(--focus)] hover:underline">
+        <Link href={`/arena/hakimiyet?${new URLSearchParams({ game, exam_ref: examRef })}`} className="text-xs font-bold text-[var(--focus-text)] hover:underline">
           Hâkimiyet haritası
         </Link>
       </div>
@@ -130,7 +130,7 @@ function SummaryCard({
         <button
           type="button"
           onClick={() => onPractice(weakest)}
-          className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-[var(--focus)]/30 bg-[var(--focus)]/5 px-4 py-3 text-left text-sm font-bold text-[var(--focus)] hover:bg-[var(--focus)]/10"
+          className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-[var(--focus)]/30 bg-[var(--focus)]/5 px-4 py-3 text-left text-sm font-bold text-[var(--focus-text)] hover:bg-[var(--focus)]/10"
         >
           <span className="flex items-center gap-2">
             <Target className="h-4 w-4" aria-hidden="true" />
@@ -141,7 +141,7 @@ function SummaryCard({
       )}
       <Link
         href="/arena/calisma#gunluk-plan"
-        className="flex min-h-11 w-full items-center justify-center text-xs font-bold text-[var(--text-sub)] hover:text-[var(--focus)] hover:underline"
+        className="flex min-h-11 w-full items-center justify-center text-xs font-bold text-[var(--text-sub)] hover:text-[var(--focus-text)] hover:underline"
       >
         Günlük çalışma planına dön
       </Link>
@@ -240,7 +240,7 @@ export default function TaniClient() {
         <p className="mt-2 text-sm text-[var(--text-sub)]">
           Ders ve sınav kapsamı birlikte, yayınlandığı biçimde belirtilmelidir.
         </p>
-        <Link href="/arena/calisma" className="mt-5 inline-flex text-sm font-bold text-[var(--focus)] hover:underline">
+        <Link href="/arena/calisma" className="mt-5 inline-flex text-sm font-bold text-[var(--focus-text)] hover:underline">
           Çalışmaya dön
         </Link>
       </main>
@@ -256,7 +256,7 @@ export default function TaniClient() {
           <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--text-sub)]">{subjectName.toLocaleUpperCase('tr-TR')} · İÇ TAKSONOMİ</p>
           <h1 className="mt-1 text-xl font-bold text-[var(--text)]">Seviyeni ölç</h1>
         </div>
-        <Link href="/arena/calisma" className="text-xs font-bold text-[var(--focus)] hover:underline">Çalışmaya dön</Link>
+        <Link href="/arena/calisma" className="text-xs font-bold text-[var(--focus-text)] hover:underline">Çalışmaya dön</Link>
       </header>
 
       {diagnostic.loading ? (
@@ -266,7 +266,7 @@ export default function TaniClient() {
       ) : diagnostic.error === 'load' || !diagnostic.response ? (
         <div className="rounded-2xl border border-[var(--danger)]/30 bg-[var(--danger)]/5 p-5 text-sm text-[var(--text)]">
           <p>Kısa tarama şu an yüklenemedi.</p>
-          <button type="button" onClick={() => void diagnostic.refresh()} className="mt-3 inline-flex items-center gap-2 font-bold text-[var(--focus)]">
+          <button type="button" onClick={() => void diagnostic.refresh()} className="mt-3 inline-flex items-center gap-2 font-bold text-[var(--focus-text)]">
             <RefreshCw className="h-4 w-4" aria-hidden="true" /> Yeniden dene
           </button>
         </div>

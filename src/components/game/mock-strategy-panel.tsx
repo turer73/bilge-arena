@@ -35,7 +35,7 @@ export function MockStrategyPanel({ analysis }: { analysis: MockStrategyAnalysis
       aria-labelledby="mock-strategy-title"
       className="animate-fadeUp rounded-xl border border-[var(--focus)]/35 bg-[var(--surface)] p-4"
     >
-      <p className="text-[10px] font-bold tracking-widest text-[var(--focus)]">AKILLI DENEME</p>
+      <p className="text-[10px] font-bold tracking-widest text-[var(--focus-text)]">AKILLI DENEME</p>
       <h2 id="mock-strategy-title" className="mt-1 font-display text-base font-black">
         Deneme stratejin
       </h2>

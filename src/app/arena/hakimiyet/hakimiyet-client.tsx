@@ -67,7 +67,7 @@ export default function HakimiyetClient() {
         <p className="mt-2 text-sm text-[var(--text-sub)]">
           Ders kapsamı tanınamadı. Yayınlanmış bir ders bağlantısı açmayı deneyin.
         </p>
-        <Link href="/arena/calisma" className="mt-5 inline-flex text-xs font-bold text-[var(--focus)] hover:underline">
+        <Link href="/arena/calisma" className="mt-5 inline-flex text-xs font-bold text-[var(--focus-text)] hover:underline">
           Çalışmaya dön
         </Link>
       </main>
@@ -81,7 +81,7 @@ export default function HakimiyetClient() {
           <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--text-sub)]">ÖĞRENME KANITLARIM</p>
           <h1 className="mt-1 text-xl font-bold text-[var(--text)]">Hâkimiyet Haritam</h1>
         </div>
-        <Link href="/arena/calisma" className="text-xs font-bold text-[var(--focus)] hover:underline">
+        <Link href="/arena/calisma" className="text-xs font-bold text-[var(--focus-text)] hover:underline">
           Çalışma ortamına dön
         </Link>
       </div>

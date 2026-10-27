@@ -47,7 +47,7 @@ export function PaperPackCreateClient({
   if (!user) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <LockKeyhole className="mx-auto h-10 w-10 text-[var(--focus)]" aria-hidden="true" />
+        <LockKeyhole className="mx-auto h-10 w-10 text-[var(--focus-text)]" aria-hidden="true" />
         <h1 className="mt-4 text-xl font-black">Giriş yapman gerekiyor</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">Kağıt paketi yalnız sana ait günlük plandan hazırlanır.</p>
         <Link href="/giris" className="btn-primary mt-6 inline-flex min-h-11 items-center rounded-xl px-7 text-sm font-bold">Giriş yap</Link>
@@ -57,7 +57,7 @@ export function PaperPackCreateClient({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 md:px-6 md:py-10">
-      <Link href="/arena/calisma" className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-bold text-[var(--focus)] hover:bg-[var(--focus)]/10">← Çalışmaya dön</Link>
+      <Link href="/arena/calisma" className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-bold text-[var(--focus-text)] hover:bg-[var(--focus)]/10">← Çalışmaya dön</Link>
       <section className="mt-3 overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--card-bg)] shadow-sm">
         <div className="border-b border-[var(--border)] bg-[var(--bg-secondary)] px-5 py-4 md:px-7">
           <p className="text-[10px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">BUGÜNÜN 15&apos;İ · KAĞIT/PDF</p>
@@ -71,7 +71,7 @@ export function PaperPackCreateClient({
 
           <ul className="grid gap-3 text-sm leading-6 sm:grid-cols-2">
             <li className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-              <FileDown className="mb-2 h-5 w-5 text-[var(--focus)]" aria-hidden="true" />
+              <FileDown className="mb-2 h-5 w-5 text-[var(--focus-text)]" aria-hidden="true" />
               Soru, seçenek, optik form ve yalnız cevap sayfasını açan QR.
             </li>
             <li className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
@@ -91,7 +91,7 @@ export function PaperPackCreateClient({
           {error && (
             <div role="alert" className="rounded-xl border border-[var(--urgency)]/30 bg-[var(--urgency)]/5 p-4 text-sm">
               <p>Paket hazırlanamadı. Bugünkü planın henüz oluşmamış veya geçici bir bağlantı sorunu olabilir.</p>
-              <button type="button" onClick={() => void create()} disabled={creating} className="mt-3 inline-flex min-h-11 items-center gap-2 font-bold text-[var(--focus)]">
+              <button type="button" onClick={() => void create()} disabled={creating} className="mt-3 inline-flex min-h-11 items-center gap-2 font-bold text-[var(--focus-text)]">
                 <RefreshCw className="h-4 w-4" aria-hidden="true" /> Aynı isteği yeniden dene
               </button>
             </div>

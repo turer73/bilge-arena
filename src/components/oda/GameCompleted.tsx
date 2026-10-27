@@ -12,7 +12,7 @@
 
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
 import { isScoreboardMember } from '@/lib/rooms/member-status'
@@ -89,6 +89,24 @@ export function GameCompleted({ state, userId }: GameCompletedProps) {
     grantedRef.current = room.id
     void grantStatsAndCheckBadges(room.id, isFirstPlace)
   }, [room.state, room.id, isArchived, isFirstPlace])
+
+  // Paylasim baglantisi: baslik/skor/kategori sunucuda oda-DB'den okunup
+  // imzalanir (disc #2950). Yanit gelene kadar genel /p/[code] kullanilir.
+  const [signedShare, setSignedShare] = useState<{ roomId: string; path: string } | null>(null)
+  useEffect(() => {
+    if (isArchived || room.state !== 'completed') return
+    const controller = new AbortController()
+    fetch(`/api/rooms/${encodeURIComponent(room.id)}/share-link`, { method: 'POST', signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { path?: unknown } | null) => {
+        if (body && typeof body.path === 'string' && body.path.startsWith('/p/')) {
+          setSignedShare({ roomId: room.id, path: body.path })
+        }
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [room.id, room.state, isArchived])
+  const sharePath = signedShare?.roomId === room.id ? signedShare.path : `/p/${room.code}`
 
   return (
     <section
@@ -168,19 +186,16 @@ export function GameCompleted({ state, userId }: GameCompletedProps) {
           Codex P1 fix: NEXT_PUBLIC_SITE_URL ile SSR/client tutarli URL
           (window.location.origin SSR'da yok, hidrasyon mismatch yapiyordu)
 
-          T8 PR3: og_title/og_score/og_category querystring eklenir, sosyal
-          medya crawler page generateMetadata ile dinamik OG image URL uretir
-          (DB fetch YOK, anon crawler dostu). */}
+          /p/[code] public share route (auth YOK, sosyal medya tarayicisi
+          dostu). Kart degerleri sunucunun imzaladigi sharePath'ten gelir;
+          istemci baslik/skor yazmaz (disc #2950). */}
       {!isArchived && (() => {
         const me = ranked.find((r) => r.user_id === userId)
         const score = me?.score ?? 0
-        const ogParams = new URLSearchParams({ og_title: room.title })
-        if (score > 0) ogParams.set('og_score', String(score))
-        if (room.category) ogParams.set('og_category', room.category)
-        // Codex P1 fix (T8 PR3 follow-up): /p/[code] public share route
-        // (auth YOK, sosyal medya crawler dostu). /oda/[code] auth-gated
-        // crawler /giris'e redirect olurdu.
-        const shareUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/p/${room.code}?${ogParams.toString()}`
+        // Sosyal ağlar göreli adresi paylaşamaz; env yoksa kanonik alan adına düş
+        // (klipper code-review bulgusu; depodaki siteUrl kalıbıyla aynı).
+        const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim().replace(/\/+$/, '')
+        const shareUrl = `${siteUrl}${sharePath}`
         const shareText =
           score > 0
             ? `Bilge Arena'da "${room.title}" oyununu bitirdim, ${score} puan topladım!`

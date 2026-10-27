@@ -11,7 +11,10 @@
  *   1200x630 PNG döner, mobil cihazlarda OG card preview gösterir.
  */
 
-import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
+
+const SECRET = 'test-share-secret-0123456789abcdef0123456789'
+afterEach(() => vi.unstubAllEnvs())
 
 // next/og ImageResponse mock (gerçek satori render gereksiz, smoke test)
 // `new ImageResponse(jsx, opts)` constructor kullanildigi icin class mock
@@ -20,8 +23,10 @@ vi.mock('next/og', () => ({
     status = 200
     headers = new Map([['content-type', 'image/png']])
     _opts: unknown
+    _jsx: unknown
     _jsxRendered = true
-    constructor(_jsx: unknown, opts: unknown) {
+    constructor(jsx: unknown, opts: unknown) {
+      this._jsx = jsx
       this._opts = opts
     }
   },
@@ -56,28 +61,31 @@ describe('/api/og/result/[code] route', () => {
     expect(res._opts.fonts).toHaveLength(1)
   })
 
-  test('2) querystring title kullanilir', async () => {
+  // disc #2950: yalniz imzali degerler cizilir; imzasiz URL metni karta girmez.
+  test('2) imzasiz title/score/category cizilmez, genel kart cizilir', async () => {
+    vi.stubEnv('SHARE_LINK_SECRET', SECRET)
     const { GET } = await import('../route')
-    const request = new Request(
-      'https://bilgearena.com/api/og/result/CODE01?title=Test%20Oda',
-    ) as unknown as Parameters<typeof GET>[0]
-    const params = Promise.resolve({ code: 'CODE01' })
-    const res = (await GET(request, { params })) as unknown as {
-      _jsxRendered: boolean
+    for (const query of ['title=SAHTE&score=999&category=matematik', 'og_title=SAHTE&og_score=999&og_category=matematik']) {
+      const request = new Request(`https://bilgearena.com/api/og/result/BLZGE2?${query}`) as unknown as Parameters<typeof GET>[0]
+      const res = (await GET(request, { params: Promise.resolve({ code: 'BLZGE2' }) })) as unknown as { _jsx: unknown }
+      const text = JSON.stringify(res._jsx)
+      expect(text, query).toContain('Bilge Arena Yarışması')
+      expect(text, query).not.toContain('SAHTE')
+      expect(text, query).not.toContain('999')
     }
-    expect(res._jsxRendered).toBe(true)
   })
 
-  test('3) score + category querystring optional', async () => {
+  test('3) imzali title, score ve category cizilir', async () => {
+    vi.stubEnv('SHARE_LINK_SECRET', SECRET)
+    const { signShareClaims } = await import('@/lib/rooms/share-link')
+    const signed = await signShareClaims({ code: 'BLZGE2', title: 'Genel Kultur Gecesi', score: 850, category: 'matematik' }, SECRET)
     const { GET } = await import('../route')
-    const request = new Request(
-      'https://bilgearena.com/api/og/result/X?title=A&score=850&category=matematik',
-    ) as unknown as Parameters<typeof GET>[0]
-    const params = Promise.resolve({ code: 'X' })
-    const res = (await GET(request, { params })) as unknown as {
-      _jsxRendered: boolean
-    }
-    expect(res._jsxRendered).toBe(true)
+    const request = new Request(`https://bilgearena.com/api/og/result/BLZGE2?${signed!.toString()}`) as unknown as Parameters<typeof GET>[0]
+    const res = (await GET(request, { params: Promise.resolve({ code: 'BLZGE2' }) })) as unknown as { _jsx: unknown }
+    const text = JSON.stringify(res._jsx)
+    expect(text).toContain('Genel Kultur Gecesi')
+    expect(text).toContain('850')
+    expect(text).toContain('Kategori: matematik')
   })
 
   test('4) Inter-Bold.woff fetch ilk cagri', async () => {

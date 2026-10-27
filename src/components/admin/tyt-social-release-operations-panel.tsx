@@ -252,7 +252,7 @@ export function TytSocialReleaseOperationsPanel() {
                   <td className="px-3 py-2">{item.sourceTitle ?? 'Kaynak yok'}<br /><span className="text-[var(--text-sub)]">{item.licenseCode ?? 'lisans yok'}</span></td>
                   <td className="px-3 py-2">{workflowLabels[item.workflowState]}</td>
                   <td className="px-3 py-2">
-                    <button type="button" onClick={() => choose(item)} className="min-h-11 rounded-lg border border-[var(--focus)] px-3 font-bold text-[var(--focus)]">İncele</button>
+                    <button type="button" onClick={() => choose(item)} className="min-h-11 rounded-lg border border-[var(--focus)] px-3 font-bold text-[var(--focus-text)]">İncele</button>
                   </td>
                 </tr>
               ))}

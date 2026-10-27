@@ -21,6 +21,16 @@ vi.mock('next/image', () => ({
     const { fill: _fill, priority: _priority, ...rest } = props
     return <img alt="" {...rest} />
   },
+  // getImageProps (art direction / preload): optimizer yerine belirlenimci srcset.
+  getImageProps: (props: { src: string; alt?: string; sizes?: string; loading?: string }) => ({
+    props: {
+      src: String(props.src),
+      alt: props.alt ?? '',
+      sizes: props.sizes,
+      loading: props.loading,
+      srcSet: `${String(props.src)} 1x`,
+    },
+  }),
 }))
 
 // framer-motion mock — animasyonsuz render

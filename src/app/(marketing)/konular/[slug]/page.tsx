@@ -180,7 +180,7 @@ export default async function KonuPage({
                       key={oi}
                       className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm ${
                         oi === sq.correct
-                          ? 'border border-[var(--focus)]/40 bg-[var(--focus-bg)] font-semibold text-[var(--focus)]'
+                          ? 'border border-[var(--focus)]/40 bg-[var(--focus-bg)] font-semibold text-[var(--focus-text)]'
                           : 'text-[var(--text-sub)]'
                       }`}
                     >

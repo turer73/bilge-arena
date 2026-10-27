@@ -101,7 +101,7 @@ export default async function RehberArticlePage({
 
       {/* Baslik */}
       <header className="mb-8">
-        <div className="mb-3 flex items-center gap-2 text-[11px] font-bold text-[var(--focus)]">
+        <div className="mb-3 flex items-center gap-2 text-[11px] font-bold text-[var(--focus-text)]">
           <span className="rounded-md bg-[var(--focus-bg)] px-2 py-0.5">{a.category}</span>
           <span className="text-[var(--text-muted)]">{a.readingMinutes} dk okuma</span>
           <span className="text-[var(--text-muted)]">
@@ -114,7 +114,7 @@ export default async function RehberArticlePage({
           <span>Hazırlayan</span>
           <Link
             href="/hakkinda#icerik-sorumlulugu"
-            className="font-semibold text-[var(--text-sub)] hover:text-[var(--focus)] hover:underline"
+            className="font-semibold text-[var(--text-sub)] hover:text-[var(--focus-text)] hover:underline"
           >
             Bilge Arena İçerik Ekibi
           </Link>
@@ -158,7 +158,7 @@ export default async function RehberArticlePage({
                   href={source.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-semibold text-[var(--focus)] hover:underline"
+                  className="font-semibold text-[var(--focus-text)] hover:underline"
                 >
                   {source.label}
                 </a>

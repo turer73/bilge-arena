@@ -125,7 +125,7 @@ export function AdminSidebar() {
                 href={href}
                 className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-[var(--focus-bg)] text-[var(--focus)] font-bold'
+                    ? 'bg-[var(--focus-bg)] text-[var(--focus-text)] font-bold'
                     : 'text-[var(--text-sub)] hover:bg-[var(--card)] hover:text-[var(--text)]'
                 }`}
               >
