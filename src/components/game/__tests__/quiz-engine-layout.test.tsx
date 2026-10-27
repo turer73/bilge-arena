@@ -436,6 +436,24 @@ describe('QuizEngine yerleşim', () => {
     expect(panel.compareDocumentPosition(firstOption) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
+  test('answered: yorumlar açılınca bölüm görünüme getirilir (mobilde sonuç paneli altta sabit)', () => {
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    quizGame.showComments = true
+    try {
+      render(<QuizEngine game="matematik" />)
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' })
+      expect(scrollIntoView.mock.contexts.some((el) => (el as HTMLElement).classList?.contains('scroll-mt-24'))).toBe(true)
+    } finally {
+      quizGame.showComments = false
+    }
+  })
+
+  test('üst bar arkasında opak zemin taşır (kaydırılan soru metni görünmez)', () => {
+    render(<QuizEngine game="matematik" />)
+    expect(document.querySelector('header')?.getAttribute('style')).toContain('var(--app-bg)')
+  })
+
   test('playing: panel render edilmez', () => {
     quizStoreValue.state = 'playing'
     render(<QuizEngine game="matematik" />)
