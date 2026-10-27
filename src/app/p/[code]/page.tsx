@@ -1,107 +1,101 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { slugToLabel } from '@/lib/rooms/categories'
+import { isShareRoomCode, verifyShareParams, type ShareClaims } from '@/lib/rooms/share-link'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 
 /**
  * Bilge Arena Oda: /p/[code] public share landing
- * Sprint 2C Task 8 PR3 + Codex P1 fix (T8 PR3 follow-up)
  *
- * Codex review (PR #68 commit 303e199d6e) yakaladi: generateMetadata
- * /oda/[code] auth-gated route'da — sosyal medya crawler oturumsuz hit
- * eder, page redirect /giris yapar. Crawler metadata goremez, OG card
- * preview kirik.
+ * Auth YOK: sosyal medya tarayicisi oturumsuz gelir, OG meta etiketlerini
+ * buradan okur (/oda/[code] auth-gated oldugu icin tarayici /giris'e gider).
  *
- * Cozum: Public share route /p/[code]:
- *   - Auth YOK (proxy.ts middleware sadece /admin matcher)
- *   - generateMetadata querystring driven (og_title/og_score/og_category)
- *   - Page body: minimal sonuc + "Sen de oyna" CTA -> /oda/[code] redirect
- *   - Sosyal medya crawler bu route'tan OG meta tag'lerini fetch edip
- *     /api/og/result/[code]?title=... ile dynamic kart cizer
- *
- * Plan-deviation #85 (yeni): /p/ kisa public prefix. /share/ alternative
- * olabilirdi ama URL'de scrolling icin kisa tercih. Auth-gated /oda/[code]
- * gercek lobby kalir; /p/[code] sadece SHARED meta + CTA.
+ * Guvenlik (genel tarama 2026-10-26, disc #2950): baslik, skor ve kategori
+ * eskiden dogrudan URL'den basiliyordu; var olmayan kod ve uydurma metinle
+ * bilgearena.com alanindan sahte sonuc karti uretilebiliyordu. Artik degerler
+ * yalniz sunucunun imzaladigi baglantidan gelir (POST /api/rooms/[id]/share-link).
+ * Imzasi tutmayan istekte URL'deki metin HIC kullanilmaz; genel kart gosterilir.
  */
-export async function generateMetadata({
-  params,
-  searchParams,
-}: {
+
+const GENERIC_TITLE = 'Bilge Arena oyun sonucu'
+
+type ShareRouteProps = {
   params: Promise<{ code: string }>
   searchParams: Promise<Record<string, string | string[] | undefined>>
-}): Promise<Metadata> {
+}
+
+type ResolvedShare = { code: string; claims: ShareClaims | null; signature: string | null }
+
+async function resolveShare({ params, searchParams }: ShareRouteProps): Promise<ResolvedShare> {
   const { code } = await params
-  const sp = await searchParams
+  if (!isShareRoomCode(code)) notFound()
+  const query = await searchParams
+  const claims = await verifyShareParams(code, query)
+  // İmza yalnız doğrulandıysa taşınır; istek kapsamında kalır.
+  const signature = claims && typeof query.og_sig === 'string' ? query.og_sig : null
+  return { code, claims, signature }
+}
 
-  const ogTitle =
-    typeof sp.og_title === 'string' ? sp.og_title : 'Bilge Arena Oda'
-  const ogScore = typeof sp.og_score === 'string' ? sp.og_score : undefined
-  const ogCategory =
-    typeof sp.og_category === 'string' ? sp.og_category : undefined
+function ogImagePath({ code, claims, signature }: ResolvedShare): string {
+  const base = `/api/og/result/${encodeURIComponent(code)}`
+  if (!claims || !signature) return base
+  // Imzali degerler OG route'a aynen iletilir; route imzayi yeniden dogrular.
+  const query = new URLSearchParams({ og_title: claims.title })
+  if (claims.score !== null) query.set('og_score', String(claims.score))
+  if (claims.category !== null) query.set('og_category', claims.category)
+  query.set('og_sig', signature)
+  return `${base}?${query.toString()}`
+}
 
-  const ogParams = new URLSearchParams({ title: ogTitle })
-  if (ogScore) ogParams.set('score', ogScore)
-  if (ogCategory) ogParams.set('category', ogCategory)
+export async function generateMetadata(props: ShareRouteProps): Promise<Metadata> {
+  const share = await resolveShare(props)
+  const { claims } = share
 
-  const description = ogCategory
-    ? `${slugToLabel(ogCategory)} kategorisinde Bilge Arena yarışması`
+  const title = claims?.title ?? GENERIC_TITLE
+  const description = claims?.category
+    ? `${slugToLabel(claims.category)} kategorisinde Bilge Arena yarışması`
     : 'Bilge Arena oyun odası'
+  const image = ogImagePath(share)
 
   return {
-    title: `${ogTitle} — Bilge Arena`,
+    // Kok layout '%s | Bilge Arena' sablonu markayi ekler.
+    title,
     description,
+    robots: { index: false, follow: true },
     openGraph: {
       ...OG_DEFAULTS,
-      title: ogTitle,
+      title,
       description,
-      images: [
-        {
-          url: `/api/og/result/${code}?${ogParams.toString()}`,
-          width: 1200,
-          height: 630,
-        },
-      ],
+      images: [{ url: image, width: 1200, height: 630 }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: ogTitle,
+      title,
       description,
-      images: [`/api/og/result/${code}?${ogParams.toString()}`],
+      images: [image],
     },
   }
 }
 
-export default async function SharePage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ code: string }>
-  searchParams: Promise<Record<string, string | string[] | undefined>>
-}) {
-  const { code } = await params
-  const sp = await searchParams
-
-  const ogTitle =
-    typeof sp.og_title === 'string' ? sp.og_title : 'Bilge Arena Oda'
-  const ogScore = typeof sp.og_score === 'string' ? sp.og_score : undefined
-  const ogCategory =
-    typeof sp.og_category === 'string' ? sp.og_category : undefined
+export default async function SharePage(props: ShareRouteProps) {
+  const { code, claims } = await resolveShare(props)
 
   return (
     <main className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center gap-6 p-6 text-center">
       <div className="text-5xl">🏆</div>
-      <h1 className="text-2xl font-bold">{ogTitle}</h1>
-      {ogScore && (
+      <h1 className="text-2xl font-bold">{claims?.title ?? GENERIC_TITLE}</h1>
+      {claims?.score != null && (
         <p className="text-base">
           <span className="text-[var(--text-sub)]">Skor:</span>{' '}
           <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
-            {ogScore}
+            {claims.score}
           </span>
         </p>
       )}
-      {ogCategory && (
+      {claims?.category && (
         <p className="text-sm text-[var(--text-sub)]">
-          Kategori: {slugToLabel(ogCategory)}
+          Kategori: {slugToLabel(claims.category)}
         </p>
       )}
       <p className="text-sm text-[var(--text-sub)]">

@@ -1,13 +1,15 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
 import { getInterBoldUrl } from '@/lib/og/font-url'
+import { verifyShareParams } from '@/lib/rooms/share-link'
 
 /**
  * Bilge Arena Oda: /api/og/result/[code] OG image dynamic route
  * Sprint 2C Task 8 PR2 (PR #63 follow-up)
  *
  * Replay & Share viral kart icin OG image. Querystring driven (DB fetch YOK):
- *   /api/og/result/ABC123?title=Genel+Kultur&score=850&category=matematik
+ *   /api/og/result/ABC123?og_title=...&og_score=850&og_category=matematik&og_sig=...
+ *   (yalniz POST /api/rooms/[id]/share-link'in imzaladigi degerler cizilir)
  *
  * Pattern: src/app/og/route.tsx (PR5 TDK uyumda eklenmis), Inter-Bold.woff
  * public/fonts/ altinda CDN cached. Edge runtime + 1 MB bundle limit guvenli.
@@ -59,9 +61,12 @@ export async function GET(
 ) {
   const { code } = await params
   const { searchParams } = new URL(request.url)
-  const title = searchParams.get('title') || 'Bilge Arena Yarışması'
-  const score = searchParams.get('score')
-  const category = searchParams.get('category')
+  // Yalniz sunucunun imzaladigi degerler cizilir (disc #2950). Imzasiz veya
+  // bozuk istekte URL'deki metin kullanilmaz; genel kart cizilir.
+  const claims = await verifyShareParams(code, searchParams)
+  const title = claims?.title ?? 'Bilge Arena Yarışması'
+  const score = claims?.score != null ? String(claims.score) : null
+  const category = claims?.category ?? null
 
   const interBold = await getInterBold()
 

@@ -543,7 +543,7 @@ export function KuleClient() {
                 {state.game === 'sosyal' && (
                   <Link
                     href="/arena/calisma"
-                    className="text-xs font-bold text-[var(--focus)] underline underline-offset-2"
+                    className="text-xs font-bold text-[var(--focus-text)] underline underline-offset-2"
                   >
                     Çalış sayfasına git
                   </Link>

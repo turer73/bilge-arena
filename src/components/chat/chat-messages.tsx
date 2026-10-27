@@ -27,7 +27,7 @@ export function ChatMessages({ messages, isLoading, onQuickAction }: ChatMessage
 
         {questionContext ? (
           <div className="w-full rounded-lg border border-[var(--focus-border)] bg-[var(--focus-bg)] px-3 py-2 text-left">
-            <div className="mb-1 text-[9px] font-bold text-[var(--focus)]">📌 Aktif Soru</div>
+            <div className="mb-1 text-[9px] font-bold text-[var(--focus-text)]">📌 Aktif Soru</div>
             <div className="text-[10px] leading-relaxed text-[var(--text-sub)] line-clamp-3">
               {questionContext.split('\n').find((l) => l.startsWith('Soru:'))?.replace('Soru: ', '') || questionContext.substring(0, 100)}
             </div>
@@ -43,7 +43,7 @@ export function ChatMessages({ messages, isLoading, onQuickAction }: ChatMessage
               key={action.label}
               onClick={() => onQuickAction?.(action.prompt, action.mode)}
               disabled={isLoading}
-              className="rounded-full border border-[var(--border)] px-2.5 py-1 text-[10px] text-[var(--text-sub)] transition-all hover:border-[var(--focus-border)] hover:bg-[var(--focus-bg)] hover:text-[var(--focus)] active:scale-95 disabled:opacity-40"
+              className="rounded-full border border-[var(--border)] px-2.5 py-1 text-[10px] text-[var(--text-sub)] transition-all hover:border-[var(--focus-border)] hover:bg-[var(--focus-bg)] hover:text-[var(--focus-text)] active:scale-95 disabled:opacity-40"
             >
               {action.label}
             </button>

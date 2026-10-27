@@ -134,7 +134,7 @@ export function NotificationBell({
           <div className="flex items-center justify-between border-b border-[var(--border)] px-3 py-2">
             <span className="text-xs font-bold text-[var(--text)]">Bildirimler</span>
             {unread > 0 && (
-              <button onClick={markAll} className="text-[10px] text-[var(--focus)] hover:underline">
+              <button onClick={markAll} className="text-[10px] text-[var(--focus-text)] hover:underline">
                 Tümünü okundu işaretle
               </button>
             )}

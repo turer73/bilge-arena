@@ -26,6 +26,7 @@ import type {
   RoomState as RoomFullState,
 } from './room-state-reducer'
 import { isScoreboardMember } from './member-status'
+import { canonicalUuid, isValidUuid } from '@/lib/utils/uuid'
 
 const RPC_URL =
   process.env.BILGE_ARENA_RPC_URL ?? 'http://127.0.0.1:3001'
@@ -287,11 +288,16 @@ export async function verifyRoomFirstPlace(
 ): Promise<{ finished: boolean; isFirstPlace: boolean }> {
   const headers = { Authorization: `Bearer ${jwt}` }
   const opts = { headers, cache: 'no-store' as const }
+  // Kimlik URL'ye kodlanmadan girerse ek PostgREST parametresi (ör. &limit=1)
+  // tasiyabilir; UUID disi deger fail-closed reddedilir.
+  const id = canonicalUuid(roomId)
+  if (!id) return { finished: false, isFirstPlace: false }
+  const encodedId = encodeURIComponent(id)
 
   try {
     const [roomRes, membersRes] = await Promise.all([
-      fetch(`${RPC_URL}/rooms?id=eq.${roomId}&select=state&limit=1`, opts),
-      fetch(`${RPC_URL}/room_members?room_id=eq.${roomId}&select=user_id,score`, opts),
+      fetch(`${RPC_URL}/rooms?id=eq.${encodedId}&select=state&limit=1`, opts),
+      fetch(`${RPC_URL}/room_members?room_id=eq.${encodedId}&select=user_id,score`, opts),
     ])
 
     if (!roomRes.ok || !membersRes.ok) return { finished: false, isFirstPlace: false }
@@ -312,6 +318,49 @@ export async function verifyRoomFirstPlace(
     return { finished: true, isFirstPlace: me.score === maxScore && me.score > 0 }
   } catch {
     return { finished: false, isFirstPlace: false }
+  }
+}
+
+// =============================================================================
+// fetchShareableResult — /p/[code] imzali paylasim baglantisi icin
+// =============================================================================
+
+export type ShareableResult = {
+  code: string
+  title: string
+  category: string
+  score: number
+}
+
+/**
+ * Paylasim kartinin degerlerini oyuncunun KENDI JWT'siyle oda-DB'den okur.
+ * RLS yalniz uye oldugu odayi gosterir; oda tamamlanmamissa veya cagiran uye
+ * degilse null (fail-closed). Degerler istemciden ALINMAZ.
+ */
+export async function fetchShareableResult(
+  jwt: string,
+  roomId: string,
+  userId: string,
+): Promise<ShareableResult | null> {
+  if (!isValidUuid(roomId) || !isValidUuid(userId)) return null
+  const id = encodeURIComponent(roomId.toLowerCase())
+  const member = encodeURIComponent(userId.toLowerCase())
+  const opts = { headers: { Authorization: `Bearer ${jwt}` }, cache: 'no-store' as const }
+
+  try {
+    const [roomRes, memberRes] = await Promise.all([
+      fetch(`${RPC_URL}/rooms?id=eq.${id}&select=code,title,category,state&limit=1`, opts),
+      fetch(`${RPC_URL}/room_members?room_id=eq.${id}&user_id=eq.${member}&select=score&limit=1`, opts),
+    ])
+    if (!roomRes.ok || !memberRes.ok) return null
+    const rooms = (await roomRes.json()) as Array<Pick<Room, 'code' | 'title' | 'category' | 'state'>>
+    const members = (await memberRes.json()) as Array<{ score: number }>
+    const room = rooms[0]
+    if (!room || members.length === 0) return null
+    if (room.state !== 'completed' && room.state !== 'archived') return null
+    return { code: room.code, title: room.title, category: room.category, score: members[0].score }
+  } catch {
+    return null
   }
 }
 

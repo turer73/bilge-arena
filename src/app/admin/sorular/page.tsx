@@ -578,7 +578,7 @@ export default function AdminQuestionsPage() {
                   <td className="px-2 py-3">
                     <button
                       onClick={() => void openEdit(q)}
-                      className="min-h-11 rounded-lg px-2 py-1 text-[10px] font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)]"
+                      className="min-h-11 rounded-lg px-2 py-1 text-[10px] font-bold text-[var(--focus-text)] transition-colors hover:bg-[var(--focus-bg)]"
                     >
                       Duzenle
                     </button>
