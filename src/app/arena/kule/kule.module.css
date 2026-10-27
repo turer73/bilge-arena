@@ -781,9 +781,21 @@
 .questionText {
   margin-bottom: 24px;
   color: #f7f9ff;
-  font-size: clamp(1.05rem, 2vw, 1.25rem);
-  font-weight: 750;
+  font-size: calc(clamp(1.05rem, 2vw, 1.25rem) * var(--quiz-font-scale, 1));
+  font-weight: 600;
   line-height: 1.65;
+}
+
+/* Sik ve cozum metni rem tabanli; Aa okuma ayari (--quiz-font-scale) ile buyur. */
+.optionText {
+  min-width: 0;
+  font-size: calc(0.9375rem * var(--quiz-font-scale, 1));
+  line-height: 1.5;
+}
+
+.solution {
+  font-size: calc(0.875rem * var(--quiz-font-scale, 1));
+  line-height: 1.6;
 }
 
 .options {
@@ -962,19 +974,34 @@
   }
 
   .gameShell {
-    padding: 18px 14px 48px;
+    padding: 12px 14px 48px;
+  }
+
+  .questionText {
+    margin-bottom: 16px;
+  }
+
+  .feedback {
+    margin-top: 0;
   }
 
   .gameArena {
     grid-template-columns: 1fr;
   }
 
+  /* Oyun sirasinda kule sorudan once tek satirlik kat seridine iner; arka plan
+     gorseli ve kural metni soruyu ekranin altina itiyordu. */
   .towerProgress {
     position: relative;
     top: auto;
-    min-height: 188px;
+    min-height: 0;
     container-type: normal;
-    padding: 13px;
+    padding: 8px;
+  }
+
+  .towerBackdrop,
+  .towerRule {
+    display: none;
   }
 
   .towerBackdrop img {
@@ -988,7 +1015,7 @@
     width: 100%;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     grid-template-rows: none;
-    margin: 62px auto 2px;
+    margin: 0 auto;
     padding: 10px 4px;
     border-radius: 22px;
   }
@@ -996,7 +1023,7 @@
   .towerFloor {
     display: grid;
     width: 100%;
-    min-height: 48px;
+    min-height: 34px;
     grid-template-columns: 1fr;
     justify-items: center;
     padding: 6px 3px;
@@ -1025,7 +1052,7 @@
   }
 
   .hud {
-    padding: 12px;
+    padding: 8px 12px;
   }
 
   .resultActions {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { ArrowRight, Check, CircleCheckBig, CircleX, Clock3, Lightbulb, MessagesSquare, ScrollText, X } from 'lucide-react'
 import type { PublicQuestion } from '@/lib/utils/question-public'
 import { getOptionLetter } from '@/lib/utils/question'
@@ -8,7 +8,7 @@ import { renderRichText, stripRichText } from '@/lib/utils/rich-text'
 import { LikeButton } from '@/components/social/like-button'
 import { TopicExplanationButton } from '@/components/bilge-tahta/topic-explanation-button'
 import { AcademyDialog } from '@/components/academy/academy-dialog'
-import { useWideStudy } from '@/lib/hooks/use-wide-study'
+import { useMobileAnswerSheet } from '@/lib/hooks/use-mobile-answer-sheet'
 
 interface ExplanationPanelProps {
   question: PublicQuestion
@@ -41,38 +41,11 @@ export function ExplanationPanel({
   const correctText = correctAnswer >= 0 ? question.content.options[correctAnswer] : null
   const selectedText = selectedOption >= 0 ? question.content.options[selectedOption] : null
 
-  const wide = useWideStudy()
   const rootRef = useRef<HTMLDivElement>(null)
   const nextRef = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    const root = rootRef.current
-    if (!root) return
-    // Genis ekranda panel soru kartinin USTUNDE akista durur; alt siklara
-    // tiklayan kullanicinin viewport'u asagida kalabilir, paneli gorunur yap.
-    if (wide) {
-      root.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
-      return
-    }
-    // Mobilde panel ekranin altina sabitlenir (CSS): soru yerinde kalir. Kabuk
-    // panel yuksekligi kadar alt bosluk alir ki son sik panelin arkasinda kalmasin.
-    const shell = root.closest<HTMLElement>('[data-responsive-quiz-shell]')
-    const publishHeight = () => shell?.style.setProperty('--quiz-sheet-h', `${Math.ceil(root.getBoundingClientRect().height)}px`)
-    publishHeight()
-    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(publishHeight) : null
-    observer?.observe(root)
-    // Isaretlenen ve dogru sik panelin ustunde gorunsun.
-    const marked = shell?.querySelectorAll<HTMLElement>('[data-quiz-option="correct"], [data-quiz-option="wrong"]')
-    const lowest = marked?.length ? marked[marked.length - 1] : null
-    if (lowest) {
-      const overlap = lowest.getBoundingClientRect().bottom + 12 - root.getBoundingClientRect().top
-      if (overlap > 0) window.scrollBy?.({ top: overlap, behavior: 'smooth' })
-    }
-    nextRef.current?.focus({ preventScroll: true })
-    return () => {
-      observer?.disconnect()
-      shell?.style.removeProperty('--quiz-sheet-h')
-    }
-  }, [wide])
+  // Genis ekranda panel soru kartinin USTUNDE akista durur ve gorunur kaydirilir;
+  // mobilde ekranin altina sabit panel olur, soru ve isaretli siklar yerinde kalir.
+  useMobileAnswerSheet(rootRef, nextRef)
 
   const topic = question.subcategory || question.category
   // Soru metni, öncül ve şıklar sunucuda soru kimliğinden okunur (maskelemeye girmez);

@@ -40,6 +40,9 @@ import { getTytSocialAllowedCategories } from '@/lib/exam-policy/tyt-social-cont
 import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 import { useAuthStore } from '@/stores/auth-store'
 import styles from './fethet.module.css'
+import sheetStyles from '@/components/game/answer-sheet.module.css'
+import { useMobileAnswerSheet } from '@/lib/hooks/use-mobile-answer-sheet'
+import { useQuizReading } from '@/lib/hooks/use-quiz-reading'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -166,6 +169,11 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
   const [gradeError, setGradeError] = useState<string | null>(null)
   const [correctOption, setCorrectOption] = useState<number | null>(null)
   const [solution, setSolution] = useState<string | null>(null)
+  // Mobilde cevap sonucu pencerenin altinda sabit panelde; soru ve isaretli siklar yerinde kalir.
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const nextRef = useRef<HTMLButtonElement>(null)
+  useMobileAnswerSheet(sheetRef, nextRef, revealed)
+  const { fontScale } = useQuizReading()
   const [done, setDone] = useState(false)
   const [passed, setPassed] = useState(false)
   const [attemptId, setAttemptId] = useState<string | null>(null)
@@ -309,8 +317,10 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
   return (
     <div className={styles.modalBackdrop}>
       <section
-        className={styles.quizModal}
-        style={{ '--subject': color } as CSSProperties}
+        className={`${styles.quizModal} ${sheetStyles.host}`}
+        style={{ '--subject': color, '--quiz-font-scale': fontScale } as CSSProperties}
+        data-answer-sheet-host
+        data-answer-sheet-scroll
         role="dialog"
         aria-modal="true"
         aria-labelledby="fetih-soru-baslik"
@@ -496,9 +506,10 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
                         disabled={revealed || grading}
                         className={styles.quizOption}
                         data-state={optionState}
+                        data-answer-marked={optionState === 'correct' || optionState === 'wrong' ? '' : undefined}
                       >
                         <span className={styles.optionMarker}>{label}</span>
-                        <span>{renderRichText(opt)}</span>
+                        <span className={styles.optionText}>{renderRichText(opt)}</span>
                         {optionState === 'correct' && <Check size={17} aria-hidden="true" />}
                         {optionState === 'wrong' && <X size={17} aria-hidden="true" />}
                         {(optionState === 'idle' || optionState === 'selected') && (
@@ -518,20 +529,32 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
                   <p className={styles.gradeError} role="alert">{gradeError}</p>
                 )}
 
-                {revealed && solution && (
-                  <div className={styles.solutionBox}>
-                    <BookOpenText size={18} aria-hidden="true" />
-                    <p>{solution}</p>
-                  </div>
-                )}
-
                 {revealed && (
-                  <button
-                    onClick={handleNext}
-                    className={styles.nextAction}
-                  >
-                    {idx + 1 < totalQ ? 'Sonraki Soru →' : 'Sonucu Gör'}
-                  </button>
+                  <div ref={sheetRef} className={`${styles.answerSheet} ${sheetStyles.sheet}`}>
+                    <p
+                      className={styles.answerResult}
+                      data-result={selected === correctOption ? 'correct' : 'wrong'}
+                      role="status"
+                      aria-live="polite"
+                    >
+                      {selected === correctOption
+                        ? <><Check size={17} aria-hidden="true" /> Doğru!</>
+                        : <><X size={17} aria-hidden="true" /> Yanlış.{correctOption !== null && correctOption >= 0 ? ` Doğru cevap: ${['A', 'B', 'C', 'D', 'E'][correctOption] ?? correctOption + 1}` : ''}</>}
+                    </p>
+                    {solution && (
+                      <div className={styles.solutionBox}>
+                        <BookOpenText size={18} aria-hidden="true" />
+                        <p>{solution}</p>
+                      </div>
+                    )}
+                    <button
+                      ref={nextRef}
+                      onClick={handleNext}
+                      className={styles.nextAction}
+                    >
+                      {idx + 1 < totalQ ? 'Sonraki Soru →' : 'Sonucu Gör'}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

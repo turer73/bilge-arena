@@ -1,0 +1,51 @@
+/* Soru cozulen ekranlarda ortak mobil cevap paneli (ana oyun ekraninin
+   [data-quiz-feedback] paneliyle ayni davranis; academy-quiz.module.css).
+   Kullanim: kabuk `host` sinifi + data-answer-sheet-host, cevap sonrasi blok
+   `sheet` sinifi, davranis useMobileAnswerSheet. Genis ekranda iki sinif da
+   gorunumu degistirmez; blok akista kalir. */
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+@media (max-width: 767px) {
+  .host:has(.sheet) { padding-bottom: calc(var(--quiz-sheet-h, 45dvh) + 16px) !important; }
+  /* backdrop-filter / transform sabit konumlu cocugu kabuga hapseder; panel ekranin altina otursun. */
+  .host:has(.sheet),
+  .host :has(> .sheet),
+  .host :has(.sheet) {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .sheet {
+    position: fixed;
+    z-index: 60;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-width: 520px;
+    max-height: min(62dvh, 560px);
+    margin: 0 auto !important;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+    border: 2px solid var(--app-border, var(--border));
+    border-bottom: 0;
+    border-radius: 24px 24px 0 0;
+    background-color: var(--app-card, var(--card-bg, #0d1b35));
+    box-shadow: 0 -14px 36px rgba(2, 8, 22, .55);
+    animation: sheetUp .22s ease-out both;
+  }
+  .sheet > * + * { margin-top: 10px; }
+  /* Sonuc paneli acikken sitenin alt gezinme cubugu paneli ortmesin (ana oyun
+     ekrani cubugu zaten gizler). */
+  :global(body):has(.sheet) :global(nav[aria-label='Mobil gezinme']) { display: none; }
+}
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .sheet { animation: none; }
+}
+
+/* Paylasilan QuestionCard / OptionButton kullanan kabuklar Aa okuma olcegini
+   (--quiz-font-scale) ana oyun ekraniyla ayni rem tabanli boyutlarla alir. */
+.host [data-quiz-prompt] { font-size: calc(1.0625rem * var(--quiz-font-scale, 1)); line-height: 1.6; }
+.host [data-quiz-passage] { font-size: calc(1rem * var(--quiz-font-scale, 1)); line-height: 1.65; }
+.host [data-quiz-option-text] { font-size: calc(.9375rem * var(--quiz-font-scale, 1)); line-height: 1.5; min-width: 0; overflow-wrap: anywhere; }

@@ -28,6 +28,7 @@ import { GameCompleted } from './GameCompleted'
 import { GameView } from './GameView'
 import { SonucView } from './SonucView'
 import { HostGameActions } from './HostGameActions'
+import sheetStyles from '@/components/game/answer-sheet.module.css'
 import { LobbyPreviewQuestion } from './LobbyPreviewQuestion'
 import { WaitingForOthers } from './WaitingForOthers'
 
@@ -160,7 +161,9 @@ export function LobbyContainer({
       // Async per-user reveal — caller cevap verdi, SonucView gosterilir,
       // auto-advance bitince advanceRoundForMemberAction auto-tetikler.
       return (
-        <div className="space-y-4">
+        // Kabuk SonucView + host kontrolleri: mobil sonuc paneli kadar alt bosluk
+        // tum kapsayiciya eklenir, "Sonraki Tura Gec" panelin arkasinda kalmaz.
+        <div className={`space-y-4 ${sheetStyles.host}`} data-answer-sheet-host>
           <SonucView
             state={state}
             userId={userId}
@@ -225,7 +228,7 @@ export function LobbyContainer({
   }
   if (roomState === 'reveal') {
     return (
-      <div className="space-y-4">
+      <div className={`space-y-4 ${sheetStyles.host}`} data-answer-sheet-host>
         <SonucView state={state} userId={userId} />
         <HostGameActions
           isHost={isHost}

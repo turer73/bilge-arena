@@ -1,10 +1,13 @@
 'use client'
 
 import { DocumentBoundaryLink } from '@/components/privacy/document-boundary-link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { renderRichText } from '@/lib/utils/rich-text'
 import { gradeQuestion } from '@/lib/questions/grade-question'
+import { useMobileAnswerSheet } from '@/lib/hooks/use-mobile-answer-sheet'
+import { useQuizReading } from '@/lib/hooks/use-quiz-reading'
+import sheetStyles from '@/components/game/answer-sheet.module.css'
 import { preparationContextSchema, preparationTicketSchema, PREPARATION_DESCRIPTION, PREPARATION_HREF,
   type PreparationContext, type PreparationRequest, type PreparationTicket } from '@/lib/diagnostic/tyt-social-preparation'
 
@@ -43,6 +46,9 @@ export function PreparationSession() {
   const generation = useRef(0)
   const shownAt = useRef(Date.now())
   const times = useRef<Record<string, number>>({})
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const nextRef = useRef<HTMLButtonElement>(null)
+  const { fontScale } = useQuizReading()
   useEffect(() => {
     const controller = new AbortController(); lifetime.current = controller
     const token = ++generation.current
@@ -55,6 +61,8 @@ export function PreparationSession() {
   const current = ticket?.questions[position]
   const graded = ticket?.progress.find(p => p.questionId === current?.id)
   const expired = ticket ? Date.parse(ticket.expiresAt) <= Date.now() : false
+  // Mobilde sonuc alttan acilan panelde; soru ve isaretli siklar yerinde kalir.
+  useMobileAnswerSheet(sheetRef, nextRef, !!graded)
   async function load(r: PreparationRequest) {
     const response = await fetch('/api/study/tyt-social-preparation', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-idempotency-key': r.requestId },
@@ -118,27 +126,34 @@ export function PreparationSession() {
       <p className="mt-3 text-lg">{result.correct} doğru · {result.wrong} yanlış / 20 soru</p>
       <p className="mt-3 text-sm leading-6">Bu turdaki gözlemin kaydedildi. Aynı havuzla tekrar çalışma yapılabilir; tekrar sonucu bağımsız seviye ölçümü sayılmaz.</p>
       <DocumentBoundaryLink href="/arena/sosyal?exam_ref=TYT" className="mt-4 inline-flex min-h-11 items-center font-bold text-[var(--app-accent-text)]">Çalışmaya dön</DocumentBoundaryLink>
-    </section> : ticket && current ? <section className={card}>
+    </section> : ticket && current ? <section className={`${card} ${sheetStyles.host}`} data-answer-sheet-host style={{ '--quiz-font-scale': fontScale } as CSSProperties}>
       <p className="mb-4 text-sm">Soru {position + 1} / 20 · {ticket.progress.length} yanıt kaydedildi</p>
       {expired && <p role="alert">Oturumun iki saatlik süresi doldu. Yeni bir tur için sayfayı yenile.</p>}
       {current.content.passage && <div className="mb-4 whitespace-pre-wrap text-sm leading-7">{renderRichText(current.content.passage)}</div>}
       {current.content.context && <div className="mb-4 whitespace-pre-wrap text-sm leading-7">{renderRichText(current.content.context)}</div>}
       <fieldset disabled={busy || !!graded || expired || pendingChoice.current !== null}>
-        <legend className="text-base font-bold leading-7">{renderRichText(current.content.question || current.content.sentence)}</legend>
-        <div className="mt-4 space-y-3">{current.content.options.map((text, index) => <label key={index} className="flex min-h-12 cursor-pointer gap-3 rounded-xl border border-[var(--app-border)] p-4">
+        <legend className="font-semibold leading-7" style={{ fontSize: 'calc(1.0625rem * var(--quiz-font-scale, 1))' }}>{renderRichText(current.content.question || current.content.sentence)}</legend>
+        <div className="mt-4 space-y-3">{current.content.options.map((text, index) => <label key={index} className="flex min-h-12 cursor-pointer gap-3 rounded-xl border border-[var(--app-border)] p-4"
+          data-answer-marked={graded && (index === graded.correctOption || index === graded.selectedOption) ? '' : undefined}>
           <input className="mt-1 size-4 shrink-0" type="radio" name={current.id} checked={(graded?.selectedOption ?? choice) === index} onChange={() => setChoice(index)} />
-          <span className="min-w-0 break-words text-sm leading-6"><strong>{String.fromCharCode(65 + index)}.</strong> {renderRichText(text)}</span>
+          <span className="min-w-0 break-words leading-6" style={{ fontSize: 'calc(0.9375rem * var(--quiz-font-scale, 1))' }}><strong>{String.fromCharCode(65 + index)}.</strong> {renderRichText(text)}</span>
         </label>)}</div>
       </fieldset>
-      {graded ? <div role="status" className="mt-4 space-y-2 text-sm leading-7">
-        <p className="font-bold">{graded.isCorrect ? 'Doğru.' : 'Bu kez olmadı.'} Doğru cevap: {renderRichText(current.content.options[graded.correctOption])}</p>
-        {graded.solution && <p>{renderRichText(graded.solution)}</p>}
-      </div> : <button className={`${button} mt-4 w-full`} disabled={choice === null || busy || expired} onClick={answer}>{busy ? 'Kaydediliyor…' : 'Cevabı kaydet'}</button>}
-      {ticket.progress.length === 20 ? <button className={`${button} mt-4 w-full`} disabled={busy || expired} onClick={finish}>{busy ? 'Sonuç kaydediliyor…' : 'Turu tamamla ve kaydet'}</button>
-        : graded && <button className={`${button} mt-4 w-full`} disabled={busy} onClick={() => {
-          const next = ticket.questions.findIndex(q => !ticket.progress.some(p => p.questionId === q.id))
-          setPosition(next); setChoice(null); shownAt.current = Date.now()
-        }}>Sonraki soru</button>}
+      {graded ? <div ref={sheetRef} className={`mt-4 ${sheetStyles.sheet}`}>
+        <div role="status" className="space-y-2 text-sm leading-7">
+          <p className="font-bold">{graded.isCorrect ? 'Doğru.' : 'Bu kez olmadı.'} Doğru cevap: {renderRichText(current.content.options[graded.correctOption])}</p>
+          {graded.solution && <p style={{ fontSize: 'calc(0.9375rem * var(--quiz-font-scale, 1))' }}>{renderRichText(graded.solution)}</p>}
+        </div>
+        {ticket.progress.length === 20
+          ? <button ref={nextRef} className={`${button} mt-4 w-full`} disabled={busy || expired} onClick={finish}>{busy ? 'Sonuç kaydediliyor…' : 'Turu tamamla ve kaydet'}</button>
+          : <button ref={nextRef} className={`${button} mt-4 w-full`} disabled={busy} onClick={() => {
+            const next = ticket.questions.findIndex(q => !ticket.progress.some(p => p.questionId === q.id))
+            setPosition(next); setChoice(null); shownAt.current = Date.now()
+          }}>Sonraki soru</button>}
+      </div> : <>
+        <button className={`${button} mt-4 w-full`} disabled={choice === null || busy || expired} onClick={answer}>{busy ? 'Kaydediliyor…' : 'Cevabı kaydet'}</button>
+        {ticket.progress.length === 20 && <button className={`${button} mt-4 w-full`} disabled={busy || expired} onClick={finish}>{busy ? 'Sonuç kaydediliyor…' : 'Turu tamamla ve kaydet'}</button>}
+      </>}
     </section> : context?.available ? <section className={`${card} space-y-4`}>
       <h2 className="font-bold">Cevaplama düzenini seç</h2>
       <p className="text-sm leading-6">İlk 15 soru ortak; son 5 soru seçtiğin düzene göre gelir. Bu seçimden inanç veya muafiyet nedeni çıkarılmaz; neden ya da belge istemiyoruz. Seçim yalnız bu hazırlık turunu etkiler.</p>

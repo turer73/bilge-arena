@@ -66,6 +66,17 @@ describe('KuleClient grading', () => {
     expect(grader.gradeQuestion).toHaveBeenCalledWith('kule-question-1', 0, ATTEMPT_ID)
   })
 
+  it('sonuç, çözüm ve Sonraki Kat aynı mobil panelde; doğru şık işaretli kalır', async () => {
+    await startGame()
+    fireEvent.click(screen.getByText('4').closest('button')!)
+    const status = await screen.findByRole('status')
+    const sheet = status.parentElement!
+    expect(sheet).toContainElement(screen.getByText(/Sunucu çözümü/))
+    expect(sheet).toContainElement(screen.getByRole('button', { name: /Sonraki Kat/ }))
+    expect(screen.getByText('4').closest('button')).toHaveAttribute('data-answer-marked')
+    expect(document.querySelector('[data-answer-sheet-host]')).toContainElement(sheet)
+  })
+
   it('shows a retryable error instead of fabricating a grading result', async () => {
     grader.gradeQuestion.mockRejectedValueOnce(new Error('network'))
     await startGame()
