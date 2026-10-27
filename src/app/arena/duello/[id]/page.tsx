@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
   ArrowLeft,
@@ -24,6 +24,9 @@ import { toast } from '@/stores/toast-store'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import type { Question, Challenge } from '@/types/database'
 import type { OptionState } from '@/components/game/option-button'
+import { QuizReadingSettings } from '@/components/game/quiz-reading-settings'
+import { useQuizReading } from '@/lib/hooks/use-quiz-reading'
+import sheetStyles from '@/components/game/answer-sheet.module.css'
 
 const MOBILE_ARENA_STYLE = `
   @media (max-width: 767px) {
@@ -62,6 +65,7 @@ export default function DuelloGamePage() {
   const { user } = useAuthStore()
 
   const [challenge, setChallenge] = useState<Challenge | null>(null)
+  const { fontSize, fontScale, setFontSize } = useQuizReading()
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<{ questionId: string; selectedOption: number; timeTaken: number }[]>([])
@@ -255,25 +259,28 @@ export default function DuelloGamePage() {
         <div className="flex items-center justify-between gap-3 border-b-2 border-[var(--app-border-soft)] px-4 py-3 md:px-5">
           <button type="button" onClick={() => router.push('/arena/duello')} className="inline-flex min-h-10 items-center gap-1.5 rounded-xl text-xs font-black text-[var(--app-text-sub)] hover:text-[var(--app-accent-text)]"><ArrowLeft size={16} /> <span className="hidden sm:inline">Düello Merkezi</span></button>
           <div className="flex items-center gap-2"><Swords size={19} className="text-[var(--app-warn-ink)]" /><span className="font-display text-base font-black">Düello</span>{gameDefinition && <span className="rounded-lg px-2 py-1 text-[9px] font-black" style={{ backgroundColor: `${gameDefinition.colorHex}18`, color: gameDefinition.colorHex }}>{gameDefinition.name}</span>}</div>
-          <span className="rounded-xl bg-[var(--app-accent-tint)] px-3 py-2 text-xs font-black text-[var(--app-accent-text)]">{currentIndex + 1}/{questions.length}</span>
+          <div className="flex items-center gap-2">
+            <span className="rounded-xl bg-[var(--app-accent-tint)] px-3 py-2 text-xs font-black text-[var(--app-accent-text)]">{currentIndex + 1}/{questions.length}</span>
+            <QuizReadingSettings fontSize={fontSize} onChange={setFontSize} showSound={false} variant="card" />
+          </div>
         </div>
-        <div className="px-4 py-4 md:px-5">
-          <div className="mb-3 flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.14em] text-[var(--app-text-muted)]"><ShieldCheck size={13} className="text-[var(--app-success-ink)]" /> Cevaplar tur bitene kadar gizli</div>
+        <div className="px-4 py-2.5 md:px-5 md:py-4">
+          <div className="mb-3 hidden items-center gap-2 md:flex text-[9px] font-black uppercase tracking-[0.14em] text-[var(--app-text-muted)]"><ShieldCheck size={13} className="text-[var(--app-success-ink)]" /> Cevaplar tur bitene kadar gizli</div>
           <div className="h-2.5 overflow-hidden rounded-full bg-[var(--app-border-soft)]"><div className="h-full rounded-full bg-gradient-to-r from-[var(--app-accent)] to-[var(--app-warn)] transition-[width] duration-500" style={{ width: `${progress}%` }} /></div>
         </div>
       </header>
 
       <div className="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
-        <main data-duel-question className="min-w-0 rounded-[26px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-border)] md:p-6">
+        <main data-duel-question className={`${sheetStyles.host} ${sheetStyles.focusMode} min-w-0 rounded-[26px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-border)] md:p-6`} style={{ '--quiz-font-scale': fontScale } as CSSProperties}>
           <div className="flex items-center justify-between gap-3">
             <div><p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]"><Sparkles size={14} /> Düello sorusu</p><p className="mt-1 text-xs font-bold text-[var(--app-text-muted)]">{state === 'answered' ? 'Cevabın kaydedildi' : 'Hamleni seç'}</p></div>
             <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${state === 'answered' ? 'bg-[var(--app-success-tint)] text-[var(--app-success-ink)]' : 'bg-[var(--app-accent-tint)] text-[var(--app-accent)]'}`}>{state === 'answered' ? <ShieldCheck size={22} /> : <Zap size={21} />}</span>
           </div>
 
-          <div className="my-5 h-px bg-[var(--app-border-soft)]" />
-          <h1 className="text-lg font-black leading-7 md:text-xl md:leading-8">{renderRichText(questionText)}</h1>
+          <div className="my-3 h-px bg-[var(--app-border-soft)] md:my-5" />
+          <h1 className="font-semibold leading-[1.55]" style={{ fontSize: 'calc(clamp(1.0625rem, 2vw, 1.25rem) * var(--quiz-font-scale, 1))' }}>{renderRichText(questionText)}</h1>
 
-          <div className="mt-6 flex flex-col gap-3">
+          <div className="mt-4 flex flex-col gap-3 md:mt-6">
             {question.content.options.map((option, index) => (
               <OptionButton key={`${currentIndex}-${index}`} index={index} text={option} state={getOptionState(index)} onClick={() => handleAnswer(index)} delay={index * 55} />
             ))}

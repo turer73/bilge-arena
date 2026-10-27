@@ -12,18 +12,20 @@ const sizes: { value: QuizFontSize; label: string; description: string }[] = [
   { value: 'large', label: 'Büyük', description: '%112' },
 ]
 
-export function QuizReadingSettings({ fontSize, onChange, showSound = true, stats }: {
+export function QuizReadingSettings({ fontSize, onChange, showSound = true, stats, variant = 'header' }: {
   fontSize: QuizFontSize
   onChange: (value: QuizFontSize) => void
   showSound?: boolean
   stats?: { streak: number; xp: number }
+  /** header: renkli oyun ust bari; card: acik kart zemini (duello, tani). */
+  variant?: 'header' | 'card'
 }) {
   const [open, setOpen] = useState(false)
   const groupId = useId()
 
   return (
     <>
-      <button type="button" data-quiz-reading-toggle className={styles.readingToggle}
+      <button type="button" data-quiz-reading-toggle className={variant === 'card' ? styles.readingToggleCard : styles.readingToggle}
         aria-label="Yazı boyutu ve ses ayarları" aria-haspopup="dialog" aria-expanded={open}
         onClick={() => setOpen(true)}>Aa</button>
       {open && (
