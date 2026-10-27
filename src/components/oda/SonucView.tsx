@@ -128,8 +128,7 @@ export function SonucView({ state, userId, onAsyncAdvanceSuccess }: SonucViewPro
   return (
     <section
       aria-label="Tur sonucu"
-      className={cn('rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6', sheetStyles.host)}
-      data-answer-sheet-host
+      className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6"
       style={{ '--quiz-font-scale': fontScale } as CSSProperties}
     >
       <header className="mb-4 flex items-center justify-between">

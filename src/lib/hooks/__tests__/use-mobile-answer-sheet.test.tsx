@@ -53,6 +53,20 @@ describe('useMobileAnswerSheet', () => {
     expect(host.style.getPropertyValue('--quiz-sheet-h')).toBe('')
   })
 
+  test('giriş animasyonu sürerken de panelin yerleşik konumuna göre kaydırır', () => {
+    setWide(false)
+    // Panel translateY ile ekranın altından giriyor: ilk ölçüm 790'da, yerleşik üstü 800 - 300 = 500.
+    rects.set('sheet', { top: 790, height: 300, bottom: 1090 })
+    rects.set('marked', { top: 520, bottom: 580 })
+    mockRects()
+    vi.spyOn(document.documentElement, 'clientHeight', 'get').mockReturnValue(800)
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(300)
+    const scrollBy = vi.fn()
+    HTMLElement.prototype.scrollBy = scrollBy as unknown as HTMLElement['scrollBy']
+    render(<Sheet />)
+    expect(scrollBy).toHaveBeenCalledWith({ top: 92, behavior: 'smooth' })
+  })
+
   test('işaretli öğe zaten panelin üstündeyse kaydırmaz', () => {
     setWide(false)
     rects.set('sheet', { top: 500, height: 300, bottom: 800 })

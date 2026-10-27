@@ -64,8 +64,8 @@ describe('SonucView', () => {
     expect(marked).toHaveLength(2)
     expect(marked.join(' ')).toMatch(/Ankara/)
     expect(marked.join(' ')).toMatch(/İstanbul/)
-    const host = container.querySelector('[data-answer-sheet-host]')!
-    expect(host.contains(status)).toBe(true)
+    // Alt bosluk kabugu LobbyContainer'da (host kontrollerini de kapsar).
+    expect(container.querySelector('[data-answer-sheet-host]')).toBeNull()
     expect(status.parentElement!.textContent).toMatch(/1923’te başkent/)
   })
 

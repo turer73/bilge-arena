@@ -40,7 +40,12 @@ export function useMobileAnswerSheet(
     const marked = host?.querySelectorAll<HTMLElement>(MARKED)
     const lowest = marked?.length ? marked[marked.length - 1] : null
     if (lowest) {
-      const overlap = lowest.getBoundingClientRect().bottom + 12 - sheet.getBoundingClientRect().top
+      // Panel asagidan kayarak acilir (translateY); getBoundingClientRect animasyonun
+      // ilk karesini olcer. Sabit panelin yerlesik ustu: gorunum alani yuksekligi
+      // eksi panel yuksekligi (offsetHeight transform'dan etkilenmez).
+      const viewportHeight = document.documentElement.clientHeight || window.innerHeight
+      const settledTop = Math.min(sheet.getBoundingClientRect().top, viewportHeight - sheet.offsetHeight)
+      const overlap = lowest.getBoundingClientRect().bottom + 12 - settledTop
       if (overlap > 0) {
         const scroller = sheet.closest<HTMLElement>('[data-answer-sheet-scroll]')
         if (scroller) scroller.scrollBy?.({ top: overlap, behavior: 'smooth' })
