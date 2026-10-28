@@ -79,6 +79,9 @@ const quizGame = vi.hoisted(() => ({
   showReportModal: false,
   setShowReportModal: vi.fn(),
   setHelpPaused: vi.fn(),
+  setReadingPaused: vi.fn(),
+  answerStatus: 'idle' as 'idle' | 'pending' | 'failed',
+  retryAnswer: vi.fn(),
   getOptionState: () => 'idle',
   optionOrderFor: (_questionId: string, optionCount: number) => Array.from({ length: optionCount }, (_, i) => i),
   handleAnswer: vi.fn(),
@@ -256,6 +259,37 @@ vi.mock('next/dynamic', () => ({
 import { QuizEngine } from '../quiz-engine'
 
 describe('QuizEngine yerleşim', () => {
+  test('signed-in mobile progress follows the lobby start action', () => {
+    const previousUser = authStoreValue.user
+    const previousScreen = quizGame.screen
+    try {
+      authStoreValue.user = { id: 'u1' }
+      quizGame.screen = 'lobby'
+      const { container } = render(<QuizEngine game="matematik" />)
+      const progress = container.querySelector('[data-mobile-mastery-map-card]')
+      expect(progress).not.toBeNull()
+      expect(screen.getByTestId('normal-quiz-start').compareDocumentPosition(progress!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    } finally {
+      authStoreValue.user = previousUser
+      quizGame.screen = previousScreen
+    }
+  })
+
+  test('pending and failed answers explain the state and offer an explicit retry', () => {
+    try {
+      quizGame.answerStatus = 'pending'
+      const { rerender } = render(<QuizEngine game="matematik" />)
+      expect(screen.getByRole('status')).toHaveTextContent('Cevabın doğrulanıyor')
+      quizGame.answerStatus = 'failed'
+      rerender(<QuizEngine game="matematik" />)
+      expect(screen.getByRole('alert')).toHaveTextContent('Seçimin korunuyor')
+      fireEvent.click(screen.getByRole('button', { name: 'Aynı cevabı tekrar gönder' }))
+      expect(quizGame.retryAnswer).toHaveBeenCalledTimes(1)
+    } finally {
+      quizGame.answerStatus = 'idle'
+    }
+  })
+
   test('yeni soruda kaydırmayı sıfırlar, cevap geri bildiriminde yerini korur', () => {
     const initialState = quizStoreValue.state
     const { rerender } = render(<QuizEngine game="matematik" />)

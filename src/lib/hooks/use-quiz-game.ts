@@ -84,6 +84,9 @@ export interface UseQuizGameReturn {
   setShowReportModal: (v: boolean) => void
   /** Bilge Chan companion 'yardim' balonu acik/kapali — sayaci duraklatir */
   setHelpPaused: (v: boolean) => void
+  setReadingPaused: (v: boolean) => void
+  answerStatus: 'idle' | 'pending' | 'failed'
+  retryAnswer: () => void
 
   // Aksiyonlar
   handleStart: () => Promise<void>
@@ -130,6 +133,11 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const [showLifeLost, setShowLifeLost] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
+  const [submission, setSubmission] = useState<{
+    questionId: string
+    optionIndex: number
+    status: 'pending' | 'failed'
+  } | null>(null)
   const [attemptId, setAttemptId] = useState<string | null>(null)
   const [strategyTracked, setStrategyTracked] = useState(false)
 
@@ -217,7 +225,8 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         }
       })
       .finally(() => {
-        if (gradeRequestRef.current === controller) gradeRequestRef.current = null
+        if (gradeRequestRef.current !== controller) return
+        gradeRequestRef.current = null
         gradingRef.current = false
       })
   }, [quizStore, mode.timePerQuestion, attemptId, strategyTracked])
@@ -234,7 +243,8 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   // devam eder. Yalniz klasik (per-soru sureli) modda; deneme genel suresi ayri.
   const chatOpen = useChatStore((s) => s.isOpen)
   const [helpPaused, setHelpPaused] = useState(false)
-  const helpOpen = chatOpen || helpPaused
+  const [readingPaused, setReadingPaused] = useState(false)
+  const helpOpen = chatOpen || helpPaused || readingPaused
   const helpWasPausedRef = useRef(false)
 
   useEffect(() => {
@@ -242,11 +252,11 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     if (helpOpen) {
       timer.pause()
       helpWasPausedRef.current = true
-    } else if (helpWasPausedRef.current) {
+    } else if (helpWasPausedRef.current && !gradingRef.current && !submission) {
       timer.start()
       helpWasPausedRef.current = false
     }
-  }, [helpOpen, isDeneme, mode.timePerQuestion, quizStore.state, timer])
+  }, [helpOpen, isDeneme, mode.timePerQuestion, quizStore.state, submission, timer])
   // Companion-yardim durumu soru degisiminde handleNext/handleRestart'ta sifirlanir
   // (effect yerine handler — gereksiz cascading render onler).
 
@@ -499,6 +509,8 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
 
     const question = quizStore.currentQuestion()
     if (!question) return
+    // A failed response may already have locked this choice on the server.
+    if (submission?.questionId === question.id && submission.optionIndex !== optionIndex) return
 
     // Ekran-index'ini kanonik DB-index'ine cevir — server bununla notlar (disc#1296).
     const shuffleMap = shuffleMapRef.current.get(question.id)
@@ -517,6 +529,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     gradingRef.current = true
     const controller = new AbortController()
     gradeRequestRef.current = controller
+    setSubmission({ questionId: question.id, optionIndex, status: 'pending' })
 
     const position = useQuizStore.getState().currentIndex
     let strategyEvent
@@ -555,6 +568,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
           correctOption,
           grade.solution,
         )
+        setSubmission(null)
 
         if (!userId) {
           const activationVariant = getActivationExposure()
@@ -592,11 +606,14 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
       .catch((error) => {
         if (controller.signal.aborted) return
         console.error('[QuizGame] Cevap notlandırma hatası:', error)
-        if (isTimedMode && useQuizStore.getState().state === 'playing') timer.start()
+        const current = useQuizStore.getState()
+        if (current.state !== 'playing' || current.currentQuestion()?.id !== question.id) return
+        setSubmission({ questionId: question.id, optionIndex, status: 'failed' })
         toast.error('Cevap doğrulanamadı', 'Lütfen bağlantını kontrol edip tekrar dene.')
       })
       .finally(() => {
-        if (gradeRequestRef.current === controller) gradeRequestRef.current = null
+        if (gradeRequestRef.current !== controller) return
+        gradeRequestRef.current = null
         gradingRef.current = false
         if (denemeTimeUpPendingRef.current) {
           denemeTimeUpPendingRef.current = false
@@ -604,11 +621,17 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
           setScreen('result')
         }
       })
-  }, [quizStore, timer, mode.timePerQuestion, isDeneme, attemptId, strategyTracked, userId, questionExamRef, game, setShowBurst, setShowXPPopup, setShowLifeLost, setScreen])
+  }, [quizStore, timer, mode.timePerQuestion, isDeneme, attemptId, strategyTracked, userId, questionExamRef, game, submission, setSubmission, setShowBurst, setShowXPPopup, setShowLifeLost, setScreen])
+
+  const retryAnswer = useCallback(() => {
+    if (submission?.status === 'failed') handleAnswer(submission.optionIndex)
+  }, [handleAnswer, submission])
 
   // --- Sonraki soru ---
 
   const handleNext = useCallback(() => {
+    setSubmission(null)
+    setReadingPaused(false)
     setShowComments(false)
     setShowReportModal(false)
     setHelpPaused(false) // yeni soruda yardım-duraklatma sıfırlanır
@@ -626,7 +649,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         timer.start()
       }
     }
-  }, [quizStore, timer, mode.timePerQuestion, isDeneme, setShowComments, setShowReportModal, setHelpPaused, setScreen])
+  }, [quizStore, timer, mode.timePerQuestion, isDeneme, setShowComments, setShowReportModal, setHelpPaused, setReadingPaused, setSubmission, setScreen])
 
   // --- Yeniden baslat ---
 
@@ -634,6 +657,8 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     gradeRequestRef.current?.abort()
     gradeRequestRef.current = null
     gradingRef.current = false
+    setSubmission(null)
+    setReadingPaused(false)
     denemeTimeUpPendingRef.current = false
     setAttemptId(null)
     setStrategyTracked(false)
@@ -644,12 +669,15 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     setHelpPaused(false)
     helpWasPausedRef.current = false
     setScreen('lobby')
-  }, [quizStore, setAttemptId, setStrategyTracked, setIsGuestMode, setHelpPaused, setScreen])
+  }, [quizStore, setAttemptId, setStrategyTracked, setIsGuestMode, setHelpPaused, setReadingPaused, setSubmission, setScreen])
 
   // --- Secenek durumu ---
 
   const getOptionState = useCallback((index: number): OptionState => {
     const question = quizStore.currentQuestion()
+    if (quizStore.state === 'playing' && question && submission?.questionId === question.id) {
+      return index === submission.optionIndex ? 'selected' : 'idle'
+    }
     if (quizStore.state !== 'answered' || !question) return 'idle'
 
     const lastAnswer = quizStore.answers[quizStore.answers.length - 1]
@@ -658,7 +686,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     if (index === lastAnswer.correctOption) return 'correct'
     if (index === lastAnswer.selectedOption) return 'wrong'
     return 'dim'
-  }, [quizStore])
+  }, [quizStore, submission])
 
   const optionOrderFor = useCallback((questionId: string, optionCount: number): number[] => {
     const map = shuffleMapRef.current.get(questionId)
@@ -685,6 +713,10 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     setShowComments,
     setShowReportModal,
     setHelpPaused,
+    setReadingPaused,
+    answerStatus: submission && quizStore.state === 'playing' && submission.questionId === quizStore.currentQuestion()?.id
+      ? submission.status : 'idle',
+    retryAnswer,
     handleStart,
     handleStartPlanned,
     handleStartPreparedDeneme,

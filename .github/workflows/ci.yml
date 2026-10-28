@@ -544,11 +544,11 @@ jobs:
       # NOT: CI'da SUPABASE_SERVICE_KEY (service-role) secret'i yok → service-role
       # kullanan sayfalar (landing/arena vb.) dev server'da hata verir ve render
       # flaky olur. Bu yuzden smoke yalniz service-role/data GEREKTIRMEYEN
-      # auth-boundary spec'leriyle sinirli: oda + admin guard redirect'leri
+      # auth-boundary ve fixture kullanan spec'lerle sinirli: oda, admin, mobil quiz
       # (ilk CI kosusunda deterministik gecti). Tam suite icin operatorun
       # SUPABASE_SERVICE_KEY secret'i eklemesi gerekir (follow-up).
       - name: Run E2E smoke (chromium, backend-independent)
-        run: npm run test:e2e -- --project=chromium e2e/oda-routes.spec.ts e2e/proxy-admin-guard.spec.ts e2e/tyt-social-preparation.spec.ts e2e/controlled-measurement.spec.ts
+        run: npm run test:e2e -- --project=chromium e2e/oda-routes.spec.ts e2e/proxy-admin-guard.spec.ts e2e/tyt-social-preparation.spec.ts e2e/controlled-measurement.spec.ts e2e/mobile-ux-first-pass.spec.ts
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
