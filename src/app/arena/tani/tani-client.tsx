@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, BrainCircuit, RefreshCw, Target } from 'lucide-react'
@@ -10,6 +10,9 @@ import { useAdaptiveDiagnostic } from '@/lib/hooks/use-adaptive-diagnostic'
 import type { DiagnosticOutcomeSummaryPublic } from '@/lib/diagnostic/public-contract'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { parseDiagnosticPageScope } from '@/lib/diagnostic/scope'
+import { QuizReadingSettings } from '@/components/game/quiz-reading-settings'
+import { useQuizReading } from '@/lib/hooks/use-quiz-reading'
+import sheetStyles from '@/components/game/answer-sheet.module.css'
 
 interface PendingAnswer {
   sessionId: string
@@ -160,6 +163,7 @@ export default function TaniClient() {
   )
   const diagnostic = useAdaptiveDiagnostic(requestedScope?.game ?? null, user?.id, requestedScope?.examRef)
   const [selection, setSelection] = useState<{ questionKey: string; option: number } | null>(null)
+  const { fontSize, fontScale, setFontSize } = useQuizReading()
   const questionTiming = useRef<{ questionKey: string; startedAt: number } | null>(null)
   const pendingAnswer = useRef<PendingAnswer | null>(null)
   const questionId = diagnostic.session?.question?.id ?? null
@@ -294,11 +298,16 @@ export default function TaniClient() {
           )}
 
           {activeQuestion && session && (
-            <section ref={registerQuestion} aria-labelledby="diagnostic-question-title" className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-sm md:p-7">
-              <div className="mb-5">
+            <section ref={registerQuestion} aria-labelledby="diagnostic-question-title"
+              className={`${sheetStyles.host} ${sheetStyles.focusMode} rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4 shadow-sm md:p-7`}
+              style={{ '--quiz-font-scale': fontScale } as CSSProperties}>
+              <div className="mb-4 md:mb-5">
                 <div className="flex items-center justify-between gap-3 text-xs text-[var(--text-sub)]">
                   <span>Soru {session.progress.answered + 1} / {session.progress.total}</span>
-                  <span>{session.progress.coveredOutcomes} / {session.progress.totalOutcomes} kazanım yoklandı</span>
+                  <span className="flex items-center gap-2">
+                    <span className="hidden sm:inline">{session.progress.coveredOutcomes} / {session.progress.totalOutcomes} kazanım yoklandı</span>
+                    <QuizReadingSettings fontSize={fontSize} onChange={setFontSize} showSound={false} variant="card" />
+                  </span>
                 </div>
                 <div
                   role="progressbar"
@@ -313,11 +322,11 @@ export default function TaniClient() {
               </div>
 
               <fieldset disabled={diagnostic.submitting}>
-                <legend id="diagnostic-question-title" className="text-base font-bold leading-7 text-[var(--text)]">
+                <legend id="diagnostic-question-title" className="font-semibold leading-7 text-[var(--text)]" style={{ fontSize: 'calc(1.0625rem * var(--quiz-font-scale, 1))' }}>
                   {activeQuestion.content.question}
                 </legend>
                 {activeQuestion.content.passage && (
-                  <p className="mt-3 rounded-xl bg-[var(--surface)] p-4 text-sm leading-6 text-[var(--text-sub)]">
+                  <p className="mt-3 rounded-xl bg-[var(--surface)] p-4 leading-6 text-[var(--text-sub)]" style={{ fontSize: 'calc(0.9375rem * var(--quiz-font-scale, 1))' }}>
                     {activeQuestion.content.passage}
                   </p>
                 )}
@@ -339,7 +348,7 @@ export default function TaniClient() {
                         onChange={() => setSelection({ questionKey: `${session.id}:${activeQuestion.id}`, option: index })}
                         className="h-4 w-4 accent-[var(--focus)]"
                       />
-                      <span><span className="mr-2 font-bold">{String.fromCharCode(65 + index)}.</span>{option}</span>
+                      <span className="min-w-0" style={{ fontSize: 'calc(0.9375rem * var(--quiz-font-scale, 1))' }}><span className="mr-2 font-bold">{String.fromCharCode(65 + index)}.</span>{option}</span>
                     </label>
                   ))}
                 </div>
@@ -354,7 +363,7 @@ export default function TaniClient() {
                 type="button"
                 onClick={() => void handleSubmit()}
                 disabled={selectedOption === null || diagnostic.submitting}
-                className="btn-primary mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                className={`btn-primary ${sheetStyles.stickyAction} mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 {diagnostic.submitting ? 'Kaydediliyor...' : 'Cevabı kaydet ve devam et'}
                 {!diagnostic.submitting && <ArrowRight className="h-4 w-4" aria-hidden="true" />}

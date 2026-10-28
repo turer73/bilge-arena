@@ -8,6 +8,11 @@ vi.mock('@/stores/auth-store', () => ({ useAuthStore: mocks.auth }))
 vi.mock('@/lib/hooks/use-social-pilot', () => ({ useSocialPilot: mocks.hook }))
 import SocialPilotClient from '../social-pilot-client'
 
+Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+  configurable: true,
+  value: function(this: HTMLDialogElement) { this.setAttribute('open', '') },
+})
+
 const base = { supported: true, label: SOCIAL_DISCOVERY_LABEL, description: SOCIAL_DISCOVERY_DESCRIPTION,
   questionCount: 12, session: null }
 function hook(response: unknown, error = false) {
@@ -69,5 +74,18 @@ describe('social discovery student flow', () => {
     expect(screen.getAllByText('2 / 3 doğru')).toHaveLength(4)
     expect(screen.queryByText('%67')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Hâkimiyet haritası' })).not.toBeInTheDocument()
+  })
+
+  it('soru kartı Aa ayarıyla ölçeklenir ve kök soru normal kalınlıkta', async () => {
+    const ui = userEvent.setup()
+    window.localStorage.removeItem('bilge-quiz-font-size')
+    mocks.hook.mockReturnValue(hook(active()))
+    render(<SocialPilotClient />)
+    const section = screen.getAllByRole('radio')[0].closest('section') as HTMLElement
+    expect(section.style.getPropertyValue('--quiz-font-scale')).toBe('1')
+    await ui.click(screen.getByRole('button', { name: 'Yazı boyutu ve ses ayarları' }))
+    await ui.click(screen.getByRole('radio', { name: /Küçük/ }))
+    expect(section.style.getPropertyValue('--quiz-font-scale')).toBe('0.88')
+    window.localStorage.removeItem('bilge-quiz-font-size')
   })
 })

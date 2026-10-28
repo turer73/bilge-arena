@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import type { Challenge, Question } from '@/types/database'
 
@@ -22,6 +22,11 @@ vi.mock('@/stores/toast-store', () => ({
 }))
 
 import DuelloGamePage from '../page'
+
+Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+  configurable: true,
+  value: function(this: HTMLDialogElement) { this.setAttribute('open', '') },
+})
 
 const challenge: Challenge = {
   id: 'duel-1',
@@ -86,5 +91,18 @@ describe('DuelloGamePage', () => {
     expect(container.querySelector('[data-duel-versus]')).toBeInTheDocument()
     expect(container.querySelectorAll('[data-quiz-option]')).toHaveLength(4)
     await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/challenges/duel-1', { cache: 'no-store' }))
+  })
+
+  test('Aa ayarı soru metnini ve şıkları ölçekler; başlık normal kalınlıkta', async () => {
+    window.localStorage.removeItem('bilge-quiz-font-size')
+    const { container } = render(<DuelloGamePage />)
+    const heading = await screen.findByRole('heading', { name: 'Üç basamaklı en küçük sayı kaçtır?' })
+    expect(heading).not.toHaveClass('font-black')
+    const main = container.querySelector('[data-duel-question]') as HTMLElement
+    expect(main.style.getPropertyValue('--quiz-font-scale')).toBe('1')
+    fireEvent.click(screen.getByRole('button', { name: 'Yazı boyutu ve ses ayarları' }))
+    fireEvent.click(screen.getByRole('radio', { name: /Büyük/ }))
+    expect(main.style.getPropertyValue('--quiz-font-scale')).toBe('1.12')
+    window.localStorage.removeItem('bilge-quiz-font-size')
   })
 })

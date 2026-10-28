@@ -1,11 +1,14 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { useAuthStore } from '@/stores/auth-store'
 import { useSocialPilot, type SocialPilotAnswerInput } from '@/lib/hooks/use-social-pilot'
 import { getCategoryLabel } from '@/lib/constants/games'
 import { SOCIAL_DISCOVERY_DESCRIPTION, SOCIAL_DISCOVERY_LABEL } from '@/lib/diagnostic/social-pilot-public'
+import { QuizReadingSettings } from '@/components/game/quiz-reading-settings'
+import { useQuizReading } from '@/lib/hooks/use-quiz-reading'
+import sheetStyles from '@/components/game/answer-sheet.module.css'
 
 export default function SocialPilotClient() {
   const { user, loading: authLoading } = useAuthStore()
@@ -14,6 +17,7 @@ export default function SocialPilotClient() {
   const question = session?.question
   const key = question && session ? `${session.id}:${question.id}` : null
   const [choice, setChoice] = useState<{ key: string; index: number } | null>(null)
+  const { fontSize, fontScale, setFontSize } = useQuizReading()
   const [lockedKey, setLockedKey] = useState<string | null>(null)
   const selected = key && choice?.key === key ? choice.index : null
   const timing = useRef<{ key: string; start: number } | null>(null)
@@ -59,20 +63,23 @@ export default function SocialPilotClient() {
           {session?.status === 'expired' && <p role="status" className={card}>Önceki keşfin süresi doldu. Yeni bir tur başlatabilirsin.</p>}
           {session?.status === 'abandoned' && <p role="status" className={card}>Önceki tur tamamlanamadı. Yeni bir tur başlatabilirsin.</p>}
           {question && session ? (
-            <section ref={register} className={card}>
-              <p className="mb-4 text-sm text-[var(--text-sub)]">Soru {session.answeredCount + 1} / 12</p>
+            <section ref={register} className={`${card} ${sheetStyles.host} ${sheetStyles.focusMode}`} style={{ '--quiz-font-scale': fontScale } as CSSProperties}>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <p className="text-sm text-[var(--text-sub)]">Soru {session.answeredCount + 1} / 12</p>
+                <QuizReadingSettings fontSize={fontSize} onChange={setFontSize} showSound={false} variant="card" />
+              </div>
               <fieldset disabled={pilot.submitting || lockedKey === key}>
-                <legend className="text-base font-bold leading-7 text-[var(--text)]">{question.question}</legend>
-                {question.passage && <p className="mt-3 whitespace-pre-wrap rounded-xl bg-[var(--surface)] p-4 text-sm leading-6">{question.passage}</p>}
+                <legend className="font-semibold leading-7 text-[var(--text)]" style={{ fontSize: 'calc(1.0625rem * var(--quiz-font-scale, 1))' }}>{question.question}</legend>
+                {question.passage && <p className="mt-3 whitespace-pre-wrap rounded-xl bg-[var(--surface)] p-4 leading-6" style={{ fontSize: 'calc(0.9375rem * var(--quiz-font-scale, 1))' }}>{question.passage}</p>}
                 <div className="mt-5 space-y-3">
                   {question.options.map((option, index) => <label key={index} className="flex min-h-12 cursor-pointer items-start gap-3 rounded-xl border border-[var(--border)] p-4 text-sm leading-6">
                     <input type="radio" name={`social-${question.id}`} className="mt-1 h-4 w-4 shrink-0" checked={selected === index}
                       onChange={() => setChoice({ key: key!, index })} />
-                    <span className="min-w-0 break-words"><strong>{String.fromCharCode(65 + index)}.</strong> {option}</span>
+                    <span className="min-w-0 break-words" style={{ fontSize: 'calc(0.9375rem * var(--quiz-font-scale, 1))' }}><strong>{String.fromCharCode(65 + index)}.</strong> {option}</span>
                   </label>)}
                 </div>
               </fieldset>
-              <button type="button" className="btn-primary mt-5 min-h-12 w-full rounded-xl px-5 py-3 font-bold disabled:opacity-50"
+              <button type="button" className={`btn-primary ${sheetStyles.stickyAction} mt-5 min-h-12 w-full rounded-xl px-5 py-3 font-bold disabled:opacity-50`}
                 disabled={selected === null || pilot.submitting} onClick={() => void submit()}>{pilot.submitting ? 'Kaydediliyor…' : 'Cevabı kaydet ve devam et'}</button>
             </section>
           ) : (
