@@ -59,7 +59,13 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { scanQuestion, turkishRestorationExclusion, turkishRestorationWords } from './scan-question-text-defects.mjs'
+import {
+  scanQuestion,
+  turkishRestorationExclusion,
+  turkishRestorationWords,
+  minorTextCorrectionExclusion,
+  verifyMinorTextCorrection,
+} from './scan-question-text-defects.mjs'
 
 export const PROPOSALS_SCHEMA = 'question-revision-proposals@1'
 // Payload'da tasinabilen icerik alanlari (106 + 110 `coach`). `coach` (kurate
@@ -441,7 +447,7 @@ export function diffContent(before, after) {
 // ── Paket: ogeleri kur ───────────────────────────────────────────────────────
 /** currentById: Map<questionId (kucuk harf), current>; offline=true ise
  * kazanim/kaynak eksigi blok degil "pending_db" notudur ve oge "preview" kalir. */
-export function buildBatch({ proposals, currentById, offline = false, mappingPendingDrafts = false, draftOnly = false }) {
+export function buildBatch({ proposals, currentById, offline = false, mappingPendingDrafts = false, draftOnly = false, allowMinorTextCorrection = false }) {
   const onlyDrafts = draftOnly || mappingPendingDrafts
   return proposals.map((proposal) => {
     const qid = uid(proposal.questionId)
@@ -488,6 +494,27 @@ export function buildBatch({ proposals, currentById, offline = false, mappingPen
         errors = errors.filter((x) => !mappingError(x))
         item.notes.push('hat: iki onaysiz Turkce harf duzeltmesi (215); kazanim ve kaynak taban revizyondan tasinir, tabanin APPROVED dogrulama karari devralinir')
       }
+    } else if (allowMinorTextCorrection && !onlyDrafts && proposal.changeKind === 'edit' && built.payload && errors.every(mappingError)) {
+      // Kucuk metin duzeltmesi hatti (230)
+      const minorCheck = verifyMinorTextCorrection(current.content, built.payload.content)
+      if (minorCheck?.valid) {
+        const exclusion = minorTextCorrectionExclusion({
+          game: current.metadata?.game,
+          category: current.metadata?.category,
+          topic: current.metadata?.topic,
+          content: current.content,
+          examRef: current.metadata?.examRef,
+          baseApproved: current.baseApproved === true,
+        }) ?? (current.isActive === false ? 'soru pasif' : null)
+        if (exclusion) {
+          item.notes.push(`kucuk metin duzeltmesi uygun, ama standart yol: ${exclusion}`)
+        } else {
+          item.lane = 'minor_text_correction'
+          item.minorChanges = minorCheck.changes
+          errors = errors.filter((x) => !mappingError(x))
+          item.notes.push('hat: kucuk metin duzeltmesi (230); kazanim ve kaynak taban revizyondan tasinir, karar korunur/legacy devredilir')
+        }
+      }
     }
     if (offline) {
       // kazanim/kaynak DB'den gelecek; cevrimdisi bunlari not olarak ayir
@@ -498,10 +525,19 @@ export function buildBatch({ proposals, currentById, offline = false, mappingPen
     } else if (!current.baseRevisionId) errors.push('yayimli revizyon yok (published_revision_id bos)')
     const gate = scanGate({ payload: built.payload, current, changeKind: proposal.changeKind })
     item.notes.push(...gate.notes.map((n) => `tarama: ${n}`))
-    // Harf geri getirmesi yeni kusur ekleyemez; kalan ERROR'lar tabanda da vardir
-    // ve ayri bir oneriyle (iki onayli yol) ele alinir.
-    if (item.lane === 'turkish_restoration') item.notes.push(...gate.blocking.map((b) => `tarama ERROR (tabanda da var, ayri oneriyle ele alin): ${b}`))
-    else errors.push(...gate.blocking.map((b) => `tarama ERROR: ${b}`))
+    // Hizli hatlar (215 ve 230): yeni kusur eklenmedikce tabandaki eski ERROR'lar
+    // ayri bir oneriyle ele alinmak uzere not olarak kaydedilir, bloklamaz.
+    if (item.lane === 'turkish_restoration' || item.lane === 'minor_text_correction') {
+      const baseScan = scanGate({ payload: { metadata: built.payload.metadata, content: current.content }, current, changeKind: proposal.changeKind })
+      const newErrors = gate.blocking.filter((b) => !baseScan.blocking.includes(b))
+      if (newErrors.length) {
+        errors.push(...newErrors.map((b) => `tarama ERROR (yeni eklendi): ${b}`))
+      }
+      const existingErrors = gate.blocking.filter((b) => baseScan.blocking.includes(b))
+      if (existingErrors.length) {
+        item.notes.push(...existingErrors.map((b) => `tarama ERROR (tabanda da var, ayri oneriyle ele alin): ${b}`))
+      }
+    } else errors.push(...gate.blocking.map((b) => `tarama ERROR: ${b}`))
     if (errors.length) { item.status = 'blocked'; item.reasons.push(...errors) }
     else if (offline) item.status = 'preview' // kazanim/kaynak/taban DB'den gelmeden uygulanamaz
     else item.requestId = draftRequestId(qid, built.payload)
@@ -518,10 +554,12 @@ export function renderReviewSheet({ batch, items, mode = 'dry-run' }) {
   const counts = items.reduce((a, i) => ({ ...a, [i.status]: (a[i.status] ?? 0) + 1 }), {})
   const lines = []
   lines.push(`# Taslak revizyon paketi: ${batch?.title ?? ''}`, '')
-  const lanes = items.filter((i) => i.lane === 'turkish_restoration').length
+  const lanes215 = items.filter((i) => i.lane === 'turkish_restoration').length
+  const lanes230 = items.filter((i) => i.lane === 'minor_text_correction').length
   lines.push(`Mod: ${mode}. Ogeler: ${items.length} (ready ${counts.ready ?? 0}, preview ${counts.preview ?? 0}, blocked ${counts.blocked ?? 0}, needs_patch ${counts.needs_patch ?? 0}${counts.applied ? `, applied ${counts.applied}` : ''}${counts.published ? `, published ${counts.published}` : ''}).`, '')
   lines.push('Bu sayfadaki hicbir oneri kaynak kabulu, kalite karari veya yayin onayi degildir.', 'Standart yolda iki bagimsiz insan onayi (stage 1 ve stage 2) gerekir.', 'Uygun AI hazirligi + yetkili sahip kabulu alternatifi icin', '`docs/quality/ai-prepared-owner-acceptance.md` uygulanir. Pasife alma yalniz `retire` taslaginin yayimiyla olur.', '')
-  if (lanes) lines.push(`Istisna: "Turkce harf duzeltmesi (215)" hattindaki ${lanes} oge --apply ile iki onaysiz yayimlanir.`, 'DB degisikligin yalniz listelenmis govdelerin ASCII->Turkce harf geri getirmesi oldugunu harf harf', 'kanitlar; kanitlanamazsa oge reddedilir ve iki onayli yola doner.', '')
+  if (lanes215) lines.push(`Istisna: "Turkce harf duzeltmesi (215)" hattindaki ${lanes215} oge --apply ile iki onaysiz yayimlanir.`, 'DB degisikligin yalniz listelenmis govdelerin ASCII->Turkce harf geri getirmesi oldugunu harf harf', 'kanitlar; kanitlanamazsa oge reddedilir ve iki onayli yola doner.', '')
+  if (lanes230) lines.push(`Istisna: "Kucuk metin duzeltmesi (230)" hattindaki ${lanes230} oge --apply ile yayimlanir.`, 'DB degisikligin yalniz cevap, secenek sayisi, rakamlar ve olumsuzluk korunarak kucuk metin farki oldugunu', 'kanitlar; taban onayli ise karari tasir, legacy ise kararsiz yayimlar.', '')
   if (batch?.sourceRef) lines.push(`Kaynak: ${batch.sourceRef}`, '')
   for (const it of items) {
     lines.push(`## ${it.ref} · ${it.questionId}`, '')
@@ -529,6 +567,7 @@ export function renderReviewSheet({ batch, items, mode = 'dry-run' }) {
     lines.push(`- Bulgu: ${it.finding.severity} ${it.finding.code}: ${it.finding.summary}`)
     lines.push(`- Degisiklik turu: ${it.changeKind}`)
     if (it.lane === 'turkish_restoration') lines.push(`- Hat: **Turkce harf duzeltmesi (215), iki onaysiz yayin** · ${(it.words ?? []).join(', ')}`)
+    if (it.lane === 'minor_text_correction') lines.push(`- Hat: **Kucuk metin duzeltmesi (230)** · ${it.minorChanges ? it.minorChanges.map(c => `${c.field} (${c.diffCount} fark)`).join(', ') : ''}`)
     if (it.mappingRequired) lines.push('- Kazanim: **esleme bekleyen taslak** (164); stage 2/yayin uygunlugu degildir.')
     if (it.baseRevisionId) lines.push(`- Taban revizyon: ${it.baseRevisionId}`)
     if (it.payload?.outcomes?.length) lines.push(`- Kazanim eslemesi (degismez): ${it.payload.outcomes.map((o) => `${o.outcomeId} (w ${o.weight}${o.primary ? ', primary' : ''})`).join('; ')}`)
@@ -619,6 +658,12 @@ export async function applyRevisionItems({ db, userId, items, requireAllReady = 
       it.status = 'published'; it.revisionId = data?.revisionId ?? null; it.replayed = data?.replayed === true
       continue
     }
+    if (it.lane === 'minor_text_correction') {
+      const { data, error } = await db.rpc('publish_question_minor_text_correction', { p_user_id: userId, p_question_id: it.questionId, p_base_revision_id: it.baseRevisionId, p_content: it.payload.content, p_request_id: it.requestId })
+      if (error) { it.status = 'blocked'; it.reasons.push(`RPC (230): ${error.code ?? ''} ${error.message ?? ''}`.trim()); continue }
+      it.status = 'published'; it.revisionId = data?.revisionId ?? null; it.replayed = data?.replayed === true
+      continue
+    }
     const { data, error } = await db.rpc('create_question_content_revision', { p_user_id: userId, p_question_id: it.questionId, p_base_revision_id: it.baseRevisionId, p_payload: it.payload, p_request_id: it.requestId })
     if (error) { it.status = 'blocked'; it.reasons.push(`RPC: ${error.code ?? ''} ${error.message ?? ''}`.trim()); continue }
     it.status = 'applied'; it.revisionId = data?.revisionId ?? null; it.revisionNo = data?.revisionNo ?? null; it.replayed = data?.replayed === true
@@ -635,6 +680,7 @@ if (isMain) {
   const forceOffline = argv.includes('--offline')
   const mappingPendingDrafts = argv.includes('--mapping-pending-drafts')
   const draftOnly = argv.includes('--draft-only') || mappingPendingDrafts
+  const allowMinorTextCorrection = argv.includes('--minor-text-correction')
   const requireAllReady = argv.includes('--require-all-ready') || argv.includes('--draft-only')
   if (forceOffline && (!rowsPath || apply)) { console.error('--offline --rows gerektirir ve --apply ile kullanilamaz'); process.exit(2) }
   if (!proposalsPath) { console.error('--proposals <dosya> zorunlu'); process.exit(2) }
@@ -664,7 +710,7 @@ if (isMain) {
     if (apply) { console.error('--apply icin DB baglantisi gerekir (.env.local)'); process.exit(2) }
   } else { console.error('DB (.env.local) ya da --rows <dis aktarim> gerekir'); process.exit(2) }
 
-  const items = buildBatch({ proposals, currentById, offline, mappingPendingDrafts, draftOnly })
+  const items = buildBatch({ proposals, currentById, offline, mappingPendingDrafts, draftOnly, allowMinorTextCorrection })
   if (apply && snapshot) {
     // Dis aktarim ile canli icerik ayrismissa (baska bir revizyon yayimlanmis) taslagi acma.
     for (const it of items) {
@@ -684,8 +730,9 @@ if (isMain) {
   if (!applyPreflight.passed) console.log(`Uygulama on kontrolu: ${applyPreflight.reason}`)
   for (const it of items) if (!['ready', 'applied', 'published', 'preview'].includes(it.status)) console.log(`  ${it.status.padEnd(11)} ${it.ref}: ${it.reasons.join(' | ')}`)
   for (const it of items) if (it.status === 'applied') console.log(`  applied     ${it.ref}: revizyon ${it.revisionId} no ${it.revisionNo}${it.replayed ? ' (replay)' : ''}`)
-  for (const it of items) if (it.status === 'published') console.log(`  published   ${it.ref}: Turkce harf duzeltmesi (215) revizyon ${it.revisionId}${it.replayed ? ' (replay)' : ''}`)
+  for (const it of items) if (it.status === 'published') console.log(`  published   ${it.ref}: ${it.lane === 'minor_text_correction' ? 'Kucuk metin duzeltmesi (230)' : 'Turkce harf duzeltmesi (215)'} revizyon ${it.revisionId}${it.replayed ? ' (replay)' : ''}`)
   for (const it of items) if (it.lane === 'turkish_restoration' && it.status === 'ready') console.log(`  215 hatti   ${it.ref}: --apply ile iki onaysiz yayimlanir (${(it.words ?? []).join(', ')})`)
+  for (const it of items) if (it.lane === 'minor_text_correction' && it.status === 'ready') console.log(`  230 hatti   ${it.ref}: --apply ile yayimlanir (${(it.minorChanges ?? []).map(c => `${c.field} (${c.diffCount} fark)`).join(', ')})`)
   console.log(`Yazildi: ${outDir}/{report.json,payloads.json,review-sheet.md}`)
   process.exit((apply || requireAllReady) && (!applyPreflight.passed || items.some((i) => i.status === 'blocked')) ? 1 : 0)
 }

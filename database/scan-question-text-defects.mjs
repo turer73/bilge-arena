@@ -157,6 +157,137 @@ export function turkishRestorationExclusion({ game, category, content, examRef, 
   return null
 }
 
+// ── Kucuk Metin Duzeltmesi (Migration 230) ──────────────────────────────────
+export const MINOR_TEXT_CORRECTION_FIELD_LIMITS = {
+  question: { maxCharDelta: 35, maxWordDiff: 8 },
+  solution: { maxCharDelta: 60, maxWordDiff: 12 },
+  passage: { maxCharDelta: 40, maxWordDiff: 8 },
+  options: { maxCharDelta: 15, maxWordDiff: 3 },
+  hint: { maxCharDelta: 30, maxWordDiff: 6 },
+  explanation: { maxCharDelta: 30, maxWordDiff: 6 },
+  sentence: { maxCharDelta: 30, maxWordDiff: 6 },
+  context: { maxCharDelta: 30, maxWordDiff: 6 },
+}
+
+export function minorTextCorrectionCleanDigits(text) {
+  if (!text) return ''
+  return String(text)
+    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, (c) => '0123456789'['⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(c)])
+    .replace(/[^0-9]+/g, ' ')
+}
+
+export function minorTextCorrectionNegationCount(text) {
+  if (!text) return 0
+  const lowered = lowerTr(String(text))
+  const matches = [...lowered.matchAll(/(?<![a-zçğıöşü0-9])(degil|değil|degildir|değildir|yok|yoktur|hic|hiç|asla|olamaz|yapamaz|tuzsuz|etsiz|yagsiz|yağsız|kokusuz)(?![a-zçğıöşü0-9])/gu)]
+  return matches.length
+}
+
+export function verifyMinorTextCorrectionString(field, oldStr, newStr, maxCharDelta, maxWordDiff) {
+  if (oldStr === null && newStr === null) return { field, changed: false }
+  if (oldStr === null || newStr === null) return null
+  if (typeof oldStr !== 'string' || typeof newStr !== 'string') return null
+  if (newStr.normalize('NFC') !== newStr) return null
+  if (oldStr === newStr) return { field, changed: false }
+
+  if (Math.abs(newStr.length - oldStr.length) > maxCharDelta) return null
+  if (minorTextCorrectionCleanDigits(oldStr) !== minorTextCorrectionCleanDigits(newStr)) return null
+  if (minorTextCorrectionNegationCount(oldStr) !== minorTextCorrectionNegationCount(newStr)) return null
+
+  const oldWords = oldStr.trim().split(/\s+/).filter(Boolean)
+  const newWords = newStr.trim().split(/\s+/).filter(Boolean)
+  if (Math.abs(newWords.length - oldWords.length) > 3) return null
+
+  let diffCount = 0
+  const changes = []
+  const minWords = Math.min(oldWords.length, newWords.length)
+  for (let i = 0; i < minWords; i++) {
+    if (oldWords[i] !== newWords[i]) {
+      diffCount++
+      changes.push({ old: oldWords[i], new: newWords[i] })
+    }
+  }
+  diffCount += Math.abs(newWords.length - oldWords.length)
+  if (diffCount > maxWordDiff) return null
+
+  return { field, changed: true, diffCount, changes }
+}
+
+export function verifyMinorTextCorrection(oldContent, newContent) {
+  if (!oldContent || !newContent || typeof oldContent !== 'object' || typeof newContent !== 'object') return null
+  if (Array.isArray(oldContent) || Array.isArray(newContent)) return null
+
+  const oldKeys = Object.keys(oldContent).sort()
+  const newKeys = Object.keys(newContent).sort()
+  if (oldKeys.join(',') !== newKeys.join(',')) return null
+
+  if (oldContent.answer !== newContent.answer) return null
+  if (oldContent.correct !== undefined && oldContent.correct !== newContent.correct) return null
+
+  if (!Array.isArray(oldContent.options) || !Array.isArray(newContent.options)) return null
+  if (oldContent.options.length !== newContent.options.length) return null
+
+  let hasChange = false
+  const fieldChanges = []
+
+  // Check options
+  for (let i = 0; i < oldContent.options.length; i++) {
+    const res = verifyMinorTextCorrectionString(`options[${i}]`, oldContent.options[i], newContent.options[i], 15, 3)
+    if (!res) return null
+    if (res.changed) {
+      hasChange = true
+      fieldChanges.push(res)
+    }
+  }
+
+  // Check question
+  const qRes = verifyMinorTextCorrectionString('question', oldContent.question, newContent.question, 35, 8)
+  if (!qRes) return null
+  if (qRes.changed) {
+    hasChange = true
+    fieldChanges.push(qRes)
+  }
+
+  // Check optional string fields
+  for (const f of ['solution', 'passage', 'hint', 'explanation', 'sentence', 'context']) {
+    if (f in oldContent) {
+      const limits = MINOR_TEXT_CORRECTION_FIELD_LIMITS[f]
+      const res = verifyMinorTextCorrectionString(f, oldContent[f], newContent[f], limits.maxCharDelta, limits.maxWordDiff)
+      if (!res) return null
+      if (res.changed) {
+        hasChange = true
+        fieldChanges.push(res)
+      }
+    }
+  }
+
+  // Check type if present
+  if ('type' in oldContent && oldContent.type !== newContent.type) return null
+
+  // Check other non-string fields (like coach)
+  for (const k of oldKeys) {
+    if (!['question', 'options', 'answer', 'correct', 'solution', 'passage', 'hint', 'explanation', 'sentence', 'context', 'type'].includes(k)) {
+      if (JSON.stringify(oldContent[k]) !== JSON.stringify(newContent[k])) return null
+    }
+  }
+
+  if (!hasChange) return null
+  return { valid: true, changes: fieldChanges }
+}
+
+export function minorTextCorrectionExclusion({ game, category, topic, content, examRef, baseApproved = false }) {
+  if (game === 'wordquest') return 'wordquest (Ingilizce icerik)'
+  if (game === 'sosyal' && String(examRef ?? '').trim().toUpperCase() === 'TYT' && baseApproved) return 'onayli TYT sosyal revizyonu (218)'
+  const catTopic = `${category ?? ''} ${topic ?? ''}`.toLowerCase()
+  if (/(yazim|imla|noktalama|hece|ses_bilgisi|ses_olaylari|anlatim_bozuklugu)/.test(catTopic)) {
+    return 'yazim/noktalama/dilbilgisi konulu soru'
+  }
+  if (/(yazim|yazil|imla|noktalama|buyuk harf|kucuk harf|kesme isaret|ses olay|unlu dus|unlu uyum|unsuz)/.test(foldTurkishToAscii(content?.question ?? ''))) {
+    return 'kok yazim/noktalama/ses bilgisi konulu'
+  }
+  return null
+}
+
 const STEM_RE = new RegExp(
   '(?<![\\p{L}])(' + ASCII_DIACRITIC_STEMS.map(([s]) => s.replace(/ /g, '\\s+')).join('|') + ')(?=[\\p{L}]*)(?![\\p{L}]*[çğıöşüÇĞİÖŞÜ])',
   'giu',

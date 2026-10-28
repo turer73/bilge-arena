@@ -665,3 +665,106 @@ describe('Turkce harf duzeltmesi hatti (migration 215)', () => {
     expect(draft.status).toBe('blocked')
   })
 })
+
+describe('kucuk metin duzeltmesi hatti (migration 230)', () => {
+  const baseQuestion = () => ({
+    questionId: Q,
+    baseRevisionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    isActive: true,
+    content: {
+      question: 'Rönesansın doğuşunda hangi etken belirleyicidir?',
+      options: ['Matbaanın icadı', 'Pusulanın yayılması', 'Buhar makinesi', 'Sanayi devrimi'],
+      answer: 0,
+      solution: 'Rönesansın doğuşunda matbaa belirleyicidir.',
+    },
+    metadata: { game: 'sosyal', category: 'tarih', difficulty: 3, examRef: 'AYT' },
+    outcomes: [{ outcomeId: OUTCOME, weight: 1, primary: true }],
+    source: { kind: 'original', title: 'Test soru bankasi', licenseCode: 'INTERNAL' },
+  })
+
+  const runMinor = (cur, patch, extra = {}) =>
+    buildBatch({
+      proposals: [
+        {
+          ref: 'M-1',
+          questionId: Q,
+          finding: { code: 'PUNCTUATION_FIX', severity: 'P2', summary: 'Kesme isareti eksik.' },
+          evidence: ['manual'],
+          changeKind: 'edit',
+          patch,
+          rationale: 'Yazım kuralına göre kesme işareti eklendi.',
+        },
+      ],
+      currentById: new Map([[Q, cur]]),
+      allowMinorTextCorrection: true,
+      ...extra,
+    })[0]
+
+  it('215te olmayan noktalama/apostrof duzeltmesi 230 hattinda ready ve minor_text_correction olur', async () => {
+    const cur = baseQuestion()
+    const patch = {
+      question: "Rönesans'ın doğuşunda hangi etken belirleyicidir?",
+      solution: "Rönesans'ın doğuşunda matbaa belirleyicidir.",
+    }
+    const item = runMinor(cur, patch)
+    expect(item.status).toBe('ready')
+    expect(item.lane).toBe('minor_text_correction')
+    expect(item.minorChanges).toBeDefined()
+    expect(item.minorChanges.map((c) => c.field)).toEqual(['question', 'solution'])
+    expect(item.requestId).toMatch(/^[0-9a-f-]{36}$/)
+
+    const sheet = renderReviewSheet({ batch: { title: 'Minor Batch' }, items: [item] })
+    expect(sheet).toContain('Kucuk metin duzeltmesi (230)')
+
+    // Apply RPC verification
+    const calls = []
+    const db = {
+      rpc: async (name, args) => {
+        calls.push({ name, args })
+        return { data: { revisionId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' }, error: null }
+      },
+    }
+    await applyRevisionItems({ db, userId: Q, items: [item] })
+    expect(calls.map((c) => c.name)).toEqual(['publish_question_minor_text_correction'])
+    expect(calls[0].args.p_question_id).toBe(Q)
+    expect(calls[0].args.p_content.question).toBe("Rönesans'ın doğuşunda hangi etken belirleyicidir?")
+    expect(item.status).toBe('published')
+  })
+
+  it('sayi/rakam degisikligi veya olumsuzluk degisikligi 230 hattina alinmaz, draft kalir', () => {
+    const cur = baseQuestion()
+    // Sayi degisikligi
+    const numPatch = { question: 'Rönesansın doğuşunda 2 etken belirleyicidir?' }
+    expect(runMinor(cur, numPatch).lane).toBe('draft')
+
+    // Olumsuzluk anlami degisikligi
+    const negCur = {
+      ...baseQuestion(),
+      content: { ...baseQuestion().content, question: 'Aşağıdakilerden hangisi doğru değildir?' },
+    }
+    const negPatch = { question: 'Aşağıdakilerden hangisi doğru mudur?' }
+    expect(runMinor(negCur, negPatch).lane).toBe('draft')
+  })
+
+  it('kapsam disi: TYT onayli sosyal, wordquest, dilbilgisi konulu soru draft kalir', () => {
+    const cur = baseQuestion()
+    // TYT sosyal ve tabani onayli ise
+    const tytSocialApproved = {
+      ...cur,
+      metadata: { ...cur.metadata, examRef: 'TYT' },
+      baseApproved: true,
+    }
+    const patch = { question: "Rönesans'ın doğuşunda hangi etken belirleyicidir?" }
+    const resTyt = runMinor(tytSocialApproved, patch)
+    expect(resTyt.lane).toBe('draft')
+    expect(resTyt.notes.join(' ')).toContain('standart yol: onayli TYT sosyal revizyonu (218)')
+
+    // Wordquest
+    const wqCur = { ...cur, metadata: { ...cur.metadata, game: 'wordquest' } }
+    expect(runMinor(wqCur, patch).lane).toBe('draft')
+
+    // Dilbilgisi konusu
+    const gramCur = { ...cur, metadata: { ...cur.metadata, topic: 'noktalama_isaretleri' } }
+    expect(runMinor(gramCur, patch).lane).toBe('draft')
+  })
+})
