@@ -9,16 +9,30 @@
 --   * Sayilar / Rakamlar: Eski ve yeni metindeki tum sayisal diziler (0-9)
 --     birebir ayni sira ve degerde korunmak zorundadir; sayi degistirilemez,
 --     silinemez veya eklenemez.
+--   * Harf Iskeleti: Bosluk ve . , ; : ! ? ' " ve tirnak isaretleri disindaki
+--     her karakter ayni sirada kalir. Bir harf yalnizca buyuk/kucuk harf olarak
+--     ya da ASCII'den Turkce karsiligina (c->ç, g->ğ, i->ı, o->ö, s->ş, u->ü,
+--     a->â, i->î, u->û, I->İ) degisebilir. Boylece "artar"->"azalir",
+--     "Ankara"->"Istanbul" veya ek eklenmesi (artar->artmaz) reddedilir.
+--     Matematik isaretleri (- + = < > / ( ) %) iskelete dahildir, degisemez.
+--   * Roma Rakamlari: Yalniz Roma rakami harflerinden olusan sozcuklerin
+--     (I, II, IV...) dizisi birebir korunur.
 --   * Olumsuzluk Kelimeleri: "degil", "yok", "hic", "asla", "olamaz", "yapamaz"
 --     gibi anlami tersine ceviren sozcuklerin sayisi degisemez.
 --   * Duzenleme Siniri: Her alanda karakter farki ve degisen sozcuk sayisi
 --     katica sinirlidir (soru kokunde max 35 karakter / 8 sozcuk; siklarda
 --     max 15 karakter / 3 sozcuk; cozumde max 60 karakter / 12 sozcuk).
---   * Kapsam Disi: Pasif sorular, wordquest, turkce/yazim_kurallari, kokunde
---     yazim/noktalama/imla gecen celdiricili sorular ve onayli TYT sosyal sorular.
---   * Kalite Karari: Taban revizyonda APPROVED karar varsa devralinir; taban
---     revizyon kararsizsa (legacy) "legacy, karar yok" durumu oldugu gibi
---     tasinir ve sahte onay damgalanmaz.
+--   * Kapsam Disi: Pasif sorular, wordquest, turkce/yazim_kurallari, kategori,
+--     alt kategori veya konusu yazim/imla/noktalama/hece/ses bilgisi/anlatim
+--     bozuklugu olan sorular, kokunde yazim/noktalama/imla gecen sorular ve
+--     onayli TYT sosyal sorular.
+--   * Kalite Karari: Taban revizyonun guncel politikadaki en yeni karari
+--     APPROVED ise devralinir (215/218 gibi revizyon kimligine bagli; ozet
+--     serilestirmesi karsilastirilmaz). Taban revizyonun HIC karari yoksa ve
+--     revizyona bagli bir kalite politikasi yoksa "NONE_LEGACY" olarak tasinir
+--     ve sahte onay damgalanmaz. REJECTED / NEEDS_REVIEW / INCONCLUSIVE karari,
+--     eski politikada karari veya revizyona bagli politikasi (LGS/TYT @4-@5)
+--     olan taban bu yoldan yayimlanamaz; iki asamali yola gider.
 --   * Her yayin question_governance_events ve question_minor_text_corrections
 --     tablosuna ayrintili diff ile kaydedilir.
 
@@ -62,6 +76,79 @@ BEGIN
   FROM regexp_matches(lower(translate(p_text, 'İIÇĞÖŞÜ', 'iıçğöşü')), '\m(degil|değil|degildir|değildir|yok|yoktur|hic|hiç|asla|olamaz|yapamaz|tuzsuz|etsiz|yagsiz|yağsız|kokusuz)\M', 'g');
   RETURN COALESCE(v_count, 0);
 END
+$fn$;
+
+-- Locale-bagimsiz Turkce buyuk/kucuk harf katlamasi. lower() C/--no-locale
+-- kumelerde ASCII disi harfleri kucultmez; bu yuzden acik eslem kullanilir.
+CREATE OR REPLACE FUNCTION public.question_minor_text_correction_case_fold(p_text text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+SET search_path = pg_catalog
+AS $fn$
+  SELECT translate(COALESCE(p_text, ''),
+    'ABCÇDEFGĞHIİJKLMNOÖPQRSŞTUÜVWXYZÂÎÛ',
+    'abcçdefgğhıijklmnoöpqrsştuüvwxyzâîû');
+$fn$;
+
+-- Harf iskeleti: yalnizca bosluk ve metin noktalamasi atilir. Tire, parantez,
+-- bolu ve matematik isaretleri bilerek iskelette kalir.
+CREATE OR REPLACE FUNCTION public.question_minor_text_correction_skeleton(p_text text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+SET search_path = pg_catalog
+AS $fn$
+  SELECT regexp_replace(COALESCE(p_text, ''), '[[:space:]\u00a0.,;:!?…''"’‘ʼ“”«»]', '', 'g');
+$fn$;
+
+CREATE OR REPLACE FUNCTION public.question_minor_text_correction_letters_compatible(p_old text, p_new text)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = pg_catalog
+AS $fn$
+DECLARE
+  v_old text := public.question_minor_text_correction_skeleton(p_old);
+  v_new text := public.question_minor_text_correction_skeleton(p_new);
+  a text;
+  b text;
+  fa text;
+  fb text;
+BEGIN
+  IF char_length(v_old) <> char_length(v_new) THEN
+    RETURN false;
+  END IF;
+  FOR i IN 1 .. char_length(v_old) LOOP
+    a := substr(v_old, i, 1);
+    b := substr(v_new, i, 1);
+    CONTINUE WHEN a = b;
+    fa := public.question_minor_text_correction_case_fold(a);
+    fb := public.question_minor_text_correction_case_fold(b);
+    -- Ayni harfin buyuk/kucuk bicimi. case_fold harf disini degistirmedigi
+    -- icin a <> b iken fa = fb ancak bir harfin iki bicimiyle olusur.
+    CONTINUE WHEN fa = fb;
+    -- ASCII buyuk I, Turkce metinde İ/i yerine yazilmis olabilir.
+    CONTINUE WHEN a = 'I' AND fb = 'i';
+    -- Noktali İ'nin noktasiz bicime inmesi geri yukleme degil, bozulmadir.
+    IF a = 'İ' THEN RETURN false; END IF;
+    -- Yalnizca ASCII -> Turkce harf geri yuklemesi; ters yon reddedilir.
+    CONTINUE WHEN (fa, fb) IN (('c','ç'),('g','ğ'),('i','ı'),('o','ö'),('s','ş'),('u','ü'),('a','â'),('i','î'),('u','û'));
+    RETURN false;
+  END LOOP;
+  RETURN true;
+END
+$fn$;
+
+CREATE OR REPLACE FUNCTION public.question_minor_text_correction_roman_tokens(p_text text)
+RETURNS text[]
+LANGUAGE sql
+IMMUTABLE
+SET search_path = pg_catalog
+AS $fn$
+  SELECT COALESCE(array_agg(t ORDER BY ord), '{}'::text[])
+  FROM regexp_split_to_table(COALESCE(p_text, ''), '[^A-Za-z0-9ÇĞİÖŞÜÂÎÛçğıöşüâîû]+') WITH ORDINALITY AS x(t, ord)
+  WHERE t ~ '^[IVXLCDM]+$';
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.question_minor_text_correction_verify_string(
@@ -111,6 +198,15 @@ BEGIN
 
   IF public.question_minor_text_correction_negation_count(p_old) <>
      public.question_minor_text_correction_negation_count(p_new) THEN
+    RETURN NULL;
+  END IF;
+
+  IF NOT public.question_minor_text_correction_letters_compatible(p_old, p_new) THEN
+    RETURN NULL;
+  END IF;
+
+  IF public.question_minor_text_correction_roman_tokens(p_old) IS DISTINCT FROM
+     public.question_minor_text_correction_roman_tokens(p_new) THEN
     RETURN NULL;
   END IF;
 
@@ -332,6 +428,9 @@ BEGIN
 
   IF base.game = 'wordquest'
     OR (base.game = 'turkce' AND base.category = 'yazim_kurallari')
+    OR public.question_turkish_restoration_fold(
+         COALESCE(base.category, '') || ' ' || COALESCE(base.subcategory, '') || ' ' || COALESCE(base.topic, ''))
+       ~ '(yazim|imla|noktalama|hece|ses_bilgisi|ses bilgisi|ses_olaylari|ses olaylari|anlatim_bozuklugu|anlatim bozuklugu)'
     OR public.question_turkish_restoration_fold(COALESCE(base.content->>'question', ''))
        ~ '(yazim|yazil|imla|noktalama|buyuk harf|kucuk harf|kesme isaret|ses olay|unlu dus|unlu uyum|unsuz)' THEN
     RAISE EXCEPTION 'spelling-topic question: use the two-stage revision path' USING ERRCODE='22023';
@@ -353,15 +452,37 @@ BEGIN
 
   SELECT required_policy_version INTO v_policy
   FROM public.question_validation_runtime WHERE singleton;
+  IF v_policy IS NULL THEN
+    RAISE EXCEPTION 'question validation runtime policy missing' USING ERRCODE='22023';
+  END IF;
 
+  -- Revizyona bagli kalite politikasi (fen/turkce LGS, 229 TYT) yeni revizyona
+  -- tasinamaz: baglama kendi kosu kanitini ister. Bu tabanlar inceleme yoluna gider.
+  IF EXISTS (
+    SELECT 1 FROM public.question_validation_revision_policies b WHERE b.revision_id = base.id
+  ) OR public.question_revision_validation_policy(base.id) IS DISTINCT FROM v_policy THEN
+    RAISE EXCEPTION 'revision-bound quality policy: use the reviewed revision path' USING ERRCODE='22023';
+  END IF;
+
+  -- Karar revizyon kimligine baglanir (215/218 ile ayni); revizyon icerigi
+  -- degismez. content_sha256 karsilastirilmaz: 2026-08-22 denetim kosusu ozeti
+  -- bosluksuz JSON uzerinden, revizyon ozeti jsonb::text uzerinden hesaplanmistir
+  -- (ayni icerik, farkli serilestirme). Guncel politikadaki EN YENI karar
+  -- APPROVED olmalidir; sonradan gelen NEEDS_REVIEW eski onayi gecersiz kilar.
   SELECT * INTO d FROM public.question_validation_decisions
-  WHERE revision_id = base.id AND policy_version = v_policy AND verdict = 'APPROVED'
+  WHERE revision_id = base.id AND policy_version = v_policy
   ORDER BY decided_at DESC, created_at DESC
   LIMIT 1;
-  v_has_approved := FOUND;
+  v_has_approved := FOUND AND d.verdict = 'APPROVED';
 
   IF v_has_approved THEN
     v_base_verdict := 'APPROVED@' || v_policy;
+  ELSIF EXISTS (
+    SELECT 1 FROM public.question_validation_decisions x WHERE x.revision_id = base.id
+  ) THEN
+    -- REJECTED / NEEDS_REVIEW / INCONCLUSIVE ya da eski politika karari: legacy degildir.
+    RAISE EXCEPTION 'base revision has a non-current or non-approved quality decision: use the two-stage revision path'
+      USING ERRCODE='22023';
   ELSE
     v_base_verdict := 'NONE_LEGACY';
   END IF;
@@ -476,11 +597,17 @@ BEGIN
   END IF;
   IF v_revision.change_kind = 'retire' THEN RETURN NEW; END IF;
 
-  -- Migration 230: Eger kucuk metin duzeltmesi kaydi varsa ve taban legacy (kararsiz) idiyse
-  -- legacy durumunun devrine izin verilir.
+  -- Migration 230: Kucuk metin duzeltmesi kaydi varsa ve taban HIC karari ve
+  -- revizyona bagli politikasi olmayan legacy revizyonsa, legacy durumunun
+  -- devrine izin verilir. Tabanda herhangi bir karar varsa normal kapi uygulanir.
   IF EXISTS (
     SELECT 1 FROM public.question_minor_text_corrections m
     WHERE m.revision_id = v_revision.id AND m.base_policy_verdict = 'NONE_LEGACY'
+      AND m.base_revision_id = v_revision.base_revision_id
+      AND NOT EXISTS (SELECT 1 FROM public.question_validation_decisions x WHERE x.revision_id = m.base_revision_id)
+      AND NOT EXISTS (SELECT 1 FROM public.question_validation_decisions x WHERE x.revision_id = v_revision.id)
+      AND NOT EXISTS (SELECT 1 FROM public.question_validation_revision_policies b
+                      WHERE b.revision_id IN (m.base_revision_id, v_revision.id))
   ) THEN
     RETURN NEW;
   END IF;
@@ -504,6 +631,10 @@ $fn$;
 
 REVOKE ALL ON FUNCTION public.question_minor_text_correction_clean_digits(text),
   public.question_minor_text_correction_negation_count(text),
+  public.question_minor_text_correction_case_fold(text),
+  public.question_minor_text_correction_skeleton(text),
+  public.question_minor_text_correction_letters_compatible(text, text),
+  public.question_minor_text_correction_roman_tokens(text),
   public.question_minor_text_correction_verify_string(text, text, text, integer, integer),
   public.question_minor_text_correction_verify(jsonb, jsonb),
   public.publish_question_minor_text_correction(uuid, uuid, uuid, jsonb, uuid)

@@ -163,11 +163,9 @@ export const MINOR_TEXT_CORRECTION_FIELD_LIMITS = {
   solution: { maxCharDelta: 60, maxWordDiff: 12 },
   passage: { maxCharDelta: 40, maxWordDiff: 8 },
   options: { maxCharDelta: 15, maxWordDiff: 3 },
-  hint: { maxCharDelta: 30, maxWordDiff: 6 },
-  explanation: { maxCharDelta: 30, maxWordDiff: 6 },
-  sentence: { maxCharDelta: 30, maxWordDiff: 6 },
-  context: { maxCharDelta: 30, maxWordDiff: 6 },
 }
+// SQL 230 yalniz question/options/solution/passage alanlarini duzenlenebilir sayar;
+// diger tum anahtarlar (hint, explanation, coach...) birebir ayni kalmalidir.
 
 export function minorTextCorrectionCleanDigits(text) {
   if (!text) return ''
@@ -183,6 +181,46 @@ export function minorTextCorrectionNegationCount(text) {
   return matches.length
 }
 
+// SQL question_minor_text_correction_case_fold ile birebir: locale-bagimsiz,
+// Turkce I/İ kurali (I->ı, İ->i). Liste disi karakterler degismez.
+const MINOR_CASE_UPPER = 'ABCÇDEFGĞHIİJKLMNOÖPQRSŞTUÜVWXYZÂÎÛ'
+const MINOR_CASE_LOWER = 'abcçdefgğhıijklmnoöpqrsştuüvwxyzâîû'
+export function minorTextCorrectionCaseFold(text) {
+  return Array.from(String(text ?? ''), (c) => {
+    const i = MINOR_CASE_UPPER.indexOf(c)
+    return i < 0 ? c : MINOR_CASE_LOWER[i]
+  }).join('')
+}
+
+// SQL question_minor_text_correction_skeleton: yalniz bosluk ve metin noktalamasi
+// atilir; tire, parantez, bolu ve matematik isaretleri iskelette kalir.
+// Bosluk kumesi SQL [[:space:] ] ile ayni: ASCII bosluklar + U+00A0.
+export function minorTextCorrectionSkeleton(text) {
+  return String(text ?? '').replace(/[ \t\n\v\f\r\u00a0.,;:!?…'"’‘ʼ“”«»]/g, '')
+}
+
+const MINOR_RESTORATION_PAIRS = new Set(['c>ç', 'g>ğ', 'i>ı', 'o>ö', 's>ş', 'u>ü', 'a>â', 'i>î', 'u>û'])
+export function minorTextCorrectionLettersCompatible(oldStr, newStr) {
+  const a = Array.from(minorTextCorrectionSkeleton(oldStr))
+  const b = Array.from(minorTextCorrectionSkeleton(newStr))
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] === b[i]) continue
+    const fa = minorTextCorrectionCaseFold(a[i])
+    const fb = minorTextCorrectionCaseFold(b[i])
+    if (fa === fb) continue
+    if (a[i] === 'I' && fb === 'i') continue
+    if (a[i] === 'İ') return false
+    if (MINOR_RESTORATION_PAIRS.has(`${fa}>${fb}`)) continue
+    return false
+  }
+  return true
+}
+
+export function minorTextCorrectionRomanTokens(text) {
+  return String(text ?? '').split(/[^A-Za-z0-9ÇĞİÖŞÜÂÎÛçğıöşüâîû]+/).filter((t) => /^[IVXLCDM]+$/.test(t))
+}
+
 export function verifyMinorTextCorrectionString(field, oldStr, newStr, maxCharDelta, maxWordDiff) {
   if (oldStr === null && newStr === null) return { field, changed: false }
   if (oldStr === null || newStr === null) return null
@@ -193,6 +231,8 @@ export function verifyMinorTextCorrectionString(field, oldStr, newStr, maxCharDe
   if (Math.abs(newStr.length - oldStr.length) > maxCharDelta) return null
   if (minorTextCorrectionCleanDigits(oldStr) !== minorTextCorrectionCleanDigits(newStr)) return null
   if (minorTextCorrectionNegationCount(oldStr) !== minorTextCorrectionNegationCount(newStr)) return null
+  if (!minorTextCorrectionLettersCompatible(oldStr, newStr)) return null
+  if (minorTextCorrectionRomanTokens(oldStr).join('\u0000') !== minorTextCorrectionRomanTokens(newStr).join('\u0000')) return null
 
   const oldWords = oldStr.trim().split(/\s+/).filter(Boolean)
   const newWords = newStr.trim().split(/\s+/).filter(Boolean)
@@ -249,7 +289,7 @@ export function verifyMinorTextCorrection(oldContent, newContent) {
   }
 
   // Check optional string fields
-  for (const f of ['solution', 'passage', 'hint', 'explanation', 'sentence', 'context']) {
+  for (const f of ['solution', 'passage']) {
     if (f in oldContent) {
       const limits = MINOR_TEXT_CORRECTION_FIELD_LIMITS[f]
       const res = verifyMinorTextCorrectionString(f, oldContent[f], newContent[f], limits.maxCharDelta, limits.maxWordDiff)
@@ -261,12 +301,9 @@ export function verifyMinorTextCorrection(oldContent, newContent) {
     }
   }
 
-  // Check type if present
-  if ('type' in oldContent && oldContent.type !== newContent.type) return null
-
   // Check other non-string fields (like coach)
   for (const k of oldKeys) {
-    if (!['question', 'options', 'answer', 'correct', 'solution', 'passage', 'hint', 'explanation', 'sentence', 'context', 'type'].includes(k)) {
+    if (!['question', 'options', 'answer', 'correct', 'solution', 'passage'].includes(k)) {
       if (JSON.stringify(oldContent[k]) !== JSON.stringify(newContent[k])) return null
     }
   }
@@ -275,11 +312,12 @@ export function verifyMinorTextCorrection(oldContent, newContent) {
   return { valid: true, changes: fieldChanges }
 }
 
-export function minorTextCorrectionExclusion({ game, category, topic, content, examRef, baseApproved = false }) {
+export function minorTextCorrectionExclusion({ game, category, subcategory, topic, content, examRef, baseApproved = false }) {
   if (game === 'wordquest') return 'wordquest (Ingilizce icerik)'
   if (game === 'sosyal' && String(examRef ?? '').trim().toUpperCase() === 'TYT' && baseApproved) return 'onayli TYT sosyal revizyonu (218)'
-  const catTopic = `${category ?? ''} ${topic ?? ''}`.toLowerCase()
-  if (/(yazim|imla|noktalama|hece|ses_bilgisi|ses_olaylari|anlatim_bozuklugu)/.test(catTopic)) {
+  if (game === 'turkce' && category === 'yazim_kurallari') return 'yazim/noktalama/dilbilgisi konulu soru'
+  const catTopic = foldTurkishToAscii(`${category ?? ''} ${subcategory ?? ''} ${topic ?? ''}`)
+  if (/(yazim|imla|noktalama|hece|ses_bilgisi|ses bilgisi|ses_olaylari|ses olaylari|anlatim_bozuklugu|anlatim bozuklugu)/.test(catTopic)) {
     return 'yazim/noktalama/dilbilgisi konulu soru'
   }
   if (/(yazim|yazil|imla|noktalama|buyuk harf|kucuk harf|kesme isaret|ses olay|unlu dus|unlu uyum|unsuz)/.test(foldTurkishToAscii(content?.question ?? ''))) {

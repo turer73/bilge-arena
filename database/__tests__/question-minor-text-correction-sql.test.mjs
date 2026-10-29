@@ -33,6 +33,18 @@ describe('230 question minor text correction SQL contract', () => {
     expect(sql).toContain('question_minor_text_correction_clean_digits(p_old) IS DISTINCT FROM');
     // Negation count match
     expect(sql).toContain('question_minor_text_correction_negation_count(p_old) <>');
+    // Letter skeleton: only case, ASCII->Turkish restoration and text punctuation may change
+    expect(sql).toContain('IF NOT public.question_minor_text_correction_letters_compatible(p_old, p_new) THEN');
+    expect(sql).toContain("(('c','ç'),('g','ğ'),('i','ı'),('o','ö'),('s','ş'),('u','ü'),('a','â'),('i','î'),('u','û'))");
+    // Roman numeral words are preserved
+    expect(sql).toContain('question_minor_text_correction_roman_tokens(p_old) IS DISTINCT FROM');
+  });
+
+  it('only treats a base with no decision and no revision-bound policy as NONE_LEGACY', () => {
+    expect(sql).toContain('revision-bound quality policy: use the reviewed revision path');
+    expect(sql).toContain('base revision has a non-current or non-approved quality decision');
+    expect(sql).toContain("v_has_approved := FOUND AND d.verdict = 'APPROVED';");
+    expect(sql).toContain('AND NOT EXISTS (SELECT 1 FROM public.question_validation_decisions x WHERE x.revision_id = m.base_revision_id)');
   });
 
   it('implements publish_question_minor_text_correction with full governance locks and event logging', () => {

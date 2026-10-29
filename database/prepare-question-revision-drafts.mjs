@@ -501,6 +501,7 @@ export function buildBatch({ proposals, currentById, offline = false, mappingPen
         const exclusion = minorTextCorrectionExclusion({
           game: current.metadata?.game,
           category: current.metadata?.category,
+          subcategory: current.metadata?.subcategory,
           topic: current.metadata?.topic,
           content: current.content,
           examRef: current.metadata?.examRef,
@@ -512,7 +513,7 @@ export function buildBatch({ proposals, currentById, offline = false, mappingPen
           item.lane = 'minor_text_correction'
           item.minorChanges = minorCheck.changes
           errors = errors.filter((x) => !mappingError(x))
-          item.notes.push('hat: kucuk metin duzeltmesi (230); kazanim ve kaynak taban revizyondan tasinir, karar korunur/legacy devredilir')
+          item.notes.push('hat: kucuk metin duzeltmesi (230); kazanim ve kaynak taban revizyondan tasinir, guncel APPROVED karar devralinir, hic karari olmayan taban NONE_LEGACY tasinir; baska karar veya revizyona bagli politika SQL tarafinda reddedilir')
         }
       }
     }
