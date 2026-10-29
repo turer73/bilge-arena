@@ -128,6 +128,11 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const quizLimit = useQuizLimit()
   const quiz = useQuizGame(game, user?.id)
   const retryAnswerRef = useRef<HTMLButtonElement>(null)
+  const optionsRef = useRef<HTMLDivElement>(null)
+  const handleRetryAnswer = () => {
+    optionsRef.current?.querySelector<HTMLElement>('[data-quiz-option="selected"]')?.scrollIntoView?.({ block: 'center' })
+    quiz.retryAnswer()
+  }
   useEffect(() => {
     if (quiz.answerStatus === 'failed') retryAnswerRef.current?.scrollIntoView?.({ block: 'nearest' })
   }, [quiz.answerStatus])
@@ -930,7 +935,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
         </div>
 
         {/* Secenekler */}
-        <div className={`${quizStyles.options} flex flex-col gap-2`}>
+        <div ref={optionsRef} className={`${quizStyles.options} flex flex-col gap-2`}>
           {question.content.options.map((opt, idx) => (
             <OptionButton
               key={`${quizStore.currentIndex}-${idx}`}
@@ -954,7 +959,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
           <div role="alert" className="mt-3 rounded-2xl border border-[var(--app-danger)] bg-[var(--app-card)] p-4 text-sm text-[var(--app-text)]">
             <p>Cevabın doğrulanamadı. Seçimin korunuyor; bağlantını kontrol edip tekrar deneyebilirsin.</p>
             {quiz.isDeneme && <p className="mt-2">Sınav süresi devam ediyor.</p>}
-            <button ref={retryAnswerRef} type="button" onClick={quiz.retryAnswer}
+            <button ref={retryAnswerRef} type="button" onClick={handleRetryAnswer}
               className="mt-3 min-h-12 rounded-xl bg-[var(--app-accent)] px-4 font-bold text-white">
               Aynı cevabı tekrar gönder
             </button>

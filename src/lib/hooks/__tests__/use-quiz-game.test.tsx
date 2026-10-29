@@ -89,6 +89,7 @@ vi.mock('@/lib/utils/plausible', () => ({ trackEvent: analytics.trackEvent }))
 
 import { useQuizGame } from '../use-quiz-game'
 import { markActivationExposure } from '@/lib/experiments/activation'
+import { toast } from '@/stores/toast-store'
 
 const makeQ = (id: string): PublicQuestion =>
   ({
@@ -560,11 +561,13 @@ describe('useQuizGame — visible answer submission and reading pause', () => {
 
   test('preserves a failed choice and retries the same canonical answer', async () => {
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const errorToast = vi.spyOn(toast, 'error').mockImplementation(() => {})
     grader.gradeQuestion.mockRejectedValueOnce(new Error('network'))
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
     try {
       await act(async () => result.current.handleAnswer(1))
       expect(result.current.answerStatus).toBe('failed')
+      expect(errorToast).not.toHaveBeenCalled()
       expect(result.current.getOptionState(1)).toBe('selected')
       expect(quiz.answerQuestion).not.toHaveBeenCalled()
       expect(timer.start).not.toHaveBeenCalled()
@@ -576,6 +579,7 @@ describe('useQuizGame — visible answer submission and reading pause', () => {
       expect(quiz.answerQuestion).toHaveBeenCalledTimes(1)
     } finally {
       errorLog.mockRestore()
+      errorToast.mockRestore()
     }
   })
 

@@ -609,7 +609,6 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         const current = useQuizStore.getState()
         if (current.state !== 'playing' || current.currentQuestion()?.id !== question.id) return
         setSubmission({ questionId: question.id, optionIndex, status: 'failed' })
-        toast.error('Cevap doğrulanamadı', 'Lütfen bağlantını kontrol edip tekrar dene.')
       })
       .finally(() => {
         if (gradeRequestRef.current !== controller) return

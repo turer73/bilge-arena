@@ -82,7 +82,7 @@ const quizGame = vi.hoisted(() => ({
   setReadingPaused: vi.fn(),
   answerStatus: 'idle' as 'idle' | 'pending' | 'failed',
   retryAnswer: vi.fn(),
-  getOptionState: () => 'idle',
+  getOptionState: (_index?: number): 'idle' | 'selected' => 'idle',
   optionOrderFor: (_questionId: string, optionCount: number) => Array.from({ length: optionCount }, (_, i) => i),
   handleAnswer: vi.fn(),
   handleNext: vi.fn(),
@@ -177,8 +177,8 @@ vi.mock('../explanation-panel', () => ({
   ExplanationPanel: () => <div data-testid="explanation-panel" />,
 }))
 vi.mock('../option-button', () => ({
-  OptionButton: ({ index }: { index: number }) => (
-    <button data-testid={`option-${index}`} />
+  OptionButton: ({ index, state }: { index: number; state: string }) => (
+    <button data-testid={`option-${index}`} data-quiz-option={state} />
   ),
 }))
 vi.mock('../lobby', () => ({
@@ -276,6 +276,8 @@ describe('QuizEngine yerleşim', () => {
   })
 
   test('pending and failed answers explain the state and offer an explicit retry', () => {
+    const previousOptionState = quizGame.getOptionState
+    quizGame.getOptionState = (index?: number) => index === 0 ? 'selected' : 'idle'
     try {
       quizGame.answerStatus = 'pending'
       const { rerender } = render(<QuizEngine game="matematik" />)
@@ -283,9 +285,13 @@ describe('QuizEngine yerleşim', () => {
       quizGame.answerStatus = 'failed'
       rerender(<QuizEngine game="matematik" />)
       expect(screen.getByRole('alert')).toHaveTextContent('Seçimin korunuyor')
+      const selected = screen.getByTestId('option-0')
+      selected.scrollIntoView = vi.fn()
       fireEvent.click(screen.getByRole('button', { name: 'Aynı cevabı tekrar gönder' }))
+      expect(selected.scrollIntoView).toHaveBeenCalledWith({ block: 'center' })
       expect(quizGame.retryAnswer).toHaveBeenCalledTimes(1)
     } finally {
+      quizGame.getOptionState = previousOptionState
       quizGame.answerStatus = 'idle'
     }
   })

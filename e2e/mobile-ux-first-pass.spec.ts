@@ -66,3 +66,41 @@ test('pending answers are visible and a failed request retries the same choice',
   await expect(page.locator('[data-quiz-option="correct"]')).toHaveText(/22/)
   expect(selections).toEqual([2, 2])
 })
+
+test('successful retry keeps the first selected answer between the header and result panel', async ({ page }) => {
+  const selections: number[] = []
+  await page.route('**/api/questions/grade', async (route) => {
+    const selectedOption = route.request().postDataJSON().selectedOption
+    selections.push(selectedOption)
+    if (selections.length === 1) {
+      await route.fulfill({ status: 503, json: { error: 'local-test' } })
+    } else {
+      // The server fixture accepts the displayed first choice, regardless of shuffle.
+      await route.fulfill({ json: {
+        isCorrect: true, correctOption: selectedOption,
+        acceptedOption: selectedOption, solution: 'Test notlandırma yanıtı.',
+      } })
+    }
+  })
+  await page.getByRole('button', { name: 'Yazı boyutu ayarları', exact: true }).click()
+  await page.getByRole('radio', { name: 'Büyük %112', exact: true }).check()
+  await page.getByRole('button', { name: 'Hazırlığa dön', exact: true }).click()
+  await page.getByRole('button', { name: 'Önizlemeyi başlat · 1 soru', exact: true }).click()
+  const firstOption = page.locator('[data-quiz-option]').first()
+  await firstOption.click()
+  await expect(page.getByRole('alert').filter({ hasText: 'Seçimin korunuyor' })).toBeVisible()
+  await expect(page.getByText('Cevap doğrulanamadı', { exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Aynı cevabı tekrar gönder', exact: true }).click()
+  await expect(firstOption).toHaveAttribute('data-quiz-option', 'correct')
+  await expect(page.locator('[data-quiz-feedback]')).toBeVisible()
+  await expect.poll(async () => {
+    const selected = await firstOption.boundingBox()
+    const header = await page.locator('[data-responsive-quiz-shell] header').boundingBox()
+    const feedback = await page.locator('[data-quiz-feedback]').boundingBox()
+    return selected !== null && header !== null && feedback !== null
+      && selected.y >= header.y + header.height
+      && selected.y + selected.height <= feedback.y
+  }).toBe(true)
+  expect(selections).toHaveLength(2)
+  expect(selections[1]).toBe(selections[0])
+})

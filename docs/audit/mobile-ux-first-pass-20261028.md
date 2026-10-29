@@ -57,3 +57,29 @@ güncellendi; ölçekleme kontrolleri korunuyor. Bu başarısız push kaydı
 D:/Projelerim/.codex-tmp/mobile-ux-first-pass-20261028/push.log içinde korunur.
 
 Araştırmadaki discovery 2976 için aday düzeltmedir; üretim kabulü değildir.
+
+## 29 Ekim önizleme kontrolü
+
+PR #709'un 90477560 sürümünde CI geçti; Vercel önizlemesinin kaynak commit'i
+ayrıca doğrulandı. 360×640 tarayıcıda misafir akışı, büyük yazı tercihi ve
+klavyeyle Aa kapatma incelendi. Önizlemenin gerçek sorusunda bağlantı kesilip
+geri açıldı: seçim korundu, aynı cevabın tekrarı sunucu tarafından kabul edildi.
+Bu kontrol oturum açmış kullanıcıya ait oturum kaydetme kabulünü kapsamaz.
+
+İki kusur bulundu (discovery 2980, takip CLAIM 104887): başarısız gönderimde
+hem panel hem toast aynı hatayı gösteriyordu; tekrar denemeden sonra ilk seçili
+şık yapışkan başlığın arkasında kalabiliyordu. Aday düzeltmede yinelenen toast
+kaldırıldı ve tekrar gönderim başlamadan seçili şık görünümün ortasına getirildi.
+Hata paneli, seçenek kilidi ve sunucunun notlandırma yetkisi korunuyor.
+
+Hook/bileşen testleri, yinelenen toast oluşmamasını ve tekrar gönderimin
+seçili şıkkı görünür alana getirmesini denetler. Üçüncü Chromium senaryosu,
+büyük yazıyla ilk seçeneği işaretleyip hata/başarı sonrasında seçilen şıkkın
+başlık ve sonuç paneli arasında kalmasını denetler. Bu senaryodaki notlandırma
+yanıtı bir arayüz fixture'ıdır; içerik doğruluğu kanıtı değildir.
+
+Takip düzeltmesinde Node 22 ile ilgili 73 birim/bileşen testi ve üç yerel
+Chromium senaryosu geçti. Derleme ve tam test kapısının son çıktısı PR'dadır.
+İlk takip commit denemesinde tip kontrolü, test dublörünün yalnız `idle`
+döndürecek şekilde dar tanımlandığını yakaladı; `selected` durumu da tanıma
+eklendi. Başarısız kapı çıktısı mobile-ux-review-20261029/commit.log içinde korunur.
