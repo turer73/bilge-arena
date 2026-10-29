@@ -548,7 +548,7 @@ jobs:
       # (ilk CI kosusunda deterministik gecti). Tam suite icin operatorun
       # SUPABASE_SERVICE_KEY secret'i eklemesi gerekir (follow-up).
       - name: Run E2E smoke (chromium, backend-independent)
-        run: npm run test:e2e -- --project=chromium e2e/oda-routes.spec.ts e2e/proxy-admin-guard.spec.ts e2e/tyt-social-preparation.spec.ts e2e/controlled-measurement.spec.ts e2e/mobile-ux-first-pass.spec.ts
+        run: npm run test:e2e -- --project=chromium e2e/oda-routes.spec.ts e2e/proxy-admin-guard.spec.ts e2e/tyt-social-preparation.spec.ts e2e/controlled-measurement.spec.ts e2e/mobile-ux-first-pass.spec.ts e2e/mobile-ux-accessibility.spec.ts
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
