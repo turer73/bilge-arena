@@ -4,7 +4,7 @@ import { memo } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { getOptionLetter } from '@/lib/utils/question'
 import { renderRichText, stripRichText } from '@/lib/utils/rich-text'
-import { Check, X } from 'lucide-react'
+import { Check, LoaderCircle, X } from 'lucide-react'
 
 export type OptionState = 'idle' | 'correct' | 'wrong' | 'dim' | 'selected'
 
@@ -14,6 +14,8 @@ interface OptionButtonProps {
   state: OptionState
   onClick: () => void
   delay?: number
+  disabled?: boolean
+  pending?: boolean
 }
 
 const stateStyles: Record<OptionState, {
@@ -71,7 +73,7 @@ const stateStyles: Record<OptionState, {
   },
 }
 
-export const OptionButton = memo(function OptionButton({ index, text, state, onClick, delay = 0 }: OptionButtonProps) {
+export const OptionButton = memo(function OptionButton({ index, text, state, onClick, delay = 0, disabled = false, pending = false }: OptionButtonProps) {
   const s = stateStyles[state]
   const optionLetter = getOptionLetter(index)
   const stateLabel = state === 'correct'
@@ -87,7 +89,8 @@ export const OptionButton = memo(function OptionButton({ index, text, state, onC
       data-quiz-option={state}
       type="button"
       onClick={onClick}
-      disabled={state !== 'idle'}
+      disabled={disabled || state !== 'idle'}
+      aria-busy={pending || undefined}
       aria-label={`${optionLetter} seçeneği: ${stripRichText(text)}${stateLabel}`}
       className={cn(
         'relative flex min-h-[58px] w-full items-center gap-2 overflow-hidden rounded-[18px] border-2 px-3.5 py-3 text-left',
@@ -108,7 +111,7 @@ export const OptionButton = memo(function OptionButton({ index, text, state, onC
           s.badgeBg, s.badgeText, s.border,
         )}
       >
-        {optionLetter}
+        {pending ? <LoaderCircle size={18} className="animate-spin" aria-hidden="true" /> : optionLetter}
       </span>
 
       {/* Metin */}

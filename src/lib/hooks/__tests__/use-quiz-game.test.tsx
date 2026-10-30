@@ -51,8 +51,14 @@ const timer = vi.hoisted(() => ({
   stop: vi.fn(),
   pause: vi.fn(),
   reset: vi.fn(),
+  onTimeUp: undefined as (() => void) | undefined,
 }))
-vi.mock('@/lib/hooks/use-timer', () => ({ useTimer: () => timer }))
+vi.mock('@/lib/hooks/use-timer', () => ({
+  useTimer: (options: { onTimeUp?: () => void }) => {
+    timer.onTimeUp = options.onTimeUp
+    return timer
+  },
+}))
 const elapsed = vi.hoisted(() => ({ reset: vi.fn(), seconds: 0 }))
 vi.mock('@/components/game/deneme-timer', () => ({
   useElapsedTime: () => elapsed,
@@ -83,6 +89,7 @@ vi.mock('@/lib/utils/plausible', () => ({ trackEvent: analytics.trackEvent }))
 
 import { useQuizGame } from '../use-quiz-game'
 import { markActivationExposure } from '@/lib/experiments/activation'
+import { toast } from '@/stores/toast-store'
 
 const makeQ = (id: string): PublicQuestion =>
   ({
@@ -527,6 +534,104 @@ describe('useQuizGame — yardım açıkken sayaç duraklatma', () => {
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
     act(() => result.current.setHelpPaused(true))
     expect(timer.pause).not.toHaveBeenCalled()
+  })
+})
+
+describe('useQuizGame — visible answer submission and reading pause', () => {
+  beforeEach(() => {
+    quiz.state = 'playing'
+    quiz.currentQuestion.mockReturnValue(makeQ('q1'))
+  })
+
+  test('shows the pending choice immediately and ignores a second answer', async () => {
+    let finish!: (value: { isCorrect: boolean; correctOption: number; solution: string }) => void
+    grader.gradeQuestion.mockReturnValue(new Promise((resolve) => { finish = resolve }))
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+    act(() => result.current.handleAnswer(2))
+    expect(result.current.answerStatus).toBe('pending')
+    expect(result.current.getOptionState(2)).toBe('selected')
+    expect(result.current.getOptionState(0)).toBe('idle')
+    act(() => result.current.handleAnswer(0))
+    expect(grader.gradeQuestion).toHaveBeenCalledTimes(1)
+    expect(quiz.answerQuestion).not.toHaveBeenCalled()
+    await act(async () => { finish({ isCorrect: true, correctOption: 2, solution: 'Çözüm' }) })
+    expect(result.current.answerStatus).toBe('idle')
+    expect(quiz.answerQuestion).toHaveBeenCalledTimes(1)
+  })
+
+  test('preserves a failed choice and retries the same canonical answer', async () => {
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const errorToast = vi.spyOn(toast, 'error').mockImplementation(() => {})
+    grader.gradeQuestion.mockRejectedValueOnce(new Error('network'))
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+    try {
+      await act(async () => result.current.handleAnswer(1))
+      expect(result.current.answerStatus).toBe('failed')
+      expect(errorToast).not.toHaveBeenCalled()
+      expect(result.current.getOptionState(1)).toBe('selected')
+      expect(quiz.answerQuestion).not.toHaveBeenCalled()
+      expect(timer.start).not.toHaveBeenCalled()
+      act(() => result.current.handleAnswer(0))
+      expect(grader.gradeQuestion).toHaveBeenCalledTimes(1)
+      await act(async () => result.current.retryAnswer())
+      expect(grader.gradeQuestion).toHaveBeenCalledTimes(2)
+      expect(grader.gradeQuestion.mock.calls.map((call) => call[1])).toEqual([1, 1])
+      expect(quiz.answerQuestion).toHaveBeenCalledTimes(1)
+    } finally {
+      errorLog.mockRestore()
+      errorToast.mockRestore()
+    }
+  })
+
+  test('an aborted old request cannot unlock a new request after restart', async () => {
+    let finishOld!: (value: { isCorrect: boolean; correctOption: number; solution: string }) => void
+    grader.gradeQuestion.mockReturnValueOnce(new Promise((resolve) => { finishOld = resolve }))
+    grader.gradeQuestion.mockReturnValueOnce(new Promise(() => {}))
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+    act(() => result.current.handleAnswer(1))
+    act(() => result.current.handleRestart())
+    act(() => result.current.handleAnswer(2))
+    await act(async () => { finishOld({ isCorrect: false, correctOption: 2, solution: 'Eski' }) })
+    act(() => result.current.handleAnswer(0))
+    expect(grader.gradeQuestion).toHaveBeenCalledTimes(2)
+    expect(result.current.answerStatus).toBe('pending')
+    expect(result.current.getOptionState(2)).toBe('selected')
+    expect(quiz.answerQuestion).not.toHaveBeenCalled()
+  })
+
+  test('closing Aa keeps the timer paused while help remains open', () => {
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+    act(() => result.current.setReadingPaused(true))
+    expect(timer.pause).toHaveBeenCalled()
+    act(() => result.current.setHelpPaused(true))
+    act(() => result.current.setReadingPaused(false))
+    expect(timer.start).not.toHaveBeenCalled()
+    act(() => result.current.setHelpPaused(false))
+    expect(timer.start).toHaveBeenCalledTimes(1)
+  })
+
+  test('an aborted timeout request cannot unlock the next game answer', async () => {
+    let finishOld!: (value: { isCorrect: boolean; correctOption: number; solution: string }) => void
+    grader.gradeQuestion.mockReturnValueOnce(new Promise((resolve) => { finishOld = resolve }))
+    grader.gradeQuestion.mockReturnValueOnce(new Promise(() => {}))
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+    act(() => timer.onTimeUp?.())
+    act(() => result.current.handleRestart())
+    act(() => result.current.handleAnswer(2))
+    await act(async () => { finishOld({ isCorrect: false, correctOption: 2, solution: 'Eski' }) })
+    act(() => result.current.handleAnswer(2))
+    expect(grader.gradeQuestion).toHaveBeenCalledTimes(2)
+    expect(result.current.answerStatus).toBe('pending')
+    expect(quiz.answerQuestion).not.toHaveBeenCalled()
+  })
+
+  test('Aa does not pause the exam timer', () => {
+    gameStore.selectedMode = 'deneme'
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+    act(() => result.current.setReadingPaused(true))
+    act(() => result.current.setReadingPaused(false))
+    expect(timer.pause).not.toHaveBeenCalled()
+    expect(timer.start).not.toHaveBeenCalled()
   })
 })
 

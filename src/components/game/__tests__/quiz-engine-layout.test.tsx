@@ -7,6 +7,7 @@
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, test, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import * as autoPauseHook from '@/lib/hooks/use-game-auto-pause'
 
 beforeEach(() => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
@@ -68,7 +69,7 @@ const quizGame = vi.hoisted(() => ({
   attemptId: null as string | null,
   isDeneme: false,
   mode: { id: 'klasik', name: 'Klasik', questionCount: 10, timePerQuestion: 30, lives: 3 },
-  timer: { seconds: 24 },
+  timer: { seconds: 24, start: vi.fn(), pause: vi.fn() },
   denemeConfig: null,
   loadError: null,
   showBurst: false,
@@ -79,7 +80,10 @@ const quizGame = vi.hoisted(() => ({
   showReportModal: false,
   setShowReportModal: vi.fn(),
   setHelpPaused: vi.fn(),
-  getOptionState: () => 'idle',
+  setReadingPaused: vi.fn(),
+  answerStatus: 'idle' as 'idle' | 'pending' | 'failed',
+  retryAnswer: vi.fn(),
+  getOptionState: (_index?: number): 'idle' | 'selected' => 'idle',
   optionOrderFor: (_questionId: string, optionCount: number) => Array.from({ length: optionCount }, (_, i) => i),
   handleAnswer: vi.fn(),
   handleNext: vi.fn(),
@@ -174,8 +178,8 @@ vi.mock('../explanation-panel', () => ({
   ExplanationPanel: () => <div data-testid="explanation-panel" />,
 }))
 vi.mock('../option-button', () => ({
-  OptionButton: ({ index }: { index: number }) => (
-    <button data-testid={`option-${index}`} />
+  OptionButton: ({ index, state }: { index: number; state: string }) => (
+    <button data-testid={`option-${index}`} data-quiz-option={state} />
   ),
 }))
 vi.mock('../lobby', () => ({
@@ -256,6 +260,97 @@ vi.mock('next/dynamic', () => ({
 import { QuizEngine } from '../quiz-engine'
 
 describe('QuizEngine yerleşim', () => {
+  test.each(['pending', 'failed'] as const)('%s cevapta arka plana geçiş ikinci bir duraklatma penceresi açmaz', (status) => {
+    const previousState = quizStoreValue.state
+    try {
+      quizStoreValue.state = 'playing'
+      quizGame.answerStatus = status
+      quizGame.timer.start.mockClear()
+      quizGame.timer.pause.mockClear()
+      render(<QuizEngine game="matematik" />)
+      fireEvent(window, new Event('pagehide'))
+      expect(screen.queryByRole('dialog', { name: 'Oyun duraklatıldı' })).not.toBeInTheDocument()
+      expect(quizGame.timer.pause).not.toHaveBeenCalled()
+      expect(quizGame.timer.start).not.toHaveBeenCalled()
+    } finally {
+      quizGame.answerStatus = 'idle'
+      quizStoreValue.state = previousState
+    }
+  })
+
+  test.each(['pending', 'failed'] as const)('%s cevapta kalan bir Devam Et eylemi sayacı başlatamaz', (status) => {
+    const previousState = quizStoreValue.state
+    const resume = vi.fn()
+    vi.spyOn(autoPauseHook, 'useGameAutoPause').mockReturnValue({ autoPaused: true, resume })
+    try {
+      quizStoreValue.state = 'playing'
+      quizGame.answerStatus = status
+      quizGame.timer.start.mockClear()
+      render(<QuizEngine game="matematik" />)
+      fireEvent.click(screen.getByRole('button', { name: 'Devam Et' }))
+      expect(resume).toHaveBeenCalledOnce()
+      expect(quizGame.timer.start).not.toHaveBeenCalled()
+    } finally {
+      quizGame.answerStatus = 'idle'
+      quizStoreValue.state = previousState
+    }
+  })
+
+  test('cevap gönderilmemiş süreli oyunda arka plandan Devam Et sayacı başlatır', () => {
+    const previousState = quizStoreValue.state
+    try {
+      quizStoreValue.state = 'playing'
+      quizGame.answerStatus = 'idle'
+      quizGame.timer.start.mockClear()
+      quizGame.timer.pause.mockClear()
+      render(<QuizEngine game="matematik" />)
+      fireEvent(window, new Event('pagehide'))
+      expect(quizGame.timer.pause).toHaveBeenCalledOnce()
+      fireEvent.click(screen.getByRole('button', { name: 'Devam Et' }))
+      expect(quizGame.timer.start).toHaveBeenCalledOnce()
+      expect(screen.queryByRole('dialog', { name: 'Oyun duraklatıldı' })).not.toBeInTheDocument()
+    } finally {
+      quizStoreValue.state = previousState
+    }
+  })
+
+  test('signed-in mobile progress follows the lobby start action', () => {
+    const previousUser = authStoreValue.user
+    const previousScreen = quizGame.screen
+    try {
+      authStoreValue.user = { id: 'u1' }
+      quizGame.screen = 'lobby'
+      const { container } = render(<QuizEngine game="matematik" />)
+      const progress = container.querySelector('[data-mobile-mastery-map-card]')
+      expect(progress).not.toBeNull()
+      expect(screen.getByTestId('normal-quiz-start').compareDocumentPosition(progress!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    } finally {
+      authStoreValue.user = previousUser
+      quizGame.screen = previousScreen
+    }
+  })
+
+  test('pending and failed answers explain the state and offer an explicit retry', () => {
+    const previousOptionState = quizGame.getOptionState
+    quizGame.getOptionState = (index?: number) => index === 0 ? 'selected' : 'idle'
+    try {
+      quizGame.answerStatus = 'pending'
+      const { rerender } = render(<QuizEngine game="matematik" />)
+      expect(screen.getByRole('status')).toHaveTextContent('Cevabın doğrulanıyor')
+      quizGame.answerStatus = 'failed'
+      rerender(<QuizEngine game="matematik" />)
+      expect(screen.getByRole('alert')).toHaveTextContent('Seçimin korunuyor')
+      const selected = screen.getByTestId('option-0')
+      selected.scrollIntoView = vi.fn()
+      fireEvent.click(screen.getByRole('button', { name: 'Aynı cevabı tekrar gönder' }))
+      expect(selected.scrollIntoView).toHaveBeenCalledWith({ block: 'center' })
+      expect(quizGame.retryAnswer).toHaveBeenCalledTimes(1)
+    } finally {
+      quizGame.getOptionState = previousOptionState
+      quizGame.answerStatus = 'idle'
+    }
+  })
+
   test('yeni soruda kaydırmayı sıfırlar, cevap geri bildiriminde yerini korur', () => {
     const initialState = quizStoreValue.state
     const { rerender } = render(<QuizEngine game="matematik" />)

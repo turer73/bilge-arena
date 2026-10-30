@@ -83,7 +83,7 @@ describe('social discovery student flow', () => {
     render(<SocialPilotClient />)
     const section = screen.getAllByRole('radio')[0].closest('section') as HTMLElement
     expect(section.style.getPropertyValue('--quiz-font-scale')).toBe('1')
-    await ui.click(screen.getByRole('button', { name: 'Yazı boyutu ve ses ayarları' }))
+    await ui.click(screen.getByRole('button', { name: 'Yazı boyutu ayarları' }))
     await ui.click(screen.getByRole('radio', { name: /Küçük/ }))
     expect(section.style.getPropertyValue('--quiz-font-scale')).toBe('0.88')
     window.localStorage.removeItem('bilge-quiz-font-size')

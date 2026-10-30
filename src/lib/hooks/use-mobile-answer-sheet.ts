@@ -33,7 +33,22 @@ export function useMobileAnswerSheet(
       return
     }
     const host = sheet.closest<HTMLElement>(HOST)
-    const publishHeight = () => host?.style.setProperty('--quiz-sheet-h', `${Math.ceil(sheet.getBoundingClientRect().height)}px`)
+    const revealFocus = () => {
+      const focused = document.activeElement
+      if (!(focused instanceof HTMLElement) || !sheet.contains(focused) || sheet.clientHeight <= 0) return
+      const bounds = focused.getBoundingClientRect()
+      const sheetTop = sheet.getBoundingClientRect().top
+      // Shared entrance transforms cancel out; scroll only the panel so the
+      // learner's question position stays intact when text makes it taller.
+      const above = bounds.top - sheetTop - 12
+      const below = bounds.bottom - sheetTop - sheet.clientHeight + 12
+      if (above < 0) sheet.scrollTop += above
+      else if (below > 0) sheet.scrollTop += below
+    }
+    const publishHeight = () => {
+      host?.style.setProperty('--quiz-sheet-h', `${Math.ceil(sheet.getBoundingClientRect().height)}px`)
+      revealFocus()
+    }
     publishHeight()
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(publishHeight) : null
     observer?.observe(sheet)
@@ -53,6 +68,7 @@ export function useMobileAnswerSheet(
       }
     }
     focusRef?.current?.focus({ preventScroll: true })
+    revealFocus()
     return () => {
       observer?.disconnect()
       host?.style.removeProperty('--quiz-sheet-h')
