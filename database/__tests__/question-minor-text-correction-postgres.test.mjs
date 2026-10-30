@@ -118,7 +118,15 @@ const pairProbes = [
   ['sira sayisi noktasi 3. sinif -> 3 sinif', solutionOf('Üç etken 3. sınıfta vardır.'), solutionOf('Üç etken 3 sınıfta vardır.'), false],
   ['sozcukten sonra bosluklu soru isareti kaçtır ? -> kaçtır?', { ...baseContent(), question: 'Üç etken kaçtır ?' }, { ...baseContent(), question: 'Üç etken kaçtır?' }, true],
   ['sozcukten sonra coklu noktalama Neden?! -> Neden?', solutionOf('Neden?! Üç etken vardır.'), solutionOf('Neden? Üç etken vardır.'), true],
-  ['kelime ayirma Ortaçağ -> Orta Çağ', solutionOf("Ortaçağ'dan üç etken kaldı."), solutionOf("Orta Çağ'dan üç etken kaldı."), true],
+  // Codex PR #710 altinci tur: kelime sinirlari ve cumle ortasi ozel ad.
+  ['kisa parcali birlestirme O da -> Oda', solutionOf('“O da” üç etkendir.'), solutionOf('“Oda” üç etkendir.'), false],
+  ['baglac ayirma bende -> ben de', solutionOf('Üç etkeni bende gördüm.'), solutionOf('Üç etkeni ben de gördüm.'), false],
+  ['kisa parcali ayirma işbirliği -> iş birliği', solutionOf('Üç ülke işbirliği yaptı.'), solutionOf('Üç ülke iş birliği yaptı.'), false],
+  ['uzun parcali ayirma yerçekimi -> yer çekimi', solutionOf('Üç cisme yerçekimi etki eder.'), solutionOf('Üç cisme yer çekimi etki eder.'), true],
+  ['cumle ortasi ozel ad dünyanın -> Dünyanın', solutionOf('Üç etken dünyanın çevresindedir.'), solutionOf('Üç etken Dünyanın çevresindedir.'), false],
+  ['cumle ortasi birim adi kucultme Watt -> watt', solutionOf('Güç birimi Watt olur.'), solutionOf('Güç birimi watt olur.'), true],
+  ['noktadan sonra cumle basi buyutme', solutionOf('Üç etken vardır. bu sonuçtur.'), solutionOf('Üç etken vardır. Bu sonuçtur.'), true],
+  ['cumle ortasinda ozel ad yaratan ayirma Ortaçağ -> Orta Çağ', solutionOf("Üç etken Ortaçağ'dan kaldı."), solutionOf("Üç etken Orta Çağ'dan kaldı."), false],
 ]
 
 suite(`230 minor text correction ${bin ? 'native PostgreSQL' : 'PGlite WASM'} acceptance (isolated fixture)`, () => {
@@ -326,6 +334,8 @@ suite(`230 minor text correction ${bin ? 'native PostgreSQL' : 'PGlite WASM'} ac
     ['anlatim bozuklugu konusu', { game: 'turkce', category: 'paragraf', topic: 'Anlatım Bozukluğu' }],
     ['hece alt kategorisi', { game: 'turkce', category: 'dil_bilgisi', subcategory: 'hece_bilgisi' }],
     ['wordquest', { game: 'wordquest', category: 'vocabulary', exam: 'YDT' }],
+    ['sozcukte anlam kategorisi', { game: 'turkce', category: 'sozcukte_anlam' }],
+    ['deyim konusu', { game: 'turkce', category: 'paragraf', topic: 'Deyimler' }],
   ])('excludes %s', async (_name, meta) => {
     const other = await seedQuestion(meta)
     await rejects(publish(fixedContent(), randomUUID(), other.question, other.revision), /spelling-topic question|use the two-stage revision path/)

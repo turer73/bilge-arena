@@ -126,6 +126,9 @@ $fn$;
 -- NaCl -> NACL, dna -> DNA gibi bilimsel simge ve kisaltma degisimleri boylece
 -- reddedilir; "ankara" -> "Ankara" gibi bas harf duzeltmesi gecer. Iskeletle
 -- ayni on islemler (kesme, metin noktalamasi) ve ayni atilan kume kullanilir.
+-- '2' cumle basindaki (metin basi ya da . ? ! … : sonrasi) en az iki harfli
+-- dizinin ilk harfidir: kucukten buyuge degisim yalniz orada gecer, boylece
+-- cumle ortasinda ozel ad yaratilamaz (ocak -> Ocak, dünyanın -> Dünyanın).
 CREATE OR REPLACE FUNCTION public.question_minor_text_correction_case_mask(p_text text)
 RETURNS text
 LANGUAGE plpgsql
@@ -133,37 +136,51 @@ IMMUTABLE
 SET search_path = pg_catalog
 AS $fn$
 DECLARE
-  v text := regexp_replace(
-    regexp_replace(
-      regexp_replace(
-        translate(COALESCE(p_text, ''), '’‘ʼ', ''''''''),
-        '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû])''(?=[a-zçğıöşüâîû])', '\1', 'g'),
-      '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]{2}[[:space:]\u00a0]*)[.,;:?!…]+(?!=)', '\1', 'g'),
-    '[.…]+[[:space:]\u00a0]*$', '', 'g');
+  c_plain constant text := chr(57344);
+  c_sent constant text := chr(57345);
+  v text := regexp_replace(translate(COALESCE(p_text, ''), '’‘ʼ', ''''''''), '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû])''(?=[a-zçğıöşüâîû])', '\1', 'g');
   v_mask text := '';
   v_len integer := 0;
   v_run integer := 0;
   v_start integer := 0;
+  v_sent boolean := true;
+  v_run_sent boolean := false;
   c text;
 BEGIN
-  FOR i IN 1 .. char_length(v) LOOP
-    c := substr(v, i, 1);
-    IF c ~ '[[:space:]\u00a0"“”«»]' THEN
-      IF v_run >= 3 THEN v_mask := overlay(v_mask PLACING '1' FROM v_start FOR 1); END IF;
+  -- Iskeletin attigi metin noktalamasi burada isaretle degistirilir; cumle
+  -- sonu (. ? ! … :) iceren dizi cumle basi isaretidir.
+  v := regexp_replace(v, '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]{2}[[:space:]\u00a0]*)[.,;:?!…]*[.?!…:][.,;:?!…]*(?!=)', '\1' || c_sent, 'g');
+  v := regexp_replace(v, '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]{2}[[:space:]\u00a0]*)[.,;:?!…]+(?!=)', '\1' || c_plain, 'g');
+  v := regexp_replace(v, '[.…]+[[:space:]\u00a0]*$', '', 'g');
+  FOR i IN 1 .. char_length(v) + 1 LOOP
+    c := CASE WHEN i <= char_length(v) THEN substr(v, i, 1) ELSE c_plain END;
+    IF c = c_sent OR c = c_plain OR c ~ '[[:space:]\u00a0"“”«»]'
+       OR position(c IN 'ABCÇDEFGĞHIİJKLMNOÖPQRSŞTUÜVWXYZÂÎÛabcçdefgğhıijklmnoöpqrsştuüvwxyzâîû') = 0 THEN
+      -- Harf dizisi biter: cumle basinda ve en az iki harfliyse '2', degilse
+      -- en az uc harfliyse '1'.
+      IF v_run > 0 THEN
+        IF v_run_sent AND v_run >= 2 THEN
+          v_mask := overlay(v_mask PLACING '2' FROM v_start FOR 1);
+        ELSIF v_run >= 3 THEN
+          v_mask := overlay(v_mask PLACING '1' FROM v_start FOR 1);
+        END IF;
+      END IF;
       v_run := 0;
-      CONTINUE;
     END IF;
+    EXIT WHEN i > char_length(v);
+    IF c = c_sent THEN v_sent := true; CONTINUE; END IF;
+    CONTINUE WHEN c = c_plain OR c ~ '[[:space:]\u00a0"“”«»]';
     v_len := v_len + 1;
     v_mask := v_mask || '0';
     IF position(c IN 'ABCÇDEFGĞHIİJKLMNOÖPQRSŞTUÜVWXYZÂÎÛabcçdefgğhıijklmnoöpqrsştuüvwxyzâîû') > 0 THEN
-      IF v_run = 0 THEN v_start := v_len; END IF;
+      IF v_run = 0 THEN
+        v_start := v_len;
+        v_run_sent := v_sent;
+      END IF;
       v_run := v_run + 1;
-    ELSE
-      IF v_run >= 3 THEN v_mask := overlay(v_mask PLACING '1' FROM v_start FOR 1); END IF;
-      v_run := 0;
     END IF;
+    v_sent := false;
   END LOOP;
-  IF v_run >= 3 THEN v_mask := overlay(v_mask PLACING '1' FROM v_start FOR 1); END IF;
   RETURN v_mask;
 END
 $fn$;
@@ -200,8 +217,14 @@ BEGIN
     -- Buyuk/kucuk harf degisimi (I -> i/ı ve geri yuklemeyle birlikte olani dahil)
     -- yalniz yeni metinde en az uc harfli dizinin ilk harfinde: Co -> CO, NaCl ->
     -- NACL reddedilir; "Ortaçağ" -> "Orta Çağ" ayirma duzeltmesi gecer.
-    IF (a <> fa) <> (b <> fb) AND substr(v_mask_new, i, 1) <> '1' THEN
-      RETURN false;
+    IF (a <> fa) <> (b <> fb) THEN
+      IF substr(v_mask_new, i, 1) NOT IN ('1', '2') THEN
+        RETURN false;
+      END IF;
+      -- Kucukten buyuge yalniz cumle basinda.
+      IF b <> fb AND substr(v_mask_new, i, 1) <> '2' THEN
+        RETURN false;
+      END IF;
     END IF;
     -- Ayni harfin buyuk/kucuk bicimi. case_fold harf disini degistirmedigi
     -- icin a <> b iken fa = fb ancak bir harfin iki bicimiyle olusur.
@@ -234,11 +257,13 @@ AS $fn$
 DECLARE
   v_old text[];
   v_new text[];
+  v_old_cut integer[] := '{}';
+  v_new_cut integer[] := '{}';
+  v_pos integer := 0;
+  v_shift boolean := false;
+  v_restored boolean := public.question_minor_text_correction_case_fold(public.question_minor_text_correction_skeleton(p_old))
+    <> public.question_minor_text_correction_case_fold(public.question_minor_text_correction_skeleton(p_new));
 BEGIN
-  IF public.question_minor_text_correction_case_fold(public.question_minor_text_correction_skeleton(p_old))
-     = public.question_minor_text_correction_case_fold(public.question_minor_text_correction_skeleton(p_new)) THEN
-    RETURN true;
-  END IF;
   SELECT COALESCE(array_agg(t ORDER BY ord), '{}'::text[]) INTO v_old
   FROM regexp_split_to_table(
     regexp_replace(translate(COALESCE(p_old, ''), '’‘ʼ', ''''''''), '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû])''(?=[a-zçğıöşüâîû])', '\1', 'g'),
@@ -249,17 +274,50 @@ BEGIN
     regexp_replace(translate(COALESCE(p_new, ''), '’‘ʼ', ''''''''), '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû])''(?=[a-zçğıöşüâîû])', '\1', 'g'),
     '[^A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]+') WITH ORDINALITY AS x(t, ord)
   WHERE t <> '';
-  IF cardinality(v_old) <> cardinality(v_new) THEN
+  IF cardinality(v_old) = cardinality(v_new) THEN
+    FOR i IN 1 .. cardinality(v_old) LOOP
+      CONTINUE WHEN public.question_minor_text_correction_case_fold(v_old[i])
+        = public.question_minor_text_correction_case_fold(v_new[i]);
+      IF NOT v_restored THEN
+        v_shift := true;  -- harf sayisi ayni, sinir kaymis
+        CONTINUE;
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM public.question_turkish_restoration_stems stem
+        WHERE starts_with(public.question_turkish_restoration_fold(v_old[i]), stem.ascii_stem)
+          AND starts_with(lower(translate(v_new[i], 'İIÇĞÖŞÜ', 'iıçğöşü')), stem.turkish_stem)
+      ) THEN
+        RETURN false;
+      END IF;
+    END LOOP;
+    IF NOT v_shift THEN
+      RETURN true;
+    END IF;
+  END IF;
+  -- Kelime birlestirme/ayirma: harf geri yuklemesiyle birlikte olamaz; degisen
+  -- her sinirin iki yanindaki parca en az uc harf olmali ("O da" -> "Oda",
+  -- "ben de" -> "bende" reddedilir; "yerçekimi" -> "yer çekimi" gecer).
+  IF v_restored THEN
     RETURN false;
   END IF;
-  FOR i IN 1 .. cardinality(v_old) LOOP
-    CONTINUE WHEN public.question_minor_text_correction_case_fold(v_old[i])
-      = public.question_minor_text_correction_case_fold(v_new[i]);
-    IF NOT EXISTS (
-      SELECT 1 FROM public.question_turkish_restoration_stems stem
-      WHERE starts_with(public.question_turkish_restoration_fold(v_old[i]), stem.ascii_stem)
-        AND starts_with(lower(translate(v_new[i], 'İIÇĞÖŞÜ', 'iıçğöşü')), stem.turkish_stem)
-    ) THEN
+  FOR i IN 1 .. cardinality(v_old) - 1 LOOP
+    v_pos := v_pos + char_length(v_old[i]);
+    v_old_cut := v_old_cut || v_pos;
+  END LOOP;
+  v_pos := 0;
+  FOR i IN 1 .. cardinality(v_new) - 1 LOOP
+    v_pos := v_pos + char_length(v_new[i]);
+    v_new_cut := v_new_cut || v_pos;
+  END LOOP;
+  FOR i IN 1 .. cardinality(v_old) - 1 LOOP
+    IF NOT (v_old_cut[i] = ANY (v_new_cut))
+       AND (char_length(v_old[i]) < 3 OR char_length(v_old[i + 1]) < 3) THEN
+      RETURN false;
+    END IF;
+  END LOOP;
+  FOR i IN 1 .. cardinality(v_new) - 1 LOOP
+    IF NOT (v_new_cut[i] = ANY (v_old_cut))
+       AND (char_length(v_new[i]) < 3 OR char_length(v_new[i + 1]) < 3) THEN
       RETURN false;
     END IF;
   END LOOP;
@@ -579,9 +637,9 @@ BEGIN
     OR (base.game = 'turkce' AND base.category = 'yazim_kurallari')
     OR public.question_turkish_restoration_fold(
          COALESCE(base.category, '') || ' ' || COALESCE(base.subcategory, '') || ' ' || COALESCE(base.topic, ''))
-       ~ '(yazim|imla|noktalama|hece|ses_bilgisi|ses bilgisi|ses_olaylari|ses olaylari|anlatim_bozuklugu|anlatim bozuklugu)'
+       ~ '(yazim|imla|noktalama|hece|ses_bilgisi|ses bilgisi|ses_olaylari|ses olaylari|anlatim_bozuklugu|anlatim bozuklugu|anlam|deyim|atasoz)'
     OR public.question_turkish_restoration_fold(COALESCE(base.content->>'question', ''))
-       ~ '(yazim|yazil|imla|noktalama|buyuk harf|kucuk harf|kesme isaret|ses olay|unlu dus|unlu uyum|unsuz)' THEN
+       ~ '(yazim|yazil|imla|noktalama|buyuk harf|kucuk harf|kesme isaret|ses olay|unlu dus|unlu uyum|unsuz|anlam|deyim|atasoz)' THEN
     RAISE EXCEPTION 'spelling-topic question: use the two-stage revision path' USING ERRCODE='22023';
   END IF;
 

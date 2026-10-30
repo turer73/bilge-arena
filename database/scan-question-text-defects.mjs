@@ -222,23 +222,40 @@ export function minorTextCorrectionSkeleton(text) {
 // harf degisimine yalniz yeni metinde bu konumda izin verilir (Co -> CO, dna -> DNA
 // reddedilir; Ortaçağ -> Orta Çağ ayirma duzeltmesi gecer).
 const MINOR_STRIP_CHAR = /[ \t\n\v\f\r\u00a0"“”«»]/
+const MINOR_MARK_PLAIN = String.fromCharCode(0xe000)
+const MINOR_MARK_SENT = String.fromCharCode(0xe001)
+const MINOR_WS = ' \\t\\n\\v\\f\\r\\u00a0'
+const MINOR_SENT_PUNCT = new RegExp(`([${MINOR_LETTER}]{2}[${MINOR_WS}]*)[.,;:?!…]*[.?!…:][.,;:?!…]*(?!=)`, 'g')
 export function minorTextCorrectionCaseMask(text) {
   const v = String(text ?? '')
     .replace(/[’‘ʼ]/g, "'")
     .replace(MINOR_SUFFIX_APOSTROPHE, '$1')
-    .replace(MINOR_TEXT_PUNCT, '$1')
+    .replace(MINOR_SENT_PUNCT, `$1${MINOR_MARK_SENT}`)
+    .replace(MINOR_TEXT_PUNCT, `$1${MINOR_MARK_PLAIN}`)
     .replace(MINOR_END_PUNCT, '')
   const mask = []
   let run = 0
   let start = -1
-  const close = () => { if (run >= 3) mask[start] = '1'; run = 0 }
+  let sent = true
+  let runSent = false
+  const isLetter = (c) => MINOR_CASE_UPPER.includes(c) || MINOR_CASE_LOWER.includes(c)
+  const close = () => {
+    if (run > 0) {
+      if (runSent && run >= 2) mask[start] = '2'
+      else if (run >= 3) mask[start] = '1'
+    }
+    run = 0
+  }
   for (const c of v) {
-    if (MINOR_STRIP_CHAR.test(c)) { close(); continue }
+    if (c === MINOR_MARK_SENT || c === MINOR_MARK_PLAIN || MINOR_STRIP_CHAR.test(c) || !isLetter(c)) close()
+    if (c === MINOR_MARK_SENT) { sent = true; continue }
+    if (c === MINOR_MARK_PLAIN || MINOR_STRIP_CHAR.test(c)) continue
     mask.push('0')
-    if (MINOR_CASE_UPPER.includes(c) || MINOR_CASE_LOWER.includes(c)) {
-      if (run === 0) start = mask.length - 1
+    if (isLetter(c)) {
+      if (run === 0) { start = mask.length - 1; runSent = sent }
       run++
-    } else close()
+    }
+    sent = false
   }
   close()
   return mask.join('')
@@ -256,7 +273,10 @@ export function minorTextCorrectionLettersCompatible(oldStr, newStr) {
     if (a[i] === b[i]) continue
     const fa = minorTextCorrectionCaseFold(a[i])
     const fb = minorTextCorrectionCaseFold(b[i])
-    if ((a[i] !== fa) !== (b[i] !== fb) && mb[i] !== '1') return false
+    if ((a[i] !== fa) !== (b[i] !== fb)) {
+      if (mb[i] !== '1' && mb[i] !== '2') return false
+      if (b[i] !== fb && mb[i] !== '2') return false // kucukten buyuge yalniz cumle basinda
+    }
     if (fa === fb) continue
     if (a[i] === 'I' && fb === 'i') continue
     if (a[i] === 'İ') return false
@@ -278,16 +298,29 @@ const minorTextCorrectionTokens = (text) => String(text ?? '')
   .filter(Boolean)
 export function minorTextCorrectionRestorationOk(oldStr, newStr) {
   const fold = (s) => minorTextCorrectionCaseFold(minorTextCorrectionSkeleton(s))
-  if (fold(oldStr) === fold(newStr)) return true
+  const restored = fold(oldStr) !== fold(newStr)
   const a = minorTextCorrectionTokens(oldStr)
   const b = minorTextCorrectionTokens(newStr)
-  if (a.length !== b.length) return false
-  for (let i = 0; i < a.length; i++) {
-    if (minorTextCorrectionCaseFold(a[i]) === minorTextCorrectionCaseFold(b[i])) continue
-    const folded = foldTurkishToAscii(a[i])
-    const lowered = lowerTr(b[i])
-    if (!TURKISH_RESTORATION_STEMS.some(([ascii, turkish]) => folded.startsWith(ascii) && lowered.startsWith(turkish))) return false
+  if (a.length === b.length) {
+    let shift = false
+    for (let i = 0; i < a.length; i++) {
+      if (minorTextCorrectionCaseFold(a[i]) === minorTextCorrectionCaseFold(b[i])) continue
+      if (!restored) { shift = true; continue }
+      const folded = foldTurkishToAscii(a[i])
+      const lowered = lowerTr(b[i])
+      if (!TURKISH_RESTORATION_STEMS.some(([ascii, turkish]) => folded.startsWith(ascii) && lowered.startsWith(turkish))) return false
+    }
+    if (!shift) return true
   }
+  // Kelime birlestirme/ayirma: geri yuklemeyle birlikte olamaz; degisen sinirin
+  // iki yanindaki parca en az uc harf (O da -> Oda reddedilir, yerçekimi -> yer çekimi gecer).
+  if (restored) return false
+  const cuts = (t) => { const out = []; let pos = 0; for (let i = 0; i < t.length - 1; i++) { pos += [...t[i]].length; out.push(pos) } return out }
+  const ca = cuts(a)
+  const cb = cuts(b)
+  const len = (w) => [...w].length
+  for (let i = 0; i < ca.length; i++) if (!cb.includes(ca[i]) && (len(a[i]) < 3 || len(a[i + 1]) < 3)) return false
+  for (let i = 0; i < cb.length; i++) if (!ca.includes(cb[i]) && (len(b[i]) < 3 || len(b[i + 1]) < 3)) return false
   return true
 }
 
@@ -393,11 +426,11 @@ export function minorTextCorrectionExclusion({ game, category, subcategory, topi
   if (game === 'sosyal' && String(examRef ?? '').trim().toUpperCase() === 'TYT' && baseApproved) return 'onayli TYT sosyal revizyonu (218)'
   if (game === 'turkce' && category === 'yazim_kurallari') return 'yazim/noktalama/dilbilgisi konulu soru'
   const catTopic = foldTurkishToAscii(`${category ?? ''} ${subcategory ?? ''} ${topic ?? ''}`)
-  if (/(yazim|imla|noktalama|hece|ses_bilgisi|ses bilgisi|ses_olaylari|ses olaylari|anlatim_bozuklugu|anlatim bozuklugu)/.test(catTopic)) {
+  if (/(yazim|imla|noktalama|hece|ses_bilgisi|ses bilgisi|ses_olaylari|ses olaylari|anlatim_bozuklugu|anlatim bozuklugu|anlam|deyim|atasoz)/.test(catTopic)) {
     return 'yazim/noktalama/dilbilgisi konulu soru'
   }
-  if (/(yazim|yazil|imla|noktalama|buyuk harf|kucuk harf|kesme isaret|ses olay|unlu dus|unlu uyum|unsuz)/.test(foldTurkishToAscii(content?.question ?? ''))) {
-    return 'kok yazim/noktalama/ses bilgisi konulu'
+  if (/(yazim|yazil|imla|noktalama|buyuk harf|kucuk harf|kesme isaret|ses olay|unlu dus|unlu uyum|unsuz|anlam|deyim|atasoz)/.test(foldTurkishToAscii(content?.question ?? ''))) {
+    return 'kok yazim/noktalama/ses bilgisi/anlam konulu'
   }
   return null
 }
