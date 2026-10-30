@@ -8,6 +8,8 @@ import { getModesForContext, type QuizMode } from '@/lib/constants/modes'
 import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 import { getLobbyModeLabel, getLobbyPresentation } from '@/lib/utils/lobby-presentation'
 import { useLobbySelection } from '@/lib/hooks/use-lobby-selection'
+import { useQuizReading } from '@/lib/hooks/use-quiz-reading'
+import { QuizReadingSettings } from './quiz-reading-settings'
 
 interface MobileLobbyFlowProps {
   game: GameSlug
@@ -122,6 +124,7 @@ export function MobileLobbyFlow({
   onLimitReached,
   quizLimit,
 }: MobileLobbyFlowProps) {
+  const { fontSize, setFontSize } = useQuizReading()
   const gameDef = GAMES[game]
   const categories = getCategoriesForExam(game, selectedExamRef)
   const effectiveExamRef = game === 'sosyal' && isTytSocialV2ClientEnabled()
@@ -228,9 +231,13 @@ export function MobileLobbyFlow({
       aria-labelledby="mobile-flow-title"
       className="rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-shadow)] md:hidden"
     >
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]">Oyun</p>
-        <h1 id="mobile-flow-title" className="mt-1 text-xl font-black leading-6 text-[var(--app-text)]">Hemen başla</h1>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]">Oyun</p>
+          <h1 id="mobile-flow-title" className="mt-1 text-xl font-black leading-6 text-[var(--app-text)]">Hemen başla</h1>
+        </div>
+        <QuizReadingSettings fontSize={fontSize} onChange={setFontSize} variant="card"
+          showSound={false} returnLabel="Hazırlığa dön" />
       </div>
 
       {loadError && (
@@ -267,6 +274,29 @@ export function MobileLobbyFlow({
         })}
       </div>
 
+      <div data-mobile-start-action className="mt-4">
+        <p className="mb-1 text-center text-xs font-semibold leading-5 text-[var(--app-text-sub)]">
+          {game !== 'wordquest' && <>{scopeLabel} · </>}
+          {mode.isDeneme ? 'Tüm konular' : <>{categoryLabel} · {difficulty.label}</>}
+        </p>
+        <p role="status" aria-label="Tur kuralları" className="mb-3 text-center text-sm font-semibold leading-6 text-[var(--app-text-sub)]">
+          {questionCount} soru · {timeLabel} · {lives} can
+        </p>
+        {startHref && !startBlocked ? (
+          <Link href={startHref}
+            className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none">
+            <Play size={18} fill="currentColor" aria-hidden="true" />
+            {startLabel ?? 'Giriş yaparak başla'}
+          </Link>
+        ) : (
+          <button type="button" onClick={startAction} disabled={!startAction}
+            className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60">
+            <Play size={18} fill="currentColor" aria-hidden="true" />
+            {actionLabel}
+          </button>
+        )}
+      </div>
+
       <button
         type="button"
         onClick={(event) => openSheet('modes', event.currentTarget)}
@@ -290,31 +320,6 @@ export function MobileLobbyFlow({
             <SettingRow label="Konu" value={categoryLabel} onClick={(trigger) => openSheet('topic', trigger)} />
             <SettingRow label="Seviye" value={difficulty.label} onClick={(trigger) => openSheet('difficulty', trigger)} />
           </>
-        )}
-      </div>
-
-      <div className="mt-4 border-t-2 border-[var(--app-border-soft)] pt-4">
-        <p role="status" aria-label="Tur kuralları" className="mb-3 text-center text-sm font-semibold leading-6 text-[var(--app-text-sub)]">
-          {questionCount} soru · {timeLabel} · {lives} can
-        </p>
-        {startHref && !startBlocked ? (
-          <Link
-            href={startHref}
-            className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
-          >
-            <Play size={18} fill="currentColor" aria-hidden="true" />
-            {startLabel ?? 'Giriş yaparak başla'}
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={startAction}
-            disabled={!startAction}
-            className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Play size={18} fill="currentColor" aria-hidden="true" />
-            {actionLabel}
-          </button>
         )}
       </div>
 

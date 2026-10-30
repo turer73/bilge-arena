@@ -19,7 +19,7 @@ function Sheet({ active = true }: { active?: boolean }) {
     <div data-answer-sheet-host data-testid="host">
       <div data-answer-sheet-scroll data-testid="scroller">
         <button data-answer-marked data-testid="marked">B</button>
-        {active && <div ref={sheetRef} data-testid="sheet"><button ref={nextRef}>Devam</button></div>}
+        {active && <div ref={sheetRef} data-testid="sheet"><button ref={nextRef} data-testid="next">Devam</button></div>}
       </div>
     </div>
   )
@@ -34,6 +34,39 @@ function mockRects() {
 }
 
 describe('useMobileAnswerSheet', () => {
+  test('büyük metinde odaklanan düğmeyi yalnız panelin içinde görünür kaydırır', () => {
+    setWide(false)
+    rects.set('sheet', { top: 500, height: 200, bottom: 700 })
+    rects.set('marked', { top: 300, bottom: 360 })
+    rects.set('next', { top: 750, bottom: 794 })
+    mockRects()
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function(this: HTMLElement) {
+      return this.dataset.testid === 'sheet' ? 200 : 800
+    })
+    const parentScroll = vi.fn()
+    HTMLElement.prototype.scrollBy = parentScroll
+    const windowScroll = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    const { getByTestId } = render(<Sheet />)
+    expect(getByTestId('next')).toHaveFocus()
+    expect(getByTestId('sheet').scrollTop).toBe(106)
+    expect(parentScroll).not.toHaveBeenCalled()
+    expect(windowScroll).not.toHaveBeenCalled()
+  })
+
+  test('odaklanan düğme zaten panelde görünürse okuma konumunu değiştirmez', () => {
+    setWide(false)
+    rects.set('sheet', { top: 500, height: 200, bottom: 700 })
+    rects.set('marked', { top: 300, bottom: 360 })
+    rects.set('next', { top: 560, bottom: 604 })
+    mockRects()
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function(this: HTMLElement) {
+      return this.dataset.testid === 'sheet' ? 200 : 800
+    })
+    const { getByTestId } = render(<Sheet />)
+    expect(getByTestId('next')).toHaveFocus()
+    expect(getByTestId('sheet').scrollTop).toBe(0)
+  })
+
   test('mobilde: kabuğa panel yüksekliğini yazar, işaretli öğeyi kaydırma kabında panelin üstüne alır, odağı verir', () => {
     setWide(false)
     rects.set('sheet', { top: 500, height: 300, bottom: 800 })

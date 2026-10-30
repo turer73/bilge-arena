@@ -135,18 +135,20 @@ export function ExplanationPanel({
             appearance="learning"
           />
 
-          <LikeButton initialCount={0} size="sm" appearance="learning" />
+          <div data-quiz-feedback-social className="flex items-center gap-2">
+            <LikeButton initialCount={0} size="sm" appearance="learning" />
 
-          {onOpenComments && (
-            <button
-              type="button"
-              onClick={onOpenComments}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-[var(--app-card)]/80 text-[var(--app-text-sub)] transition-colors hover:bg-[var(--app-card)] hover:text-[var(--app-accent-text)]"
-              aria-label="Yorumlar"
-            >
-              <MessagesSquare className="h-4 w-4" aria-hidden="true" />
-            </button>
-          )}
+            {onOpenComments && (
+              <button
+                type="button"
+                onClick={onOpenComments}
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-[var(--app-card)]/80 text-[var(--app-text-sub)] transition-colors hover:bg-[var(--app-card)] hover:text-[var(--app-accent-text)]"
+                aria-label="Yorumlar"
+              >
+                <MessagesSquare className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
+          </div>
 
         </div>
       </div>

@@ -127,6 +127,15 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const learningUserId = tytSocialStartBlocked ? undefined : user?.id
   const quizLimit = useQuizLimit()
   const quiz = useQuizGame(game, user?.id)
+  const retryAnswerRef = useRef<HTMLButtonElement>(null)
+  const optionsRef = useRef<HTMLDivElement>(null)
+  const handleRetryAnswer = () => {
+    optionsRef.current?.querySelector<HTMLElement>('[data-quiz-option="selected"]')?.scrollIntoView?.({ block: 'center' })
+    quiz.retryAnswer()
+  }
+  useEffect(() => {
+    if (quiz.answerStatus === 'failed') retryAnswerRef.current?.scrollIntoView?.({ block: 'nearest' })
+  }, [quiz.answerStatus])
   // Yorumlar soru kartinin ustunde acilir; mobilde sonuc paneli altta sabit
   // durdugu icin acilan bolumu gorunume getir.
   const commentsRef = useRef<HTMLDivElement>(null)
@@ -172,6 +181,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
   ])
   const autoPauseSessionKey = quiz.attemptId ?? quizStore.questions[0]?.id ?? null
   const autoPauseActive = quiz.screen === 'game' && !quiz.isDeneme && quizStore.state === 'playing'
+    && !quiz.helpOpen && quiz.answerStatus === 'idle'
   const { autoPaused, resume: clearAutoPause } = useGameAutoPause({
     active: autoPauseActive,
     sessionKey: autoPauseSessionKey,
@@ -179,10 +189,10 @@ export function QuizEngine({ game }: QuizEngineProps) {
   })
   const resumeAutoPausedGame = useCallback(() => {
     clearAutoPause()
-    if (!quiz.helpOpen && quiz.mode.timePerQuestion > 0 && useQuizStore.getState().state === 'playing') {
+    if (!quiz.helpOpen && quiz.answerStatus === 'idle' && quiz.mode.timePerQuestion > 0 && useQuizStore.getState().state === 'playing') {
       quiz.timer.start()
     }
-  }, [clearAutoPause, quiz.helpOpen, quiz.mode.timePerQuestion, quiz.timer])
+  }, [clearAutoPause, quiz.helpOpen, quiz.answerStatus, quiz.mode.timePerQuestion, quiz.timer])
   const sessionSaver = useSessionSaver({
     screen: quiz.screen,
     userId: user?.id,
@@ -424,16 +434,6 @@ export function QuizEngine({ game }: QuizEngineProps) {
             {TODAY_PLAN_CONTENT_UNAVAILABLE_MESSAGE}
           </p>
         )}
-        {user && (
-          <div data-mobile-mastery-map-card className="mx-auto w-full max-w-[720px] px-3 pt-3 md:hidden">
-            <MasteryMapCard
-              outcomes={masteryMap.outcomes}
-              discovery={masteryMap.discovery}
-              diagnosticAvailable={masteryMap.coverage?.diagnosticAvailable ?? false}
-              loading={masteryMap.loading}
-            />
-          </div>
-        )}
         {user && <div className="mx-auto w-full max-w-[720px] px-3 pt-3 md:px-5 lg:max-w-[1180px] lg:px-6"><TytSocialExamPolicyCardView policy={tytSocialPolicy} /></div>}
         <Lobby
           game={game}
@@ -551,6 +551,16 @@ export function QuizEngine({ game }: QuizEngineProps) {
           }}
           loadError={quiz.loadError}
         />
+        {user && (
+          <div data-mobile-mastery-map-card className="mx-auto w-full max-w-[720px] px-3 pb-4 md:hidden">
+            <MasteryMapCard
+              outcomes={masteryMap.outcomes}
+              discovery={masteryMap.discovery}
+              diagnosticAvailable={masteryMap.coverage?.diagnosticAvailable ?? false}
+              loading={masteryMap.loading}
+            />
+          </div>
+        )}
         <PremiumGateModal
           isOpen={showPremiumModal}
           onClose={() => setShowPremiumModal(false)}
@@ -787,6 +797,8 @@ export function QuizEngine({ game }: QuizEngineProps) {
             </div>
           )}
           <QuizReadingSettings fontSize={fontSize} onChange={setFontSize} showSound={!quiz.isDeneme}
+            onOpenChange={quiz.setReadingPaused}
+            timerBehavior={quiz.isDeneme ? 'continues' : quiz.mode.timePerQuestion > 0 ? 'paused' : undefined}
             stats={!quiz.isDeneme ? { streak: quizStore.streak, xp: quizStore.xpEarned } : undefined} />
         </div>
 
@@ -924,18 +936,36 @@ export function QuizEngine({ game }: QuizEngineProps) {
         </div>
 
         {/* Secenekler */}
-        <div className={`${quizStyles.options} flex flex-col gap-2`}>
+        <div ref={optionsRef} className={`${quizStyles.options} flex flex-col gap-2`}>
           {question.content.options.map((opt, idx) => (
             <OptionButton
               key={`${quizStore.currentIndex}-${idx}`}
               index={idx}
               text={opt}
               state={quiz.getOptionState(idx)}
+              disabled={quiz.answerStatus === 'pending' || quiz.answerStatus === 'failed'}
+              pending={quiz.answerStatus === 'pending' && quiz.getOptionState(idx) === 'selected'}
               onClick={() => quiz.handleAnswer(idx)}
               delay={idx * 55}
             />
           ))}
         </div>
+
+        {quiz.answerStatus === 'pending' && (
+          <p role="status" className="mt-3 rounded-2xl border border-[var(--app-accent)] bg-[var(--app-accent-tint)] px-4 py-3 text-sm font-semibold text-[var(--app-accent-ink)]">
+            Cevabın doğrulanıyor…
+          </p>
+        )}
+        {quiz.answerStatus === 'failed' && (
+          <div role="alert" className="mt-3 rounded-2xl border border-[var(--app-danger)] bg-[var(--app-card)] p-4 text-sm text-[var(--app-text)]">
+            <p>Cevabın doğrulanamadı. Seçimin korunuyor; bağlantını kontrol edip tekrar deneyebilirsin.</p>
+            {quiz.isDeneme && <p className="mt-2">Sınav süresi devam ediyor.</p>}
+            <button ref={retryAnswerRef} type="button" onClick={handleRetryAnswer}
+              className="mt-3 min-h-12 rounded-xl bg-[var(--app-accent)] px-4 font-bold text-white">
+              Aynı cevabı tekrar gönder
+            </button>
+          </div>
+        )}
 
         {/* XP popup */}
         {!quiz.isDeneme && quiz.showXPPopup && quizStore.lastXPResult && (

@@ -49,6 +49,21 @@ function FlowHarness({
 }
 
 describe('MobileLobbyFlow', () => {
+  it('offers reading settings before starting and shows the selected scope beside the start action', () => {
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+      configurable: true,
+      value: function(this: HTMLDialogElement) { this.setAttribute('open', '') },
+    })
+    render(<FlowHarness initialCategory="sayilar" />)
+    const start = screen.getByRole('button', { name: 'Başla · 10 soru' })
+    const scope = screen.getByRole('button', { name: 'Kapsam seç: TYT' })
+    expect(start.compareDocumentPosition(scope) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(start.parentElement).toHaveTextContent('TYT')
+    expect(start.parentElement).toHaveTextContent('Sayılar')
+    fireEvent.click(screen.getByRole('button', { name: 'Yazı boyutu ayarları' }))
+    expect(screen.getByRole('dialog', { name: 'Okuma ayarları' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hazırlığa dön' })).toBeInTheDocument()
+  })
   it('başlatmadan önce seçili modun soru, süre ve can kurallarını gösterir', () => {
     render(<FlowHarness />)
     expect(screen.getByLabelText('Tur kuralları')).toHaveTextContent('10 soru · 30 sn / soru · 3 can')

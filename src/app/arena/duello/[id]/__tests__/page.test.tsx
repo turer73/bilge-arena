@@ -100,7 +100,7 @@ describe('DuelloGamePage', () => {
     expect(heading).not.toHaveClass('font-black')
     const main = container.querySelector('[data-duel-question]') as HTMLElement
     expect(main.style.getPropertyValue('--quiz-font-scale')).toBe('1')
-    fireEvent.click(screen.getByRole('button', { name: 'Yazı boyutu ve ses ayarları' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Yazı boyutu ayarları' }))
     fireEvent.click(screen.getByRole('radio', { name: /Büyük/ }))
     expect(main.style.getPropertyValue('--quiz-font-scale')).toBe('1.12')
     window.localStorage.removeItem('bilge-quiz-font-size')
