@@ -111,6 +111,13 @@ const pairProbes = [
   ['bolme isareti bosluk duzeltmesi 6 : 3 -> 6:3', solutionOf('Oran 6 : 3 olur.'), solutionOf('Oran 6:3 olur.'), true],
   ['sozcukten sonra iki nokta Cevap : 5 -> Cevap: 5', solutionOf('Cevap : 5 olur.'), solutionOf('Cevap: 5 olur.'), true],
   ['sozcukten sonra noktali virgul ekleme', solutionOf('Üç etken vardır, x - 3 = 5 ise x = 8.'), solutionOf('Üç etken vardır; x - 3 = 5 ise x = 8.'), true],
+  // Codex PR #710 besinci tur: matematik ayiraclari genel olarak korunur.
+  ['kume virgulu {a,b} -> {ab}', { ...baseContent(), question: 'A = {a,b} kümesinin eleman sayısı kaçtır?' }, { ...baseContent(), question: 'A = {ab} kümesinin eleman sayısı kaçtır?' }, false],
+  ['degisken listesi x, y -> x y', solutionOf('x, y ve üç etken vardır.'), solutionOf('x y ve üç etken vardır.'), false],
+  ['yer tutucu soru isareti x = ? silme', solutionOf('Üç etken için x = ? olur.'), solutionOf('Üç etken için x = olur.'), false],
+  ['sira sayisi noktasi 3. sinif -> 3 sinif', solutionOf('Üç etken 3. sınıfta vardır.'), solutionOf('Üç etken 3 sınıfta vardır.'), false],
+  ['sozcukten sonra bosluklu soru isareti kaçtır ? -> kaçtır?', { ...baseContent(), question: 'Üç etken kaçtır ?' }, { ...baseContent(), question: 'Üç etken kaçtır?' }, true],
+  ['sozcukten sonra coklu noktalama Neden?! -> Neden?', solutionOf('Neden?! Üç etken vardır.'), solutionOf('Neden? Üç etken vardır.'), true],
   ['kelime ayirma Ortaçağ -> Orta Çağ', solutionOf("Ortaçağ'dan üç etken kaldı."), solutionOf("Orta Çağ'dan üç etken kaldı."), true],
 ]
 

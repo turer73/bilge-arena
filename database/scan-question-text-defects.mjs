@@ -198,36 +198,36 @@ export function minorTextCorrectionCaseFold(text) {
 
 // SQL question_minor_text_correction_skeleton: yalniz bosluk ve metin noktalamasi
 // atilir; tire, parantez, bolu ve matematik isaretleri iskelette kalir.
-// Unlem yalniz iki harften sonra ve ardinda = yokken, kesme yalniz harf ile
-// kucuk harf arasindayken atilir (5!, n!, !=, f'(x), A'B iskelette kalir).
+// Kesme yalniz harf ile kucuk harf arasindayken atilir (f'(x), A'B kalir).
 // Bosluk kumesi SQL [[:space:] ] ile ayni: ASCII bosluklar + U+00A0.
 const MINOR_LETTER = 'A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû'
 const MINOR_LOWER = 'a-zçğıöşüâîû'
 const MINOR_SUFFIX_APOSTROPHE = new RegExp(`([${MINOR_LETTER}])'(?=[${MINOR_LOWER}])`, 'g')
-const MINOR_TEXT_EXCLAMATION = new RegExp(`([${MINOR_LETTER}]{2})!(?!=)`, 'g')
-// Iki nokta/noktali virgul yalniz en az iki harfli sozcukten sonra (arada bosluk
-// olabilir) atilir; bolme anlamindaki "6 : x" iskelette kalir.
-const MINOR_TEXT_COLON = new RegExp(`([${MINOR_LETTER}]{2}[ \\t\\n\\v\\f\\r\\u00a0]*)[:;]`, 'g')
+// Noktalama yalniz en az iki harfli sozcukten sonra (arada bosluk olabilir,
+// ardinda = yok) ya da metin sonundaki nokta/uc nokta olarak atilir; {a,b},
+// 6 : x, x = ?, 3. sinif, 5! ve a != b iskelette kalir.
+const MINOR_TEXT_PUNCT = new RegExp(`([${MINOR_LETTER}]{2}[ \\t\\n\\v\\f\\r\\u00a0]*)[.,;:?!…]+(?!=)`, 'g')
+const MINOR_END_PUNCT = /[.…]+[ \t\n\v\f\r\u00a0]*$/
 export function minorTextCorrectionSkeleton(text) {
   return String(text ?? '')
     .replace(/[’‘ʼ]/g, "'")
     .replace(MINOR_SUFFIX_APOSTROPHE, '$1')
-    .replace(MINOR_TEXT_EXCLAMATION, '$1')
-    .replace(MINOR_TEXT_COLON, '$1')
-    .replace(/[ \t\n\v\f\r\u00a0.,?…"“”«»]/g, '')
+    .replace(MINOR_TEXT_PUNCT, '$1')
+    .replace(MINOR_END_PUNCT, '')
+    .replace(/[ \t\n\v\f\r\u00a0"“”«»]/g, '')
 }
 
 // SQL question_minor_text_correction_case_mask ile birebir: iskeletle hizali
 // '0'/'1' dizisi; '1' yalniz en az uc harfli harf dizisinin ilk harfi. Buyuk/kucuk
 // harf degisimine yalniz yeni metinde bu konumda izin verilir (Co -> CO, dna -> DNA
 // reddedilir; Ortaçağ -> Orta Çağ ayirma duzeltmesi gecer).
-const MINOR_STRIP_CHAR = /[ \t\n\v\f\r\u00a0.,?…"“”«»]/
+const MINOR_STRIP_CHAR = /[ \t\n\v\f\r\u00a0"“”«»]/
 export function minorTextCorrectionCaseMask(text) {
   const v = String(text ?? '')
     .replace(/[’‘ʼ]/g, "'")
     .replace(MINOR_SUFFIX_APOSTROPHE, '$1')
-    .replace(MINOR_TEXT_EXCLAMATION, '$1')
-    .replace(MINOR_TEXT_COLON, '$1')
+    .replace(MINOR_TEXT_PUNCT, '$1')
+    .replace(MINOR_END_PUNCT, '')
   const mask = []
   let run = 0
   let start = -1

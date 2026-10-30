@@ -27,7 +27,7 @@ describe('230 question minor text correction SQL contract', () => {
     expect(sql).toContain("IF p_old->'answer' IS DISTINCT FROM p_new->'answer' THEN");
     expect(sql).not.toContain("(p_old->>'answer')::int");
     expect(sql).toContain("COALESCE(jsonb_typeof(p_new->'options'->i), 'null') NOT IN ('string', 'null')");
-    expect(sql).toContain("'([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]{2})!(?!=)'");
+    expect(sql).toContain("'([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]{2}[[:space:]\\u00a0]*)[.,;:?!…]+(?!=)'");
     // Option count must match
     expect(sql).toContain("jsonb_array_length(p_new->'options') <> v_opt_len");
     // NFC normalization check
@@ -42,6 +42,7 @@ describe('230 question minor text correction SQL contract', () => {
     expect(sql).toContain("IF (a <> fa) <> (b <> fb) AND substr(v_mask_new, i, 1) <> '1' THEN");
     expect(sql).toContain('public.question_minor_text_correction_case_mask(text),');
     expect(sql).toContain('IF NOT public.question_minor_text_correction_restoration_ok(p_old, p_new) THEN');
+    expect(sql).toContain("[.,;:?!…]+(?!=)");
     expect(sql).toContain('SELECT 1 FROM public.question_turkish_restoration_stems stem');
     expect(sql).toContain("'(?<![0-9])[.,]|[.,](?![0-9])'");
     expect(sql).toContain("(('c','ç'),('g','ğ'),('i','ı'),('o','ö'),('s','ş'),('u','ü'),('a','â'),('i','î'),('u','û'))");
