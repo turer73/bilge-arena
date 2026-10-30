@@ -59,7 +59,8 @@ LANGUAGE sql
 IMMUTABLE
 SET search_path = pg_catalog
 AS $fn$
-  SELECT regexp_replace(translate(COALESCE(p_text, ''), '⁰¹²³⁴⁵⁶⁷⁸⁹', '0123456789'), '[^0-9]+', ' ', 'g');
+  -- Bas/son ayiraclar imzaya girmez: 'x = 3' ile 'x = 3.' ayni sayi dizisidir.
+  SELECT btrim(regexp_replace(translate(COALESCE(p_text, ''), '⁰¹²³⁴⁵⁶⁷⁸⁹', '0123456789'), '[^0-9]+', ' ', 'g'), ' ');
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.question_minor_text_correction_negation_count(p_text text)
@@ -92,14 +93,24 @@ AS $fn$
 $fn$;
 
 -- Harf iskeleti: yalnizca bosluk ve metin noktalamasi atilir. Tire, parantez,
--- bolu ve matematik isaretleri bilerek iskelette kalir.
+-- bolu ve matematik isaretleri bilerek iskelette kalir. Unlem ve kesme isareti
+-- yalniz metindeki anlamlarinda atilir: en az iki harften sonra gelen ve
+-- ardinda = olmayan unlem ("Dikkat!") ile harf ve kucuk harf arasindaki ek
+-- kesmesi ("Ankara'nin"). 5!, n!, (n+1)!, !=, f'(x) ve A'B gibi matematik
+-- kullanimlari iskelette kalir; kesme bicimleri once ASCII kesmeye esitlenir.
 CREATE OR REPLACE FUNCTION public.question_minor_text_correction_skeleton(p_text text)
 RETURNS text
 LANGUAGE sql
 IMMUTABLE
 SET search_path = pg_catalog
 AS $fn$
-  SELECT regexp_replace(COALESCE(p_text, ''), '[[:space:]\u00a0.,;:!?…''"’‘ʼ“”«»]', '', 'g');
+  SELECT regexp_replace(
+    regexp_replace(
+      regexp_replace(
+        translate(COALESCE(p_text, ''), '’‘ʼ', ''''''''),
+        '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû])''(?=[a-zçğıöşüâîû])', '\1', 'g'),
+      '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]{2})!(?!=)', '\1', 'g'),
+    '[[:space:]\u00a0.,;:?…"“”«»]', '', 'g');
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.question_minor_text_correction_letters_compatible(p_old text, p_new text)
@@ -268,10 +279,15 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  IF (p_old->>'answer')::int IS DISTINCT FROM (p_new->>'answer')::int THEN
+  -- JSON degeri birebir: 0 ile "0" farklidir (puanlama sayisal answer bekler).
+  IF p_old->'answer' IS DISTINCT FROM p_new->'answer' THEN
     RETURN NULL;
   END IF;
-  IF p_old ? 'correct' AND (p_old->>'correct')::int IS DISTINCT FROM (p_new->>'correct')::int THEN
+  IF p_old ? 'correct' AND p_old->'correct' IS DISTINCT FROM p_new->'correct' THEN
+    RETURN NULL;
+  END IF;
+  IF jsonb_typeof(p_old->'question') IS DISTINCT FROM 'string'
+     OR jsonb_typeof(p_new->'question') IS DISTINCT FROM 'string' THEN
     RETURN NULL;
   END IF;
 
@@ -284,6 +300,11 @@ BEGIN
   END IF;
 
   FOR i IN 0 .. v_opt_len - 1 LOOP
+    -- ->> sayiyi metne cevirir; tip degisimi ya da metin disi sik reddedilir.
+    IF COALESCE(jsonb_typeof(p_old->'options'->i), 'null') NOT IN ('string', 'null')
+       OR COALESCE(jsonb_typeof(p_new->'options'->i), 'null') NOT IN ('string', 'null') THEN
+      RETURN NULL;
+    END IF;
     v_opt_res := public.question_minor_text_correction_verify_string(
       'options[' || i || ']',
       p_old->'options'->>i,
@@ -314,6 +335,10 @@ BEGIN
   END IF;
 
   IF p_old ? 'solution' THEN
+    IF COALESCE(jsonb_typeof(p_old->'solution'), 'null') NOT IN ('string', 'null')
+       OR COALESCE(jsonb_typeof(p_new->'solution'), 'null') NOT IN ('string', 'null') THEN
+      RETURN NULL;
+    END IF;
     v_res := public.question_minor_text_correction_verify_string(
       'solution',
       p_old->>'solution',
@@ -329,6 +354,10 @@ BEGIN
   END IF;
 
   IF p_old ? 'passage' THEN
+    IF COALESCE(jsonb_typeof(p_old->'passage'), 'null') NOT IN ('string', 'null')
+       OR COALESCE(jsonb_typeof(p_new->'passage'), 'null') NOT IN ('string', 'null') THEN
+      RETURN NULL;
+    END IF;
     v_res := public.question_minor_text_correction_verify_string(
       'passage',
       p_old->>'passage',

@@ -24,7 +24,10 @@ describe('230 question minor text correction SQL contract', () => {
 
   it('enforces rigorous safety guards against meaning drift, diacritic tricks, and answer changes', () => {
     // Answer must not change
-    expect(sql).toContain("(p_old->>'answer')::int IS DISTINCT FROM (p_new->>'answer')::int");
+    expect(sql).toContain("IF p_old->'answer' IS DISTINCT FROM p_new->'answer' THEN");
+    expect(sql).not.toContain("(p_old->>'answer')::int");
+    expect(sql).toContain("COALESCE(jsonb_typeof(p_new->'options'->i), 'null') NOT IN ('string', 'null')");
+    expect(sql).toContain("'([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]{2})!(?!=)'");
     // Option count must match
     expect(sql).toContain("jsonb_array_length(p_new->'options') <> v_opt_len");
     // NFC normalization check

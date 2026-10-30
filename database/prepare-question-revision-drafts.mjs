@@ -426,9 +426,29 @@ export function validatePayloadShape(p, { allowUnmapped = false } = {}) {
 export function scanGate({ payload, current, changeKind }) {
   if (changeKind === 'retire' || !payload) return { blocking: [], notes: [] }
   const r = scanQuestion({ id: current?.questionId, game: payload.metadata.game, category: payload.metadata.category, content: payload.content })
-  const blocking = r.findings.filter((f) => f.severity === 'error').map((f) => `${f.rule} @${f.field}: ${JSON.stringify(f.detail)}`)
+  const errorFindings = r.findings.filter((f) => f.severity === 'error')
+  const blocking = errorFindings.map((f) => `${f.rule} @${f.field}: ${JSON.stringify(f.detail)}`)
+  // Hizli hatlarin taban karsilastirmasi icin kusur basina anahtar: bir alandaki
+  // kusurlarin bir kismini gideren duzeltme, kalanlari "yeni" saymasin.
+  const blockingItems = errorFindings.flatMap((f) => (Array.isArray(f.detail) && f.detail.length
+    ? f.detail.map((d) => `${f.rule} @${f.field}: ${JSON.stringify(d)}`)
+    : [`${f.rule} @${f.field}: ${JSON.stringify(f.detail)}`]))
   const notes = r.findings.filter((f) => f.severity !== 'error').map((f) => `${f.rule} @${f.field}: ${JSON.stringify(f.detail)}`)
-  return { blocking, notes }
+  return { blocking, blockingItems, notes }
+}
+
+/** Coklu kume farki: `items` icinde olup `base`te karsiligi kalmayanlar yeni,
+ * karsiligi olanlar tabanda da var sayilir. */
+export function splitNewScanItems(items, base) {
+  const left = new Map()
+  for (const b of base) left.set(b, (left.get(b) ?? 0) + 1)
+  const fresh = []
+  const existing = []
+  for (const it of items) {
+    const n = left.get(it) ?? 0
+    if (n > 0) { left.set(it, n - 1); existing.push(it) } else fresh.push(it)
+  }
+  return { fresh, existing }
 }
 
 export function diffContent(before, after) {
@@ -530,11 +550,10 @@ export function buildBatch({ proposals, currentById, offline = false, mappingPen
     // ayri bir oneriyle ele alinmak uzere not olarak kaydedilir, bloklamaz.
     if (item.lane === 'turkish_restoration' || item.lane === 'minor_text_correction') {
       const baseScan = scanGate({ payload: { metadata: built.payload.metadata, content: current.content }, current, changeKind: proposal.changeKind })
-      const newErrors = gate.blocking.filter((b) => !baseScan.blocking.includes(b))
+      const { fresh: newErrors, existing: existingErrors } = splitNewScanItems(gate.blockingItems, baseScan.blockingItems)
       if (newErrors.length) {
         errors.push(...newErrors.map((b) => `tarama ERROR (yeni eklendi): ${b}`))
       }
-      const existingErrors = gate.blocking.filter((b) => baseScan.blocking.includes(b))
       if (existingErrors.length) {
         item.notes.push(...existingErrors.map((b) => `tarama ERROR (tabanda da var, ayri oneriyle ele alin): ${b}`))
       }

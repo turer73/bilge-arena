@@ -27,6 +27,7 @@ import {
   renderReviewSheet,
   revisionApplyPreflight,
   scanGate,
+  splitNewScanItems,
   snapshotFromExport,
   validatePayloadShape,
   validateProposal,
@@ -663,6 +664,15 @@ describe('Turkce harf duzeltmesi hatti (migration 215)', () => {
     const draft = run(cur, { ...restore, solution: 'Çözüm: kisi başına bir ölçüm yapılır.' })
     expect(draft.lane).toBe('draft')
     expect(draft.status).toBe('blocked')
+  })
+
+  it('alandaki kusurlarin bir kismini gideren duzeltme kalanlari yeni saymaz (kusur basina karsilastirma)', () => {
+    const cur = fen({ content: { ...fen().content, solution: 'Cozum: kisi basina bir olcum.' } })
+    const partial = run(cur, { ...restore, solution: 'Çözüm: kisi basina bir olcum.' })
+    expect(partial.reasons.join(' ')).not.toContain('yeni eklendi')
+    expect(partial).toEqual(expect.objectContaining({ status: 'ready', lane: 'turkish_restoration' }))
+    expect(partial.notes.join(' ')).toContain('tabanda da var, ayri oneriyle ele alin')
+    expect(splitNewScanItems(['a', 'b', 'b'], ['b', 'a'])).toEqual({ fresh: ['b'], existing: ['a', 'b'] })
   })
 })
 

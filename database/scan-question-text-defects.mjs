@@ -172,6 +172,7 @@ export function minorTextCorrectionCleanDigits(text) {
   return String(text)
     .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, (c) => '0123456789'['⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(c)])
     .replace(/[^0-9]+/g, ' ')
+    .trim()
 }
 
 export function minorTextCorrectionNegationCount(text) {
@@ -194,9 +195,19 @@ export function minorTextCorrectionCaseFold(text) {
 
 // SQL question_minor_text_correction_skeleton: yalniz bosluk ve metin noktalamasi
 // atilir; tire, parantez, bolu ve matematik isaretleri iskelette kalir.
+// Unlem yalniz iki harften sonra ve ardinda = yokken, kesme yalniz harf ile
+// kucuk harf arasindayken atilir (5!, n!, !=, f'(x), A'B iskelette kalir).
 // Bosluk kumesi SQL [[:space:] ] ile ayni: ASCII bosluklar + U+00A0.
+const MINOR_LETTER = 'A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû'
+const MINOR_LOWER = 'a-zçğıöşüâîû'
+const MINOR_SUFFIX_APOSTROPHE = new RegExp(`([${MINOR_LETTER}])'(?=[${MINOR_LOWER}])`, 'g')
+const MINOR_TEXT_EXCLAMATION = new RegExp(`([${MINOR_LETTER}]{2})!(?!=)`, 'g')
 export function minorTextCorrectionSkeleton(text) {
-  return String(text ?? '').replace(/[ \t\n\v\f\r\u00a0.,;:!?…'"’‘ʼ“”«»]/g, '')
+  return String(text ?? '')
+    .replace(/[’‘ʼ]/g, "'")
+    .replace(MINOR_SUFFIX_APOSTROPHE, '$1')
+    .replace(MINOR_TEXT_EXCLAMATION, '$1')
+    .replace(/[ \t\n\v\f\r\u00a0.,;:?…"“”«»]/g, '')
 }
 
 const MINOR_RESTORATION_PAIRS = new Set(['c>ç', 'g>ğ', 'i>ı', 'o>ö', 's>ş', 'u>ü', 'a>â', 'i>î', 'u>û'])
@@ -263,6 +274,7 @@ export function verifyMinorTextCorrection(oldContent, newContent) {
 
   if (oldContent.answer !== newContent.answer) return null
   if (oldContent.correct !== undefined && oldContent.correct !== newContent.correct) return null
+  if (typeof oldContent.question !== 'string' || typeof newContent.question !== 'string') return null
 
   if (!Array.isArray(oldContent.options) || !Array.isArray(newContent.options)) return null
   if (oldContent.options.length !== newContent.options.length) return null

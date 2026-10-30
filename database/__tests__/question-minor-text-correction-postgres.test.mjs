@@ -69,6 +69,25 @@ const meaningChanges = [
   ['cevap anahtari', { ...fixedContent(), answer: 3 }],
 ]
 
+// Codex PR #710 incelemesi: matematik noktalamasi, cevap/sik JSON tipi ve sayi
+// imzasinin bas/son ayiraclari. Son sutun beklenen gecerlilik.
+const solutionOf = (solution) => ({ ...baseContent(), solution })
+const firstOption = (value, from = baseContent()) => ({ ...from, options: [value, ...from.options.slice(1)] })
+const pairProbes = [
+  ['faktoriyel 5! -> 5', solutionOf('5! = 120 olduğundan cevap 120.'), solutionOf('5 = 120 olduğundan cevap 120.'), false],
+  ['faktoriyel n! -> n', solutionOf('n! ifadesi 120 ise n = 5.'), solutionOf('n ifadesi 120 ise n = 5.'), false],
+  ['esit degil != -> =', solutionOf('a != b ise sonuç 1.'), solutionOf('a = b ise sonuç 1.'), false],
+  ["turev f'(x) -> f(x)", solutionOf("f'(x) = 2x ise x = 1."), solutionOf('f(x) = 2x ise x = 1.'), false],
+  ["geometri A'B' -> AB", solutionOf("A'B' kenarı 4 birimdir."), solutionOf('AB kenarı 4 birimdir.'), false],
+  ['cevap sayi -> metin', baseContent(), { ...fixedContent(), answer: '4' }, false],
+  ['sik sayi -> metin', firstOption(12), firstOption('12', fixedContent()), false],
+  ['sondaki nokta sayi imzasini bozmaz', solutionOf('Üç etken vardır; x - 3 = 5 ise x = 8'), solutionOf('Üç etken vardır; x - 3 = 5 ise x = 8.'), true],
+  ['sikta bastaki bosluk', firstOption(' 12'), firstOption('12'), true],
+  ['metin unlemi', solutionOf('Dikkat! Üç etken vardır.'), solutionOf('Dikkat. Üç etken vardır.'), true],
+  ['ek kesmesi', solutionOf('Türkiyenin üç etkeni vardır.'), solutionOf("Türkiye'nin üç etkeni vardır."), true],
+  ['kesme bicimi', solutionOf('Türkiye’nin üç etkeni vardır.'), solutionOf("Türkiye'nin üç etkeni vardır."), true],
+]
+
 suite(`230 minor text correction ${bin ? 'native PostgreSQL' : 'PGlite WASM'} acceptance (isolated fixture)`, () => {
   let db, q, base, owner
   const scalar = async (sql, values = []) => (await db.query(sql, values)).rows[0].result
@@ -209,6 +228,22 @@ suite(`230 minor text correction ${bin ? 'native PostgreSQL' : 'PGlite WASM'} ac
     const before = await live()
     await rejects(publish(content), NOT_MINOR)
     expect(await live()).toEqual(before)
+    expect(await revisionCount()).toBe(1)
+  })
+
+  it.each(pairProbes)('SQL and JS agree on review probe: %s', async (_name, oldContent, newContent, valid) => {
+    const sql = await scalar('SELECT public.question_minor_text_correction_verify($1::jsonb,$2::jsonb) IS NOT NULL AS result', [JSON.stringify(oldContent), JSON.stringify(newContent)])
+    expect(sql).toBe(valid)
+    expect(verifyMinorTextCorrection(oldContent, newContent) !== null).toBe(valid)
+  })
+
+  it('rejects dropping a factorial and a string answer through the publisher', async () => {
+    const [, oldContent, newContent] = pairProbes[0]
+    const seeded = await seedQuestion({ content: oldContent })
+    await decide('APPROVED', POLICY, seeded.revision)
+    await rejects(publish(newContent, randomUUID(), seeded.question, seeded.revision), NOT_MINOR)
+    await decide('APPROVED')
+    await rejects(publish({ ...fixedContent(), answer: '4' }), NOT_MINOR)
     expect(await revisionCount()).toBe(1)
   })
 
