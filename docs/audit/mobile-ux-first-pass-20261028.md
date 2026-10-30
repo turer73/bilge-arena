@@ -58,6 +58,24 @@ D:/Projelerim/.codex-tmp/mobile-ux-first-pass-20261028/push.log içinde korunur.
 
 Araştırmadaki discovery 2976 için aday düzeltmedir; üretim kabulü değildir.
 
+## 30 Ekim yayın öncesi inceleme
+
+GitHub inceleme konusu PRRT_kwDORhvg386xs7G4, korunan gönderim sırasında
+arka plana geçişten sonra Devam Et eyleminin sayacı yeniden başlatabildiğini
+bildirdi (discovery 2988). Yayından önce otomatik duraklatma yalnız idle
+cevap durumunda etkinleştirildi; eski bir Devam Et eylemi de pending/failed
+durumunda süreyi başlatamaz. Seçilmiş cevabın tekrar gönderimle çözülmesi beklenir.
+
+Beş bileşen testi pending/failed durumlarında pencere açılmamasını, kalan
+Devam Et eyleminin sayacı başlatmamasını ve normal süreli oyunda devamın hâlâ
+çalışmasını denetler. Tarayıcı testi hem bekleyen hem başarısız cevapta pagehide
+olayını ve 31 saniyelik zaman geçişini uygular; süre ve seçim korunmalı, tekrar
+gönderimde aynı kanonik cevap gitmelidir. Bu sentetik yaşam döngüsü testi,
+fiziksel telefonda işletim sisteminin sekmeyi kapatması testi değildir.
+İlgili 41 bileşen testi ve yedi mobil Chromium senaryosu geçti. İlk tip
+kontrolü, iki Testing Library sorgusuna yanlışlıkla verilen Playwright `exact`
+seçeneğini yakaladı; sorguların tam metin eşleşmesi korunarak seçenek kaldırıldı.
+
 ## 29 Ekim önizleme kontrolü
 
 PR #709'un 90477560 sürümünde CI geçti; Vercel önizlemesinin kaynak commit'i

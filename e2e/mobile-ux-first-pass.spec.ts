@@ -42,6 +42,7 @@ test('mobile start is above the tab bar and reading settings carry into the game
 })
 
 test('pending answers are visible and a failed request retries the same choice', async ({ page }) => {
+  await page.clock.install()
   let release!: () => void
   const held = new Promise<void>((resolve) => { release = resolve })
   const selections: number[] = []
@@ -60,8 +61,20 @@ test('pending answers are visible and a failed request retries the same choice',
   await expect(page.locator('[data-quiz-option="selected"]')).toHaveText(/22/)
   const options = page.locator('[data-quiz-option]')
   for (const option of await options.all()) await expect(option).toBeDisabled()
+  const timerBefore = await page.locator('[data-quiz-timer]').textContent()
+  await page.evaluate(() => window.dispatchEvent(new Event('pagehide')))
+  await expect(page.getByRole('dialog', { name: 'Oyun duraklatıldı' })).toHaveCount(0)
+  await page.clock.fastForward(31_000)
+  await expect(page.locator('[data-quiz-timer]')).toHaveText(timerBefore!)
+  await expect(page.locator('[data-quiz-option="selected"]')).toHaveText(/22/)
   release()
   await expect(page.getByRole('alert').filter({ hasText: 'Seçimin korunuyor' })).toBeVisible()
+  await page.evaluate(() => window.dispatchEvent(new Event('pagehide')))
+  await expect(page.getByRole('dialog', { name: 'Oyun duraklatıldı' })).toHaveCount(0)
+  await page.clock.fastForward(31_000)
+  await expect(page.locator('[data-quiz-timer]')).toHaveText(timerBefore!)
+  await expect(page.locator('[data-quiz-option="selected"]')).toHaveText(/22/)
+  expect(selections).toEqual([2])
   await page.getByRole('button', { name: 'Aynı cevabı tekrar gönder', exact: true }).click()
   await expect(page.locator('[data-quiz-option="correct"]')).toHaveText(/22/)
   expect(selections).toEqual([2, 2])

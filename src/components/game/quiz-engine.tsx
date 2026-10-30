@@ -180,7 +180,8 @@ export function QuizEngine({ game }: QuizEngineProps) {
     setDifficultyForScope,
   ])
   const autoPauseSessionKey = quiz.attemptId ?? quizStore.questions[0]?.id ?? null
-  const autoPauseActive = quiz.screen === 'game' && !quiz.isDeneme && quizStore.state === 'playing' && !quiz.helpOpen
+  const autoPauseActive = quiz.screen === 'game' && !quiz.isDeneme && quizStore.state === 'playing'
+    && !quiz.helpOpen && quiz.answerStatus === 'idle'
   const { autoPaused, resume: clearAutoPause } = useGameAutoPause({
     active: autoPauseActive,
     sessionKey: autoPauseSessionKey,
@@ -188,10 +189,10 @@ export function QuizEngine({ game }: QuizEngineProps) {
   })
   const resumeAutoPausedGame = useCallback(() => {
     clearAutoPause()
-    if (!quiz.helpOpen && quiz.mode.timePerQuestion > 0 && useQuizStore.getState().state === 'playing') {
+    if (!quiz.helpOpen && quiz.answerStatus === 'idle' && quiz.mode.timePerQuestion > 0 && useQuizStore.getState().state === 'playing') {
       quiz.timer.start()
     }
-  }, [clearAutoPause, quiz.helpOpen, quiz.mode.timePerQuestion, quiz.timer])
+  }, [clearAutoPause, quiz.helpOpen, quiz.answerStatus, quiz.mode.timePerQuestion, quiz.timer])
   const sessionSaver = useSessionSaver({
     screen: quiz.screen,
     userId: user?.id,

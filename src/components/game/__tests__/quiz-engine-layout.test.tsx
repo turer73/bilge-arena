@@ -7,6 +7,7 @@
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, test, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import * as autoPauseHook from '@/lib/hooks/use-game-auto-pause'
 
 beforeEach(() => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
@@ -68,7 +69,7 @@ const quizGame = vi.hoisted(() => ({
   attemptId: null as string | null,
   isDeneme: false,
   mode: { id: 'klasik', name: 'Klasik', questionCount: 10, timePerQuestion: 30, lives: 3 },
-  timer: { seconds: 24 },
+  timer: { seconds: 24, start: vi.fn(), pause: vi.fn() },
   denemeConfig: null,
   loadError: null,
   showBurst: false,
@@ -259,6 +260,60 @@ vi.mock('next/dynamic', () => ({
 import { QuizEngine } from '../quiz-engine'
 
 describe('QuizEngine yerleşim', () => {
+  test.each(['pending', 'failed'] as const)('%s cevapta arka plana geçiş ikinci bir duraklatma penceresi açmaz', (status) => {
+    const previousState = quizStoreValue.state
+    try {
+      quizStoreValue.state = 'playing'
+      quizGame.answerStatus = status
+      quizGame.timer.start.mockClear()
+      quizGame.timer.pause.mockClear()
+      render(<QuizEngine game="matematik" />)
+      fireEvent(window, new Event('pagehide'))
+      expect(screen.queryByRole('dialog', { name: 'Oyun duraklatıldı' })).not.toBeInTheDocument()
+      expect(quizGame.timer.pause).not.toHaveBeenCalled()
+      expect(quizGame.timer.start).not.toHaveBeenCalled()
+    } finally {
+      quizGame.answerStatus = 'idle'
+      quizStoreValue.state = previousState
+    }
+  })
+
+  test.each(['pending', 'failed'] as const)('%s cevapta kalan bir Devam Et eylemi sayacı başlatamaz', (status) => {
+    const previousState = quizStoreValue.state
+    const resume = vi.fn()
+    vi.spyOn(autoPauseHook, 'useGameAutoPause').mockReturnValue({ autoPaused: true, resume })
+    try {
+      quizStoreValue.state = 'playing'
+      quizGame.answerStatus = status
+      quizGame.timer.start.mockClear()
+      render(<QuizEngine game="matematik" />)
+      fireEvent.click(screen.getByRole('button', { name: 'Devam Et' }))
+      expect(resume).toHaveBeenCalledOnce()
+      expect(quizGame.timer.start).not.toHaveBeenCalled()
+    } finally {
+      quizGame.answerStatus = 'idle'
+      quizStoreValue.state = previousState
+    }
+  })
+
+  test('cevap gönderilmemiş süreli oyunda arka plandan Devam Et sayacı başlatır', () => {
+    const previousState = quizStoreValue.state
+    try {
+      quizStoreValue.state = 'playing'
+      quizGame.answerStatus = 'idle'
+      quizGame.timer.start.mockClear()
+      quizGame.timer.pause.mockClear()
+      render(<QuizEngine game="matematik" />)
+      fireEvent(window, new Event('pagehide'))
+      expect(quizGame.timer.pause).toHaveBeenCalledOnce()
+      fireEvent.click(screen.getByRole('button', { name: 'Devam Et' }))
+      expect(quizGame.timer.start).toHaveBeenCalledOnce()
+      expect(screen.queryByRole('dialog', { name: 'Oyun duraklatıldı' })).not.toBeInTheDocument()
+    } finally {
+      quizStoreValue.state = previousState
+    }
+  })
+
   test('signed-in mobile progress follows the lobby start action', () => {
     const previousUser = authStoreValue.user
     const previousScreen = quizGame.screen
