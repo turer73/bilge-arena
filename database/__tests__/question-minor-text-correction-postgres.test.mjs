@@ -105,6 +105,12 @@ const pairProbes = [
   ['anlam ayiran acisi -> açısı', solutionOf('Üçgenin acisi üç birimdir.'), solutionOf('Üçgenin açısı üç birimdir.'), false],
   ['listedeki govde sinif -> sınıf', solutionOf('Üç sinif vardır.'), solutionOf('Üç sınıf vardır.'), true],
   ['geri yukleme ve kelime birlesmesi birlikte', solutionOf('Üç sinif lar vardır.'), solutionOf('Üç sınıflar vardır.'), false],
+  // Codex PR #710 dorduncu tur: bolme anlamindaki iki nokta.
+  ['bolme isareti silme 6 : x -> 6x', solutionOf('6 : x = 3 ise x kaçtır?'), solutionOf('6x = 3 ise x kaçtır?'), false],
+  ['tek harften sonra iki nokta x: 2 -> x 2', solutionOf('x: 2 ise üç etken vardır.'), solutionOf('x 2 ise üç etken vardır.'), false],
+  ['bolme isareti bosluk duzeltmesi 6 : 3 -> 6:3', solutionOf('Oran 6 : 3 olur.'), solutionOf('Oran 6:3 olur.'), true],
+  ['sozcukten sonra iki nokta Cevap : 5 -> Cevap: 5', solutionOf('Cevap : 5 olur.'), solutionOf('Cevap: 5 olur.'), true],
+  ['sozcukten sonra noktali virgul ekleme', solutionOf('Üç etken vardır, x - 3 = 5 ise x = 8.'), solutionOf('Üç etken vardır; x - 3 = 5 ise x = 8.'), true],
   ['kelime ayirma Ortaçağ -> Orta Çağ', solutionOf("Ortaçağ'dan üç etken kaldı."), solutionOf("Orta Çağ'dan üç etken kaldı."), true],
 ]
 

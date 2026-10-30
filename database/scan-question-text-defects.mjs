@@ -205,24 +205,29 @@ const MINOR_LETTER = 'A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû'
 const MINOR_LOWER = 'a-zçğıöşüâîû'
 const MINOR_SUFFIX_APOSTROPHE = new RegExp(`([${MINOR_LETTER}])'(?=[${MINOR_LOWER}])`, 'g')
 const MINOR_TEXT_EXCLAMATION = new RegExp(`([${MINOR_LETTER}]{2})!(?!=)`, 'g')
+// Iki nokta/noktali virgul yalniz en az iki harfli sozcukten sonra (arada bosluk
+// olabilir) atilir; bolme anlamindaki "6 : x" iskelette kalir.
+const MINOR_TEXT_COLON = new RegExp(`([${MINOR_LETTER}]{2}[ \\t\\n\\v\\f\\r\\u00a0]*)[:;]`, 'g')
 export function minorTextCorrectionSkeleton(text) {
   return String(text ?? '')
     .replace(/[’‘ʼ]/g, "'")
     .replace(MINOR_SUFFIX_APOSTROPHE, '$1')
     .replace(MINOR_TEXT_EXCLAMATION, '$1')
-    .replace(/[ \t\n\v\f\r\u00a0.,;:?…"“”«»]/g, '')
+    .replace(MINOR_TEXT_COLON, '$1')
+    .replace(/[ \t\n\v\f\r\u00a0.,?…"“”«»]/g, '')
 }
 
 // SQL question_minor_text_correction_case_mask ile birebir: iskeletle hizali
 // '0'/'1' dizisi; '1' yalniz en az uc harfli harf dizisinin ilk harfi. Buyuk/kucuk
 // harf degisimine yalniz yeni metinde bu konumda izin verilir (Co -> CO, dna -> DNA
 // reddedilir; Ortaçağ -> Orta Çağ ayirma duzeltmesi gecer).
-const MINOR_STRIP_CHAR = /[ \t\n\v\f\r\u00a0.,;:?…"“”«»]/
+const MINOR_STRIP_CHAR = /[ \t\n\v\f\r\u00a0.,?…"“”«»]/
 export function minorTextCorrectionCaseMask(text) {
   const v = String(text ?? '')
     .replace(/[’‘ʼ]/g, "'")
     .replace(MINOR_SUFFIX_APOSTROPHE, '$1')
     .replace(MINOR_TEXT_EXCLAMATION, '$1')
+    .replace(MINOR_TEXT_COLON, '$1')
   const mask = []
   let run = 0
   let start = -1

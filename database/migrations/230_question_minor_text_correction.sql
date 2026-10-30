@@ -103,6 +103,9 @@ $fn$;
 -- ardinda = olmayan unlem ("Dikkat!") ile harf ve kucuk harf arasindaki ek
 -- kesmesi ("Ankara'nin"). 5!, n!, (n+1)!, !=, f'(x) ve A'B gibi matematik
 -- kullanimlari iskelette kalir; kesme bicimleri once ASCII kesmeye esitlenir.
+-- Iki nokta ve noktali virgul yalniz en az iki harfli sozcukten sonra (arada
+-- bosluk olabilir) metin noktalamasi sayilip atilir: "Cevap: 5" atilir, bolme
+-- anlamindaki "6 : x" ve "x: 2" iskelette kalir.
 CREATE OR REPLACE FUNCTION public.question_minor_text_correction_skeleton(p_text text)
 RETURNS text
 LANGUAGE sql
@@ -112,10 +115,12 @@ AS $fn$
   SELECT regexp_replace(
     regexp_replace(
       regexp_replace(
-        translate(COALESCE(p_text, ''), '’‘ʼ', ''''''''),
-        '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû])''(?=[a-zçğıöşüâîû])', '\1', 'g'),
-      '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]{2})!(?!=)', '\1', 'g'),
-    '[[:space:]\u00a0.,;:?…"“”«»]', '', 'g');
+        regexp_replace(
+          translate(COALESCE(p_text, ''), '’‘ʼ', ''''''''),
+          '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû])''(?=[a-zçğıöşüâîû])', '\1', 'g'),
+        '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]{2})!(?!=)', '\1', 'g'),
+      '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]{2}[[:space:]\u00a0]*)[:;]', '\1', 'g'),
+    '[[:space:]\u00a0.,?…"“”«»]', '', 'g');
 $fn$;
 
 -- Buyuk/kucuk harf degisimine izin verilen konumlar: iskeletle hizali '0'/'1'
@@ -132,9 +137,11 @@ AS $fn$
 DECLARE
   v text := regexp_replace(
     regexp_replace(
-      translate(COALESCE(p_text, ''), '’‘ʼ', ''''''''),
-      '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû])''(?=[a-zçğıöşüâîû])', '\1', 'g'),
-    '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]{2})!(?!=)', '\1', 'g');
+      regexp_replace(
+        translate(COALESCE(p_text, ''), '’‘ʼ', ''''''''),
+        '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû])''(?=[a-zçğıöşüâîû])', '\1', 'g'),
+      '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]{2})!(?!=)', '\1', 'g'),
+    '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]{2}[[:space:]\u00a0]*)[:;]', '\1', 'g');
   v_mask text := '';
   v_len integer := 0;
   v_run integer := 0;
@@ -143,7 +150,7 @@ DECLARE
 BEGIN
   FOR i IN 1 .. char_length(v) LOOP
     c := substr(v, i, 1);
-    IF c ~ '[[:space:]\u00a0.,;:?…"“”«»]' THEN
+    IF c ~ '[[:space:]\u00a0.,?…"“”«»]' THEN
       IF v_run >= 3 THEN v_mask := overlay(v_mask PLACING '1' FROM v_start FOR 1); END IF;
       v_run := 0;
       CONTINUE;
