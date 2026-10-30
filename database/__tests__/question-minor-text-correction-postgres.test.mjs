@@ -38,10 +38,12 @@ const PUBLISH = 'public.publish_question_minor_text_correction($1,$2,$3,$4::json
 const NOT_MINOR = /not a verified minor text correction/
 const NOT_LEGACY = /non-current or non-approved quality decision/
 
-// ASCII'lesmis, kesme isareti eksik taban icerik.
+// ASCII'lesmis, kesme isareti eksik taban icerik. Geri yuklenen sozcukler
+// (asagidaki, buyuk, sicaklik) 215 govde listesinde; 230 listesiz harf
+// geri yuklemesini incelemesiz yayimlamaz.
 const baseContent = () => ({
-  question: 'Asagidakilerden hangisi Ronesansin en buyuk sonuclarindan biridir?',
-  options: ['Yalniz I', 'Sicaklik artar', 'Ankara', 'I ve II', 'Matbaanin yayginlasmasi'],
+  question: 'Asagidakilerden hangisi Rönesansın en buyuk sonuçlarından biridir?',
+  options: ['Yalnız I', 'Sicaklik artar', 'Ankara', 'I ve II', 'Matbaanın yaygınlaşması'],
   answer: 4,
   solution: 'Üç etken vardır; x - 3 = 5 ise x = 8.',
 })
@@ -94,7 +96,15 @@ const pairProbes = [
   ['buyuk harfli kelime icinde kucultme ANKARA -> Ankara', firstOption('ANKARA'), firstOption('Ankara'), false],
   ['kelime basi buyuk harf ankara -> Ankara', firstOption('ankara'), firstOption('Ankara'), true],
   ['kelime basi buyuk harf ve geri yukleme cozum -> Çözüm', solutionOf('cozum: üç etken vardır.'), solutionOf('Çözüm: üç etken vardır.'), true],
-  ['buyuk I -> İ kelime icinde ISTANBUL -> İSTANBUL', firstOption('ISTANBUL'), firstOption('İSTANBUL'), true],
+  ['listesiz I -> İ geri yuklemesi ISTANBUL -> İSTANBUL', firstOption('ISTANBUL'), firstOption('İSTANBUL'), false],
+  // Codex PR #710 ucuncu tur: sayi ayraci ve anlam ayiran harf/sapka.
+  ['binlik ayrac 1.000 -> 1,000', firstOption('1.000'), firstOption('1,000'), false],
+  ['ondalik ayrac silme 2,5 -> 25', solutionOf('Üç etken 2,5 birimdir.'), solutionOf('Üç etken 25 birimdir.'), false],
+  ['sapka Hala -> Hâlâ', firstOption('Hala'), firstOption('Hâlâ'), false],
+  ['anlam ayiran kok -> kök', solutionOf('kok üç etkenden oluşur.'), solutionOf('kök üç etkenden oluşur.'), false],
+  ['anlam ayiran acisi -> açısı', solutionOf('Üçgenin acisi üç birimdir.'), solutionOf('Üçgenin açısı üç birimdir.'), false],
+  ['listedeki govde sinif -> sınıf', solutionOf('Üç sinif vardır.'), solutionOf('Üç sınıf vardır.'), true],
+  ['geri yukleme ve kelime birlesmesi birlikte', solutionOf('Üç sinif lar vardır.'), solutionOf('Üç sınıflar vardır.'), false],
   ['kelime ayirma Ortaçağ -> Orta Çağ', solutionOf("Ortaçağ'dan üç etken kaldı."), solutionOf("Orta Çağ'dan üç etken kaldı."), true],
 ]
 
@@ -179,6 +189,13 @@ suite(`230 minor text correction ${bin ? 'native PostgreSQL' : 'PGlite WASM'} ac
     // Gercek karar tablosu (findings/rationale/decided_at ve UNIQUE kisitiyla); uuid-ossp yerine core uuid.
     await db.exec(table('136_question_validation_pipeline.sql', 'question_validation_decisions').replace('uuid_generate_v4()', 'gen_random_uuid()'))
     await db.exec(table('142_question_governance_write_context.sql', 'content_governance_write_context'))
+    // 215 govde listesi (230 harf geri yuklemesini bununla sinirlar); canlida 215 ile kurulu.
+    await db.exec(table('215_question_turkish_letter_restoration.sql', 'question_turkish_restoration_stems'))
+    {
+      const t215 = read('215_question_turkish_letter_restoration.sql')
+      const at = t215.indexOf('INSERT INTO public.question_turkish_restoration_stems')
+      await db.exec(t215.slice(at, t215.indexOf(';\n', at) + 1))
+    }
     await db.exec('ALTER TABLE public.content_governance_write_context ENABLE ROW LEVEL SECURITY; REVOKE ALL ON public.content_governance_write_context FROM PUBLIC,anon,authenticated,service_role')
     for (const [file, names] of [
       ['106_question_content_governance.sql', ['content_governance_hash', 'content_governance_lock_request']],
@@ -325,7 +342,8 @@ suite(`230 minor text correction ${bin ? 'native PostgreSQL' : 'PGlite WASM'} ac
       has_function_privilege('service_role','public.publish_question_minor_text_correction(uuid,uuid,uuid,jsonb,uuid)','EXECUTE') AS service_rpc,
       has_function_privilege('authenticated','public.publish_question_minor_text_correction(uuid,uuid,uuid,jsonb,uuid)','EXECUTE') AS client_rpc,
       has_function_privilege('service_role','public.question_minor_text_correction_letters_compatible(text,text)','EXECUTE')
-        OR has_function_privilege('service_role','public.question_minor_text_correction_case_mask(text)','EXECUTE') AS helper,
+        OR has_function_privilege('service_role','public.question_minor_text_correction_case_mask(text)','EXECUTE')
+        OR has_function_privilege('service_role','public.question_minor_text_correction_restoration_ok(text,text)','EXECUTE') AS helper,
       has_function_privilege('service_role','public.question_minor_text_correction_verify(jsonb,jsonb)','EXECUTE') AS verifier,
       has_table_privilege('service_role','public.question_minor_text_corrections','SELECT') AS audit_read,
       has_table_privilege('authenticated','public.question_minor_text_corrections','INSERT') AS audit_write`)).rows[0]

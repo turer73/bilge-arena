@@ -171,7 +171,10 @@ export function minorTextCorrectionCleanDigits(text) {
   if (!text) return ''
   return String(text)
     .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, (c) => '0123456789'['⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(c)])
-    .replace(/[^0-9]+/g, ' ')
+    // Rakamlar arasindaki nokta ve virgul anlam tasir (1.000 bin, 1,000 bir).
+    .replace(/[^0-9.,]+/g, ' ')
+    .replace(/(?<![0-9])[.,]|[.,](?![0-9])/g, ' ')
+    .replace(/ +/g, ' ')
     .trim()
 }
 
@@ -258,6 +261,31 @@ export function minorTextCorrectionLettersCompatible(oldStr, newStr) {
   return true
 }
 
+// SQL question_minor_text_correction_restoration_ok ile birebir: alanda harf
+// geri yuklemesi (buyuk/kucuk disinda harf degisimi) varsa harf dizileri bire bir
+// eslesmeli ve degisen her sozcuk 215'in govde listesinden gecmeli. Liste sapkali
+// harf ve anlam ayiran ciftleri icermez: Hala -> Hâlâ, ol -> öl reddedilir.
+const MINOR_TOKEN_SPLIT = new RegExp(`[^${MINOR_LETTER}]+`)
+const minorTextCorrectionTokens = (text) => String(text ?? '')
+  .replace(/[’‘ʼ]/g, "'")
+  .replace(MINOR_SUFFIX_APOSTROPHE, '$1')
+  .split(MINOR_TOKEN_SPLIT)
+  .filter(Boolean)
+export function minorTextCorrectionRestorationOk(oldStr, newStr) {
+  const fold = (s) => minorTextCorrectionCaseFold(minorTextCorrectionSkeleton(s))
+  if (fold(oldStr) === fold(newStr)) return true
+  const a = minorTextCorrectionTokens(oldStr)
+  const b = minorTextCorrectionTokens(newStr)
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (minorTextCorrectionCaseFold(a[i]) === minorTextCorrectionCaseFold(b[i])) continue
+    const folded = foldTurkishToAscii(a[i])
+    const lowered = lowerTr(b[i])
+    if (!TURKISH_RESTORATION_STEMS.some(([ascii, turkish]) => folded.startsWith(ascii) && lowered.startsWith(turkish))) return false
+  }
+  return true
+}
+
 export function minorTextCorrectionRomanTokens(text) {
   return String(text ?? '').split(/[^A-Za-z0-9ÇĞİÖŞÜÂÎÛçğıöşüâîû]+/).filter((t) => /^[IVXLCDM]+$/.test(t))
 }
@@ -274,6 +302,7 @@ export function verifyMinorTextCorrectionString(field, oldStr, newStr, maxCharDe
   if (minorTextCorrectionNegationCount(oldStr) !== minorTextCorrectionNegationCount(newStr)) return null
   if (!minorTextCorrectionLettersCompatible(oldStr, newStr)) return null
   if (minorTextCorrectionRomanTokens(oldStr).join('\u0000') !== minorTextCorrectionRomanTokens(newStr).join('\u0000')) return null
+  if (!minorTextCorrectionRestorationOk(oldStr, newStr)) return null
 
   const oldWords = oldStr.trim().split(/\s+/).filter(Boolean)
   const newWords = newStr.trim().split(/\s+/).filter(Boolean)

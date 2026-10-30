@@ -60,7 +60,12 @@ IMMUTABLE
 SET search_path = pg_catalog
 AS $fn$
   -- Bas/son ayiraclar imzaya girmez: 'x = 3' ile 'x = 3.' ayni sayi dizisidir.
-  SELECT btrim(regexp_replace(translate(COALESCE(p_text, ''), '⁰¹²³⁴⁵⁶⁷⁸⁹', '0123456789'), '[^0-9]+', ' ', 'g'), ' ');
+  -- Rakamlar arasindaki nokta ve virgul anlam tasir (1.000 bin, 1,000 bir).
+  SELECT btrim(regexp_replace(regexp_replace(regexp_replace(
+    translate(COALESCE(p_text, ''), '⁰¹²³⁴⁵⁶⁷⁸⁹', '0123456789'),
+    '[^0-9.,]+', ' ', 'g'),
+    '(?<![0-9])[.,]|[.,](?![0-9])', ' ', 'g'),
+    ' +', ' ', 'g'), ' ');
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.question_minor_text_correction_negation_count(p_text text)
@@ -208,6 +213,55 @@ BEGIN
 END
 $fn$;
 
+-- Harf geri yuklemesi (buyuk/kucuk disinda harf degisimi) yalniz 215'in govde
+-- listesindeki sozcuklerde: alanda geri yukleme varsa harf dizileri bire bir
+-- eslesmeli ve degisen her sozcuk listelenmis bir govdeyle baslamali. Liste
+-- sapkali harf ve anlam ayiran ciftleri icermez: Hala -> Hâlâ (sozcuk anlami
+-- sorusunda cevabi degistirir), kok -> kök, acisi -> açısı reddedilir. 230 bu
+-- yolla 215'in sahip kararini (listesiz harf geri yuklemesi incelemesiz
+-- yayimlanmaz) genisletmez.
+CREATE OR REPLACE FUNCTION public.question_minor_text_correction_restoration_ok(p_old text, p_new text)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SET search_path = pg_catalog
+AS $fn$
+DECLARE
+  v_old text[];
+  v_new text[];
+BEGIN
+  IF public.question_minor_text_correction_case_fold(public.question_minor_text_correction_skeleton(p_old))
+     = public.question_minor_text_correction_case_fold(public.question_minor_text_correction_skeleton(p_new)) THEN
+    RETURN true;
+  END IF;
+  SELECT COALESCE(array_agg(t ORDER BY ord), '{}'::text[]) INTO v_old
+  FROM regexp_split_to_table(
+    regexp_replace(translate(COALESCE(p_old, ''), '’‘ʼ', ''''''''), '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû])''(?=[a-zçğıöşüâîû])', '\1', 'g'),
+    '[^A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]+') WITH ORDINALITY AS x(t, ord)
+  WHERE t <> '';
+  SELECT COALESCE(array_agg(t ORDER BY ord), '{}'::text[]) INTO v_new
+  FROM regexp_split_to_table(
+    regexp_replace(translate(COALESCE(p_new, ''), '’‘ʼ', ''''''''), '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû])''(?=[a-zçğıöşüâîû])', '\1', 'g'),
+    '[^A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]+') WITH ORDINALITY AS x(t, ord)
+  WHERE t <> '';
+  IF cardinality(v_old) <> cardinality(v_new) THEN
+    RETURN false;
+  END IF;
+  FOR i IN 1 .. cardinality(v_old) LOOP
+    CONTINUE WHEN public.question_minor_text_correction_case_fold(v_old[i])
+      = public.question_minor_text_correction_case_fold(v_new[i]);
+    IF NOT EXISTS (
+      SELECT 1 FROM public.question_turkish_restoration_stems stem
+      WHERE starts_with(public.question_turkish_restoration_fold(v_old[i]), stem.ascii_stem)
+        AND starts_with(lower(translate(v_new[i], 'İIÇĞÖŞÜ', 'iıçğöşü')), stem.turkish_stem)
+    ) THEN
+      RETURN false;
+    END IF;
+  END LOOP;
+  RETURN true;
+END
+$fn$;
+
 CREATE OR REPLACE FUNCTION public.question_minor_text_correction_roman_tokens(p_text text)
 RETURNS text[]
 LANGUAGE sql
@@ -228,7 +282,7 @@ CREATE OR REPLACE FUNCTION public.question_minor_text_correction_verify_string(
 )
 RETURNS jsonb
 LANGUAGE plpgsql
-IMMUTABLE
+STABLE
 SET search_path = pg_catalog
 AS $fn$
 DECLARE
@@ -278,6 +332,10 @@ BEGIN
     RETURN NULL;
   END IF;
 
+  IF NOT public.question_minor_text_correction_restoration_ok(p_old, p_new) THEN
+    RETURN NULL;
+  END IF;
+
   v_old_words := regexp_split_to_array(btrim(p_old), '\s+');
   v_new_words := regexp_split_to_array(btrim(p_new), '\s+');
 
@@ -310,7 +368,7 @@ $fn$;
 CREATE OR REPLACE FUNCTION public.question_minor_text_correction_verify(p_old jsonb, p_new jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
-IMMUTABLE
+STABLE
 SET search_path = pg_catalog
 AS $fn$
 DECLARE
@@ -722,6 +780,7 @@ REVOKE ALL ON FUNCTION public.question_minor_text_correction_clean_digits(text),
   public.question_minor_text_correction_case_mask(text),
   public.question_minor_text_correction_letters_compatible(text, text),
   public.question_minor_text_correction_roman_tokens(text),
+  public.question_minor_text_correction_restoration_ok(text, text),
   public.question_minor_text_correction_verify_string(text, text, text, integer, integer),
   public.question_minor_text_correction_verify(jsonb, jsonb),
   public.publish_question_minor_text_correction(uuid, uuid, uuid, jsonb, uuid)
