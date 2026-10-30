@@ -1,5 +1,5 @@
 -- Revision-bound TYT quality@5; global runtime and all existing LGS bindings remain unchanged.
--- Generated with Supabase CLI, then numbered229 for this repository migration-order contract.
+-- Generated with Supabase CLI, then numbered 229; renumbered 231 after 230 reached production first (2026-10-30).
 -- Requires independent source/catalog acceptance and exact benchmark before any binding.
 BEGIN;
 SET LOCAL lock_timeout='5s';
