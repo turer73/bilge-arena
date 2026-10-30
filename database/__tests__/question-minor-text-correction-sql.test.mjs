@@ -40,6 +40,7 @@ describe('230 question minor text correction SQL contract', () => {
     expect(sql).toContain('IF NOT public.question_minor_text_correction_letters_compatible(p_old, p_new) THEN');
     expect(sql).toContain('CREATE OR REPLACE FUNCTION public.question_minor_text_correction_case_mask(p_text text)');
     expect(sql).toContain("IF b <> fb AND substr(v_mask_new, i, 1) <> '2' THEN");
+    expect(sql).toContain("IF a <> fa AND substr(v_mask_new, i, 1) = '2' THEN");
     expect(sql).toContain("anlatim bozuklugu|anlam|deyim|atasoz)");
     expect(sql).toContain('public.question_minor_text_correction_case_mask(text),');
     expect(sql).toContain('IF NOT public.question_minor_text_correction_restoration_ok(p_old, p_new) THEN');

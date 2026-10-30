@@ -276,6 +276,7 @@ export function minorTextCorrectionLettersCompatible(oldStr, newStr) {
     if ((a[i] !== fa) !== (b[i] !== fb)) {
       if (mb[i] !== '1' && mb[i] !== '2') return false
       if (b[i] !== fb && mb[i] !== '2') return false // kucukten buyuge yalniz cumle basinda
+      if (a[i] !== fa && mb[i] === '2') return false // cumle/sik basinda kucultme duzeltme degildir
     }
     if (fa === fb) continue
     if (a[i] === 'I' && fb === 'i') continue

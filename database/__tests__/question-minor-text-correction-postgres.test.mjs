@@ -125,7 +125,12 @@ const pairProbes = [
   ['uzun parcali ayirma yerçekimi -> yer çekimi', solutionOf('Üç cisme yerçekimi etki eder.'), solutionOf('Üç cisme yer çekimi etki eder.'), true],
   ['cumle ortasi ozel ad dünyanın -> Dünyanın', solutionOf('Üç etken dünyanın çevresindedir.'), solutionOf('Üç etken Dünyanın çevresindedir.'), false],
   ['cumle ortasi birim adi kucultme Watt -> watt', solutionOf('Güç birimi Watt olur.'), solutionOf('Güç birimi watt olur.'), true],
-  ['noktadan sonra cumle basi buyutme', solutionOf('Üç etken vardır. bu sonuçtur.'), solutionOf('Üç etken vardır. Bu sonuçtur.'), true],
+  // 100 adaylik canli kuru calismanin incelemesi: cumle/sik basinda kucultme.
+  ['cumle basi kucultme Tarım a -> tarıma', solutionOf("Tarım'a dayalı üç etken vardır."), solutionOf('tarıma dayalı üç etken vardır.'), false],
+  ['sik basi kucultme Yüksek -> yüksek', firstOption('Yüksek verim'), firstOption('yüksek verim'), false],
+  ['noktadan sonra cumle basi kucultme', solutionOf('Üç etken vardır. İnsan etkisi yoktur.'), solutionOf('Üç etken vardır. insan etkisi yoktur.'), false],
+  ['cumle ortasi kucultme İnsan -> insan', solutionOf('Üç etken İnsan etkisidir.'), solutionOf('Üç etken insan etkisidir.'), true],
+  ['noktadan sonra cumle basi buyutme',solutionOf('Üç etken vardır. bu sonuçtur.'), solutionOf('Üç etken vardır. Bu sonuçtur.'), true],
   ['cumle ortasinda ozel ad yaratan ayirma Ortaçağ -> Orta Çağ', solutionOf("Üç etken Ortaçağ'dan kaldı."), solutionOf("Üç etken Orta Çağ'dan kaldı."), false],
 ]
 
