@@ -1,6 +1,6 @@
 # TYT için revizyona bağlı kalite politikası
 
-TYT matematik, Türkçe, fen ve sosyal soruları `question-quality@5` ile denetlendiğinde mevcut global `question-quality@2` yayın kapısı bu sonucu kullanamıyor. Migration229, yalnız tam revizyon ve gerçek denetim kaydına bağlanmış `@5` sonucunu kullanmaya izin verir. Global politika ve yayın zorunluluğu değişmez. Migration soru içeriğini, aktifliği veya yayın durumunu değiştirmez; kaynak ve insan incelemesi yerine geçmez.
+TYT matematik, Türkçe, fen ve sosyal soruları `question-quality@5` ile denetlendiğinde mevcut global `question-quality@2` yayın kapısı bu sonucu kullanamıyor. Migration231, yalnız tam revizyon ve gerçek denetim kaydına bağlanmış `@5` sonucunu kullanmaya izin verir. Global politika ve yayın zorunluluğu değişmez. Migration soru içeriğini, aktifliği veya yayın durumunu değiştirmez; kaynak ve insan incelemesi yerine geçmez.
 
 ## Bağlantı koşulları
 
@@ -29,7 +29,7 @@ Testler gerçek publisher, kalite trigger'ı ve kaynak uygunluğu fonksiyonları
 1. Tam PR commit'i için yerel testler ve gerekli CI yeşil olmalı.
 2. Ayrı canlı şema onayı alınmalı; bu doküman uygulama onayı değildir.
 3. Önce güncel runtime, fonksiyon tanımları/ACL ve mevcut bağlantı makbuzları salt-okuma kaydedilmeli.
-4. Migration229 uygulanmalı; runtime'ın aynı kaldığı, eski LGS makbuzlarının byte içeriğinin korunması ve helper ACL doğrulanmalı.
+4. Migration231 uygulanmalı; runtime'ın aynı kaldığı, eski LGS makbuzlarının byte içeriğinin korunması ve helper ACL doğrulanmalı.
 5. Bir soru bağlantısı eklemek ayrıca tam benchmark ve kaynak/inceleme kabulünü gerektirir. Bu migration onayı soru yayını sayılmaz.
 
 Geri alma SQL'i `docs/quality/revision-bound-tyt-policy-rollback.sql` dosyasındadır. Üç eski fonksiyonu geri yükler. Ek nullable kolon ve append-only makbuzlar korunur. TYT için var olan `@5` bağlantısı uygun eşleşme olmaktan çıkar ve yayın kapısı kapanır; eski `@2` kararına kaçış olmaz. Yeni metadata helper'ının özel ACL'si korunur. Geri alma, zaten yayımlanmış soru içeriğini geri yüklemez.
