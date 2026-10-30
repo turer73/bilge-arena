@@ -221,8 +221,13 @@ BEGIN
       IF substr(v_mask_new, i, 1) NOT IN ('1', '2') THEN
         RETURN false;
       END IF;
-      -- Kucukten buyuge yalniz cumle basinda.
+      -- Kucukten buyuge yalniz cumle basinda; buyukten kucuge yalniz cumle
+      -- ortasinda. Cumle ve sik basi buyuk harfle baslar, orada kucultme hicbir
+      -- zaman duzeltme degildir ("Tarım'a dayalı" -> "tarıma dayalı" reddedilir).
       IF b <> fb AND substr(v_mask_new, i, 1) <> '2' THEN
+        RETURN false;
+      END IF;
+      IF a <> fa AND substr(v_mask_new, i, 1) = '2' THEN
         RETURN false;
       END IF;
     END IF;
