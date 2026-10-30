@@ -259,7 +259,7 @@
     { "file": "226_ayt_literature_internal_outcome.sql", "status": "ledger", "ledger": [{ "version": "20261018230450", "name": "226_ayt_literature_internal_outcome" }] },
     { "file": "227_quarantined_retirement_scope.sql", "status": "ledger", "ledger": [{ "version": "20261019045923", "name": "227_quarantined_retirement_scope" }] },
     { "file": "228_ai_owner_retirement_acceptance.sql", "status": "ledger", "ledger": [{ "version": "20261020200911", "name": "228_ai_owner_retirement_acceptance" }] },
-    { "file": "229_revision_bound_tyt_quality_policy.sql", "status": "pending" },
-    { "file": "230_question_minor_text_correction.sql", "status": "pending" }
+    { "file": "230_question_minor_text_correction.sql", "status": "unrecorded", "note": "2026-10-30 Supabase SQL Editor ile uygulandi (raporlar/bilge-arena-230-apply 01-02-01-03-04, master c72bb98f); SQL Editor defter satiri yazmaz. Canli parmak izi (462 fonksiyon, md5 e55ce6b4f12269d801c8a7c2b07fe477) production-functions.txt ile birebir; 230 govdeleri 12/12 eslesir. 229 (simdi 231) canlida yok, 230 ona bagli degil." },
+    { "file": "231_revision_bound_tyt_quality_policy.sql", "status": "pending" }
   ]
 }

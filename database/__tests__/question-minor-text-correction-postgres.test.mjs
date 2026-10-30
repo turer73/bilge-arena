@@ -240,7 +240,7 @@ suite(`230 minor text correction ${bin ? 'native PostgreSQL' : 'PGlite WASM'} ac
     await db.exec('CREATE TRIGGER validation BEFORE UPDATE OF published_revision_id ON public.questions FOR EACH ROW EXECUTE FUNCTION public.tg_require_question_validation_decision()')
     // Canli zincirdeki sira: fen -> turkce -> 229 -> 230.
     for (const file of ['20261011203500_revision_bound_fen_quality_policy.sql', '20261014183929_revision_bound_turkce_quality_policy.sql']) await db.exec(read(file).replaceAll('__TARGET_EXAM__', 'LGS'))
-    await db.exec(read('229_revision_bound_tyt_quality_policy.sql'))
+    await db.exec(read('231_revision_bound_tyt_quality_policy.sql'))
     // Supabase varsayilan yetkileri yalniz test edilen migration'in nesnelerine uygulanir.
     await db.query(SUPABASE_DEFAULT_PRIVILEGES_SQL)
     const migration = read('230_question_minor_text_correction.sql')

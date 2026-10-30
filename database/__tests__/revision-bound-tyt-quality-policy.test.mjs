@@ -10,7 +10,7 @@ const bin=process.env.SOURCE_REVIEW_PG_BIN
 if(process.env.SOURCE_REVIEW_PG_REQUIRED==='1'&&!bin) throw Error('SOURCE_REVIEW_PG_BIN required')
 const suite=bin?describe:describe.skip
 const read=n=>readFileSync(new URL(`../migrations/${n}`,import.meta.url),'utf8')
-const tytMigration=read('229_revision_bound_tyt_quality_policy.sql')
+const tytMigration=read('231_revision_bound_tyt_quality_policy.sql')
 const rollback=readFileSync(new URL('../../docs/quality/revision-bound-tyt-policy-rollback.sql',import.meta.url),'utf8')
 const migration=read('20261011203500_revision_bound_fen_quality_policy.sql')
 const nativeTurkishMigration=read('20261014183929_revision_bound_turkce_quality_policy.sql')

@@ -64,8 +64,10 @@ describe('kayitli uretim parmak izi ve bilinen sapmalar', () => {
     readFileSync(join(DATABASE_DIR, 'migration-chain', 'production-functions.txt'), 'utf8'),
   )
 
-  it('228 sonrasi olculen 451 public fonksiyonu tasir; eski 044 imzasi ve yetim trigger yok', () => {
-    expect(production.size).toBe(451)
+  it('230 sonrasi olculen 462 public fonksiyonu tasir; eski 044 imzasi ve yetim trigger yok', () => {
+    // 2026-10-30: 228 sonrasi 451 + 230'un 11 yeni fonksiyonu (canli md5 e55ce6b4f12269d801c8a7c2b07fe477).
+    expect(production.size).toBe(462)
+    expect(production.has('publish_question_minor_text_correction(uuid,uuid,uuid,jsonb,uuid)')).toBe(true)
     for (const signature of [
       'assert_tyt_social_learning_epoch(uuid,text,uuid)',
       'create_tyt_social_daily_plan_for_epoch(uuid,date,jsonb,text,uuid)',

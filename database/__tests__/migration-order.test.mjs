@@ -40,10 +40,13 @@ describe('repo migration manifesti', () => {
 
   it('the literature seed and prior three releases retain their actual ledger pins', () => {
     const pending = repo.migrations.filter((e) => e.status === 'pending').map((e) => e.file)
-    expect(pending).toEqual(['229_revision_bound_tyt_quality_policy.sql', '230_question_minor_text_correction.sql'])
+    expect(pending).toEqual(['231_revision_bound_tyt_quality_policy.sql'])
     const latestApplied = repo.migrations.filter((e) => e.status !== 'pending')
-    expect(latestApplied.at(-1)).toEqual({ file:'228_ai_owner_retirement_acceptance.sql',status:'ledger',ledger:[ledger('20261020200911','228_ai_owner_retirement_acceptance')] })
-    const applied=latestApplied.slice(0,-1)
+    // 230 Supabase SQL Editor ile uygulandi (2026-10-30): defter satiri yok, unrecorded.
+    expect(latestApplied.at(-1)).toMatchObject({ file:'230_question_minor_text_correction.sql',status:'unrecorded' })
+    expect(latestApplied.at(-1).ledger).toBeUndefined()
+    expect(latestApplied.at(-2)).toEqual({ file:'228_ai_owner_retirement_acceptance.sql',status:'ledger',ledger:[ledger('20261020200911','228_ai_owner_retirement_acceptance')] })
+    const applied=latestApplied.slice(0,-2)
     expect(applied.at(-2)).toEqual({ file:'226_ayt_literature_internal_outcome.sql',status:'ledger',ledger:[ledger('20261018230450','226_ayt_literature_internal_outcome')] })
     expect(applied.at(-1)).toEqual({ file:'227_quarantined_retirement_scope.sql',status:'ledger',ledger:[ledger('20261019045923','227_quarantined_retirement_scope')] })
     expect(applied.slice(-5,-2).map(({ file, status, ledger: rows }) => ({ file, status, ledger: rows }))).toEqual([
