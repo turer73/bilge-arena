@@ -38,6 +38,9 @@ describe('230 question minor text correction SQL contract', () => {
     expect(sql).toContain('question_minor_text_correction_negation_count(p_old) <>');
     // Letter skeleton: only case, ASCII->Turkish restoration and text punctuation may change
     expect(sql).toContain('IF NOT public.question_minor_text_correction_letters_compatible(p_old, p_new) THEN');
+    expect(sql).toContain('CREATE OR REPLACE FUNCTION public.question_minor_text_correction_case_mask(p_text text)');
+    expect(sql).toContain("IF (a <> fa) <> (b <> fb) AND substr(v_mask_new, i, 1) <> '1' THEN");
+    expect(sql).toContain('public.question_minor_text_correction_case_mask(text),');
     expect(sql).toContain("(('c','ç'),('g','ğ'),('i','ı'),('o','ö'),('s','ş'),('u','ü'),('a','â'),('i','î'),('u','û'))");
     // Roman numeral words are preserved
     expect(sql).toContain('question_minor_text_correction_roman_tokens(p_old) IS DISTINCT FROM');

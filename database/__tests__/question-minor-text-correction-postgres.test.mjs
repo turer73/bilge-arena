@@ -86,6 +86,16 @@ const pairProbes = [
   ['metin unlemi', solutionOf('Dikkat! Üç etken vardır.'), solutionOf('Dikkat. Üç etken vardır.'), true],
   ['ek kesmesi', solutionOf('Türkiyenin üç etkeni vardır.'), solutionOf("Türkiye'nin üç etkeni vardır."), true],
   ['kesme bicimi', solutionOf('Türkiye’nin üç etkeni vardır.'), solutionOf("Türkiye'nin üç etkeni vardır."), true],
+  // Codex PR #710 ikinci tur: bilimsel simge ve kisaltmada harf buyuklugu anlam tasir.
+  ['element simgesi Co -> CO', firstOption('Co'), firstOption('CO'), false],
+  ['bilesik NaCl -> NACL', firstOption('NaCl'), firstOption('NACL'), false],
+  ['kisaltma dna -> DNA', solutionOf('dna molekülü üç etkenle eşleşir.'), solutionOf('DNA molekülü üç etkenle eşleşir.'), false],
+  ['tek harf degisken h -> H', solutionOf('h yüksekliği üç birimdir.'), solutionOf('H yüksekliği üç birimdir.'), false],
+  ['buyuk harfli kelime icinde kucultme ANKARA -> Ankara', firstOption('ANKARA'), firstOption('Ankara'), false],
+  ['kelime basi buyuk harf ankara -> Ankara', firstOption('ankara'), firstOption('Ankara'), true],
+  ['kelime basi buyuk harf ve geri yukleme cozum -> Çözüm', solutionOf('cozum: üç etken vardır.'), solutionOf('Çözüm: üç etken vardır.'), true],
+  ['buyuk I -> İ kelime icinde ISTANBUL -> İSTANBUL', firstOption('ISTANBUL'), firstOption('İSTANBUL'), true],
+  ['kelime ayirma Ortaçağ -> Orta Çağ', solutionOf("Ortaçağ'dan üç etken kaldı."), solutionOf("Orta Çağ'dan üç etken kaldı."), true],
 ]
 
 suite(`230 minor text correction ${bin ? 'native PostgreSQL' : 'PGlite WASM'} acceptance (isolated fixture)`, () => {
@@ -314,7 +324,8 @@ suite(`230 minor text correction ${bin ? 'native PostgreSQL' : 'PGlite WASM'} ac
     const row = (await db.query(`SELECT
       has_function_privilege('service_role','public.publish_question_minor_text_correction(uuid,uuid,uuid,jsonb,uuid)','EXECUTE') AS service_rpc,
       has_function_privilege('authenticated','public.publish_question_minor_text_correction(uuid,uuid,uuid,jsonb,uuid)','EXECUTE') AS client_rpc,
-      has_function_privilege('service_role','public.question_minor_text_correction_letters_compatible(text,text)','EXECUTE') AS helper,
+      has_function_privilege('service_role','public.question_minor_text_correction_letters_compatible(text,text)','EXECUTE')
+        OR has_function_privilege('service_role','public.question_minor_text_correction_case_mask(text)','EXECUTE') AS helper,
       has_function_privilege('service_role','public.question_minor_text_correction_verify(jsonb,jsonb)','EXECUTE') AS verifier,
       has_table_privilege('service_role','public.question_minor_text_corrections','SELECT') AS audit_read,
       has_table_privilege('authenticated','public.question_minor_text_corrections','INSERT') AS audit_write`)).rows[0]

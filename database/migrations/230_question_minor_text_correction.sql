@@ -113,6 +113,51 @@ AS $fn$
     '[[:space:]\u00a0.,;:?…"“”«»]', '', 'g');
 $fn$;
 
+-- Buyuk/kucuk harf degisimine izin verilen konumlar: iskeletle hizali '0'/'1'
+-- dizisi. '1' yalniz en az uc harfli bir harf dizisinin ilk harfidir. Co -> CO,
+-- NaCl -> NACL, dna -> DNA gibi bilimsel simge ve kisaltma degisimleri boylece
+-- reddedilir; "ankara" -> "Ankara" gibi bas harf duzeltmesi gecer. Iskeletle
+-- ayni on islemler (kesme/unlem) ve ayni atilan karakter kumesi kullanilir.
+CREATE OR REPLACE FUNCTION public.question_minor_text_correction_case_mask(p_text text)
+RETURNS text
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = pg_catalog
+AS $fn$
+DECLARE
+  v text := regexp_replace(
+    regexp_replace(
+      translate(COALESCE(p_text, ''), '’‘ʼ', ''''''''),
+      '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû])''(?=[a-zçğıöşüâîû])', '\1', 'g'),
+    '([A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]{2})!(?!=)', '\1', 'g');
+  v_mask text := '';
+  v_len integer := 0;
+  v_run integer := 0;
+  v_start integer := 0;
+  c text;
+BEGIN
+  FOR i IN 1 .. char_length(v) LOOP
+    c := substr(v, i, 1);
+    IF c ~ '[[:space:]\u00a0.,;:?…"“”«»]' THEN
+      IF v_run >= 3 THEN v_mask := overlay(v_mask PLACING '1' FROM v_start FOR 1); END IF;
+      v_run := 0;
+      CONTINUE;
+    END IF;
+    v_len := v_len + 1;
+    v_mask := v_mask || '0';
+    IF position(c IN 'ABCÇDEFGĞHIİJKLMNOÖPQRSŞTUÜVWXYZÂÎÛabcçdefgğhıijklmnoöpqrsştuüvwxyzâîû') > 0 THEN
+      IF v_run = 0 THEN v_start := v_len; END IF;
+      v_run := v_run + 1;
+    ELSE
+      IF v_run >= 3 THEN v_mask := overlay(v_mask PLACING '1' FROM v_start FOR 1); END IF;
+      v_run := 0;
+    END IF;
+  END LOOP;
+  IF v_run >= 3 THEN v_mask := overlay(v_mask PLACING '1' FROM v_start FOR 1); END IF;
+  RETURN v_mask;
+END
+$fn$;
+
 CREATE OR REPLACE FUNCTION public.question_minor_text_correction_letters_compatible(p_old text, p_new text)
 RETURNS boolean
 LANGUAGE plpgsql
@@ -122,6 +167,8 @@ AS $fn$
 DECLARE
   v_old text := public.question_minor_text_correction_skeleton(p_old);
   v_new text := public.question_minor_text_correction_skeleton(p_new);
+  v_mask_old text := public.question_minor_text_correction_case_mask(p_old);
+  v_mask_new text := public.question_minor_text_correction_case_mask(p_new);
   a text;
   b text;
   fa text;
@@ -130,12 +177,22 @@ BEGIN
   IF char_length(v_old) <> char_length(v_new) THEN
     RETURN false;
   END IF;
+  -- Maske iskeletle hizali olmali; degilse fail-closed.
+  IF char_length(v_mask_old) <> char_length(v_old) OR char_length(v_mask_new) <> char_length(v_new) THEN
+    RETURN false;
+  END IF;
   FOR i IN 1 .. char_length(v_old) LOOP
     a := substr(v_old, i, 1);
     b := substr(v_new, i, 1);
     CONTINUE WHEN a = b;
     fa := public.question_minor_text_correction_case_fold(a);
     fb := public.question_minor_text_correction_case_fold(b);
+    -- Buyuk/kucuk harf degisimi (I -> i/ı ve geri yuklemeyle birlikte olani dahil)
+    -- yalniz yeni metinde en az uc harfli dizinin ilk harfinde: Co -> CO, NaCl ->
+    -- NACL reddedilir; "Ortaçağ" -> "Orta Çağ" ayirma duzeltmesi gecer.
+    IF (a <> fa) <> (b <> fb) AND substr(v_mask_new, i, 1) <> '1' THEN
+      RETURN false;
+    END IF;
     -- Ayni harfin buyuk/kucuk bicimi. case_fold harf disini degistirmedigi
     -- icin a <> b iken fa = fb ancak bir harfin iki bicimiyle olusur.
     CONTINUE WHEN fa = fb;
@@ -662,6 +719,7 @@ REVOKE ALL ON FUNCTION public.question_minor_text_correction_clean_digits(text),
   public.question_minor_text_correction_negation_count(text),
   public.question_minor_text_correction_case_fold(text),
   public.question_minor_text_correction_skeleton(text),
+  public.question_minor_text_correction_case_mask(text),
   public.question_minor_text_correction_letters_compatible(text, text),
   public.question_minor_text_correction_roman_tokens(text),
   public.question_minor_text_correction_verify_string(text, text, text, integer, integer),

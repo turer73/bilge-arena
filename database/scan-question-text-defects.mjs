@@ -210,15 +210,45 @@ export function minorTextCorrectionSkeleton(text) {
     .replace(/[ \t\n\v\f\r\u00a0.,;:?…"“”«»]/g, '')
 }
 
+// SQL question_minor_text_correction_case_mask ile birebir: iskeletle hizali
+// '0'/'1' dizisi; '1' yalniz en az uc harfli harf dizisinin ilk harfi. Buyuk/kucuk
+// harf degisimine yalniz yeni metinde bu konumda izin verilir (Co -> CO, dna -> DNA
+// reddedilir; Ortaçağ -> Orta Çağ ayirma duzeltmesi gecer).
+const MINOR_STRIP_CHAR = /[ \t\n\v\f\r\u00a0.,;:?…"“”«»]/
+export function minorTextCorrectionCaseMask(text) {
+  const v = String(text ?? '')
+    .replace(/[’‘ʼ]/g, "'")
+    .replace(MINOR_SUFFIX_APOSTROPHE, '$1')
+    .replace(MINOR_TEXT_EXCLAMATION, '$1')
+  const mask = []
+  let run = 0
+  let start = -1
+  const close = () => { if (run >= 3) mask[start] = '1'; run = 0 }
+  for (const c of v) {
+    if (MINOR_STRIP_CHAR.test(c)) { close(); continue }
+    mask.push('0')
+    if (MINOR_CASE_UPPER.includes(c) || MINOR_CASE_LOWER.includes(c)) {
+      if (run === 0) start = mask.length - 1
+      run++
+    } else close()
+  }
+  close()
+  return mask.join('')
+}
+
 const MINOR_RESTORATION_PAIRS = new Set(['c>ç', 'g>ğ', 'i>ı', 'o>ö', 's>ş', 'u>ü', 'a>â', 'i>î', 'u>û'])
 export function minorTextCorrectionLettersCompatible(oldStr, newStr) {
   const a = Array.from(minorTextCorrectionSkeleton(oldStr))
   const b = Array.from(minorTextCorrectionSkeleton(newStr))
   if (a.length !== b.length) return false
+  const ma = minorTextCorrectionCaseMask(oldStr)
+  const mb = minorTextCorrectionCaseMask(newStr)
+  if (ma.length !== a.length || mb.length !== b.length) return false
   for (let i = 0; i < a.length; i++) {
     if (a[i] === b[i]) continue
     const fa = minorTextCorrectionCaseFold(a[i])
     const fb = minorTextCorrectionCaseFold(b[i])
+    if ((a[i] !== fa) !== (b[i] !== fb) && mb[i] !== '1') return false
     if (fa === fb) continue
     if (a[i] === 'I' && fb === 'i') continue
     if (a[i] === 'İ') return false
