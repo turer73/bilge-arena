@@ -81,6 +81,7 @@ export const POSTGRES_CI_SUITES = Object.freeze({
       t('tyt-social-preparation-learner-flow.test.mjs'),
       t('revision-bound-fen-quality-policy.test.mjs'),
       t('revision-bound-tyt-quality-policy.test.mjs'),
+      t('question-minor-text-correction-postgres.test.mjs'),
       t('question-benchmark-scope.test.mjs'),
     ],
   },

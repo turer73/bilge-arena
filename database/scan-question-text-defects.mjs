@@ -157,6 +157,284 @@ export function turkishRestorationExclusion({ game, category, content, examRef, 
   return null
 }
 
+// ── Kucuk Metin Duzeltmesi (Migration 230) ──────────────────────────────────
+export const MINOR_TEXT_CORRECTION_FIELD_LIMITS = {
+  question: { maxCharDelta: 35, maxWordDiff: 8 },
+  solution: { maxCharDelta: 60, maxWordDiff: 12 },
+  passage: { maxCharDelta: 40, maxWordDiff: 8 },
+  options: { maxCharDelta: 15, maxWordDiff: 3 },
+}
+// SQL 230 yalniz question/options/solution/passage alanlarini duzenlenebilir sayar;
+// diger tum anahtarlar (hint, explanation, coach...) birebir ayni kalmalidir.
+
+export function minorTextCorrectionCleanDigits(text) {
+  if (!text) return ''
+  return String(text)
+    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, (c) => '0123456789'['⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(c)])
+    // Rakamlar arasindaki nokta ve virgul anlam tasir (1.000 bin, 1,000 bir).
+    .replace(/[^0-9.,]+/g, ' ')
+    .replace(/(?<![0-9])[.,]|[.,](?![0-9])/g, ' ')
+    .replace(/ +/g, ' ')
+    .trim()
+}
+
+export function minorTextCorrectionNegationCount(text) {
+  if (!text) return 0
+  const lowered = lowerTr(String(text))
+  const matches = [...lowered.matchAll(/(?<![a-zçğıöşü0-9])(degil|değil|degildir|değildir|yok|yoktur|hic|hiç|asla|olamaz|yapamaz|tuzsuz|etsiz|yagsiz|yağsız|kokusuz)(?![a-zçğıöşü0-9])/gu)]
+  return matches.length
+}
+
+// SQL question_minor_text_correction_case_fold ile birebir: locale-bagimsiz,
+// Turkce I/İ kurali (I->ı, İ->i). Liste disi karakterler degismez.
+const MINOR_CASE_UPPER = 'ABCÇDEFGĞHIİJKLMNOÖPQRSŞTUÜVWXYZÂÎÛ'
+const MINOR_CASE_LOWER = 'abcçdefgğhıijklmnoöpqrsştuüvwxyzâîû'
+export function minorTextCorrectionCaseFold(text) {
+  return Array.from(String(text ?? ''), (c) => {
+    const i = MINOR_CASE_UPPER.indexOf(c)
+    return i < 0 ? c : MINOR_CASE_LOWER[i]
+  }).join('')
+}
+
+// SQL question_minor_text_correction_skeleton: yalniz bosluk ve metin noktalamasi
+// atilir; tire, parantez, bolu ve matematik isaretleri iskelette kalir.
+// Kesme yalniz harf ile kucuk harf arasindayken atilir (f'(x), A'B kalir).
+// Bosluk kumesi SQL [[:space:] ] ile ayni: ASCII bosluklar + U+00A0.
+const MINOR_LETTER = 'A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû'
+const MINOR_LOWER = 'a-zçğıöşüâîû'
+const MINOR_SUFFIX_APOSTROPHE = new RegExp(`([${MINOR_LETTER}])'(?=[${MINOR_LOWER}])`, 'g')
+// Noktalama yalniz en az iki harfli sozcukten sonra (arada bosluk olabilir,
+// ardinda = yok) ya da metin sonundaki nokta/uc nokta olarak atilir; {a,b},
+// 6 : x, x = ?, 3. sinif, 5! ve a != b iskelette kalir.
+const MINOR_TEXT_PUNCT = new RegExp(`([${MINOR_LETTER}]{2}[ \\t\\n\\v\\f\\r\\u00a0]*)[.,;:?!…]+(?!=)`, 'g')
+const MINOR_END_PUNCT = /[.…]+[ \t\n\v\f\r\u00a0]*$/
+export function minorTextCorrectionSkeleton(text) {
+  return String(text ?? '')
+    .replace(/[’‘ʼ]/g, "'")
+    .replace(MINOR_SUFFIX_APOSTROPHE, '$1')
+    .replace(MINOR_TEXT_PUNCT, '$1')
+    .replace(MINOR_END_PUNCT, '')
+    .replace(/[ \t\n\v\f\r\u00a0"“”«»]/g, '')
+}
+
+// SQL question_minor_text_correction_case_mask ile birebir: iskeletle hizali
+// '0'/'1' dizisi; '1' yalniz en az uc harfli harf dizisinin ilk harfi. Buyuk/kucuk
+// harf degisimine yalniz yeni metinde bu konumda izin verilir (Co -> CO, dna -> DNA
+// reddedilir; Ortaçağ -> Orta Çağ ayirma duzeltmesi gecer).
+const MINOR_STRIP_CHAR = /[ \t\n\v\f\r\u00a0"“”«»]/
+const MINOR_MARK_PLAIN = String.fromCharCode(0xe000)
+const MINOR_MARK_SENT = String.fromCharCode(0xe001)
+const MINOR_WS = ' \\t\\n\\v\\f\\r\\u00a0'
+const MINOR_SENT_PUNCT = new RegExp(`([${MINOR_LETTER}]{2}[${MINOR_WS}]*)[.,;:?!…]*[.?!…:][.,;:?!…]*(?!=)`, 'g')
+export function minorTextCorrectionCaseMask(text) {
+  const v = String(text ?? '')
+    .replace(/[’‘ʼ]/g, "'")
+    .replace(MINOR_SUFFIX_APOSTROPHE, '$1')
+    .replace(MINOR_SENT_PUNCT, `$1${MINOR_MARK_SENT}`)
+    .replace(MINOR_TEXT_PUNCT, `$1${MINOR_MARK_PLAIN}`)
+    .replace(MINOR_END_PUNCT, '')
+  const mask = []
+  let run = 0
+  let start = -1
+  let sent = true
+  let runSent = false
+  const isLetter = (c) => MINOR_CASE_UPPER.includes(c) || MINOR_CASE_LOWER.includes(c)
+  const close = () => {
+    if (run > 0) {
+      if (runSent && run >= 2) mask[start] = '2'
+      else if (run >= 3) mask[start] = '1'
+    }
+    run = 0
+  }
+  for (const c of v) {
+    if (c === MINOR_MARK_SENT || c === MINOR_MARK_PLAIN || MINOR_STRIP_CHAR.test(c) || !isLetter(c)) close()
+    if (c === MINOR_MARK_SENT) { sent = true; continue }
+    if (c === MINOR_MARK_PLAIN || MINOR_STRIP_CHAR.test(c)) continue
+    mask.push('0')
+    if (isLetter(c)) {
+      if (run === 0) { start = mask.length - 1; runSent = sent }
+      run++
+    }
+    sent = false
+  }
+  close()
+  return mask.join('')
+}
+
+const MINOR_RESTORATION_PAIRS = new Set(['c>ç', 'g>ğ', 'i>ı', 'o>ö', 's>ş', 'u>ü', 'a>â', 'i>î', 'u>û'])
+export function minorTextCorrectionLettersCompatible(oldStr, newStr) {
+  const a = Array.from(minorTextCorrectionSkeleton(oldStr))
+  const b = Array.from(minorTextCorrectionSkeleton(newStr))
+  if (a.length !== b.length) return false
+  const ma = minorTextCorrectionCaseMask(oldStr)
+  const mb = minorTextCorrectionCaseMask(newStr)
+  if (ma.length !== a.length || mb.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] === b[i]) continue
+    const fa = minorTextCorrectionCaseFold(a[i])
+    const fb = minorTextCorrectionCaseFold(b[i])
+    if ((a[i] !== fa) !== (b[i] !== fb)) {
+      if (mb[i] !== '1' && mb[i] !== '2') return false
+      if (b[i] !== fb && mb[i] !== '2') return false // kucukten buyuge yalniz cumle basinda
+    }
+    if (fa === fb) continue
+    if (a[i] === 'I' && fb === 'i') continue
+    if (a[i] === 'İ') return false
+    if (MINOR_RESTORATION_PAIRS.has(`${fa}>${fb}`)) continue
+    return false
+  }
+  return true
+}
+
+// SQL question_minor_text_correction_restoration_ok ile birebir: alanda harf
+// geri yuklemesi (buyuk/kucuk disinda harf degisimi) varsa harf dizileri bire bir
+// eslesmeli ve degisen her sozcuk 215'in govde listesinden gecmeli. Liste sapkali
+// harf ve anlam ayiran ciftleri icermez: Hala -> Hâlâ, ol -> öl reddedilir.
+const MINOR_TOKEN_SPLIT = new RegExp(`[^${MINOR_LETTER}]+`)
+const minorTextCorrectionTokens = (text) => String(text ?? '')
+  .replace(/[’‘ʼ]/g, "'")
+  .replace(MINOR_SUFFIX_APOSTROPHE, '$1')
+  .split(MINOR_TOKEN_SPLIT)
+  .filter(Boolean)
+export function minorTextCorrectionRestorationOk(oldStr, newStr) {
+  const fold = (s) => minorTextCorrectionCaseFold(minorTextCorrectionSkeleton(s))
+  const restored = fold(oldStr) !== fold(newStr)
+  const a = minorTextCorrectionTokens(oldStr)
+  const b = minorTextCorrectionTokens(newStr)
+  if (a.length === b.length) {
+    let shift = false
+    for (let i = 0; i < a.length; i++) {
+      if (minorTextCorrectionCaseFold(a[i]) === minorTextCorrectionCaseFold(b[i])) continue
+      if (!restored) { shift = true; continue }
+      const folded = foldTurkishToAscii(a[i])
+      const lowered = lowerTr(b[i])
+      if (!TURKISH_RESTORATION_STEMS.some(([ascii, turkish]) => folded.startsWith(ascii) && lowered.startsWith(turkish))) return false
+    }
+    if (!shift) return true
+  }
+  // Kelime birlestirme/ayirma: geri yuklemeyle birlikte olamaz; degisen sinirin
+  // iki yanindaki parca en az uc harf (O da -> Oda reddedilir, yerçekimi -> yer çekimi gecer).
+  if (restored) return false
+  const cuts = (t) => { const out = []; let pos = 0; for (let i = 0; i < t.length - 1; i++) { pos += [...t[i]].length; out.push(pos) } return out }
+  const ca = cuts(a)
+  const cb = cuts(b)
+  const len = (w) => [...w].length
+  for (let i = 0; i < ca.length; i++) if (!cb.includes(ca[i]) && (len(a[i]) < 3 || len(a[i + 1]) < 3)) return false
+  for (let i = 0; i < cb.length; i++) if (!ca.includes(cb[i]) && (len(b[i]) < 3 || len(b[i + 1]) < 3)) return false
+  return true
+}
+
+export function minorTextCorrectionRomanTokens(text) {
+  return String(text ?? '').split(/[^A-Za-z0-9ÇĞİÖŞÜÂÎÛçğıöşüâîû]+/).filter((t) => /^[IVXLCDM]+$/.test(t))
+}
+
+export function verifyMinorTextCorrectionString(field, oldStr, newStr, maxCharDelta, maxWordDiff) {
+  if (oldStr === null && newStr === null) return { field, changed: false }
+  if (oldStr === null || newStr === null) return null
+  if (typeof oldStr !== 'string' || typeof newStr !== 'string') return null
+  if (newStr.normalize('NFC') !== newStr) return null
+  if (oldStr === newStr) return { field, changed: false }
+
+  if (Math.abs(newStr.length - oldStr.length) > maxCharDelta) return null
+  if (minorTextCorrectionCleanDigits(oldStr) !== minorTextCorrectionCleanDigits(newStr)) return null
+  if (minorTextCorrectionNegationCount(oldStr) !== minorTextCorrectionNegationCount(newStr)) return null
+  if (!minorTextCorrectionLettersCompatible(oldStr, newStr)) return null
+  if (minorTextCorrectionRomanTokens(oldStr).join('\u0000') !== minorTextCorrectionRomanTokens(newStr).join('\u0000')) return null
+  if (!minorTextCorrectionRestorationOk(oldStr, newStr)) return null
+
+  const oldWords = oldStr.trim().split(/\s+/).filter(Boolean)
+  const newWords = newStr.trim().split(/\s+/).filter(Boolean)
+  if (Math.abs(newWords.length - oldWords.length) > 3) return null
+
+  let diffCount = 0
+  const changes = []
+  const minWords = Math.min(oldWords.length, newWords.length)
+  for (let i = 0; i < minWords; i++) {
+    if (oldWords[i] !== newWords[i]) {
+      diffCount++
+      changes.push({ old: oldWords[i], new: newWords[i] })
+    }
+  }
+  diffCount += Math.abs(newWords.length - oldWords.length)
+  if (diffCount > maxWordDiff) return null
+
+  return { field, changed: true, diffCount, changes }
+}
+
+export function verifyMinorTextCorrection(oldContent, newContent) {
+  if (!oldContent || !newContent || typeof oldContent !== 'object' || typeof newContent !== 'object') return null
+  if (Array.isArray(oldContent) || Array.isArray(newContent)) return null
+
+  const oldKeys = Object.keys(oldContent).sort()
+  const newKeys = Object.keys(newContent).sort()
+  if (oldKeys.join(',') !== newKeys.join(',')) return null
+
+  if (oldContent.answer !== newContent.answer) return null
+  if (oldContent.correct !== undefined && oldContent.correct !== newContent.correct) return null
+  if (typeof oldContent.question !== 'string' || typeof newContent.question !== 'string') return null
+
+  if (!Array.isArray(oldContent.options) || !Array.isArray(newContent.options)) return null
+  if (oldContent.options.length !== newContent.options.length) return null
+
+  let hasChange = false
+  const fieldChanges = []
+
+  // Check options
+  for (let i = 0; i < oldContent.options.length; i++) {
+    const res = verifyMinorTextCorrectionString(`options[${i}]`, oldContent.options[i], newContent.options[i], 15, 3)
+    if (!res) return null
+    if (res.changed) {
+      hasChange = true
+      fieldChanges.push(res)
+    }
+  }
+
+  // Check question
+  const qRes = verifyMinorTextCorrectionString('question', oldContent.question, newContent.question, 35, 8)
+  if (!qRes) return null
+  if (qRes.changed) {
+    hasChange = true
+    fieldChanges.push(qRes)
+  }
+
+  // Check optional string fields
+  for (const f of ['solution', 'passage']) {
+    if (f in oldContent) {
+      const limits = MINOR_TEXT_CORRECTION_FIELD_LIMITS[f]
+      const res = verifyMinorTextCorrectionString(f, oldContent[f], newContent[f], limits.maxCharDelta, limits.maxWordDiff)
+      if (!res) return null
+      if (res.changed) {
+        hasChange = true
+        fieldChanges.push(res)
+      }
+    }
+  }
+
+  // Check other non-string fields (like coach)
+  for (const k of oldKeys) {
+    if (!['question', 'options', 'answer', 'correct', 'solution', 'passage'].includes(k)) {
+      if (JSON.stringify(oldContent[k]) !== JSON.stringify(newContent[k])) return null
+    }
+  }
+
+  if (!hasChange) return null
+  return { valid: true, changes: fieldChanges }
+}
+
+export function minorTextCorrectionExclusion({ game, category, subcategory, topic, content, examRef, baseApproved = false }) {
+  if (game === 'wordquest') return 'wordquest (Ingilizce icerik)'
+  if (game === 'sosyal' && String(examRef ?? '').trim().toUpperCase() === 'TYT' && baseApproved) return 'onayli TYT sosyal revizyonu (218)'
+  if (game === 'turkce' && category === 'yazim_kurallari') return 'yazim/noktalama/dilbilgisi konulu soru'
+  const catTopic = foldTurkishToAscii(`${category ?? ''} ${subcategory ?? ''} ${topic ?? ''}`)
+  if (/(yazim|imla|noktalama|hece|ses_bilgisi|ses bilgisi|ses_olaylari|ses olaylari|anlatim_bozuklugu|anlatim bozuklugu|anlam|deyim|atasoz)/.test(catTopic)) {
+    return 'yazim/noktalama/dilbilgisi konulu soru'
+  }
+  if (/(yazim|yazil|imla|noktalama|buyuk harf|kucuk harf|kesme isaret|ses olay|unlu dus|unlu uyum|unsuz|anlam|deyim|atasoz)/.test(foldTurkishToAscii(content?.question ?? ''))) {
+    return 'kok yazim/noktalama/ses bilgisi/anlam konulu'
+  }
+  return null
+}
+
 const STEM_RE = new RegExp(
   '(?<![\\p{L}])(' + ASCII_DIACRITIC_STEMS.map(([s]) => s.replace(/ /g, '\\s+')).join('|') + ')(?=[\\p{L}]*)(?![\\p{L}]*[çğıöşüÇĞİÖŞÜ])',
   'giu',

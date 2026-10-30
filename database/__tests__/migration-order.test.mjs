@@ -40,7 +40,7 @@ describe('repo migration manifesti', () => {
 
   it('the literature seed and prior three releases retain their actual ledger pins', () => {
     const pending = repo.migrations.filter((e) => e.status === 'pending').map((e) => e.file)
-    expect(pending).toEqual(['229_revision_bound_tyt_quality_policy.sql'])
+    expect(pending).toEqual(['229_revision_bound_tyt_quality_policy.sql', '230_question_minor_text_correction.sql'])
     const latestApplied = repo.migrations.filter((e) => e.status !== 'pending')
     expect(latestApplied.at(-1)).toEqual({ file:'228_ai_owner_retirement_acceptance.sql',status:'ledger',ledger:[ledger('20261020200911','228_ai_owner_retirement_acceptance')] })
     const applied=latestApplied.slice(0,-1)

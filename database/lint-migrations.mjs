@@ -333,6 +333,7 @@ export const GOVERNANCE_WRITE_RPCS = [
   'create_governed_question', 'create_question_content_revision', 'review_question_content_revision',
   'publish_question_content_revision', 'quarantine_question_content', 'set_content_governance_enforcement',
   'content_governance_authorize_question_write', 'publish_question_turkish_restoration',
+  'publish_question_minor_text_correction',
 ];
 // Gercek cagri mi? Haric: CREATE/ALTER/DROP/COMMENT/GRANT/REVOKE ifadelerindeki
 // imza listeleri, TRIGGER ... EXECUTE FUNCTION, daha uzun bir adin parcasi ve
