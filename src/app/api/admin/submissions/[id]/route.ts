@@ -67,6 +67,9 @@ export async function PATCH(
   //    İKİSİNİN de questions'a insert etmesine izin veriyordu — kaybeden
   //    update 0 satır etkileyip yine 200 dönüyordu (duplicate + yanlış başarı).
   //    Şimdi: claim'i kazanamayan hiç insert ETMEZ.
+  //    Öz-onay yasağı (#2953): moderatör kendi gönderisini sahiplenemez; aksi
+  //    halde onay increment_coins ile kendine ödül yazardı. Koşul claim'in
+  //    içinde olduğu için ayrı okuma ile yarışmaz.
   const newStatus = body.action === 'approve' ? 'approved' : 'rejected'
   const { data: claimed, error: claimErr } = await svc
     .from('question_submissions')
@@ -78,6 +81,7 @@ export async function PATCH(
     })
     .eq('id', id)
     .eq('status', 'pending')
+    .neq('user_id', admin.id)
     .select('id, user_id, game, category, difficulty, content')
     .maybeSingle()
 
@@ -86,6 +90,15 @@ export async function PATCH(
     return NextResponse.json({ error: 'Güncelleme başarısız' }, { status: 500 })
   }
   if (!claimed) {
+    // Yalnız hata metnini seçmek için okunur; karar yukarıdaki claim'dedir.
+    const { data: own } = await svc
+      .from('question_submissions')
+      .select('user_id')
+      .eq('id', id)
+      .maybeSingle()
+    if (own?.user_id === admin.id) {
+      return NextResponse.json({ error: 'Kendi gönderini değerlendiremezsin' }, { status: 403 })
+    }
     // Satır yok VEYA başka admin önce davrandı — ikisi de "değerlendirilemez"
     return NextResponse.json({ error: 'Gönderim bulunamadı veya zaten değerlendirilmiş' }, { status: 409 })
   }
