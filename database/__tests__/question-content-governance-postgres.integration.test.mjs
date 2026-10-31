@@ -1377,10 +1377,13 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
   })
 
   it('146/213: never lets a confirmed case push a reporter past 300 coins of quality rewards in one Istanbul day', async () => {
+    // Bu dava hedefi karantinaya alir; sonraki emeklilik testleri ydtQuestion'in aktif kalmasina
+    // dayanir. Kimlikler randomUUID oldugu icin ORDER BY q.id onu bazen seciyordu (PR #713 CI).
     const target = (await client.query(`SELECT q.id AS question_id,r.id AS revision_id,r.content_sha256,r.game
       FROM public.questions q JOIN public.question_content_revisions r ON r.id=q.published_revision_id
       WHERE q.is_active AND NOT EXISTS (SELECT 1 FROM public.question_quality_cases c WHERE c.revision_id=r.id)
-      ORDER BY q.id LIMIT 1`)).rows[0]
+        AND q.id<>ALL($1::uuid[])
+      ORDER BY q.id LIMIT 1`,[[ydtQuestion,ydtLegacyNullQuestion]])).rows[0]
     expect(target).toBeDefined()
     const capCase = (await client.query('INSERT INTO public.question_quality_cases(question_id,revision_id,content_sha256) VALUES($1,$2,$3) RETURNING id',[target.question_id,target.revision_id,target.content_sha256])).rows[0].id
     const reporters = Array.from({ length: 5 }, () => randomUUID())
