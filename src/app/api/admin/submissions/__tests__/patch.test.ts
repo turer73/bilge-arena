@@ -10,7 +10,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const m = vi.hoisted(() => ({
   checkPermission: vi.fn(),
   rl: vi.fn(),
-  claim: vi.fn(),         // update().eq().eq().select().maybeSingle() sonucu
+  claim: vi.fn(),         // update().eq().eq().neq().select().maybeSingle() sonucu
+  claimNeq: vi.fn(),      // claim'in neq(kolon, değer) argümanları (öz-onay yasağı)
+  lookup: vi.fn(),        // claim kaybedilince select('user_id').eq().maybeSingle()
   subUpdate: vi.fn(),     // question_submissions.update() patch'leri (sırayla)
   logInsert: vi.fn(),
   rpc: vi.fn(),           // increment_coins (ödül)
@@ -53,12 +55,16 @@ vi.mock('@/lib/supabase/service-role', () => ({
       }
       if (table === 'question_submissions') {
         return {
+          select: () => ({ eq: () => ({ maybeSingle: m.lookup }) }),
           update: (patch: unknown) => {
             m.subUpdate(patch)
             // Zincir hem await edilebilir (rollback / question_id follow-up)
-            // hem .eq().select().maybeSingle() (atomik claim) destekler
+            // hem .eq().neq().select().maybeSingle() (atomik claim) destekler
             const eq2 = Object.assign(Promise.resolve({ error: null }), {
-              select: () => ({ maybeSingle: m.claim }),
+              neq: (...args: unknown[]) => {
+                m.claimNeq(...args)
+                return { select: () => ({ maybeSingle: m.claim }) }
+              },
             })
             const eq1 = Object.assign(Promise.resolve({ error: null }), {
               eq: () => eq2,
@@ -104,6 +110,7 @@ beforeEach(() => {
   m.checkPermission.mockResolvedValue({ id: 'admin-1' })
   m.rl.mockResolvedValue(null)
   m.claim.mockResolvedValue({ data: CLAIMED, error: null })
+  m.lookup.mockResolvedValue({ data: { user_id: 'submitter-1' }, error: null })
   m.rpc.mockImplementation((name: string) => {
     if (name === 'create_governed_question') {
       return Promise.resolve({ data: {
@@ -202,6 +209,29 @@ describe('PATCH /api/admin/submissions/[id]', () => {
     const res = await PATCH(req({ action: 'approve' }), params)
     expect(res.status).toBe(409)
     expect(m.rpc).not.toHaveBeenCalled()
+  })
+
+  it('öz-onay (#2953): claim gönderen=moderatör satırını dışlar', async () => {
+    await PATCH(req({ action: 'approve' }), params)
+    expect(m.claimNeq).toHaveBeenCalledWith('user_id', 'admin-1')
+  })
+
+  it('öz-onay (#2953): kendi gönderisi 403, soru/ödül/bildirim YOK', async () => {
+    m.claim.mockResolvedValue({ data: null, error: null })
+    m.lookup.mockResolvedValue({ data: { user_id: 'admin-1' }, error: null })
+    const res = await PATCH(req({ action: 'approve' }), params)
+    expect(res.status).toBe(403)
+    expect(m.rpc).not.toHaveBeenCalled()
+    expect(m.notifInsert).not.toHaveBeenCalled()
+    expect(m.logInsert).not.toHaveBeenCalled()
+  })
+
+  it('öz-onay (#2953): kendi gönderisini reddetmek de 403', async () => {
+    m.claim.mockResolvedValue({ data: null, error: null })
+    m.lookup.mockResolvedValue({ data: { user_id: 'admin-1' }, error: null })
+    const res = await PATCH(req({ action: 'reject' }), params)
+    expect(res.status).toBe(403)
+    expect(m.notifInsert).not.toHaveBeenCalled()
   })
 
   it('reject: soru OLUŞTURULMAZ, claim patch\'inde not var', async () => {
