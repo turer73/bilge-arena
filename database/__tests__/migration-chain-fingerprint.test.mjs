@@ -64,9 +64,19 @@ describe('kayitli uretim parmak izi ve bilinen sapmalar', () => {
     readFileSync(join(DATABASE_DIR, 'migration-chain', 'production-functions.txt'), 'utf8'),
   )
 
-  it('230 sonrasi olculen 462 public fonksiyonu tasir; eski 044 imzasi ve yetim trigger yok', () => {
+  it('231 sonrasi olculen 463 public fonksiyonu tasir; eski 044 imzasi ve yetim trigger yok', () => {
     // 2026-10-30: 228 sonrasi 451 + 230'un 11 yeni fonksiyonu (canli md5 e55ce6b4f12269d801c8a7c2b07fe477).
-    expect(production.size).toBe(462)
+    // 2026-11-01: 231 bir yardimci ekler, uc govdeyi degistirir (canli md5 c4a4ccd0ed56255d92220a5be3ea03ce).
+    expect(production.size).toBe(463)
+    for (const [signature, body] of [
+      ['question_revision_validation_metadata_hash(uuid)', 'edb6d44c8462eb0bdbfbb35381399e15'],
+      ['question_revision_validation_pair_valid(text,text,text,text)', 'b1b9f3c00c07ab3b3078e4d6baa78de0'],
+      ['question_revision_validation_policy(uuid)', '65739271d9025f267bdcc504b5c4c3b1'],
+      ['tg_question_revision_policy_guard()', 'c4fe0b4dfd28893c1d1f6294345335ef'],
+    ]) {
+      expect(production.get(signature)?.body, signature).toBe(body)
+      expect(production.get(signature)?.acl, signature).toBe('{postgres=X/postgres}')
+    }
     expect(production.has('publish_question_minor_text_correction(uuid,uuid,uuid,jsonb,uuid)')).toBe(true)
     for (const signature of [
       'assert_tyt_social_learning_epoch(uuid,text,uuid)',

@@ -282,8 +282,9 @@ question_retirement_fingerprint(uuid)|ba186c48fb48b295d077ec6c0b987fe8|t|search_
 question_revision_outcomes_valid(uuid)|b8be60cd7f6a9901469889c3393842d8|t|search_path=pg_catalog|{postgres=X/postgres}
 question_revision_retirement_review_ready(uuid)|4890a47e06aab9025f59b0c2c4589b0a|t|search_path=pg_catalog|{postgres=X/postgres}
 question_revision_single_review_ready(uuid)|11eb7157118b547791aa9ca5696f2647|t|search_path=pg_catalog|{postgres=X/postgres}
-question_revision_validation_pair_valid(text,text,text,text)|355ca1733f289df4f4c9fe9a134f10c8|f|search_path=pg_catalog|{postgres=X/postgres}
-question_revision_validation_policy(uuid)|9f75e64f36c1984d3f839ce4278449bf|t|search_path=pg_catalog|{postgres=X/postgres}
+question_revision_validation_metadata_hash(uuid)|edb6d44c8462eb0bdbfbb35381399e15|t|search_path=pg_catalog|{postgres=X/postgres}
+question_revision_validation_pair_valid(text,text,text,text)|b1b9f3c00c07ab3b3078e4d6baa78de0|f|search_path=pg_catalog|{postgres=X/postgres}
+question_revision_validation_policy(uuid)|65739271d9025f267bdcc504b5c4c3b1|t|search_path=pg_catalog|{postgres=X/postgres}
 question_revision_validation_run_complete(question_validation_revision_policies)|706c0395ad1be5947820102066b8c60a|t|search_path=pg_catalog|{postgres=X/postgres}
 question_source_curriculum_binding_valid(uuid,jsonb)|16c96cc0c626e2153afeae93738f157a|t|search_path=pg_catalog|{postgres=X/postgres}
 question_source_exception_allowances(uuid,jsonb,jsonb)|f21206f03e53665bf048354b47de54c6|t|search_path=pg_catalog|{postgres=X/postgres}
@@ -404,7 +405,7 @@ tg_question_outcome_split_scope_row_guard()|b63810863acc844bd77fcff8d5d638b8|t|s
 tg_question_quality_claim_append_only()|0fe97e863a79b960033e8a6832962806|f|search_path=pg_catalog|{postgres=X/postgres}
 tg_question_quality_mission_immutable()|a50bf1e3f84327bf63e193a4f92967c1|f|search_path=pg_catalog|{postgres=X/postgres}
 tg_question_revision_outcome_scope_guard()|175093e1819037dbf6a76321fb2273f5|t|search_path=pg_catalog|{postgres=X/postgres}
-tg_question_revision_policy_guard()|ac7709e735ef16374e66f937dac3e63f|t|search_path=pg_catalog|{postgres=X/postgres}
+tg_question_revision_policy_guard()|c4fe0b4dfd28893c1d1f6294345335ef|t|search_path=pg_catalog|{postgres=X/postgres}
 tg_questions_content_basic_guard()|28f13b3499e2cb74c6bdd5ae48a43e8a|f|search_path=pg_catalog|{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}
 tg_require_adaptive_diagnostic_release()|21410d2e5019da05783696ab125130bf|t|search_path=pg_catalog|{postgres=X/postgres}
 tg_require_question_validation_decision()|f138c7e187cf421ee1945890b49cc959|t|search_path=pg_catalog|{postgres=X/postgres}
