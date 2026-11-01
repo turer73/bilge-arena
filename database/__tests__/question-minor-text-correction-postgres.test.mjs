@@ -238,7 +238,7 @@ suite(`230 minor text correction ${bin ? 'native PostgreSQL' : 'PGlite WASM'} ac
       CREATE FUNCTION public.question_source_report_valid(uuid,jsonb) RETURNS boolean LANGUAGE sql STABLE AS $$SELECT false$$;`)
     await db.exec(func('136_question_validation_pipeline.sql', 'tg_require_question_validation_decision'))
     await db.exec('CREATE TRIGGER validation BEFORE UPDATE OF published_revision_id ON public.questions FOR EACH ROW EXECUTE FUNCTION public.tg_require_question_validation_decision()')
-    // Fikstur sirasi: fen -> turkce -> 231 -> 230 (231 canlida henuz yok, pending).
+    // Fikstur sirasi: fen -> turkce -> 231 -> 230 (canlida 230 once, 231 sonra uygulandi; 230 sinanirken 231 govdeleri yerinde olsun).
     for (const file of ['20261011203500_revision_bound_fen_quality_policy.sql', '20261014183929_revision_bound_turkce_quality_policy.sql']) await db.exec(read(file).replaceAll('__TARGET_EXAM__', 'LGS'))
     await db.exec(read('231_revision_bound_tyt_quality_policy.sql'))
     // Supabase varsayilan yetkileri yalniz test edilen migration'in nesnelerine uygulanir.
