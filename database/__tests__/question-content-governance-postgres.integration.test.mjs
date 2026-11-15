@@ -1674,4 +1674,57 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     expect(await status(draft.revisionId)).toBe('rejected')
     await client.query(sql('232_question_revision_author_withdraw.sql'))
   },30_000)
+
+  it('233: single authority publishes an unpublished draft with rationale; other paths unchanged', async () => {
+    const dir=dirname(fileURLToPath(import.meta.url))
+    const sql=name=>readFileSync(join(dir,'..','migrations',name),'utf8')
+    const publishSrc=async()=>(await client.query("SELECT md5(prosrc) m FROM pg_proc WHERE oid='public.publish_question_content_revision(uuid,uuid,uuid)'::regprocedure")).rows[0].m
+    const before=await publishSrc()
+    await client.query(sql('233_question_revision_single_authority_publish.sql'))
+    await client.query(sql('233_question_revision_single_authority_publish.sql'))
+    const live=async()=>(await client.query('SELECT content,published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0]
+    const status=async id=>(await client.query('SELECT status FROM public.question_content_revisions WHERE id=$1',[id])).rows[0].status
+    const byAuthority=(user,id,request=randomUUID(),why='answer key verified')=>rpc('public.publish_question_content_revision_by_authority($1,$2,$3,$4)',[user,id,why,request])
+    const base=(await live()).published_revision_id
+    const draft=await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,base,JSON.stringify(payload(2)),randomUUID()])
+    const stale=await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,base,JSON.stringify(payload(3)),randomUUID()])
+    // Plain publish of an unreviewed draft is still refused.
+    await err(()=>rpc('public.publish_question_content_revision($1,$2,$3)',[publisher,draft.revisionId,randomUUID()]),'22023')
+    await err(()=>byAuthority(legacyLearner,draft.revisionId),'42501')
+    await err(()=>byAuthority(reviewer1,draft.revisionId),'42501')
+    await err(()=>byAuthority(publisher,draft.revisionId,randomUUID(),' '),'22023')
+    expect(await status(draft.revisionId)).toBe('draft')
+    expect((await live()).published_revision_id).toBe(base)
+    const request=randomUUID()
+    const first=await byAuthority(publisher,draft.revisionId,request)
+    expect(first).toMatchObject({revisionId:draft.revisionId,status:'published',singleAuthority:true,replayed:false})
+    expect((await byAuthority(publisher,draft.revisionId,request)).replayed).toBe(true)
+    await err(()=>byAuthority(publisher,draft.revisionId,request,'different'),'22023')
+    expect(await status(draft.revisionId)).toBe('published')
+    expect(await status(base)).toBe('superseded')
+    const now=await live(); expect(now.published_revision_id).toBe(draft.revisionId); expect(now.content.answer).toBe(2)
+    const rec=(await client.query('SELECT actor_id,rationale FROM public.question_revision_authority_publishes WHERE revision_id=$1',[draft.revisionId])).rows
+    expect(rec).toEqual([{actor_id:publisher,rationale:'answer key verified'}])
+    const ev=(await client.query("SELECT public_reason FROM public.question_governance_events WHERE revision_id=$1 AND event_type='published'",[draft.revisionId])).rows
+    expect(ev).toEqual([{public_reason:'Single authority publish; no independent review'}])
+    expect((await client.query('SELECT count(*)::int n FROM public.question_revision_approvals WHERE revision_id=$1',[draft.revisionId])).rows[0].n).toBe(0)
+    await err(()=>client.query('UPDATE public.question_revision_authority_publishes SET rationale=$2 WHERE revision_id=$1',[draft.revisionId,'x']),'42501')
+    await err(()=>client.query('DELETE FROM public.question_revision_authority_publishes WHERE revision_id=$1',[draft.revisionId]),'42501')
+    // Published, stale and rejected revisions cannot use the path.
+    await err(()=>byAuthority(publisher,draft.revisionId),'22023')
+    await err(()=>byAuthority(publisher,stale.revisionId),'22023')
+    expect(await status(stale.revisionId)).toBe('draft')
+    expect((await client.query('SELECT count(*)::int n FROM public.question_revision_authority_publishes WHERE revision_id=$1',[stale.revisionId])).rows[0].n).toBe(0)
+    // stage1_approved drafts may also be published by the authority.
+    const s1=await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,draft.revisionId,JSON.stringify(payload(1)),randomUUID()])
+    await rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)',[reviewer1,s1.revisionId,1,'approved','ok',randomUUID()])
+    expect(await byAuthority(publisher,s1.revisionId)).toMatchObject({status:'published'})
+    expect((await live()).published_revision_id).toBe(s1.revisionId)
+    for(const role of ['anon','authenticated']) expect((await client.query("SELECT has_function_privilege($1,'public.publish_question_content_revision_by_authority(uuid,uuid,text,uuid)','EXECUTE') allowed",[role])).rows[0].allowed).toBe(false)
+    for(const role of ['anon','authenticated','service_role']) expect((await client.query("SELECT has_table_privilege($1,'public.question_revision_authority_publishes','SELECT') allowed",[role])).rows[0].allowed).toBe(false)
+    await client.query(readFileSync(join(dir,'..','rollback','233_question_revision_single_authority_publish.sql'),'utf8'))
+    expect((await client.query("SELECT to_regprocedure('public.publish_question_content_revision_by_authority(uuid,uuid,text,uuid)') fn")).rows[0].fn).toBeNull()
+    expect(await publishSrc()).toBe(before)
+    await client.query(sql('233_question_revision_single_authority_publish.sql'))
+  },30_000)
 })
