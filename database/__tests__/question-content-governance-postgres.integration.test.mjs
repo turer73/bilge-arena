@@ -1632,4 +1632,46 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
       expect((await client.query("SELECT has_table_privilege($1,'public.question_revision_retirement_reviews','SELECT,INSERT,UPDATE,DELETE') allowed",[role])).rows[0].allowed).toBe(false)
     }
   },60_000)
+  it('232: preparer withdraws own unpublished draft; review, approval and publish rules stay intact', async () => {
+    const sql=name=>readFileSync(join(dirname(fileURLToPath(import.meta.url)),'..','migrations',name),'utf8')
+    await client.query(sql('232_question_revision_author_withdraw.sql'))
+    await client.query(sql('232_question_revision_author_withdraw.sql'))
+    const base=(await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id
+    const status=async id=>(await client.query('SELECT status FROM public.question_content_revisions WHERE id=$1',[id])).rows[0].status
+    const withdraw=(user,id,request=randomUUID(),why='duplicate draft')=>rpc('public.withdraw_question_content_revision($1,$2,$3,$4)',[user,id,why,request])
+    const approvals=async id=>(await client.query('SELECT count(*)::int n FROM public.question_revision_approvals WHERE revision_id=$1',[id])).rows[0].n
+    const draft=await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,base,JSON.stringify(payload(2)),randomUUID()])
+    // The self-review rule is unchanged: the author still cannot approve or reject through review.
+    await err(()=>rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)',[author,draft.revisionId,1,'approved','self',randomUUID()]),'22023')
+    // Someone else cannot withdraw the author's draft; invalid input is refused.
+    await err(()=>withdraw(reviewer1,draft.revisionId),'22023')
+    await err(()=>withdraw(author,draft.revisionId,randomUUID(),' '),'22023')
+    await err(()=>withdraw(legacyLearner,draft.revisionId),'42501')
+    expect(await status(draft.revisionId)).toBe('draft')
+    const request=randomUUID()
+    const [first,replay]=await concurrentReplay('public.withdraw_question_content_revision($1,$2,$3,$4)',[author,draft.revisionId,'duplicate draft',request])
+    expect(first).toMatchObject({revisionId:draft.revisionId,status:'rejected',withdrawn:true,replayed:false})
+    expect(replay.replayed).toBe(true)
+    await err(()=>withdraw(author,draft.revisionId,request,'different payload'),'22023')
+    expect(await status(draft.revisionId)).toBe('rejected')
+    expect(await approvals(draft.revisionId)).toBe(0)
+    await err(()=>withdraw(author,draft.revisionId),'22023')
+    await err(()=>rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)',[reviewer1,draft.revisionId,1,'approved','closed',randomUUID()]),'22023')
+    // stage1_approved may still be withdrawn; stage2_approved and published may not.
+    const s1=await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,base,JSON.stringify(payload(3)),randomUUID()])
+    await rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)',[reviewer1,s1.revisionId,1,'approved','ok',randomUUID()])
+    expect(await withdraw(author,s1.revisionId)).toMatchObject({status:'rejected'})
+    const s2=await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,base,JSON.stringify(payload(0)),randomUUID()])
+    await rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)',[reviewer1,s2.revisionId,1,'approved','ok',randomUUID()])
+    await rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)',[reviewer2,s2.revisionId,2,'approved','ok',randomUUID()])
+    await err(()=>withdraw(author,s2.revisionId),'22023')
+    expect(await status(s2.revisionId)).toBe('stage2_approved')
+    await err(()=>withdraw(author,base),'22023')
+    expect((await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id).toBe(base)
+    for(const role of ['anon','authenticated']) expect((await client.query("SELECT has_function_privilege($1,'public.withdraw_question_content_revision(uuid,uuid,text,uuid)','EXECUTE') allowed",[role])).rows[0].allowed).toBe(false)
+    await client.query(readFileSync(join(dirname(fileURLToPath(import.meta.url)),'..','rollback','232_question_revision_author_withdraw.sql'),'utf8'))
+    expect((await client.query("SELECT to_regprocedure('public.withdraw_question_content_revision(uuid,uuid,text,uuid)') fn")).rows[0].fn).toBeNull()
+    expect(await status(draft.revisionId)).toBe('rejected')
+    await client.query(sql('232_question_revision_author_withdraw.sql'))
+  },30_000)
 })
