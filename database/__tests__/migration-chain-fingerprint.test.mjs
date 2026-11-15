@@ -69,10 +69,12 @@ describe('kayitli uretim parmak izi ve bilinen sapmalar', () => {
     // 2026-11-01: 231 bir yardimci ekler, uc govdeyi degistirir (canli md5 c4a4ccd0ed56255d92220a5be3ea03ce).
     // 2026-11-15: 232 geri cekme islevini ekler (canli md5 1e8592859ba121ea19ccb988d68b4704).
     // 2026-11-15: 233 tek yetkili yayin islevi + trigger islevi ekler, publish govdesini degistirir (canli md5 cdbe15372de09fe016fd509a15df48e0).
+    // 2026-11-16: 234 governed TYT kazanim tetikleyicisi tek yetkili taslagi kabul eder; sayi degismez (canli md5 8e9cbfff7d1e5ee8e0e3b89563246945).
     expect(production.size).toBe(466)
     expect(production.get('publish_question_content_revision_by_authority(uuid,uuid,text,uuid)')?.body).toBe('ce9aa5c145b821c5017d4354ae2e3b82')
     expect(production.get('publish_question_content_revision_by_authority(uuid,uuid,text,uuid)')?.acl).toBe('{postgres=X/postgres,service_role=X/postgres}')
     expect(production.get('publish_question_content_revision(uuid,uuid,uuid)')?.body).toBe('be32892688086c22e2f7409c81bf0348')
+    expect(production.get('trg_sync_taxonomy_auto_question_outcomes()')?.body).toBe('4bf40ed3fc284e6c3ba426a64490b7d2')
     expect(production.get('withdraw_question_content_revision(uuid,uuid,text,uuid)')?.body).toBe('0fc64d71116d51a5e9fe385d9095efba')
     expect(production.get('withdraw_question_content_revision(uuid,uuid,text,uuid)')?.acl).toBe('{postgres=X/postgres,service_role=X/postgres}')
     for (const [signature, body] of [

@@ -422,7 +422,7 @@ transfer_question_outcome_mapping_candidate(uuid,uuid,uuid,text,uuid)|f6d68097ee
 trg_materialize_verified_attempt_mastery()|51486efc61fc70cdeb3ae22607b3230a|t|search_path=pg_catalog|{postgres=X/postgres}
 trg_review_error_annotation_mastery_delta()|52debb228b98494f52b25170d097b045|t|search_path=pg_catalog|{postgres=X/postgres}
 trg_snapshot_verified_attempt_revisions()|7632821c9178fe542d180dea793fc3ce|t|search_path=pg_catalog|{postgres=X/postgres}
-trg_sync_taxonomy_auto_question_outcomes()|e16d2fa2f8c16857bbdb5e0837728a2a|t|search_path=pg_catalog|{postgres=X/postgres}
+trg_sync_taxonomy_auto_question_outcomes()|4bf40ed3fc284e6c3ba426a64490b7d2|t|search_path=pg_catalog|{postgres=X/postgres}
 trg_update_review_card()|324ca6fa6a5a907ace31876c8dfce913|t|search_path=pg_catalog|{postgres=X/postgres}
 trg_validate_and_bind_verified_completion_revisions()|0e91ea379a74cc6e9d9169add66a7f37|t|search_path=pg_catalog|{postgres=X/postgres}
 trg_verified_attempt_reward_integrity()|e8fcb38b39f5bf77a0ed6937995ed194|t|search_path=pg_catalog|{postgres=X/postgres}
