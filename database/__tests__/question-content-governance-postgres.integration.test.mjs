@@ -1727,4 +1727,37 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     expect(await publishSrc()).toBe(before)
     await client.query(sql('233_question_revision_single_authority_publish.sql'))
   },30_000)
+  it('234: single authority publishes a governed TYT math draft; trigger rollback restores the 23514 refusal', async () => {
+    const dir=dirname(fileURLToPath(import.meta.url))
+    const sql=name=>readFileSync(join(dir,'..','migrations',name),'utf8')
+    const trgSrc=async()=>(await client.query("SELECT md5(prosrc) m FROM pg_proc WHERE oid='public.trg_sync_taxonomy_auto_question_outcomes()'::regprocedure")).rows[0].m
+    await client.query(sql('20261011124426_governed_math_outcome_projection.sql'))
+    // The shared fixture never attached the 096 trigger; attach it here the way 096 does.
+    await client.query('DROP TRIGGER IF EXISTS trg_sync_taxonomy_auto_question_outcomes ON public.questions; CREATE TRIGGER trg_sync_taxonomy_auto_question_outcomes AFTER INSERT OR UPDATE OF game,exam_ref,category,is_active ON public.questions FOR EACH ROW EXECUTE FUNCTION public.trg_sync_taxonomy_auto_question_outcomes()')
+    const governed=await trgSrc()
+    const mathQ=(await client.query("SELECT id,published_revision_id FROM public.questions WHERE game='matematik' AND exam_ref='TYT' AND category='Registry'")).rows[0]
+    const mathOutcome=(await client.query("SELECT id FROM public.curriculum_outcomes WHERE code='MAT-REG-01'")).rows[0].id
+    const tyt=answer=>({ content:{ question:'3 + 4 kac eder?', options:['6','7','8','9','10'], answer, solution:'Yedi.' }, metadata:{ game:'matematik', category:'Registry', difficulty:2, examRef:'TYT' }, outcomes:[{ outcomeId:mathOutcome, weight:1, primary:true }], source:{ kind:'original', title:'TYT fixture', licenseCode:'INTERNAL' }, changeKind:'correct_answer', summary:'TYT key fix' })
+    const byAuthority=(id,request=randomUUID())=>rpc('public.publish_question_content_revision_by_authority($1,$2,$3,$4)',[publisher,id,'answer key verified',request])
+    const live=async()=>(await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[mathQ.id])).rows[0].published_revision_id
+    const d1=await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,mathQ.id,mathQ.published_revision_id,JSON.stringify(tyt(1)),randomUUID()])
+    // Before 234 the governed TYT trigger refuses the draft branch and the whole call rolls back.
+    await err(()=>byAuthority(d1.revisionId),'23514')
+    expect(await live()).toBe(mathQ.published_revision_id)
+    expect((await client.query('SELECT count(*)::int n FROM public.question_revision_authority_publishes WHERE revision_id=$1',[d1.revisionId])).rows[0].n).toBe(0)
+    await client.query(sql('234_authority_publish_governed_tyt_outcomes.sql'))
+    await client.query(sql('234_authority_publish_governed_tyt_outcomes.sql'))
+    expect(await byAuthority(d1.revisionId)).toMatchObject({ status:'published', singleAuthority:true })
+    expect(await live()).toBe(d1.revisionId)
+    expect((await client.query('SELECT outcome_id,is_primary FROM public.question_outcomes WHERE question_id=$1',[mathQ.id])).rows).toEqual([{ outcome_id:mathOutcome, is_primary:true }])
+    // A draft without an authority row still cannot reach the governed UPDATE through plain publish.
+    const d2=await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,mathQ.id,d1.revisionId,JSON.stringify(tyt(2)),randomUUID()])
+    await err(()=>rpc('public.publish_question_content_revision($1,$2,$3)',[publisher,d2.revisionId,randomUUID()]),'22023')
+    for(const role of ['anon','authenticated','service_role']) expect((await client.query("SELECT has_function_privilege($1,'public.trg_sync_taxonomy_auto_question_outcomes()','EXECUTE') allowed",[role])).rows[0].allowed).toBe(false)
+    await client.query(readFileSync(join(dir,'..','rollback','234_authority_publish_governed_tyt_outcomes.sql'),'utf8'))
+    expect(await trgSrc()).toBe(governed)
+    await err(()=>byAuthority(d2.revisionId),'23514')
+    expect(await live()).toBe(d1.revisionId)
+    await client.query('DROP TRIGGER trg_sync_taxonomy_auto_question_outcomes ON public.questions')
+  },30_000)
 })
