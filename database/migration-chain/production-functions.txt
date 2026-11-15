@@ -460,4 +460,5 @@ verified_exam_append_only()|f8d0c6b3d767f9605d3177cab9ffb166|t|search_path=pg_ca
 verified_exam_attempt_guard()|d1c3d0357572a04c2bfda5a2cc0de9c6|t|search_path=pg_catalog|{postgres=X/postgres}
 verified_exam_private_snapshot(uuid)|d42f49920a89880b26ad807e2cc2a88f|t|search_path=pg_catalog|{postgres=X/postgres}
 weekly_learning_league_week_start(timestamp with time zone)|6d7a43e6d641c87288e9ddcac3b2bb06|f|search_path=pg_catalog|{postgres=X/postgres}
+withdraw_question_content_revision(uuid,uuid,text,uuid)|0fc64d71116d51a5e9fe385d9095efba|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres}
 withdraw_teacher_classroom_membership(uuid,uuid,uuid)|86389723906278c3ae76e1cb71579cf3|t|search_path=pg_catalog|{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}

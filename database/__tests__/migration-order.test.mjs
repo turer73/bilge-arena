@@ -40,9 +40,12 @@ describe('repo migration manifesti', () => {
 
   it('the literature seed and prior three releases retain their actual ledger pins', () => {
     const pending = repo.migrations.filter((e) => e.status === 'pending').map((e) => e.file)
-    expect(pending).toEqual(['232_question_revision_author_withdraw.sql'])
+    expect(pending).toEqual([])
     const latestApplied = repo.migrations.filter((e) => e.status !== 'pending')
-    // 230 (2026-10-30) ve 231 (2026-11-01) Supabase SQL Editor ile uygulandi: defter satiri yok, unrecorded.
+    // 230 (2026-10-30), 231 (2026-11-01) ve 232 (2026-11-15) Supabase SQL Editor ile uygulandi: defter satiri yok, unrecorded.
+    expect(repo.migrations.at(-1)).toMatchObject({ file:'232_question_revision_author_withdraw.sql',status:'unrecorded' })
+    expect(repo.migrations.at(-1).ledger).toBeUndefined()
+    latestApplied.pop()
     expect(latestApplied.at(-1)).toMatchObject({ file:'231_revision_bound_tyt_quality_policy.sql',status:'unrecorded' })
     expect(latestApplied.at(-1).ledger).toBeUndefined()
     expect(latestApplied.at(-2)).toMatchObject({ file:'230_question_minor_text_correction.sql',status:'unrecorded' })
