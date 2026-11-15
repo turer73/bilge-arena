@@ -64,10 +64,13 @@ describe('kayitli uretim parmak izi ve bilinen sapmalar', () => {
     readFileSync(join(DATABASE_DIR, 'migration-chain', 'production-functions.txt'), 'utf8'),
   )
 
-  it('231 sonrasi olculen 463 public fonksiyonu tasir; eski 044 imzasi ve yetim trigger yok', () => {
+  it('232 sonrasi olculen 464 public fonksiyonu tasir; eski 044 imzasi ve yetim trigger yok', () => {
     // 2026-10-30: 228 sonrasi 451 + 230'un 11 yeni fonksiyonu (canli md5 e55ce6b4f12269d801c8a7c2b07fe477).
     // 2026-11-01: 231 bir yardimci ekler, uc govdeyi degistirir (canli md5 c4a4ccd0ed56255d92220a5be3ea03ce).
-    expect(production.size).toBe(463)
+    // 2026-11-15: 232 geri cekme islevini ekler (canli md5 1e8592859ba121ea19ccb988d68b4704).
+    expect(production.size).toBe(464)
+    expect(production.get('withdraw_question_content_revision(uuid,uuid,text,uuid)')?.body).toBe('0fc64d71116d51a5e9fe385d9095efba')
+    expect(production.get('withdraw_question_content_revision(uuid,uuid,text,uuid)')?.acl).toBe('{postgres=X/postgres,service_role=X/postgres}')
     for (const [signature, body] of [
       ['question_revision_validation_metadata_hash(uuid)', 'edb6d44c8462eb0bdbfbb35381399e15'],
       ['question_revision_validation_pair_valid(text,text,text,text)', 'b1b9f3c00c07ab3b3078e4d6baa78de0'],
