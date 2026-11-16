@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
 const sendNotification = vi.hoisted(() => vi.fn(async () => undefined))
-vi.mock('web-push', () => ({ default: { setVapidDetails: vi.fn(), sendNotification } }))
+// web-push 4'un sekli: varsayilan disa aktarim yok, yalniz adli fonksiyonlar.
+vi.mock('web-push', () => ({ setVapidDetails: vi.fn(), sendNotification }))
 
 import { isAllowedPushEndpoint } from '../push-endpoint'
 
