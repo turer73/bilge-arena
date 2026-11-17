@@ -188,7 +188,8 @@ jobs:
 
   question-quality-postgres:
     name: 🧭 Question quality PostgreSQL
-    runs-on: ubuntu-latest
+    # postgresql-16 Ubuntu 26.04 arşivinde yok; ubuntu-latest 26.04'e geçince apt kurulumu düştü.
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:16
